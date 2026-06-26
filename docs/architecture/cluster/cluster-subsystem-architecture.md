@@ -227,6 +227,11 @@ Owned ──► Draining ──► Transferring ──► Recovering ──► A
 
 Ensures exactly one active owner exists for a given singleton identity across the
 cluster. Used for coordinator roles — `ShardCoordinatorActor` is the first consumer.
+Production ownership uses a distributed leadership backend, not only local
+alive-node selection. The production target is an external coordinator
+(etcd first, Consul-compatible) with an internal Raft backend as a future
+implementation. Local strategies such as `OldestNodeElection` remain useful for
+tests, single-node development, and explicitly non-production modes.
 
 ```
 SingletonManagerActor (per-node system actor)
@@ -234,19 +239,20 @@ SingletonManagerActor (per-node system actor)
         ├── ClusterFailureModel observer callback
         │   └── on_node_state_change(alive_nodes)
         │
-        ├── ISingletonElection::elect(id, alive_nodes)
-        │   └── OldestNodeElection: lowest node_id among Alive nodes wins
+        ├── ClusterLeadershipManagerActor
+        │   └── ILeadershipBackend::try_acquire()/renew()
         │
-        ├── I'm owner? → SingletonState::Activating → Active
-        │   └── spawn singleton actor locally, bump fencing token
+        ├── Lease owner is local? → SingletonState::Activating → Active
+        │   └── spawn singleton actor locally, use backend fencing token
         │
         └── I'm standby? → SingletonState::Standby
-            └── Monitor active owner; if owner → Down, re-run election
+            └── Watch backend owner; if owner → Down/lost, acquire lease
 ```
 
 **Fencing token lifecycle:**
-- Token starts at 0 when singleton is registered.
-- Incremented on every ownership change (Standby → Active transition).
+- Token starts unset when singleton is registered.
+- Production tokens are issued by the leadership backend: etcd revision,
+  Consul KV/session generation, or future Raft `(term, log_index)`.
 - Every singleton action message carries `(singleton_name, fencing_token)`.
 - Messages with stale tokens are rejected with `FailureReason::FencingTokenStale`.
 
@@ -309,18 +315,25 @@ tracking, placement, and handoff.
 | Component | Type | Thread Safety | Description |
 |-----------|------|---------------|-------------|
 | `SingletonIdentity` / `SingletonState` | types | — | `{name, fencing_token}` and `{Standby, Activating, Active, Draining}` |
-| `ISingletonElection` | interface | — | `elect(id, alive_nodes) → optional<NodeId>` + `on_peer_down(node_id)` |
-| `OldestNodeElection` | impl | Stateless | Lowest `node_id` among `Alive` nodes wins. Deterministic, no consensus needed. |
+| `ILeadershipBackend` | interface | backend-owned | `try_acquire()`, `renew()`, `release()`, `current_owner()`, `watch()` for production leadership leases |
+| `ExternalCoordinatorBackend` | impl | backend-owned | etcd-first production backend; Consul-compatible through the same lease contract |
+| `ISingletonElection` | interface | — | Local/non-production strategy seam: `elect(id, alive_nodes) → optional<NodeId>` + `on_peer_down(node_id)` |
+| `OldestNodeElection` | impl | Stateless | Lowest `node_id` among `Alive` nodes wins. Deterministic, no consensus; not production ownership. |
 | `SingletonManagerCore` | class | Mutex-guarded | Per-node singleton registry. `register_singleton()`, `on_node_state_change(alive_nodes)`, `begin_drain()`, `complete_drain()`, `get_fencing_token()` |
 | `SingletonManagerActor` | EventBasedActor wrapper | Actor-guaranteed | Spawned automatically by `enable_cluster()`. Receives `RegisterSingleton`, `NodeStateChange`, `BeginDrain`, `CompleteDrain` messages. Manages singleton lifecycle and fencing token propagation. |
 
-**Election flow:**
+**Production leadership flow:**
 1. `ClusterFailureModel` observer callback fires with new `alive_nodes` list.
-2. Callback sends `NodeStateChange` to `SingletonManagerActor`.
-3. Actor calls `core_.on_node_state_change(alive_nodes)`.
-4. For each registered singleton, election runs via `ISingletonElection::elect()`.
-5. Winner: `Standby → Activating → Active` (spawn actor, bump fencing token).
-6. Loser (if previously active): `Active → Draining → Standby` (drain, stop actor).
+2. Callback sends membership eligibility to `ClusterLeadershipManagerActor`.
+3. Leadership manager acquires or renews a backend `LeadershipLease`.
+4. If the committed lease owner is local, `SingletonManagerActor` transitions
+   `Standby → Activating → Active` and exposes the backend fencing token.
+5. If the lease is lost, expired, or superseded, the active singleton transitions
+   `Active → Draining → Standby`.
+6. Mutating singleton and shard-coordinator commands reject stale or missing
+   tokens.
+
+Detailed design: [Production Distributed Leadership Election Design](../production/distributed-leadership-election-design.md).
 
 ### 4.4 Reliable Messaging (`MSG-003`)
 
@@ -362,9 +375,10 @@ The initialization sequence in `cluster_system_bridge.cpp`:
 ```
 enable_cluster(node_id)
   ├── new ClusterFailureModel()
-  ├── new SingletonManagerActor(node_id, OldestNodeElection())
-  ├── singleton_mgr.register_singleton({"shard-coordinator", fencing_token=0})
-  └── failure_model.register_observer(alive_nodes → singleton_mgr.on_node_state_change(alive_nodes))
+  ├── new ClusterLeadershipManagerActor(ILeadershipBackend)
+  ├── new SingletonManagerActor(node_id, leadership_manager)
+  ├── singleton_mgr.register_singleton({"shard-coordinator", fencing_token=unset})
+  └── failure_model.register_observer(alive_nodes → leadership_manager.on_membership_change(alive_nodes))
 ```
 
 **What happens on node state changes:**
@@ -372,8 +386,11 @@ enable_cluster(node_id)
 2. `ClusterFailureModel::transition(node_id, new_state, reason)` is called.
 3. If transition is legal and successful, `invalidation_queue_` is populated (for Down/Quarantined/Removed).
 4. Observer callbacks fire with updated `alive_nodes()` list.
-5. `SingletonManagerActor` receives `NodeStateChange` → re-runs elections.
-6. `RouteInvalidation::process()` drains the invalidation queue.
+5. `ClusterLeadershipManagerActor` receives the membership update and acquires,
+   renews, or releases backend leadership leases.
+6. `SingletonManagerActor` activates or drains local singletons from committed
+   lease changes.
+7. `RouteInvalidation::process()` drains the invalidation queue.
 
 ---
 
@@ -558,7 +575,7 @@ Items designed but deferred to future sprints:
 |-----------|--------|------------|
 | Distributed Pub-Sub | Design complete | `docs/architecture/production/distributed-pub-sub-design.md` |
 | Cluster Receptionist | Design complete | `docs/architecture/production/cluster-receptionist-design.md` |
-| Leader Election (Raft/etcd) | Interface defined | `docs/architecture/production/leader-election-design.md` |
+| Leader Election (Raft/etcd) | Production design added | `docs/architecture/production/distributed-leadership-election-design.md`; `docs/architecture/production/internal-raft-leadership-backend-design.md` |
 | Load-Aware Placement | Interface slot exists | Placement strategy plug-in |
 | Multi-Zone Placement | Not started | CLU-004 |
 | External Coordinator (etcd/Consul) | Interface slot exists | `ISingletonElection` plug-in |
@@ -572,6 +589,8 @@ Items designed but deferred to future sprints:
 - [Production Reliability Plane](../production/production-reliability-plane.md) — top-level 24x7 roadmap
 - [Cluster Failure Model Design](../production/cluster-failure-model-design.md) — detailed CLU-001 design
 - [Cluster Sharding & Placement Design](../production/cluster-sharding-placement-design.md) — detailed CLU-002 design
+- [Production Distributed Leadership Election Design](../production/distributed-leadership-election-design.md) — production CLU-003 leadership and fencing design
+- [Internal Raft Leadership Backend Design](../production/internal-raft-leadership-backend-design.md) — future in-process Raft backend for CLU-003
 - [Feature Gap Refined Requirement Backlog](../production/feature-gap-refined-requirement-backlog.md) — CLU-003, MSG-003 cards
 - [Akka Gap Analysis (Issue #329)](https://github.com/skg7on/HPActor/issues/329) — HPActor vs. Akka Typed comparison
 - Sprint 2 Design Spec: `docs/superpowers/specs/2026-06-21-akka-gap-closure-sprint2-design.md`

@@ -1,5 +1,13 @@
 # Leader Election for Cluster Singletons — Design Document
 
+> Production note: this document describes local and gossip-assisted election
+> strategies. Production control-plane ownership for `ShardCoordinatorActor` and
+> other mutating cluster singletons should use
+> [Production Distributed Leadership Election Design](distributed-leadership-election-design.md),
+> where leadership is granted by an external coordinator first and by an
+> [internal Raft-compatible backend](internal-raft-leadership-backend-design.md)
+> later.
+
 ## 1. Executive Summary
 
 The HPActor cluster singleton subsystem requires a pluggable leader election mechanism to determine which node owns a given singleton across the cluster. The `ISingletonElection` interface (defined in Sprint 2) provides the abstraction point. Sprint 4 adds two concrete election strategies beyond the existing `OldestNodeElection`:
@@ -106,7 +114,7 @@ election_strategy = "majority"
 
 ## 6. Design Decisions
 
-1. **Not Raft/Paxos:** `MajorityBasedElection` uses gossip-accumulated votes, not a formal consensus protocol. This trades crash-fault tolerance for implementation simplicity. The `ISingletonElection` interface is pluggable for future Raft/etcd backends.
+1. **Not Raft/Paxos:** `MajorityBasedElection` uses gossip-accumulated votes, not a formal consensus protocol. This trades crash-fault tolerance for implementation simplicity. The `ISingletonElection` interface is pluggable for future Raft/etcd backends. Production mutating singletons should use the distributed leadership backend instead of treating this strategy as consensus.
 
 2. **`record_vote()` is concrete-class API, not interface:** Different election strategies have different input mechanisms. `OldestNodeElection` needs no votes. `MajorityBasedElection` needs votes. `FixedPriorityElection` needs priorities. The common interface is `elect()` + `on_peer_down()`.
 
@@ -114,6 +122,8 @@ election_strategy = "majority"
 
 ## 7. References
 - [Cluster Subsystem Architecture](../cluster/cluster-subsystem-architecture.md) — Section 4.3 Cluster Singleton
+- [Production Distributed Leadership Election Design](distributed-leadership-election-design.md)
+- [Internal Raft Leadership Backend Design](internal-raft-leadership-backend-design.md)
 - [Feature Gap Refined Requirement Backlog](feature-gap-refined-requirement-backlog.md) — CLU-003
 - [Akka Gap Analysis (Issue #329)](https://github.com/skg7on/HPActor/issues/329)
 - Sprint 2: CLU-003 types (PR #347)
