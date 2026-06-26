@@ -31,17 +31,17 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">54.5&nbsp;%</td>
-            <td class="headerCovTableEntry">277</td>
+            <td class="headerCovTableEntryLo">53.2&nbsp;%</td>
+            <td class="headerCovTableEntry">284</td>
             <td class="headerCovTableEntry">151</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-24 07:00:40</td>
+            <td class="headerValue">2026-06-26 03:18:56</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
-            <td class="headerCovTableEntry">36</td>
+            <td class="headerCovTableEntryLo">48.6&nbsp;%</td>
+            <td class="headerCovTableEntry">37</td>
             <td class="headerCovTableEntry">18</td>
           </tr>
           <tr>
@@ -56,8 +56,8 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">44.8&nbsp;%</td>
-            <td class="headerCovTableEntry">116</td>
+            <td class="headerCovTableEntryLo">42.6&nbsp;%</td>
+            <td class="headerCovTableEntry">122</td>
             <td class="headerCovTableEntry">52</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -459,93 +459,103 @@
 <span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">           2 :     return pool-&gt;try_send(target, encoded);</span></span>
 <span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L379"><span class="lineNum">     379</span>                 :             : </span>
-<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">           9 : bool TcpTransport::is_connected(EndPoint remote_endpoint) const {</span></span>
-<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">           9 :     auto it = pools_.find(remote_endpoint);</span></span>
-<span id="L382"><span class="lineNum">     382</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">           9 :     if (it != pools_.end()) {</span></span>
-<span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return it-&gt;second-&gt;is_connected();</span></span>
-<span id="L384"><span class="lineNum">     384</span>                 :             :     }</span>
-<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC tlaBgGNC">           9 :     return false;</span></span>
-<span id="L386"><span class="lineNum">     386</span>                 :             : }</span>
-<span id="L387"><span class="lineNum">     387</span>                 :             : </span>
-<span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaGNC">           6 : void TcpTransport::close_connection(EndPoint remote_endpoint) {</span></span>
-<span id="L389"><span class="lineNum">     389</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span> :<span class="tlaGNC">           6 :     FAULT_INJECT(&quot;hpactor.transport.connection.reset&quot;) {</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaUNC tlaBgUNC">           0 : TransportSendResult TcpTransport::try_send_batch(const ActorAddress&amp; target,</span></span>
+<span id="L381"><span class="lineNum">     381</span>                 :             :                                                  const StreamBuffer&amp; encoded) {</span>
+<span id="L382"><span class="lineNum">     382</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     FAULT_INJECT(&quot;hpactor.transport.batch_send&quot;) {}</span></span>
+<span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaUNC">           0 :     auto pool = get_or_create_pool(target.endpoint);</span></span>
+<span id="L384"><span class="lineNum">     384</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!pool) {</span></span>
+<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaUNC">           0 :         return TransportSendResult::NotConnected;</span></span>
+<span id="L386"><span class="lineNum">     386</span>                 :             :     }</span>
+<span id="L387"><span class="lineNum">     387</span>                 :<span class="tlaUNC">           0 :     return pool-&gt;try_send(target, encoded);</span></span>
+<span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L389"><span class="lineNum">     389</span>                 :             : </span>
+<span id="L390"><span class="lineNum">     390</span>                 :<span class="tlaGNC tlaBgGNC">           9 : bool TcpTransport::is_connected(EndPoint remote_endpoint) const {</span></span>
+<span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaGNC">           9 :     auto it = pools_.find(remote_endpoint);</span></span>
+<span id="L392"><span class="lineNum">     392</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">           9 :     if (it != pools_.end()) {</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return it-&gt;second-&gt;is_connected();</span></span>
+<span id="L394"><span class="lineNum">     394</span>                 :             :     }</span>
+<span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaGNC tlaBgGNC">           9 :     return false;</span></span>
+<span id="L396"><span class="lineNum">     396</span>                 :             : }</span>
+<span id="L397"><span class="lineNum">     397</span>                 :             : </span>
+<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC">           6 : void TcpTransport::close_connection(EndPoint remote_endpoint) {</span></span>
+<span id="L399"><span class="lineNum">     399</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span> :<span class="tlaGNC">           6 :     FAULT_INJECT(&quot;hpactor.transport.connection.reset&quot;) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
-<span id="L390"><span class="lineNum">     390</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return; // pretend to close but don't</span></span>
-<span id="L391"><span class="lineNum">     391</span>                 :             :     }</span>
-<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     auto it = pools_.find(remote_endpoint);</span></span>
-<span id="L393"><span class="lineNum">     393</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           6 :     if (it != pools_.end()) {</span></span>
-<span id="L394"><span class="lineNum">     394</span>                 :<span class="tlaGNC">           1 :         it-&gt;second-&gt;abort();</span></span>
-<span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaGNC">           1 :         pools_.erase(it);</span></span>
-<span id="L396"><span class="lineNum">     396</span>                 :             :     }</span>
-<span id="L397"><span class="lineNum">     397</span>                 :             : }</span>
-<span id="L398"><span class="lineNum">     398</span>                 :             : </span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">           6 : void TcpTransport::set_rpc_handler(rpc_response_handler handler) {</span></span>
-<span id="L400"><span class="lineNum">     400</span>                 :             :     // Store handler and apply to all existing pools</span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">           6 :     rpc_handler_ = std::move(handler);</span></span>
-<span id="L402"><span class="lineNum">     402</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     for (auto&amp; [ep, pool] : pools_) {</span></span>
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         pool-&gt;set_rpc_handler(rpc_handler_);</span></span>
-<span id="L404"><span class="lineNum">     404</span>                 :             :     }</span>
-<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC tlaBgGNC">           6 : }</span></span>
-<span id="L406"><span class="lineNum">     406</span>                 :             : </span>
-<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">          98 : void TcpTransport::set_metrics_ring_buffer(</span></span>
-<span id="L408"><span class="lineNum">     408</span>                 :             :     metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* buf) {</span>
-<span id="L409"><span class="lineNum">     409</span>                 :<span class="tlaGNC">          98 :     metrics_ring_buffer_ = buf;</span></span>
-<span id="L410"><span class="lineNum">     410</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 98 times"> + </span>]:<span class="tlaGNC">          98 :     for (auto&amp; [ep, pool] : pools_) {</span></span>
-<span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         pool-&gt;set_metrics_ring_buffer(buf);</span></span>
-<span id="L412"><span class="lineNum">     412</span>                 :             :     }</span>
-<span id="L413"><span class="lineNum">     413</span>                 :<span class="tlaGNC tlaBgGNC">          98 : }</span></span>
-<span id="L414"><span class="lineNum">     414</span>                 :             : </span>
-<span id="L415"><span class="lineNum">     415</span>                 :<span class="tlaGNC">           1 : void TcpTransport::register_connection(ConnectionPtr conn, int fd) {</span></span>
-<span id="L416"><span class="lineNum">     416</span>                 :<span class="tlaGNC">           1 :     connections_[fd] = conn;</span></span>
-<span id="L417"><span class="lineNum">     417</span>                 :<span class="tlaGNC">           1 : }</span></span>
-<span id="L418"><span class="lineNum">     418</span>                 :             : </span>
-<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">           1 : void TcpTransport::unregister_connection(int fd) {</span></span>
-<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">           1 :     connections_.erase(fd);</span></span>
-<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">           1 : }</span></span>
-<span id="L422"><span class="lineNum">     422</span>                 :             : </span>
-<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {</span></span>
-<span id="L424"><span class="lineNum">     424</span>                 :             :     // Get or create pool for the connecting endpoint</span>
-<span id="L425"><span class="lineNum">     425</span>                 :<span class="tlaUNC">           0 :     auto pool = get_or_create_pool(remote_endpoint);</span></span>
-<span id="L426"><span class="lineNum">     426</span>                 :             : </span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaUNC">           0 :     ConnectionPtr conn;</span></span>
-<span id="L428"><span class="lineNum">     428</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (pool_config_.use_tls) {</span></span>
-<span id="L429"><span class="lineNum">     429</span>                 :             :         auto tls_conn = TlsConnection::create_server(</span>
-<span id="L430"><span class="lineNum">     430</span>                 :<span class="tlaUNC">           0 :             client_fd, endpoint_, remote_endpoint, &amp;tls_context_, &amp;loop_);</span></span>
-<span id="L431"><span class="lineNum">     431</span>                 :<span class="tlaUNC">           0 :         tls_conn-&gt;set_frame_handler([pool](StreamBuffer data) {</span></span>
-<span id="L432"><span class="lineNum">     432</span>                 :<span class="tlaUNC">           0 :             pool-&gt;on_frame_received(std::move(data));</span></span>
-<span id="L433"><span class="lineNum">     433</span>                 :<span class="tlaUNC">           0 :         });</span></span>
-<span id="L434"><span class="lineNum">     434</span>                 :<span class="tlaUNC">           0 :         tls_conn-&gt;set_error_handler([pool](ConnectionPtr c, const error&amp; e) {</span></span>
-<span id="L435"><span class="lineNum">     435</span>                 :<span class="tlaUNC">           0 :             pool-&gt;on_connection_error(c, e);</span></span>
-<span id="L436"><span class="lineNum">     436</span>                 :<span class="tlaUNC">           0 :         });</span></span>
-<span id="L437"><span class="lineNum">     437</span>                 :<span class="tlaUNC">           0 :         conn = tls_conn;</span></span>
-<span id="L438"><span class="lineNum">     438</span>                 :<span class="tlaUNC">           0 :     } else {</span></span>
-<span id="L439"><span class="lineNum">     439</span>                 :             :         auto plain_conn = WireFrameConnection::create_as_server(</span>
-<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaUNC">           0 :             client_fd, endpoint_, remote_endpoint, &amp;loop_);</span></span>
-<span id="L441"><span class="lineNum">     441</span>                 :<span class="tlaUNC">           0 :         plain_conn-&gt;set_frame_handler([pool](StreamBuffer data) {</span></span>
+<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return; // pretend to close but don't</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :             :     }</span>
+<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     auto it = pools_.find(remote_endpoint);</span></span>
+<span id="L403"><span class="lineNum">     403</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           6 :     if (it != pools_.end()) {</span></span>
+<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">           1 :         it-&gt;second-&gt;abort();</span></span>
+<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">           1 :         pools_.erase(it);</span></span>
+<span id="L406"><span class="lineNum">     406</span>                 :             :     }</span>
+<span id="L407"><span class="lineNum">     407</span>                 :             : }</span>
+<span id="L408"><span class="lineNum">     408</span>                 :             : </span>
+<span id="L409"><span class="lineNum">     409</span>                 :<span class="tlaGNC">           6 : void TcpTransport::set_rpc_handler(rpc_response_handler handler) {</span></span>
+<span id="L410"><span class="lineNum">     410</span>                 :             :     // Store handler and apply to all existing pools</span>
+<span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaGNC">           6 :     rpc_handler_ = std::move(handler);</span></span>
+<span id="L412"><span class="lineNum">     412</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     for (auto&amp; [ep, pool] : pools_) {</span></span>
+<span id="L413"><span class="lineNum">     413</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         pool-&gt;set_rpc_handler(rpc_handler_);</span></span>
+<span id="L414"><span class="lineNum">     414</span>                 :             :     }</span>
+<span id="L415"><span class="lineNum">     415</span>                 :<span class="tlaGNC tlaBgGNC">           6 : }</span></span>
+<span id="L416"><span class="lineNum">     416</span>                 :             : </span>
+<span id="L417"><span class="lineNum">     417</span>                 :<span class="tlaGNC">          98 : void TcpTransport::set_metrics_ring_buffer(</span></span>
+<span id="L418"><span class="lineNum">     418</span>                 :             :     metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* buf) {</span>
+<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">          98 :     metrics_ring_buffer_ = buf;</span></span>
+<span id="L420"><span class="lineNum">     420</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 98 times"> + </span>]:<span class="tlaGNC">          98 :     for (auto&amp; [ep, pool] : pools_) {</span></span>
+<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         pool-&gt;set_metrics_ring_buffer(buf);</span></span>
+<span id="L422"><span class="lineNum">     422</span>                 :             :     }</span>
+<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC tlaBgGNC">          98 : }</span></span>
+<span id="L424"><span class="lineNum">     424</span>                 :             : </span>
+<span id="L425"><span class="lineNum">     425</span>                 :<span class="tlaGNC">           1 : void TcpTransport::register_connection(ConnectionPtr conn, int fd) {</span></span>
+<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">           1 :     connections_[fd] = conn;</span></span>
+<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L428"><span class="lineNum">     428</span>                 :             : </span>
+<span id="L429"><span class="lineNum">     429</span>                 :<span class="tlaGNC">           1 : void TcpTransport::unregister_connection(int fd) {</span></span>
+<span id="L430"><span class="lineNum">     430</span>                 :<span class="tlaGNC">           1 :     connections_.erase(fd);</span></span>
+<span id="L431"><span class="lineNum">     431</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L432"><span class="lineNum">     432</span>                 :             : </span>
+<span id="L433"><span class="lineNum">     433</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {</span></span>
+<span id="L434"><span class="lineNum">     434</span>                 :             :     // Get or create pool for the connecting endpoint</span>
+<span id="L435"><span class="lineNum">     435</span>                 :<span class="tlaUNC">           0 :     auto pool = get_or_create_pool(remote_endpoint);</span></span>
+<span id="L436"><span class="lineNum">     436</span>                 :             : </span>
+<span id="L437"><span class="lineNum">     437</span>                 :<span class="tlaUNC">           0 :     ConnectionPtr conn;</span></span>
+<span id="L438"><span class="lineNum">     438</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (pool_config_.use_tls) {</span></span>
+<span id="L439"><span class="lineNum">     439</span>                 :             :         auto tls_conn = TlsConnection::create_server(</span>
+<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaUNC">           0 :             client_fd, endpoint_, remote_endpoint, &amp;tls_context_, &amp;loop_);</span></span>
+<span id="L441"><span class="lineNum">     441</span>                 :<span class="tlaUNC">           0 :         tls_conn-&gt;set_frame_handler([pool](StreamBuffer data) {</span></span>
 <span id="L442"><span class="lineNum">     442</span>                 :<span class="tlaUNC">           0 :             pool-&gt;on_frame_received(std::move(data));</span></span>
 <span id="L443"><span class="lineNum">     443</span>                 :<span class="tlaUNC">           0 :         });</span></span>
-<span id="L444"><span class="lineNum">     444</span>                 :<span class="tlaUNC">           0 :         plain_conn-&gt;set_error_handler([pool](ConnectionPtr c, const error&amp; e) {</span></span>
+<span id="L444"><span class="lineNum">     444</span>                 :<span class="tlaUNC">           0 :         tls_conn-&gt;set_error_handler([pool](ConnectionPtr c, const error&amp; e) {</span></span>
 <span id="L445"><span class="lineNum">     445</span>                 :<span class="tlaUNC">           0 :             pool-&gt;on_connection_error(c, e);</span></span>
 <span id="L446"><span class="lineNum">     446</span>                 :<span class="tlaUNC">           0 :         });</span></span>
-<span id="L447"><span class="lineNum">     447</span>                 :<span class="tlaUNC">           0 :         conn = plain_conn;</span></span>
-<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaUNC">           0 :     }</span></span>
-<span id="L449"><span class="lineNum">     449</span>                 :             : </span>
-<span id="L450"><span class="lineNum">     450</span>                 :<span class="tlaUNC">           0 :     pool-&gt;add_connection(conn);</span></span>
-<span id="L451"><span class="lineNum">     451</span>                 :<span class="tlaUNC">           0 :     register_connection(conn, client_fd);</span></span>
-<span id="L452"><span class="lineNum">     452</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L453"><span class="lineNum">     453</span>                 :             : </span>
-<span id="L454"><span class="lineNum">     454</span>                 :<span class="tlaUNC">           0 : std::string TcpTransport::derive_uds_path(const std::string&amp; node_id) const {</span></span>
-<span id="L455"><span class="lineNum">     455</span>                 :             :     // Sanitize node_id: replace colons with underscores</span>
-<span id="L456"><span class="lineNum">     456</span>                 :<span class="tlaUNC">           0 :     std::string sanitized = node_id;</span></span>
-<span id="L457"><span class="lineNum">     457</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (char&amp; c : sanitized) {</span></span>
-<span id="L458"><span class="lineNum">     458</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (c == ':')</span></span>
-<span id="L459"><span class="lineNum">     459</span>                 :<span class="tlaUNC">           0 :             c = '_';</span></span>
-<span id="L460"><span class="lineNum">     460</span>                 :             :     }</span>
-<span id="L461"><span class="lineNum">     461</span>                 :<span class="tlaUNC">           0 :     return &quot;/tmp/hpactor/&quot; + sanitized + &quot;.sock&quot;;</span></span>
+<span id="L447"><span class="lineNum">     447</span>                 :<span class="tlaUNC">           0 :         conn = tls_conn;</span></span>
+<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaUNC">           0 :     } else {</span></span>
+<span id="L449"><span class="lineNum">     449</span>                 :             :         auto plain_conn = WireFrameConnection::create_as_server(</span>
+<span id="L450"><span class="lineNum">     450</span>                 :<span class="tlaUNC">           0 :             client_fd, endpoint_, remote_endpoint, &amp;loop_);</span></span>
+<span id="L451"><span class="lineNum">     451</span>                 :<span class="tlaUNC">           0 :         plain_conn-&gt;set_frame_handler([pool](StreamBuffer data) {</span></span>
+<span id="L452"><span class="lineNum">     452</span>                 :<span class="tlaUNC">           0 :             pool-&gt;on_frame_received(std::move(data));</span></span>
+<span id="L453"><span class="lineNum">     453</span>                 :<span class="tlaUNC">           0 :         });</span></span>
+<span id="L454"><span class="lineNum">     454</span>                 :<span class="tlaUNC">           0 :         plain_conn-&gt;set_error_handler([pool](ConnectionPtr c, const error&amp; e) {</span></span>
+<span id="L455"><span class="lineNum">     455</span>                 :<span class="tlaUNC">           0 :             pool-&gt;on_connection_error(c, e);</span></span>
+<span id="L456"><span class="lineNum">     456</span>                 :<span class="tlaUNC">           0 :         });</span></span>
+<span id="L457"><span class="lineNum">     457</span>                 :<span class="tlaUNC">           0 :         conn = plain_conn;</span></span>
+<span id="L458"><span class="lineNum">     458</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L459"><span class="lineNum">     459</span>                 :             : </span>
+<span id="L460"><span class="lineNum">     460</span>                 :<span class="tlaUNC">           0 :     pool-&gt;add_connection(conn);</span></span>
+<span id="L461"><span class="lineNum">     461</span>                 :<span class="tlaUNC">           0 :     register_connection(conn, client_fd);</span></span>
 <span id="L462"><span class="lineNum">     462</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L463"><span class="lineNum">     463</span>                 :             : </span>
-<span id="L464"><span class="lineNum">     464</span>                 :             : } // namespace net</span>
-<span id="L465"><span class="lineNum">     465</span>                 :             : } // namespace hpactor</span>
+<span id="L464"><span class="lineNum">     464</span>                 :<span class="tlaUNC">           0 : std::string TcpTransport::derive_uds_path(const std::string&amp; node_id) const {</span></span>
+<span id="L465"><span class="lineNum">     465</span>                 :             :     // Sanitize node_id: replace colons with underscores</span>
+<span id="L466"><span class="lineNum">     466</span>                 :<span class="tlaUNC">           0 :     std::string sanitized = node_id;</span></span>
+<span id="L467"><span class="lineNum">     467</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (char&amp; c : sanitized) {</span></span>
+<span id="L468"><span class="lineNum">     468</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (c == ':')</span></span>
+<span id="L469"><span class="lineNum">     469</span>                 :<span class="tlaUNC">           0 :             c = '_';</span></span>
+<span id="L470"><span class="lineNum">     470</span>                 :             :     }</span>
+<span id="L471"><span class="lineNum">     471</span>                 :<span class="tlaUNC">           0 :     return &quot;/tmp/hpactor/&quot; + sanitized + &quot;.sock&quot;;</span></span>
+<span id="L472"><span class="lineNum">     472</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L473"><span class="lineNum">     473</span>                 :             : </span>
+<span id="L474"><span class="lineNum">     474</span>                 :             : } // namespace net</span>
+<span id="L475"><span class="lineNum">     475</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

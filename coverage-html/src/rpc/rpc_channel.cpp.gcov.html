@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">86.5&nbsp;%</td>
-            <td class="headerCovTableEntry">126</td>
-            <td class="headerCovTableEntry">109</td>
+            <td class="headerCovTableEntryMed">86.9&nbsp;%</td>
+            <td class="headerCovTableEntry">130</td>
+            <td class="headerCovTableEntry">113</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-24 07:00:40</td>
+            <td class="headerValue">2026-06-26 03:18:56</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -239,78 +239,81 @@
 <span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         _fc-&gt;stall(hpactor::fault::FaultDomain::kRpc, 5);</span></span>
 <span id="L157"><span class="lineNum">     157</span>                 :             :     }</span>
 <span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC tlaBgGNC">          35 :     net::WireFrame frame;</span></span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">          35 :     net::to_proto(frame.pb_frame.mutable_sender(), ActorAddress{});</span></span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">          35 :     net::to_proto(frame.pb_frame.mutable_receiver(), call.target);</span></span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">          35 :     frame.pb_frame.set_payload(</span></span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">          35 :         reinterpret_cast&lt;const char*&gt;(call.encoded_request.data()),</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :             :         call.encoded_request.size());</span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">          35 :     frame.pb_frame.set_message_id(call.msg_id.value());</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">          35 :     frame.pb_frame.set_flags(net::WireFrame::RpcRequest);</span></span>
-<span id="L166"><span class="lineNum">     166</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          35 :     if (is_retry) {</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">           2 :         frame.pb_frame.set_flags(frame.pb_frame.flags() |</span></span>
-<span id="L168"><span class="lineNum">     168</span>                 :             :                                  net::WireFrame::RpcIdempotent);</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     }</span>
-<span id="L170"><span class="lineNum">     170</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span>]:<span class="tlaGNC">          35 :     if (call.has_trace_context) {</span></span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">           1 :         net::to_proto(frame.pb_frame.mutable_trace_context(), call.trace_context);</span></span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     }</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             : </span>
-<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">          35 :     StreamBuffer encoded = frame.encode();</span></span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">          35 :     transport_-&gt;send(call.target, encoded);</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">          35 : }</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :             : </span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          32 : RpcFuture&lt;StreamBuffer&gt; RpcChannel::call_raw(const ActorAddress&amp; target,</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :                                              const StreamBuffer&amp; encoded_request,</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :                                              std::chrono::milliseconds timeout_ms) {</span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          32 :     return call_raw(target, encoded_request, timeout_ms, nullptr);</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :             : }</span>
-<span id="L183"><span class="lineNum">     183</span>                 :             : </span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">          33 : RpcFuture&lt;StreamBuffer&gt; RpcChannel::call_raw(const ActorAddress&amp; target,</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :             :                                              const StreamBuffer&amp; encoded_request,</span>
-<span id="L186"><span class="lineNum">     186</span>                 :             :                                              std::chrono::milliseconds timeout_ms,</span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :                                              const TraceContext* parent_context) {</span>
-<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">          33 :     MessageId msg_id = generate_message_id();</span></span>
-<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">          33 :     auto promise_ptr = std::make_shared&lt;std::promise&lt;result&lt;StreamBuffer&gt;&gt;&gt;();</span></span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">          33 :     auto future = promise_ptr-&gt;get_future();</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">          35 :     net::to_proto(frame.pb_envelope.mutable_data_frame()-&gt;mutable_sender(),</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">          35 :                   ActorAddress{});</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">          35 :     net::to_proto(frame.pb_envelope.mutable_data_frame()-&gt;mutable_receiver(),</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">          35 :                   call.target);</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">          35 :     frame.pb_envelope.mutable_data_frame()-&gt;set_payload(</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">          35 :         reinterpret_cast&lt;const char*&gt;(call.encoded_request.data()),</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :         call.encoded_request.size());</span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">          35 :     frame.pb_envelope.mutable_data_frame()-&gt;set_message_id(call.msg_id.value());</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">          35 :     frame.pb_envelope.mutable_data_frame()-&gt;set_flags(net::WireFrame::RpcRequest);</span></span>
+<span id="L168"><span class="lineNum">     168</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          35 :     if (is_retry) {</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">           4 :         frame.pb_envelope.mutable_data_frame()-&gt;set_flags(</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">           2 :             frame.pb_envelope.data_frame().flags() | net::WireFrame::RpcIdempotent);</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     }</span>
+<span id="L172"><span class="lineNum">     172</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span>]:<span class="tlaGNC">          35 :     if (call.has_trace_context) {</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">           1 :         net::to_proto(frame.pb_envelope.mutable_data_frame()-&gt;mutable_trace_context(),</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">           1 :                       call.trace_context);</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     }</span>
+<span id="L176"><span class="lineNum">     176</span>                 :             : </span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">          35 :     StreamBuffer encoded = frame.encode();</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          35 :     transport_-&gt;send(call.target, encoded);</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          35 : }</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :             : </span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          32 : RpcFuture&lt;StreamBuffer&gt; RpcChannel::call_raw(const ActorAddress&amp; target,</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :                                              const StreamBuffer&amp; encoded_request,</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :                                              std::chrono::milliseconds timeout_ms) {</span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">          32 :     return call_raw(target, encoded_request, timeout_ms, nullptr);</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : }</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             : </span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">          33 : RpcFuture&lt;StreamBuffer&gt; RpcChannel::call_raw(const ActorAddress&amp; target,</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :                                              const StreamBuffer&amp; encoded_request,</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :                                              std::chrono::milliseconds timeout_ms,</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             :                                              const TraceContext* parent_context) {</span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">          33 :     MessageId msg_id = generate_message_id();</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :             : </span>
-<span id="L193"><span class="lineNum">     193</span>                 :             :     auto* call_ptr =</span>
-<span id="L194"><span class="lineNum">     194</span>                 :             :         new PendingCall{.msg_id = msg_id,</span>
-<span id="L195"><span class="lineNum">     195</span>                 :             :                         .target = target,</span>
-<span id="L196"><span class="lineNum">     196</span>                 :             :                         .encoded_request = encoded_request,</span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :                         .timeout = timeout_ms,</span>
-<span id="L198"><span class="lineNum">     198</span>                 :             :                         .retry_count = 0,</span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">          33 :                         .max_retries = static_cast&lt;int&gt;(default_max_retries_),</span></span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">          33 :                         .promise = std::move(*promise_ptr),</span></span>
-<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">          33 :                         .enqueued_at = std::chrono::steady_clock::now(),</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">          99 :                         .ready_ = false};</span></span>
-<span id="L203"><span class="lineNum">     203</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 32 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          33 :     if (parent_context != nullptr &amp;&amp; parent_context-&gt;valid()) {</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">          33 :     auto promise_ptr = std::make_shared&lt;std::promise&lt;result&lt;StreamBuffer&gt;&gt;&gt;();</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">          33 :     auto future = promise_ptr-&gt;get_future();</span></span>
+<span id="L195"><span class="lineNum">     195</span>                 :             : </span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     auto* call_ptr =</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :         new PendingCall{.msg_id = msg_id,</span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :                         .target = target,</span>
+<span id="L199"><span class="lineNum">     199</span>                 :             :                         .encoded_request = encoded_request,</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :                         .timeout = timeout_ms,</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             :                         .retry_count = 0,</span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">          33 :                         .max_retries = static_cast&lt;int&gt;(default_max_retries_),</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">          33 :                         .promise = std::move(*promise_ptr),</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">          33 :                         .enqueued_at = std::chrono::steady_clock::now(),</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">          99 :                         .ready_ = false};</span></span>
+<span id="L206"><span class="lineNum">     206</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 32 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          33 :     if (parent_context != nullptr &amp;&amp; parent_context-&gt;valid()) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 32 times"> + </span>]
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">           1 :         call_ptr-&gt;has_trace_context = true;</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">           1 :         call_ptr-&gt;trace_context = *parent_context;</span></span>
-<span id="L206"><span class="lineNum">     206</span>                 :             :     }</span>
-<span id="L207"><span class="lineNum">     207</span>                 :             : </span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     // Compute total deadline: timeout * (max_retries + 1)</span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">          33 :     std::chrono::milliseconds total_budget = timeout_ms;</span></span>
-<span id="L210"><span class="lineNum">     210</span>         [<span class="tlaGBC" title="Branch 0 was taken 32 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          33 :     if (call_ptr-&gt;max_retries &gt; 0) {</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">          32 :         total_budget = timeout_ms * (call_ptr-&gt;max_retries + 1);</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :             :     }</span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">          33 :     call_ptr-&gt;deadline = call_ptr-&gt;enqueued_at + total_budget;</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :             : </span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">          33 :     uint64_t key = msg_id.value();</span></span>
-<span id="L216"><span class="lineNum">     216</span>                 :             :     {</span>
-<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">          33 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">          33 :         pending_.emplace(key, std::unique_ptr&lt;PendingCall&gt;(call_ptr));</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">          33 :     }</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :             : </span>
-<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">          33 :     send_request(*call_ptr, false);</span></span>
-<span id="L222"><span class="lineNum">     222</span>                 :             : </span>
-<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">          33 :     int64_t delay_ns = timeout_ms.count() * 1000000;</span></span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">          36 :     scheduler_-&gt;schedule_after([this, msg_id]() { on_timeout(msg_id); }, delay_ns);</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">           1 :         call_ptr-&gt;has_trace_context = true;</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">           1 :         call_ptr-&gt;trace_context = *parent_context;</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     }</span>
+<span id="L210"><span class="lineNum">     210</span>                 :             : </span>
+<span id="L211"><span class="lineNum">     211</span>                 :             :     // Compute total deadline: timeout * (max_retries + 1)</span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">          33 :     std::chrono::milliseconds total_budget = timeout_ms;</span></span>
+<span id="L213"><span class="lineNum">     213</span>         [<span class="tlaGBC" title="Branch 0 was taken 32 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          33 :     if (call_ptr-&gt;max_retries &gt; 0) {</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">          32 :         total_budget = timeout_ms * (call_ptr-&gt;max_retries + 1);</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :             :     }</span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">          33 :     call_ptr-&gt;deadline = call_ptr-&gt;enqueued_at + total_budget;</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :             : </span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">          33 :     uint64_t key = msg_id.value();</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :             :     {</span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">          33 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">          33 :         pending_.emplace(key, std::unique_ptr&lt;PendingCall&gt;(call_ptr));</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">          33 :     }</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :             : </span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">          33 :     send_request(*call_ptr, false);</span></span>
 <span id="L225"><span class="lineNum">     225</span>                 :             : </span>
-<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">          33 :     return RpcFuture&lt;StreamBuffer&gt;(std::move(future), timeout_ms);</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">          33 : }</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">          33 :     int64_t delay_ns = timeout_ms.count() * 1000000;</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">          36 :     scheduler_-&gt;schedule_after([this, msg_id]() { on_timeout(msg_id); }, delay_ns);</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :             : </span>
-<span id="L229"><span class="lineNum">     229</span>                 :             : } // namespace hpactor</span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">          33 :     return RpcFuture&lt;StreamBuffer&gt;(std::move(future), timeout_ms);</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">          33 : }</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :             : </span>
+<span id="L232"><span class="lineNum">     232</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
