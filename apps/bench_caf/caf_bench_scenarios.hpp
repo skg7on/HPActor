@@ -17,6 +17,7 @@
 #include "actors/actor_creation_actor.hpp"
 #include "actors/mailbox_n1_actor.hpp"
 #include "actors/mixed_case_actor.hpp"
+#include "actors/traffic_distribution_actor.hpp"
 #include "caf_bench_config.hpp"
 #include "caf_bench_metrics.hpp"
 #include "caf_bench_sampler.hpp"
@@ -202,6 +203,189 @@ run_mixed_case_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                         metrics.cpu_tasks_completed == expected_cpu &&
                         metrics.token_hops == expected_hops;
     metrics.throughput_msgps = throughput(metrics.token_hops, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+// ── Phase 2: Traffic Distribution Scenarios ────────────────────
+
+inline OneToNDimensions one_to_n_dimensions_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return {8, 1000};
+        case PresetKind::Nightly:
+            return {16, 5000};
+        case PresetKind::PaperScale:
+            return {32, 10000};
+        case PresetKind::Stress:
+            return {64, 10000};
+    }
+    return {8, 1000};
+}
+
+inline NToNRandomDimensions n_to_n_random_dimensions_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return {4, 4, 250};
+        case PresetKind::Nightly:
+            return {8, 8, 1000};
+        case PresetKind::PaperScale:
+            return {16, 16, 5000};
+        case PresetKind::Stress:
+            return {32, 32, 10000};
+    }
+    return {4, 4, 250};
+}
+
+inline TrialMetrics
+run_one_to_one_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    uint32_t messages = 10000;
+    DistributionCounters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.mailbox.default_capacity =
+        static_cast<uint32_t>(std::max<uint64_t>(messages, 4096));
+    ActorSystem system(system_cfg);
+
+    auto receiver = system.spawn<OneToOneReceiver>(&counters);
+    auto sender =
+        system.spawn<OneToOneSender>(&counters, receiver.address(), messages,
+                                     cfg.message_size_bytes, cfg.seed);
+    system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (counters.received.load(std::memory_order_acquire) < messages &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.total_sent = counters.sent.load();
+    metrics.total_received = counters.received.load();
+    metrics.completed = shutdown.has_value() && metrics.total_sent == messages &&
+                        metrics.total_received == messages;
+    metrics.throughput_msgps =
+        throughput(metrics.total_received, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+inline TrialMetrics
+run_one_to_n_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    auto dims = one_to_n_dimensions_for_preset(cfg.preset);
+    uint64_t expected =
+        static_cast<uint64_t>(dims.receivers) * dims.messages_per_receiver;
+
+    DistributionCounters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.mailbox.default_capacity =
+        static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
+    ActorSystem system(system_cfg);
+
+    std::vector<ActorAddress> receivers;
+    receivers.reserve(dims.receivers);
+    for (uint32_t i = 0; i < dims.receivers; ++i) {
+        auto r = system.spawn<OneToNReceiver>(&counters);
+        receivers.push_back(r.address());
+    }
+    auto sender = system.spawn<OneToNSender>(&counters, receivers,
+                                             dims.messages_per_receiver,
+                                             cfg.message_size_bytes, cfg.seed);
+    system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (counters.received.load(std::memory_order_acquire) < expected &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.total_sent = counters.sent.load();
+    metrics.total_received = counters.received.load();
+    metrics.completed = shutdown.has_value() && metrics.total_sent == expected &&
+                        metrics.total_received == expected;
+    metrics.throughput_msgps =
+        throughput(metrics.total_received, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+inline TrialMetrics
+run_n_to_n_random_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    auto dims = n_to_n_random_dimensions_for_preset(cfg.preset);
+    uint64_t expected =
+        static_cast<uint64_t>(dims.senders) * dims.messages_per_sender;
+
+    DistributionCounters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.mailbox.default_capacity =
+        static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
+    ActorSystem system(system_cfg);
+
+    std::vector<ActorAddress> receivers;
+    receivers.reserve(dims.receivers);
+    for (uint32_t i = 0; i < dims.receivers; ++i) {
+        auto r = system.spawn<OneToNReceiver>(&counters);
+        receivers.push_back(r.address());
+    }
+    for (uint32_t i = 0; i < dims.senders; ++i) {
+        auto s = system.spawn<NToNRandomSender>(
+            &counters, receivers, i, dims.messages_per_sender,
+            cfg.message_size_bytes, cfg.seed + i);
+        system.deliver_local(s.id(), make_bench_msg(MailboxLoadTag));
+    }
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (counters.received.load(std::memory_order_acquire) < expected &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.total_sent = counters.sent.load();
+    metrics.total_received = counters.received.load();
+    metrics.completed = shutdown.has_value() && metrics.total_sent == expected &&
+                        metrics.total_received == expected;
+    metrics.throughput_msgps =
+        throughput(metrics.total_received, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
     return metrics;

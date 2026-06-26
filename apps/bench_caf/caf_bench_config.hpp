@@ -24,6 +24,13 @@ enum class ScenarioKind {
     ActorCreation,
     MailboxN1,
     MixedCase,
+    TrafficOneToOne,
+    TrafficOneToN,
+    TrafficNToNRandom,
+    TrafficRing,
+    TrafficPipeline,
+    TrafficZipf,
+    TrafficBursty,
 };
 
 enum class PresetKind {
@@ -49,6 +56,13 @@ enum class MessageShape {
 
 enum class TrafficDistribution {
     NToOne,
+    OneToOne,
+    OneToN,
+    NToNRandom,
+    Ring,
+    Pipeline,
+    ZipfHotspot,
+    BurstyWaves,
 };
 
 struct CafBenchConfig {
@@ -81,6 +95,20 @@ inline const char* scenario_name(ScenarioKind scenario) {
             return "mailbox-n1";
         case ScenarioKind::MixedCase:
             return "mixed-case";
+        case ScenarioKind::TrafficOneToOne:
+            return "traffic-one-to-one";
+        case ScenarioKind::TrafficOneToN:
+            return "traffic-one-to-n";
+        case ScenarioKind::TrafficNToNRandom:
+            return "traffic-n-to-n-random";
+        case ScenarioKind::TrafficRing:
+            return "traffic-ring";
+        case ScenarioKind::TrafficPipeline:
+            return "traffic-pipeline";
+        case ScenarioKind::TrafficZipf:
+            return "traffic-zipf";
+        case ScenarioKind::TrafficBursty:
+            return "traffic-bursty";
     }
     return "actor-creation";
 }
@@ -132,6 +160,34 @@ inline bool parse_scenario(const std::string& value, ScenarioKind& out) {
     }
     if (value == "mixed-case") {
         out = ScenarioKind::MixedCase;
+        return true;
+    }
+    if (value == "traffic-one-to-one") {
+        out = ScenarioKind::TrafficOneToOne;
+        return true;
+    }
+    if (value == "traffic-one-to-n") {
+        out = ScenarioKind::TrafficOneToN;
+        return true;
+    }
+    if (value == "traffic-n-to-n-random") {
+        out = ScenarioKind::TrafficNToNRandom;
+        return true;
+    }
+    if (value == "traffic-ring") {
+        out = ScenarioKind::TrafficRing;
+        return true;
+    }
+    if (value == "traffic-pipeline") {
+        out = ScenarioKind::TrafficPipeline;
+        return true;
+    }
+    if (value == "traffic-zipf") {
+        out = ScenarioKind::TrafficZipf;
+        return true;
+    }
+    if (value == "traffic-bursty") {
+        out = ScenarioKind::TrafficBursty;
         return true;
     }
     return false;
@@ -192,6 +248,64 @@ inline bool parse_message_shape(const std::string& value, MessageShape& out) {
     }
     if (value == "mixed-80-20") {
         out = MessageShape::Mixed80_20;
+        return true;
+    }
+    return false;
+}
+
+inline const char* distribution_name(TrafficDistribution dist) {
+    switch (dist) {
+        case TrafficDistribution::NToOne:
+            return "n-to-one";
+        case TrafficDistribution::OneToOne:
+            return "one-to-one";
+        case TrafficDistribution::OneToN:
+            return "one-to-n";
+        case TrafficDistribution::NToNRandom:
+            return "n-to-n-random";
+        case TrafficDistribution::Ring:
+            return "ring";
+        case TrafficDistribution::Pipeline:
+            return "pipeline";
+        case TrafficDistribution::ZipfHotspot:
+            return "zipf-hotspot";
+        case TrafficDistribution::BurstyWaves:
+            return "bursty-waves";
+    }
+    return "n-to-one";
+}
+
+inline bool parse_distribution(const std::string& value, TrafficDistribution& out) {
+    if (value == "n-to-one") {
+        out = TrafficDistribution::NToOne;
+        return true;
+    }
+    if (value == "one-to-one") {
+        out = TrafficDistribution::OneToOne;
+        return true;
+    }
+    if (value == "one-to-n") {
+        out = TrafficDistribution::OneToN;
+        return true;
+    }
+    if (value == "n-to-n-random") {
+        out = TrafficDistribution::NToNRandom;
+        return true;
+    }
+    if (value == "ring") {
+        out = TrafficDistribution::Ring;
+        return true;
+    }
+    if (value == "pipeline") {
+        out = TrafficDistribution::Pipeline;
+        return true;
+    }
+    if (value == "zipf-hotspot") {
+        out = TrafficDistribution::ZipfHotspot;
+        return true;
+    }
+    if (value == "bursty-waves") {
+        out = TrafficDistribution::BurstyWaves;
         return true;
     }
     return false;
