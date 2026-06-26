@@ -14,6 +14,7 @@ add_executable(test_unit_actor
     test_actor_directory.cpp
     test_quarantine_reason.cpp
     test_stream_handle.cpp
+    test_stream_sender_actor.cpp
     routing/test_routing_logic.cpp
     routing/test_pool_router.cpp
     routing/test_group_router.cpp

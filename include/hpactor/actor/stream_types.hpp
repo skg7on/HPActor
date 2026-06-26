@@ -64,4 +64,20 @@ struct StreamErrorPayload {
     std::string description;
 };
 
+// ── Wire-protocol TypeTags (internal, used between StreamSender/Receiver) ────
+
+/// \brief Wire frame: StreamDataFrame (sender → receiver data chunk).
+inline constexpr TypeTag StreamDataTag = make_subsystem_tag(0x84);
+
+/// \brief Wire frame: StreamAckFrame (receiver → sender credit ack).
+inline constexpr TypeTag StreamAckTag = make_subsystem_tag(0x85);
+
+/// \brief Wire frame: StreamCloseFrame (graceful close).
+inline constexpr TypeTag StreamCloseTag = make_subsystem_tag(0x86);
+
+/// \brief Wire frame: StreamErrorFrame (stream error).
+/// \note Distinct from the user-facing \c StreamErrorTag (0x83),
+///       which delivers a \c StreamErrorPayload to the target actor.
+inline constexpr TypeTag StreamWireErrorTag = make_subsystem_tag(0x87);
+
 } // namespace hpactor::stream
