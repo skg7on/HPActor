@@ -43,6 +43,7 @@ enum class FaultDomain : uint8_t {
     kTracing = 12,     ///< Distributed tracing span start, finish, and drain.
     kMetrics = 13,     ///< Metrics aggregation and event processing.
     kPassivation = 14, ///< Actor passivation, reactivation, and snapshot I/O.
+    kStream = 15, ///< Stream session open, data, ack, close, and error paths.
 };
 
 /// \brief Convert a \c FaultDomain value to its enumerator name.
@@ -82,6 +83,8 @@ constexpr std::string_view to_string(FaultDomain d) noexcept {
             return "kMetrics";
         case FaultDomain::kPassivation:
             return "kPassivation";
+        case FaultDomain::kStream:
+            return "kStream";
     }
     return "kUnknown";
 }
