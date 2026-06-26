@@ -62,26 +62,30 @@ enum class MetricEventType : uint8_t {
     kRateLimitBlocked = 35,   ///< Message deferred by actor rate limiter.
     kAdmissionRejected = 36,  ///< Message rejected by admission policy.
     kAdmissionDLQRouted = 37, ///< Message rerouted to DLQ by admission policy.
-    kPerSenderBucketCount = 38, ///< Number of active per-sender buckets.
-    kAskSent = 39,              ///< An ask request was sent (local or remote).
-    kAskCompleted = 40,         ///< An ask completed successfully.
-    kAskTimeout = 41,           ///< An ask timed out (per-attempt).
-    kAskExpired = 42,           ///< An ask's overall deadline expired.
-    kAskRetry = 43,             ///< An ask was retried.
-    kAskCancelled = 44,         ///< An ask was cancelled by the caller.
-    kDeliveryResult = 45,       ///< Delivery result emitted from try_send /
-                                ///< try_reply / deliver_with_result.
-                                ///< \c code carries DeliveryStatus value.
-    kReliableTracked = 46,      ///< PendingSend added to outbound tracker.
-    kReliableAckReceived = 47,  ///< AckFrame processed; code carries
-                                ///< DeliveryStatus.
-    kReliableNackReceived = 48, ///< NackFrame processed; code carries
-                                ///< DeliveryStatus.
-    kReliableRetry = 49,        ///< Frame re-sent on retry; code carries
-                                ///< attempt_number.
-    kReliableExhausted = 50,    ///< Retries exhausted; code carries
-                                ///< total_attempts.
-    kReliableCancelled = 51,    ///< DeliveryReceipt::cancel() called.
+    kPerSenderBucketCount = 38,  ///< Number of active per-sender buckets.
+    kAskSent = 39,               ///< An ask request was sent (local or remote).
+    kAskCompleted = 40,          ///< An ask completed successfully.
+    kAskTimeout = 41,            ///< An ask timed out (per-attempt).
+    kAskExpired = 42,            ///< An ask's overall deadline expired.
+    kAskRetry = 43,              ///< An ask was retried.
+    kAskCancelled = 44,          ///< An ask was cancelled by the caller.
+    kDeliveryResult = 45,        ///< Delivery result emitted from try_send /
+                                 ///< try_reply / deliver_with_result.
+                                 ///< \c code carries DeliveryStatus value.
+    kReliableTracked = 46,       ///< PendingSend added to outbound tracker.
+    kReliableAckReceived = 47,   ///< AckFrame processed; code carries
+                                 ///< DeliveryStatus.
+    kReliableNackReceived = 48,  ///< NackFrame processed; code carries
+                                 ///< DeliveryStatus.
+    kReliableRetry = 49,         ///< Frame re-sent on retry; code carries
+                                 ///< attempt_number.
+    kReliableExhausted = 50,     ///< Retries exhausted; code carries
+                                 ///< total_attempts.
+    kReliableCancelled = 51,     ///< DeliveryReceipt::cancel() called.
+    kBatchFrameReceived = 52,    ///< A batch frame was received.
+    kBatchMessagesReceived = 53, ///< Total messages received via batch frames.
+    kBatchFrameSent = 54,        ///< A batch frame was sent.
+    kBatchMessagesSent = 55,     ///< Total messages sent via batch frames.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

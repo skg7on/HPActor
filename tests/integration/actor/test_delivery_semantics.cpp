@@ -232,10 +232,13 @@ TEST(RemoteDeliveryRoundTripTest, DeliverRemoteAccepted) {
     ActorAddress sender_addr{endpoint_ops::parse_endpoint("127.0.0.1:9001"),
                              ActorType{0}, ActorId{1}, 0};
     net::WireFrame frame;
-    net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
-    net::to_proto(frame.pb_frame.mutable_receiver(), target.address());
-    frame.pb_frame.set_type_tag(static_cast<uint32_t>(TypeTag::User));
-    frame.pb_frame.set_message_id(1);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                  sender_addr);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  target.address());
+    frame.pb_envelope.mutable_data_frame()->set_type_tag(
+        static_cast<uint32_t>(TypeTag::User));
+    frame.pb_envelope.mutable_data_frame()->set_message_id(1);
 
     // Deliver the remote frame — this exercises the full remote ingress
     // path and should result in the message being enqueued.

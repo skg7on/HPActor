@@ -18,6 +18,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
@@ -204,6 +205,65 @@ void ActorContext::send_edf(ActorAddress target, TypedMessage msg,
 
     msg.set_sender_address(owner_.address());
     sys->deliver_local_edf(target.id, std::move(msg), deadline_ns, priority);
+}
+
+mailbox::DeliveryResult
+ActorContext::send_batch(ActorId target, std::vector<TypedMessage> msgs,
+                         mailbox::DeliveryOptions options) {
+    if (msgs.empty()) {
+        ActorAddress addr;
+        addr.id = target;
+        return {mailbox::DeliveryStatus::Accepted, addr, MessageId{0}, 0};
+    }
+
+    // Validate system pointer before mutating messages
+    auto* system = owner_ ? &owner_.get()->system() : system_;
+    if (system == nullptr) {
+        ActorAddress addr;
+        addr.id = target;
+        return {mailbox::DeliveryStatus::NoRoute, addr, MessageId{0}, 0};
+    }
+
+    // Single-pass: stamp sender identity and inject trace context
+    bool do_trace = system->trace_manager() != nullptr;
+    bool create_roots =
+        do_trace &&
+        system->trace_manager()->config().create_roots_for_actor_context_sends;
+    for (auto& msg : msgs) {
+        if (owner_) {
+            msg.set_sender_address(owner_.address());
+        }
+        if (do_trace) {
+            system->trace_manager()->inject_message_context(msg, this, create_roots);
+        }
+    }
+
+    // Check if target is local via mailbox lookup
+    auto* mailbox = system->get_mailbox(target);
+    if (mailbox != nullptr) {
+        // Local fast path: bypass DeliveryPipeline.
+        // TODO(MSG-007): should route through
+        // DeliveryPipeline::try_deliver_batch() when that entry point is
+        // implemented for circuit breaker / dedup / TTL.
+        mailbox::MailboxEnvelopeMeta meta;
+        if (owner_) {
+            meta.sender = owner_.address();
+        }
+        // Account for byte-capacity enforcement
+        size_t total_bytes = 0;
+        for (const auto& msg : msgs) {
+            total_bytes += msg.payload().size();
+        }
+        meta.estimated_bytes = total_bytes;
+        auto result = mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
+        ActorAddress target_addr(system->endpoint(), 0, target, 0);
+        return result.to_delivery_result(target_addr);
+    }
+
+    // Remote target: delegate to ActorProxy
+    ActorAddress target_addr(system->endpoint(), 0, target, 0);
+    ActorProxy proxy(target_addr, system);
+    return proxy.try_send_batch(target_addr, std::move(msgs), options);
 }
 
 void ActorContext::reply(TypedMessage msg) {
