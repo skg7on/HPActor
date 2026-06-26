@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 namespace {
@@ -20,7 +21,10 @@ using namespace hpactor;
 class DurableStateTest : public ::testing::Test {
   protected:
     void SetUp() override {
-        temp_dir_ = std::filesystem::temp_directory_path() / "hpactor_dur_test";
+        // Use a per-process subdirectory to prevent concurrent ctest
+        // invocations from clobbering each other's temp files.
+        auto base = std::filesystem::temp_directory_path() / "hpactor_dur_test";
+        temp_dir_ = base / ("test_" + std::to_string(::getpid()));
         std::filesystem::create_directories(temp_dir_);
     }
 
