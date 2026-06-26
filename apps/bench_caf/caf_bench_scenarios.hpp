@@ -15,12 +15,14 @@
 #pragma once
 
 #include "actors/actor_creation_actor.hpp"
+#include "actors/mailbox_n1_actor.hpp"
 #include "caf_bench_config.hpp"
 #include "caf_bench_metrics.hpp"
 #include "caf_bench_sampler.hpp"
 
 #include <hpactor/actor/actor_system.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <thread>
 
@@ -72,6 +74,60 @@ run_actor_creation_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     metrics.completed = shutdown.has_value() &&
                         metrics.actors_created == expected &&
                         metrics.actors_completed == expected;
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+inline TrialMetrics
+run_mailbox_n1_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    auto dims = mailbox_n1_dimensions_for_preset(cfg.preset);
+    uint64_t expected =
+        static_cast<uint64_t>(dims.senders) * dims.messages_per_sender;
+
+    // Size the mailbox to hold all expected messages so the bounded
+    // admission policy does not reject before the receiver drains them.
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.mailbox.default_capacity =
+        static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
+
+    MailboxN1Counters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    ActorSystem system(system_cfg);
+    auto receiver = system.spawn<MailboxN1ReceiverActor>(&counters);
+
+    for (uint32_t i = 0; i < dims.senders; ++i) {
+        auto sender = system.spawn<MailboxN1SenderActor>(
+            &counters, receiver.address(), i, dims.messages_per_sender,
+            cfg.message_size_bytes, cfg.seed + i);
+        system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
+    }
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (counters.received.load(std::memory_order_acquire) < expected &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.total_sent = counters.sent.load();
+    metrics.total_received = counters.received.load();
+    metrics.total_dropped = 0;
+    metrics.completed = shutdown.has_value() && metrics.total_sent == expected &&
+                        metrics.total_received == expected;
+    metrics.throughput_msgps =
+        throughput(metrics.total_received, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
     return metrics;
