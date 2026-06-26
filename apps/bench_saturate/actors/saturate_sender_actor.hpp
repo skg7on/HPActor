@@ -56,6 +56,8 @@ class SaturateSenderActor : public EventBasedActor {
           receiver_addrs_(receiver_addrs), sender_index_(sender_index),
           epoch_start_(std::chrono::steady_clock::now()) {
         add_fast_tag(SendTickTag);
+        add_fast_tag(RateChangeTag);
+        add_fast_tag(ThroughputSampleTag);
         become(make_behavior());
     }
 
@@ -189,6 +191,14 @@ class SaturateSenderActor : public EventBasedActor {
                 now.time_since_epoch())
                 .count());
 
+        // Pre-compute common envelope metadata shared by all messages
+        // in the batch.  Only type_tag is needed for routing — sender,
+        // priority, and deadline use defaults.
+        mailbox::MailboxEnvelopeMeta meta;
+        meta.type_tag = LoadMessageTag;
+        meta.priority = 0;
+        meta.deadline_ns = INT64_MAX;
+
         // When all messages in the batch go to the same receiver
         // (single active receiver or round-robin with 1 receiver),
         // use batch enqueue for lower per-message overhead.
@@ -221,10 +231,6 @@ class SaturateSenderActor : public EventBasedActor {
             // Batch-enqueue to the single receiver.
             auto* mbox = home_system().get_mailbox(receiver_addrs_[0].id);
             if (mbox) {
-                mailbox::MailboxEnvelopeMeta meta;
-                meta.type_tag = LoadMessageTag;
-                meta.priority = 0;
-                meta.deadline_ns = INT64_MAX;
                 auto result =
                     mbox->try_push_batch(batch.begin(), batch.end(), meta);
                 sent_count_.fetch_add(kBatchSize, std::memory_order_relaxed);

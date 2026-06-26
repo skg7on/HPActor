@@ -93,6 +93,8 @@ class SaturateCoordinatorActor : public EventBasedActor {
         : EventBasedActor(ctx, sys),
           epoch_start_(std::chrono::steady_clock::now()) {
         build_presets();
+        add_fast_tag(RampTickTag);
+        add_fast_tag(StatsReplyTag);
         become(make_behavior());
     }
 

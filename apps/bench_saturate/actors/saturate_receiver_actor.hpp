@@ -45,6 +45,7 @@ class SaturateReceiverActor : public EventBasedActor {
           receiver_index_(receiver_index),
           epoch_start_(std::chrono::steady_clock::now()) {
         add_fast_tag(LoadMessageTag);
+        add_fast_tag(StatsPollTag);
         become(make_behavior());
     }
 

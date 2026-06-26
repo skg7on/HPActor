@@ -54,7 +54,8 @@ struct ActorDirectoryEntry {
 /// consistent copy under the internal mutex.
 ///
 /// \note Thread safety: All public methods are internally synchronized via
-///       \c std::mutex. Safe to call from any thread.
+///       \c std::shared_mutex (reader-writer lock). Reads may proceed
+///       concurrently; writes are exclusive. Safe to call from any thread.
 class ActorDirectory {
   public:
     /// \brief Allocate a fresh, monotonically increasing actor ID.

@@ -586,6 +586,7 @@ template <typename T> class MPSCActorMailbox {
         update_max_depth();
         update_pressure_state();
 
+#ifndef NDEBUG
         int64_t depth = lanes_.total_depth();
         if (depth > 1024) [[unlikely]] {
             HPACTOR_LOG_WARNING(
@@ -594,6 +595,7 @@ template <typename T> class MPSCActorMailbox {
                 "mailbox depth high",
                 log::field("depth", static_cast<uint64_t>(depth)));
         }
+#endif
 
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
