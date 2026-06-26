@@ -16,6 +16,7 @@
 
 #include "actors/actor_creation_actor.hpp"
 #include "actors/mailbox_n1_actor.hpp"
+#include "actors/mixed_case_actor.hpp"
 #include "caf_bench_config.hpp"
 #include "caf_bench_metrics.hpp"
 #include "caf_bench_sampler.hpp"
@@ -128,6 +129,79 @@ run_mailbox_n1_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                         metrics.total_received == expected;
     metrics.throughput_msgps =
         throughput(metrics.total_received, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+inline TrialMetrics
+run_mixed_case_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    auto dims = mixed_case_dimensions_for_preset(cfg.preset);
+    uint64_t expected_rings = static_cast<uint64_t>(dims.rings) * dims.repetitions;
+    uint64_t expected_cpu = dims.rings;
+    uint64_t expected_hops =
+        static_cast<uint64_t>(dims.rings) * dims.repetitions * dims.token_value;
+
+    MixedCaseCounters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    ActorSystem system(make_bench_actor_config(cfg));
+
+    for (uint32_t r = 0; r < dims.rings; ++r) {
+        std::vector<ActorAddress> nodes;
+        nodes.reserve(dims.ring_size);
+        for (uint32_t i = 0; i < dims.ring_size; ++i) {
+            auto node =
+                system.spawn<MixedRingNodeActor>(&counters, ActorAddress{});
+            nodes.push_back(node.address());
+        }
+
+        for (uint32_t i = 0; i < dims.ring_size; ++i) {
+            auto actor = std::static_pointer_cast<MixedRingNodeActor>(
+                system.get_actor(nodes[i].id));
+            actor->set_next(nodes[(i + 1) % dims.ring_size]);
+        }
+
+        auto cpu = system.spawn<MixedCpuActor>(&counters);
+        system.deliver_local(cpu.id(), make_bench_msg(MixedCpuTaskTag));
+
+        for (uint32_t rep = 0; rep < dims.repetitions; ++rep) {
+            BenchPayloadHeader header;
+            header.sequence = dims.token_value - 1;
+            system.deliver_local(
+                nodes[0].id, make_bench_msg(MixedTokenTag,
+                                            encode_bench_payload(header, 0, rep)));
+        }
+    }
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while ((counters.rings_completed.load(std::memory_order_acquire) < expected_rings ||
+            counters.cpu_tasks_completed.load(std::memory_order_acquire) <
+                expected_cpu) &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.actors_created = counters.actors_created.load();
+    metrics.rings_completed = counters.rings_completed.load();
+    metrics.token_hops = counters.token_hops.load();
+    metrics.cpu_tasks_completed = counters.cpu_tasks_completed.load();
+    metrics.completed = shutdown.has_value() &&
+                        metrics.rings_completed == expected_rings &&
+                        metrics.cpu_tasks_completed == expected_cpu &&
+                        metrics.token_hops == expected_hops;
+    metrics.throughput_msgps = throughput(metrics.token_hops, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
     return metrics;
