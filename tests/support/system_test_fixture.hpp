@@ -23,6 +23,7 @@
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <functional>
@@ -84,7 +85,7 @@ assert_eventually(std::function<bool()> predicate, int deadline_ms = 5000) {
 class CountingActor : public EventBasedActor, public LifecycleActor {
   public:
     std::vector<uint32_t> received_type_ids;
-    int handler_count = 0;
+    std::atomic<int> handler_count{0};
     bool system_init_received = false;
 
     CountingActor(ActorContext* ctx, ActorSystem& sys)

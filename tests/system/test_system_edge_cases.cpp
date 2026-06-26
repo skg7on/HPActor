@@ -26,6 +26,7 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <string>
 
@@ -71,7 +72,7 @@ HPACTOR_REGISTER_ACTOR("EmptyBehaviorActor", EmptyBehaviorActor);
 class SchedulingActor : public EventBasedActor, public LifecycleActor {
   public:
     std::vector<uint32_t> received_tags;
-    int schedule_count = 0;
+    std::atomic<int> schedule_count{0};
 
     SchedulingActor(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys) {
@@ -169,9 +170,10 @@ TEST(SystemEdgeCases, ScheduleWithZeroDelay) {
         raw->context()->schedule(std::chrono::milliseconds(0), std::move(msg));
     EXPECT_NE(handle, AlarmHandle{0});
 
-    // The zero-delay message should be delivered by the live scheduler
+    // Zero-delay messages are delivered by the async timer thread.
+    // Use condition-based polling with a generous CI timeout.
     bool delivered =
-        test::assert_eventually([&]() { return raw->schedule_count >= 1; }, 2000);
+        test::assert_eventually([&]() { return raw->schedule_count >= 1; }, 5000);
     EXPECT_TRUE(delivered);
     EXPECT_GE(raw->schedule_count, 1);
 }
@@ -220,9 +222,10 @@ TEST(SystemEdgeCases, MultipleConcurrentScheduledMessages) {
         EXPECT_NE(handle, AlarmHandle{0});
     }
 
-    // All scheduled messages should be delivered by the live scheduler
+    // Zero-delay scheduled messages are delivered by the async timer
+    // thread.  Use condition-based polling with a generous CI timeout.
     bool delivered = test::assert_eventually(
-        [&]() { return raw->schedule_count >= kNumScheduled; }, 2000);
+        [&]() { return raw->schedule_count >= kNumScheduled; }, 5000);
     EXPECT_TRUE(delivered);
     EXPECT_GE(raw->schedule_count, kNumScheduled);
 }
