@@ -47,6 +47,10 @@ class SaturateCollectorActor : public EventBasedActor {
         : EventBasedActor(ctx, sys),
           epoch_start_(std::chrono::steady_clock::now()) {
         drop_curve_.reserve(1024);
+        add_fast_tag(ThroughputSampleTag);
+        add_fast_tag(LatencySampleTag);
+        add_fast_tag(DropReportTag);
+        add_fast_tag(StatsPollTag);
         become(make_behavior());
     }
 
