@@ -34,6 +34,14 @@ inline TrialMetrics run_one_trial(const CafBenchConfig& cfg, uint32_t trial_inde
             return run_one_to_n_trial(cfg, trial_index);
         case ScenarioKind::TrafficNToNRandom:
             return run_n_to_n_random_trial(cfg, trial_index);
+        case ScenarioKind::TrafficRing:
+            return run_ring_traffic_trial(cfg, trial_index);
+        case ScenarioKind::TrafficPipeline:
+            return run_pipeline_trial(cfg, trial_index);
+        case ScenarioKind::TrafficZipf:
+            return run_zipf_hotspot_trial(cfg, trial_index);
+        case ScenarioKind::TrafficBursty:
+            return run_bursty_waves_trial(cfg, trial_index);
     }
     return run_actor_creation_trial(cfg, trial_index);
 }

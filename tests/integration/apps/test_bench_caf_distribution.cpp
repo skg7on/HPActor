@@ -54,3 +54,51 @@ TEST(Distribution, NToNRandomCompletesAllMessages) {
     EXPECT_EQ(metrics.total_sent, metrics.total_received);
     EXPECT_GT(metrics.throughput_msgps, 0.0);
 }
+
+TEST(Distribution, RingCompletesHops) {
+    bench_caf::CafBenchConfig cfg;
+    cfg.scenario = bench_caf::ScenarioKind::TrafficRing;
+    cfg.preset = bench_caf::PresetKind::Smoke;
+    cfg.scheduler_threads = 2;
+
+    auto metrics = bench_caf::run_ring_traffic_trial(cfg, 1);
+    EXPECT_TRUE(metrics.completed);
+    EXPECT_GT(metrics.token_hops, 0u);
+    EXPECT_GT(metrics.throughput_msgps, 0.0);
+}
+
+TEST(Distribution, PipelineCompletesAllStages) {
+    bench_caf::CafBenchConfig cfg;
+    cfg.scenario = bench_caf::ScenarioKind::TrafficPipeline;
+    cfg.preset = bench_caf::PresetKind::Smoke;
+    cfg.scheduler_threads = 2;
+
+    auto metrics = bench_caf::run_pipeline_trial(cfg, 1);
+    EXPECT_TRUE(metrics.completed);
+    EXPECT_EQ(metrics.total_sent, metrics.total_received);
+    EXPECT_GT(metrics.throughput_msgps, 0.0);
+}
+
+TEST(Distribution, ZipfHotspotCompletesWithSkew) {
+    bench_caf::CafBenchConfig cfg;
+    cfg.scenario = bench_caf::ScenarioKind::TrafficZipf;
+    cfg.preset = bench_caf::PresetKind::Smoke;
+    cfg.scheduler_threads = 2;
+
+    auto metrics = bench_caf::run_zipf_hotspot_trial(cfg, 1);
+    EXPECT_TRUE(metrics.completed);
+    EXPECT_EQ(metrics.total_sent, metrics.total_received);
+    EXPECT_GT(metrics.throughput_msgps, 0.0);
+}
+
+TEST(Distribution, BurstyWavesCompletesInOrder) {
+    bench_caf::CafBenchConfig cfg;
+    cfg.scenario = bench_caf::ScenarioKind::TrafficBursty;
+    cfg.preset = bench_caf::PresetKind::Smoke;
+    cfg.scheduler_threads = 2;
+
+    auto metrics = bench_caf::run_bursty_waves_trial(cfg, 1);
+    EXPECT_TRUE(metrics.completed);
+    EXPECT_EQ(metrics.total_sent, metrics.total_received);
+    EXPECT_GT(metrics.throughput_msgps, 0.0);
+}

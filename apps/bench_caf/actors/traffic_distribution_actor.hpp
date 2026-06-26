@@ -35,6 +35,7 @@ struct DistributionCounters {
     std::atomic<uint64_t> received{0};
     std::atomic<uint64_t> senders_done{0};
     std::atomic<uint64_t> receivers_done{0};
+    std::atomic<uint64_t> token_hops{0};
 };
 
 // ── One-to-One: single sender, single receiver ────────────────
