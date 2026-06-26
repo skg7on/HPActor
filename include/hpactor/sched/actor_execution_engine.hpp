@@ -56,6 +56,10 @@ struct ActorExecutionContext {
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics{nullptr};
     log::Logger* logger{nullptr};
     bool workers_paused{false};
+    /// \brief Override for the default kRequeueBudget (64).  When > 0,
+    ///        this value replaces the compile-time constant.  Useful for
+    ///        benchmarks that want longer continuous actor execution.
+    uint64_t requeue_budget_override{0};
 };
 
 /// \brief Runs one activation of a behavior-based event actor.
