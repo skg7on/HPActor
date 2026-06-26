@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:18:56</td>
+            <td class="headerValue">2026-06-26 03:44:48</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -99,205 +99,214 @@
 <span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;cstdint&gt;</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;functional&gt;</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;mutex&gt;</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;vector&gt;</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : </span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : namespace hpactor::sched {</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :             : /// \brief Hierarchical timer wheel for O(1) timer insert and cancel.</span>
-<span id="L29"><span class="lineNum">      29</span>                 :             : ///</span>
-<span id="L30"><span class="lineNum">      30</span>                 :             : /// Modeled after the Linux kernel timer wheel.  The wheel has multiple</span>
-<span id="L31"><span class="lineNum">      31</span>                 :             : /// levels, each with a different granularity, enabling efficient</span>
-<span id="L32"><span class="lineNum">      32</span>                 :             : /// management of timers from 1 ms to hours:</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : ///</span>
-<span id="L34"><span class="lineNum">      34</span>                 :             : /// | Level | Resolution | Buckets | Coverage       |</span>
-<span id="L35"><span class="lineNum">      35</span>                 :             : /// |-------|------------|---------|----------------|</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : /// | 0     | 1 ms       | 256     | 256 ms         |</span>
-<span id="L37"><span class="lineNum">      37</span>                 :             : /// | 1     | 256 ms     | 256     | ~65.5 s        |</span>
-<span id="L38"><span class="lineNum">      38</span>                 :             : /// | 2     | ~65.5 s    | 256     | ~4.66 hours    |</span>
-<span id="L39"><span class="lineNum">      39</span>                 :             : /// | 3     | ~4.66 h    | 256     | ~49.7 days     |</span>
-<span id="L40"><span class="lineNum">      40</span>                 :             : ///</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             : /// Higher-level buckets are cascaded down to lower levels as time</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             : /// advances so that timers eventually reach level 0 and fire.</span>
-<span id="L43"><span class="lineNum">      43</span>                 :             : ///</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : /// \note **Thread safety**: \c schedule(), \c schedule_at(), \c cancel(),</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : ///       and \c advance() are safe to call from any thread.  All bucket</span>
-<span id="L46"><span class="lineNum">      46</span>                 :             : ///       operations are serialized by an internal \c std::mutex.</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             : ///       Callbacks registered via \c schedule() are fired on the calling</span>
-<span id="L48"><span class="lineNum">      48</span>                 :             : ///       thread of \c advance() **without** the internal mutex held, so</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             : ///       callbacks may safely call back into \c schedule() or \c cancel()</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : ///       without deadlock (the callback acquires the mutex as a new owner;</span>
-<span id="L51"><span class="lineNum">      51</span>                 :             : ///       recursion is not required).</span>
-<span id="L52"><span class="lineNum">      52</span>                 :             : ///</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             : /// \note **Advance cap**: \c advance() caps each time step to at most</span>
-<span id="L54"><span class="lineNum">      54</span>                 :             : ///       100 ms to prevent a positive feedback loop where slow callback</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             : ///       execution causes the timer thread to fall behind, producing</span>
-<span id="L56"><span class="lineNum">      56</span>                 :             : ///       larger time windows and exponentially more callbacks in</span>
-<span id="L57"><span class="lineNum">      57</span>                 :             : ///       successive calls.</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             : class TimingWheel {</span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :   public:</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             :     /// \brief Callback type invoked when a scheduled timer expires.</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             :     ///</span>
-<span id="L62"><span class="lineNum">      62</span>                 :             :     /// \note Callbacks are fired on the thread that calls \c advance().</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             :     using TimerCallback = std::function&lt;void()&gt;;</span>
-<span id="L64"><span class="lineNum">      64</span>                 :             : </span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :     /// \brief A single entry in the timing wheel.</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :     struct Timer : mem::SlabAllocated&lt;Timer&gt; {</span>
-<span id="L67"><span class="lineNum">      67</span>                 :             :         int64_t expire_ns;      ///&lt; Absolute expiration time (monotonic</span>
-<span id="L68"><span class="lineNum">      68</span>                 :             :                                 ///&lt; clock, nanoseconds).</span>
-<span id="L69"><span class="lineNum">      69</span>                 :             :         uint64_t id;            ///&lt; Unique timer identifier.</span>
-<span id="L70"><span class="lineNum">      70</span>                 :             :         TimerCallback callback; ///&lt; Callback to invoke on expiry.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :             :     };</span>
-<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
-<span id="L73"><span class="lineNum">      73</span>                 :             :     /// \brief Construct a timing wheel.</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             :     /// \param[in] tick_ns Duration of one tick at level 0, in nanoseconds.</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             :     ///                    Default is 1 ms (1'000'000 ns).</span>
-<span id="L76"><span class="lineNum">      76</span>                 :             :     /// \param[in] num_levels Number of hierarchical levels.  Default is 4.</span>
-<span id="L77"><span class="lineNum">      77</span>                 :             :     explicit TimingWheel(int64_t tick_ns = 1'000'000, uint32_t num_levels = 4);</span>
-<span id="L78"><span class="lineNum">      78</span>                 :             : </span>
-<span id="L79"><span class="lineNum">      79</span>                 :             :     /// \brief Destructor — deletes all pending timers.</span>
-<span id="L80"><span class="lineNum">      80</span>                 :             :     ///</span>
-<span id="L81"><span class="lineNum">      81</span>                 :             :     /// \warning Pending timer callbacks are **not** invoked.  Callers</span>
-<span id="L82"><span class="lineNum">      82</span>                 :             :     ///          that need graceful cancellation should call \c cancel()</span>
-<span id="L83"><span class="lineNum">      83</span>                 :             :     ///          on every outstanding timer before destroying the wheel.</span>
-<span id="L84"><span class="lineNum">      84</span>                 :             :     ~TimingWheel();</span>
-<span id="L85"><span class="lineNum">      85</span>                 :             : </span>
-<span id="L86"><span class="lineNum">      86</span>                 :             :     TimingWheel(const TimingWheel&amp;) = delete;</span>
-<span id="L87"><span class="lineNum">      87</span>                 :             :     TimingWheel&amp; operator=(const TimingWheel&amp;) = delete;</span>
-<span id="L88"><span class="lineNum">      88</span>                 :             :     TimingWheel(TimingWheel&amp;&amp;) = delete;</span>
-<span id="L89"><span class="lineNum">      89</span>                 :             :     TimingWheel&amp; operator=(TimingWheel&amp;&amp;) = delete;</span>
-<span id="L90"><span class="lineNum">      90</span>                 :             : </span>
-<span id="L91"><span class="lineNum">      91</span>                 :             :     /// \brief Schedule a one-shot timer.</span>
-<span id="L92"><span class="lineNum">      92</span>                 :             :     ///</span>
-<span id="L93"><span class="lineNum">      93</span>                 :             :     /// \param[in] delay_ns Relative delay in nanoseconds from the wheel's</span>
-<span id="L94"><span class="lineNum">      94</span>                 :             :     ///                     current time (see \c current_time()).</span>
-<span id="L95"><span class="lineNum">      95</span>                 :             :     /// \param[in] callback Callback to invoke when the timer expires.</span>
-<span id="L96"><span class="lineNum">      96</span>                 :             :     /// \return A unique timer identifier suitable for \c cancel().</span>
-<span id="L97"><span class="lineNum">      97</span>                 :             :     ///         Returns 0 if the fault-injection site</span>
-<span id="L98"><span class="lineNum">      98</span>                 :             :     ///         \c hpactor.timing_wheel.schedule.fail fires.</span>
-<span id="L99"><span class="lineNum">      99</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex.</span>
-<span id="L100"><span class="lineNum">     100</span>                 :             :     uint64_t schedule(int64_t delay_ns, TimerCallback callback);</span>
-<span id="L101"><span class="lineNum">     101</span>                 :             : </span>
-<span id="L102"><span class="lineNum">     102</span>                 :             :     /// \brief Schedule a one-shot timer at an absolute expiration time.</span>
-<span id="L103"><span class="lineNum">     103</span>                 :             :     ///</span>
-<span id="L104"><span class="lineNum">     104</span>                 :             :     /// \param[in] expire_ns Absolute expiration time in nanoseconds</span>
-<span id="L105"><span class="lineNum">     105</span>                 :             :     ///                      (monotonic clock).</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             :     /// \param[in] callback Callback to invoke when the timer expires.</span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :     /// \return A unique timer identifier suitable for \c cancel().</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex.</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             :     uint64_t schedule_at(int64_t expire_ns, TimerCallback callback);</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     /// \brief Cancel and destroy a previously scheduled timer.</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     ///</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     /// The timer is removed from the wheel and its memory is freed.</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :     /// Its callback is **not** invoked.</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;unordered_map&gt;</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;vector&gt;</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : </span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : namespace hpactor::sched {</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : </span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : /// \brief Hierarchical timer wheel for O(1) timer insert and cancel.</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : ///</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : /// Modeled after the Linux kernel timer wheel.  The wheel has multiple</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : /// levels, each with a different granularity, enabling efficient</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : /// management of timers from 1 ms to hours:</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : ///</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : /// | Level | Resolution | Buckets | Coverage       |</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             : /// |-------|------------|---------|----------------|</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             : /// | 0     | 1 ms       | 256     | 256 ms         |</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             : /// | 1     | 256 ms     | 256     | ~65.5 s        |</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : /// | 2     | ~65.5 s    | 256     | ~4.66 hours    |</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : /// | 3     | ~4.66 h    | 256     | ~49.7 days     |</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : ///</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : /// Higher-level buckets are cascaded down to lower levels as time</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : /// advances so that timers eventually reach level 0 and fire.</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : ///</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : /// \note **Thread safety**: \c schedule(), \c schedule_at(), \c cancel(),</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : ///       and \c advance() are safe to call from any thread.  All bucket</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             : ///       operations are serialized by an internal \c std::mutex.</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             : ///       Callbacks registered via \c schedule() are fired on the calling</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : ///       thread of \c advance() **without** the internal mutex held, so</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : ///       callbacks may safely call back into \c schedule() or \c cancel()</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : ///       without deadlock (the callback acquires the mutex as a new owner;</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : ///       recursion is not required).</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : ///</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             : /// \note **Advance cap**: \c advance() caps each time step to at most</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             : ///       100 ms to prevent a positive feedback loop where slow callback</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : ///       execution causes the timer thread to fall behind, producing</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : ///       larger time windows and exponentially more callbacks in</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             : ///       successive calls.</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : class TimingWheel {</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :   public:</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :     /// \brief Callback type invoked when a scheduled timer expires.</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :     ///</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :     /// \note Callbacks are fired on the thread that calls \c advance().</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             :     using TimerCallback = std::function&lt;void()&gt;;</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     /// \brief A single entry in the timing wheel.</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     struct Timer : mem::SlabAllocated&lt;Timer&gt; {</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :         int64_t expire_ns;      ///&lt; Absolute expiration time (monotonic</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :                                 ///&lt; clock, nanoseconds).</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :         uint64_t id;            ///&lt; Unique timer identifier.</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :         TimerCallback callback; ///&lt; Callback to invoke on expiry.</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :         uint32_t level{0};      ///&lt; Which wheel level this timer resides in.</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :         uint32_t bucket{0};     ///&lt; Which bucket within that level.</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     };</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             : </span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     /// \brief Construct a timing wheel.</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :     /// \param[in] tick_ns Duration of one tick at level 0, in nanoseconds.</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     ///                    Default is 1 ms (1'000'000 ns).</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :     /// \param[in] num_levels Number of hierarchical levels.  Default is 4.</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     explicit TimingWheel(int64_t tick_ns = 1'000'000, uint32_t num_levels = 4);</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : </span>
+<span id="L82"><span class="lineNum">      82</span>                 :             :     /// \brief Destructor — deletes all pending timers.</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     ///</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :     /// \warning Pending timer callbacks are **not** invoked.  Callers</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :     ///          that need graceful cancellation should call \c cancel()</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             :     ///          on every outstanding timer before destroying the wheel.</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             :     ~TimingWheel();</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : </span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :     TimingWheel(const TimingWheel&amp;) = delete;</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :     TimingWheel&amp; operator=(const TimingWheel&amp;) = delete;</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             :     TimingWheel(TimingWheel&amp;&amp;) = delete;</span>
+<span id="L92"><span class="lineNum">      92</span>                 :             :     TimingWheel&amp; operator=(TimingWheel&amp;&amp;) = delete;</span>
+<span id="L93"><span class="lineNum">      93</span>                 :             : </span>
+<span id="L94"><span class="lineNum">      94</span>                 :             :     /// \brief Schedule a one-shot timer.</span>
+<span id="L95"><span class="lineNum">      95</span>                 :             :     ///</span>
+<span id="L96"><span class="lineNum">      96</span>                 :             :     /// \param[in] delay_ns Relative delay in nanoseconds from the wheel's</span>
+<span id="L97"><span class="lineNum">      97</span>                 :             :     ///                     current time (see \c current_time()).</span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :     /// \param[in] callback Callback to invoke when the timer expires.</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :     /// \return A unique timer identifier suitable for \c cancel().</span>
+<span id="L100"><span class="lineNum">     100</span>                 :             :     ///         Returns 0 if the fault-injection site</span>
+<span id="L101"><span class="lineNum">     101</span>                 :             :     ///         \c hpactor.timing_wheel.schedule.fail fires.</span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex.</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :     uint64_t schedule(int64_t delay_ns, TimerCallback callback);</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             : </span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :     /// \brief Schedule a one-shot timer at an absolute expiration time.</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :     ///</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :     /// \param[in] expire_ns Absolute expiration time in nanoseconds</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :     ///                      (monotonic clock).</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :     /// \param[in] callback Callback to invoke when the timer expires.</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     /// \return A unique timer identifier suitable for \c cancel().</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex.</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     uint64_t schedule_at(int64_t expire_ns, TimerCallback callback);</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     /// \brief Cancel and destroy a previously scheduled timer.</span>
 <span id="L115"><span class="lineNum">     115</span>                 :             :     ///</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :     /// \param[in] timer_id Timer identifier returned by \c schedule() or</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :     ///                     \c schedule_at().</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             :     /// \retval true  Timer was found, removed, and deleted.</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             :     /// \retval false Timer was not found (already fired, cancelled, or</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             :     ///               invalid \p timer_id).</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex.</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             :     bool cancel(uint64_t timer_id);</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             : </span>
-<span id="L124"><span class="lineNum">     124</span>                 :             :     /// \brief Advance the wheel to the given absolute time.</span>
-<span id="L125"><span class="lineNum">     125</span>                 :             :     ///</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             :     /// Processes all buckets that have become due between the last</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :     /// advance time and \p now_ns.  Expired timers are collected under</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :     /// the internal mutex; their callbacks are invoked **after** the</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :     /// mutex is released so that callbacks may safely call \c schedule()</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             :     /// or \c cancel() without blocking other threads on the mutex.</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     ///</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :     /// Each advance step is capped to at most 100 ms.  If \p now_ns</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :     /// exceeds the last advance time by more than 100 ms the wheel</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     /// advances by exactly 100 ms; the remaining time is covered by</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :     /// subsequent calls.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     ///</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :     /// \param[in] now_ns Current absolute time in nanoseconds (monotonic</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             :     ///                   clock).  Must be greater than the last \p now_ns</span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     ///                   passed to this function.  Capped internally at</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     ///                   \c old_time + 100ms.</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :     /// \return The number of timer callbacks that were invoked.</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex only while</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :     ///       collecting expired timers; releases it before firing</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             :     ///       callbacks.</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     uint32_t advance(int64_t now_ns);</span>
-<span id="L146"><span class="lineNum">     146</span>                 :             : </span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     /// \brief Current time according to the wheel.</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     ///</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :     /// Updated by \c advance().  Used as the base for relative delays</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             :     /// passed to \c schedule().</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     /// The timer is removed from the wheel and its memory is freed.</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     /// Its callback is **not** invoked.</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     ///</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             :     /// \param[in] timer_id Timer identifier returned by \c schedule() or</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     ///                     \c schedule_at().</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :     /// \retval true  Timer was found, removed, and deleted.</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :     /// \retval false Timer was not found (already fired, cancelled, or</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :     ///               invalid \p timer_id).</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex.</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :     bool cancel(uint64_t timer_id);</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             : </span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :     /// \brief Advance the wheel to the given absolute time.</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     ///</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :     /// Processes all buckets that have become due between the last</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :     /// advance time and \p now_ns.  Expired timers are collected under</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             :     /// the internal mutex; their callbacks are invoked **after** the</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     /// mutex is released so that callbacks may safely call \c schedule()</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     /// or \c cancel() without blocking other threads on the mutex.</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     /// Each advance step is capped to at most 100 ms.  If \p now_ns</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     /// exceeds the last advance time by more than 100 ms the wheel</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     /// advances by exactly 100 ms; the remaining time is covered by</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     /// subsequent calls.</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :     ///</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     /// \param[in] now_ns Current absolute time in nanoseconds (monotonic</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     ///                   clock).  Must be greater than the last \p now_ns</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :     ///                   passed to this function.  Capped internally at</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     ///                   \c old_time + 100ms.</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     /// \return The number of timer callbacks that were invoked.</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex only while</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     ///       collecting expired timers; releases it before firing</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     ///       callbacks.</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     uint32_t advance(int64_t now_ns);</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             : </span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     /// \brief Current time according to the wheel.</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     ///</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             :     /// \return The last \p now_ns value (capped) passed to \c advance().</span>
-<span id="L153"><span class="lineNum">     153</span>                 :             :     /// \note Lock-free.  Safe to call from any thread.</span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC tlaBgGNC">          35 :     int64_t current_time() const {</span></span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          70 :         return current_time_.load(std::memory_order_relaxed);</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :     }</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
-<span id="L158"><span class="lineNum">     158</span>                 :             :     /// \brief Check whether the wheel has no pending timers.</span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :     ///</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             :     /// \retval true  All buckets at every level are empty.</span>
-<span id="L161"><span class="lineNum">     161</span>                 :             :     /// \retval false At least one pending timer exists.</span>
-<span id="L162"><span class="lineNum">     162</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex for a consistent</span>
-<span id="L163"><span class="lineNum">     163</span>                 :             :     ///       snapshot.  The result may be stale by the time the caller</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             :     ///       observes it.</span>
-<span id="L165"><span class="lineNum">     165</span>                 :             :     bool empty() const;</span>
-<span id="L166"><span class="lineNum">     166</span>                 :             : </span>
-<span id="L167"><span class="lineNum">     167</span>                 :             :     /// \brief Return the earliest timer expiration time, or INT64_MAX if empty.</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             :     ///</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     /// \return The minimum expiration time of all pending timers, or</span>
-<span id="L170"><span class="lineNum">     170</span>                 :             :     ///         \c INT64_MAX if no timers are pending.</span>
-<span id="L171"><span class="lineNum">     171</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex for a consistent</span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     ///       snapshot.  The result may be stale by the time the caller</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             :     ///       observes it.</span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :     int64_t next_deadline() const;</span>
-<span id="L175"><span class="lineNum">     175</span>                 :             : </span>
-<span id="L176"><span class="lineNum">     176</span>                 :             :     /// \brief Number of pending timers.</span>
-<span id="L177"><span class="lineNum">     177</span>                 :             :     ///</span>
-<span id="L178"><span class="lineNum">     178</span>                 :             :     /// Sums the size of every bucket at every level.</span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :     ///</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :     /// \return Total pending timer count across all buckets.</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex for a consistent</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :     ///       snapshot.  The count may be stale immediately after the</span>
-<span id="L183"><span class="lineNum">     183</span>                 :             :     ///       call returns.</span>
-<span id="L184"><span class="lineNum">     184</span>                 :             :     size_t size() const;</span>
-<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
-<span id="L186"><span class="lineNum">     186</span>                 :             :   private:</span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :     struct WheelLevel {</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :         std::vector&lt;std::vector&lt;Timer*&gt;&gt; buckets;</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             :         uint32_t num_buckets;</span>
-<span id="L190"><span class="lineNum">     190</span>                 :             :         uint32_t mask;</span>
-<span id="L191"><span class="lineNum">     191</span>                 :             :     };</span>
-<span id="L192"><span class="lineNum">     192</span>                 :             : </span>
-<span id="L193"><span class="lineNum">     193</span>                 :             :     uint64_t add_timer_internal(int64_t expire_ns, TimerCallback callback);</span>
-<span id="L194"><span class="lineNum">     194</span>                 :             :     void insert_timer(Timer* timer);</span>
-<span id="L195"><span class="lineNum">     195</span>                 :             :     Timer* remove_timer(uint64_t timer_id);</span>
-<span id="L196"><span class="lineNum">     196</span>                 :             : </span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :     void recompute_min_deadline();</span>
-<span id="L198"><span class="lineNum">     198</span>                 :             : </span>
-<span id="L199"><span class="lineNum">     199</span>                 :             :     int64_t tick_ns_;</span>
-<span id="L200"><span class="lineNum">     200</span>                 :             :     uint32_t num_levels_;</span>
-<span id="L201"><span class="lineNum">     201</span>                 :             :     std::vector&lt;WheelLevel&gt; levels_;</span>
-<span id="L202"><span class="lineNum">     202</span>                 :             :     std::vector&lt;int64_t&gt; level_ranges_; ///&lt; Precomputed range per level.</span>
-<span id="L203"><span class="lineNum">     203</span>                 :             : </span>
-<span id="L204"><span class="lineNum">     204</span>                 :             :     std::atomic&lt;int64_t&gt; current_time_{0};</span>
-<span id="L205"><span class="lineNum">     205</span>                 :             :     uint64_t next_timer_id_{1};</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :     /// Updated by \c advance().  Used as the base for relative delays</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     /// passed to \c schedule().</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :     ///</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :     /// \return The last \p now_ns value (capped) passed to \c advance().</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     /// \note Lock-free.  Safe to call from any thread.</span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC tlaBgGNC">          36 :     int64_t current_time() const {</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">          72 :         return current_time_.load(std::memory_order_relaxed);</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :     }</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             : </span>
+<span id="L161"><span class="lineNum">     161</span>                 :             :     /// \brief Check whether the wheel has no pending timers.</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :     ///</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             :     /// \retval true  All buckets at every level are empty.</span>
+<span id="L164"><span class="lineNum">     164</span>                 :             :     /// \retval false At least one pending timer exists.</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex for a consistent</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :     ///       snapshot.  The result may be stale by the time the caller</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             :     ///       observes it.</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     bool empty() const;</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             : </span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :     /// \brief Return the earliest timer expiration time, or INT64_MAX if empty.</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     ///</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :     /// \return The minimum expiration time of all pending timers, or</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :     ///         \c INT64_MAX if no timers are pending.</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex for a consistent</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     ///       snapshot.  The result may be stale by the time the caller</span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :     ///       observes it.</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :     int64_t next_deadline() const;</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             : </span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     /// \brief Number of pending timers.</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     ///</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     /// Sums the size of every bucket at every level.</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :     ///</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     /// \return Total pending timer count across all buckets.</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     /// \note Thread-safe.  Acquires the internal mutex for a consistent</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             :     ///       snapshot.  The count may be stale immediately after the</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     ///       call returns.</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             :     size_t size() const;</span>
+<span id="L188"><span class="lineNum">     188</span>                 :             : </span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :   private:</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             :     struct WheelLevel {</span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :         std::vector&lt;std::vector&lt;Timer*&gt;&gt; buckets;</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             :         uint32_t num_buckets;</span>
+<span id="L193"><span class="lineNum">     193</span>                 :             :         uint32_t mask;</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             :     };</span>
+<span id="L195"><span class="lineNum">     195</span>                 :             : </span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     uint64_t add_timer_internal(int64_t expire_ns, TimerCallback callback);</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :     void insert_timer(Timer* timer);</span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :     Timer* remove_timer(uint64_t timer_id);</span>
+<span id="L199"><span class="lineNum">     199</span>                 :             : </span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :     void recompute_min_deadline();</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             : </span>
+<span id="L202"><span class="lineNum">     202</span>                 :             :     int64_t tick_ns_;</span>
+<span id="L203"><span class="lineNum">     203</span>                 :             :     uint32_t num_levels_;</span>
+<span id="L204"><span class="lineNum">     204</span>                 :             :     std::vector&lt;WheelLevel&gt; levels_;</span>
+<span id="L205"><span class="lineNum">     205</span>                 :             :     std::vector&lt;int64_t&gt; level_ranges_; ///&lt; Precomputed range per level.</span>
 <span id="L206"><span class="lineNum">     206</span>                 :             : </span>
-<span id="L207"><span class="lineNum">     207</span>                 :             :     /// Cached minimum deadline across all pending timers.</span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     /// Updated under mutex_ during schedule(), advance(), cancel().</span>
-<span id="L209"><span class="lineNum">     209</span>                 :             :     /// Read lock-free by next_deadline().</span>
-<span id="L210"><span class="lineNum">     210</span>                 :             :     std::atomic&lt;int64_t&gt; min_deadline_{INT64_MAX};</span>
-<span id="L211"><span class="lineNum">     211</span>                 :             : </span>
-<span id="L212"><span class="lineNum">     212</span>                 :             :     /// \brief Protects all bucket operations.</span>
-<span id="L213"><span class="lineNum">     213</span>                 :             :     ///</span>
-<span id="L214"><span class="lineNum">     214</span>                 :             :     /// \c schedule(), \c cancel(), \c advance(), \c empty(), \c size(),</span>
-<span id="L215"><span class="lineNum">     215</span>                 :             :     /// and the destructor acquire this mutex.  Callbacks registered via</span>
-<span id="L216"><span class="lineNum">     216</span>                 :             :     /// \c schedule() are fired by \c advance() **outside** the lock, so</span>
-<span id="L217"><span class="lineNum">     217</span>                 :             :     /// a callback that calls back into \c schedule() or \c cancel()</span>
-<span id="L218"><span class="lineNum">     218</span>                 :             :     /// acquires the mutex as a new owner — recursion is not required.</span>
-<span id="L219"><span class="lineNum">     219</span>                 :             :     mutable std::mutex mutex_;</span>
-<span id="L220"><span class="lineNum">     220</span>                 :             : };</span>
-<span id="L221"><span class="lineNum">     221</span>                 :             : </span>
-<span id="L222"><span class="lineNum">     222</span>                 :             : } // namespace hpactor::sched</span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :     std::atomic&lt;int64_t&gt; current_time_{0};</span>
+<span id="L208"><span class="lineNum">     208</span>                 :             :     uint64_t next_timer_id_{1};</span>
+<span id="L209"><span class="lineNum">     209</span>                 :             : </span>
+<span id="L210"><span class="lineNum">     210</span>                 :             :     /// Cached minimum deadline across all pending timers.</span>
+<span id="L211"><span class="lineNum">     211</span>                 :             :     /// Updated under mutex_ during schedule(), advance(), cancel().</span>
+<span id="L212"><span class="lineNum">     212</span>                 :             :     /// Read lock-free by next_deadline().</span>
+<span id="L213"><span class="lineNum">     213</span>                 :             :     std::atomic&lt;int64_t&gt; min_deadline_{INT64_MAX};</span>
+<span id="L214"><span class="lineNum">     214</span>                 :             : </span>
+<span id="L215"><span class="lineNum">     215</span>                 :             :     /// \brief Protects all bucket operations.</span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :     ///</span>
+<span id="L217"><span class="lineNum">     217</span>                 :             :     /// \c schedule(), \c cancel(), \c advance(), \c empty(), \c size(),</span>
+<span id="L218"><span class="lineNum">     218</span>                 :             :     /// and the destructor acquire this mutex.  Callbacks registered via</span>
+<span id="L219"><span class="lineNum">     219</span>                 :             :     /// \c schedule() are fired by \c advance() **outside** the lock, so</span>
+<span id="L220"><span class="lineNum">     220</span>                 :             :     /// a callback that calls back into \c schedule() or \c cancel()</span>
+<span id="L221"><span class="lineNum">     221</span>                 :             :     /// acquires the mutex as a new owner — recursion is not required.</span>
+<span id="L222"><span class="lineNum">     222</span>                 :             :     mutable std::mutex mutex_;</span>
+<span id="L223"><span class="lineNum">     223</span>                 :             : </span>
+<span id="L224"><span class="lineNum">     224</span>                 :             :     /// \brief O(1) lookup from timer id to Timer pointer.</span>
+<span id="L225"><span class="lineNum">     225</span>                 :             :     ///</span>
+<span id="L226"><span class="lineNum">     226</span>                 :             :     /// Keyed by the base timer id (low 48 bits).  Updated under mutex_</span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :     /// during schedule(), cancel(), advance(), and the destructor.</span>
+<span id="L228"><span class="lineNum">     228</span>                 :             :     std::unordered_map&lt;uint64_t, Timer*&gt; timer_map_;</span>
+<span id="L229"><span class="lineNum">     229</span>                 :             : };</span>
+<span id="L230"><span class="lineNum">     230</span>                 :             : </span>
+<span id="L231"><span class="lineNum">     231</span>                 :             : } // namespace hpactor::sched</span>
         </pre>
               </td>
             </tr>

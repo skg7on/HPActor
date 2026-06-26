@@ -1,0 +1,167 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - HPActor Coverage - include/hpactor/timer/timer_command_queue.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">include/hpactor/timer</a> - timer_command_queue.hpp<span style="font-size: 80%;"> (source / <a href="timer_command_queue.hpp.func-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">HPActor Coverage</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryLo">72.0&nbsp;%</td>
+            <td class="headerCovTableEntry">25</td>
+            <td class="headerCovTableEntry">18</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-06-26 03:44:48</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">2</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            | Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryLo">62.5&nbsp;%</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">5</td>
+          </tr>
+                  <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : // Copyright 2026 HPActor Contributors</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : // SPDX-License-Identifier: Apache-2.0</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : #pragma once</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : </span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;hpactor/timer/timer_node.hpp&gt;</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : </span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : #include &lt;array&gt;</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : #include &lt;atomic&gt;</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : #include &lt;cstddef&gt;</span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : #include &lt;vector&gt;</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : </span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : namespace hpactor::sched {</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : </span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : /// Lock-free bounded MPSC command queue for cross-thread timer operations.</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : ///</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : /// Single consumer (the shard's advance() loop), multiple producers</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : /// (any thread calling schedule_after / cancel_timer).</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : ///</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : /// MPSC protocol: producers CAS-claim a tail slot atomically before writing.</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : /// Only the consumer thread calls drain_all().</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : class TimerCommandQueue {</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             :   public:</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             :     static constexpr size_t kCapacity = 256;</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : </span>
+<span id="L25"><span class="lineNum">      25</span>                 :             :     /// Push a command.  Returns false if the queue is full.</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             :     /// Safe for multiple concurrent producers (CAS-based slot claim).</span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">         271 :     bool try_push(TimerCommand cmd) {</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">         542 :         size_t tail = tail_.load(std::memory_order_relaxed);</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :             :         for (;;) {</span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         271 :             size_t next = (tail + 1) % kCapacity;</span></span>
+<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 270 times"> + </span>]:<span class="tlaGNC">         542 :             if (next == head_.load(std::memory_order_acquire))</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           1 :                 return false; // full</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :             :             // Try to claim slot 'tail' atomically</span>
+<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 270 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         540 :             if (tail_.compare_exchange_weak(tail, next, std::memory_order_release,</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :                                             std::memory_order_relaxed)) {</span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         270 :                 buffer_[tail] = cmd;</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         270 :                 return true;</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :             }</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :             // CAS failed -- another producer claimed this slot; retry with new</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :             // tail</span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         }</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : </span>
+<span id="L44"><span class="lineNum">      44</span>                 :             :     /// Approximate number of commands currently in the queue.</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             :     /// Safe from any thread; may be stale by the time the caller acts on it.</span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaUNC">           0 :     size_t size() const {</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC">           0 :         size_t head = head_.load(std::memory_order_acquire);</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC">           0 :         size_t tail = tail_.load(std::memory_order_acquire);</span></span>
+<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (tail &gt;= head)</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaUNC">           0 :             return tail - head;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaUNC">           0 :         return kCapacity - head + tail;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :             :     }</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : </span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :     /// Drain all pending commands into `out`.  Returns the number drained.</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :     /// Must only be called by the owning shard thread.</span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC tlaBgGNC">          43 :     size_t drain_all(std::vector&lt;TimerCommand&gt;&amp; out) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          43 :         size_t head = head_.load(std::memory_order_relaxed);</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          43 :         size_t tail = tail_.load(std::memory_order_acquire);</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          43 :         size_t count = 0;</span></span>
+<span id="L60"><span class="lineNum">      60</span>         [<span class="tlaGBC" title="Branch 0 was taken 269 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 43 times"> + </span>]:<span class="tlaGNC">         312 :         while (head != tail) {</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         269 :             out.push_back(buffer_[head]);</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">         269 :             head = (head + 1) % kCapacity;</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">         269 :             ++count;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :             :         }</span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          43 :         head_.store(head, std::memory_order_release);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          43 :         return count;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     }</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             : </span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :   private:</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :     std::array&lt;TimerCommand, kCapacity&gt; buffer_{};</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :     std::atomic&lt;size_t&gt; head_{0}; // consumer index</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     std::atomic&lt;size_t&gt; tail_{0}; // producer index</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             : };</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             : </span>
+<span id="L75"><span class="lineNum">      75</span>                 :             : } // namespace hpactor::sched</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

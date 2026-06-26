@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:18:56</td>
+            <td class="headerValue">2026-06-26 03:44:48</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -237,15 +237,15 @@
 <span id="L159"><span class="lineNum">     159</span>                 :             : class ProtoTypeRegistry {</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             :   public:</span>
 <span id="L161"><span class="lineNum">     161</span>                 :             :     template &lt;typename ProtoMsgT&gt;</span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">       12617 :     void register_type(TypeTag tag, const std::string&amp; type_name) {</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">       12804 :     void register_type(TypeTag tag, const std::string&amp; type_name) {</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :         static_assert(std::is_base_of_v&lt;google::protobuf::Message, ProtoMsgT&gt;,</span>
 <span id="L164"><span class="lineNum">     164</span>                 :             :                       &quot;ProtoMsgT must be a protobuf message type&quot;);</span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">       12617 :         Entry entry;</span></span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">       12617 :         entry.type_name = type_name;</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">       12617 :         entry.prototype =</span></span>
-<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">       12617 :             mem::allocate_shared&lt;ProtoMsgT&gt;(ActorId{}, mem::RegionType::kInternal);</span></span>
-<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">       12617 :         registry_[tag] = std::move(entry);</span></span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">       12617 :     }</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">       12804 :         Entry entry;</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">       12804 :         entry.type_name = type_name;</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">       12804 :         entry.prototype =</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">       12804 :             mem::allocate_shared&lt;ProtoMsgT&gt;(ActorId{}, mem::RegionType::kInternal);</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">       12804 :         registry_[tag] = std::move(entry);</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">       12804 :     }</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             : </span>
 <span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">           2 :     [[nodiscard]] bool has_tag(TypeTag tag) const {</span></span>
 <span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">           2 :         return registry_.find(tag) != registry_.end();</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:18:56</td>
+            <td class="headerValue">2026-06-26 03:44:48</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">-</td>
@@ -129,10 +129,10 @@
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     /// Duration the circuit breaker remains \c kOpen before transitioning</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// to \c kHalfOpen.</span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">        2073 :     std::chrono::milliseconds cooldown_period{30'000};</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">        2095 :     std::chrono::milliseconds cooldown_period{30'000};</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     /// Sliding window over which failure and timeout rates are computed.</span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">        2073 :     std::chrono::milliseconds observation_window{10'000};</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">        2095 :     std::chrono::milliseconds observation_window{10'000};</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : </span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     /// Number of consecutive circuit trips before escalating to quarantine.</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     /// 0 disables circuit-to-quarantine escalation.</span>
