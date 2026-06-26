@@ -161,12 +161,13 @@ class ActorDirectory {
     /// \brief Lock-free fast path: atomic array of raw mailbox pointers
     ///        indexed by ActorId::value().  Populated on insert(), read
     ///        without a lock on the hot path via find_mailbox_fast().
-    ///        Grows on demand to accommodate new actor IDs.  Using a raw
-    ///        dynamically-allocated array because std::vector<std::atomic<T*>>
-    ///        requires Cpp17MoveInsertable which std::atomic does not satisfy
-    ///        in some standard library implementations.
+    ///        The atomic pointer+capacity pair is updated with release
+    ///        ordering and read with acquire ordering to prevent a data
+    ///        race during array growth.
     mutable std::unique_ptr<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>[]> fast_mailboxes_;
-    mutable size_t fast_mailboxes_capacity_{0};
+    mutable std::atomic<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>*> fast_mailboxes_ptr_{
+        nullptr};
+    mutable std::atomic<size_t> fast_mailboxes_capacity_{0};
 };
 
 } // namespace hpactor

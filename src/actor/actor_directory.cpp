@@ -38,31 +38,36 @@ bool ActorDirectory::insert(ActorDirectoryEntry entry) {
 }
 
 void ActorDirectory::ensure_fast_index_capacity(uint64_t id_val) {
-    if (id_val < fast_mailboxes_capacity_)
+    if (id_val < fast_mailboxes_capacity_.load(std::memory_order_relaxed))
         return;
-    // Grow with headroom to avoid repeated reallocations.
     size_t new_cap = id_val + 1024;
     auto new_array =
         std::make_unique<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>[]>(
             new_cap);
-    // Copy existing entries.
-    for (size_t i = 0; i < fast_mailboxes_capacity_; ++i) {
+    size_t old_cap = fast_mailboxes_capacity_.load(std::memory_order_relaxed);
+    for (size_t i = 0; i < old_cap; ++i) {
         new_array[i].store(fast_mailboxes_[i].load(std::memory_order_relaxed),
                            std::memory_order_relaxed);
     }
-    // Zero-initialize new entries.
-    for (size_t i = fast_mailboxes_capacity_; i < new_cap; ++i) {
+    for (size_t i = old_cap; i < new_cap; ++i) {
         new_array[i].store(nullptr, std::memory_order_relaxed);
     }
+    // Publish new array pointer and capacity with release ordering so
+    // lock-free readers in find_mailbox_fast() see a consistent pair.
+    fast_mailboxes_ptr_.store(new_array.get(), std::memory_order_release);
+    fast_mailboxes_capacity_.store(new_cap, std::memory_order_release);
     fast_mailboxes_ = std::move(new_array);
-    fast_mailboxes_capacity_ = new_cap;
 }
 
 mailbox::MPSCActorMailbox<TypedMessage>*
 ActorDirectory::find_mailbox_fast(ActorId id) const noexcept {
     const uint64_t idx = id.value();
-    if (idx < fast_mailboxes_capacity_) {
-        return fast_mailboxes_[idx].load(std::memory_order_acquire);
+    size_t cap = fast_mailboxes_capacity_.load(std::memory_order_acquire);
+    if (idx < cap) {
+        auto* array = fast_mailboxes_ptr_.load(std::memory_order_acquire);
+        if (array) {
+            return array[idx].load(std::memory_order_acquire);
+        }
     }
     return nullptr;
 }
