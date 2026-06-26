@@ -44,3 +44,24 @@ TEST(MessageCreation, SmokeCompletes) {
     EXPECT_TRUE(metrics.completed);
     EXPECT_GT(metrics.throughput_msgps, 0.0);
 }
+
+TEST(DispatchMatch, NormalPathSmokeCompletes) {
+    bench_caf::CafBenchConfig cfg;
+    cfg.scenario = bench_caf::ScenarioKind::DispatchMatch;
+    cfg.preset = bench_caf::PresetKind::Smoke;
+
+    auto metrics = bench_caf::run_dispatch_match_trial(cfg, 1);
+    EXPECT_TRUE(metrics.completed);
+    EXPECT_GT(metrics.throughput_msgps, 0.0);
+}
+
+TEST(Serialization, ProtoEncodeDecodeSmokeCompletes) {
+    bench_caf::CafBenchConfig cfg;
+    cfg.scenario = bench_caf::ScenarioKind::Serialization;
+    cfg.preset = bench_caf::PresetKind::Smoke;
+    cfg.message_size_bytes = 64;
+
+    auto metrics = bench_caf::run_serialization_trial(cfg, 1);
+    EXPECT_TRUE(metrics.completed);
+    EXPECT_GT(metrics.throughput_msgps, 0.0);
+}

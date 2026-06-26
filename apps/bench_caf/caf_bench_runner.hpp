@@ -46,6 +46,10 @@ inline TrialMetrics run_one_trial(const CafBenchConfig& cfg, uint32_t trial_inde
             return run_bursty_waves_trial(cfg, trial_index);
         case ScenarioKind::MessageCreation:
             return run_message_creation_trial(cfg, trial_index);
+        case ScenarioKind::DispatchMatch:
+            return run_dispatch_match_trial(cfg, trial_index);
+        case ScenarioKind::Serialization:
+            return run_serialization_trial(cfg, trial_index);
     }
     return run_actor_creation_trial(cfg, trial_index);
 }
