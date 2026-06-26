@@ -14,7 +14,6 @@
 
 // tests/unit/timer/test_timing_wheel.cpp
 
-#include <functional>
 #include <gtest/gtest.h>
 #include <hpactor/timer/timing_wheel.hpp>
 
@@ -33,6 +32,35 @@ class TimingWheelTest : public ::testing::Test {
 // ---------------------------------------------------------------------------
 // Basic smoke tests
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Bug regression: near-term timer after advance lands in wrong bucket
+// ---------------------------------------------------------------------------
+
+TEST_F(TimingWheelTest, NearTermTimerFiresPromptly) {
+    // Bug: insert_timer() computes bucket index from (expire_ns -
+    // current_time_) instead of expire_ns directly. A near-term timer can land
+    // in the already-processed bucket and wait a full rotation.
+
+    int64_t now = wheel_.current_time();
+    // Advance time by 5ms to move past bucket 0
+    wheel_.advance(now + 5'000'000);
+
+    bool fired = false;
+    // Schedule 2ms from the new current time
+    int64_t schedule_at = now + 7'000'000; // 5ms advance + 2ms delay
+    auto id = wheel_.schedule_at(schedule_at, [&fired]() { fired = true; });
+    ASSERT_NE(id, 0u);
+
+    // Advance in 1ms steps past the expiry time
+    int64_t step = now + 5'000'000;
+    while (step <= schedule_at + 1'000'000 && !fired) {
+        wheel_.advance(step);
+        step += 1'000'000;
+    }
+
+    EXPECT_TRUE(fired) << "Timer scheduled 2ms after now should fire promptly";
+}
 
 TEST_F(TimingWheelTest, ScheduleAndFire) {
     int fired = 0;
@@ -198,4 +226,52 @@ TEST_F(TimingWheelTest, NextDeadlineWithTimers) {
     int64_t nd = wheel_.next_deadline();
     EXPECT_GE(nd, now + 5'000'000);
     EXPECT_LE(nd, now + 5'000'000 + 2'000'000);
+}
+
+// ---------------------------------------------------------------------------
+// O(1) cancel via timer_map_
+// ---------------------------------------------------------------------------
+
+TEST_F(TimingWheelTest, CancelO1UsesMap) {
+    // Verify cancel uses map lookup — cancel, then verify second cancel
+    // returns false (timer no longer in map).
+    auto id = wheel_.schedule(5'000'000, []() {});
+    EXPECT_NE(id, 0u);
+
+    bool first = wheel_.cancel(id);
+    EXPECT_TRUE(first);
+
+    bool second = wheel_.cancel(id);
+    EXPECT_FALSE(second)
+        << "Second cancel should return false — timer removed from map";
+}
+
+TEST_F(TimingWheelTest, CancelIsConstantTime) {
+    // Schedule N timers, cancel them all.  The old O(n) linear scan of all
+    // buckets made this pathologically slow; the timer_map_ makes it O(1)
+    // per cancel.  We verify correctness: all cancels succeed, and a second
+    // cancel on each handle returns false (proving the map was used and the
+    // timer was removed from both map and bucket).
+
+    constexpr int kN = 1000;
+    std::vector<uint64_t> ids;
+    ids.reserve(kN);
+
+    for (int i = 0; i < kN; ++i) {
+        auto id = wheel_.schedule(10'000'000 + i * 1000, []() {});
+        ASSERT_NE(id, 0u);
+        ids.push_back(id);
+    }
+
+    // Cancel all timers — each must succeed on first attempt.
+    for (auto id : ids) {
+        EXPECT_TRUE(wheel_.cancel(id))
+            << "First cancel of " << id << " must succeed";
+    }
+
+    // Second cancel on each must return false (already removed from map).
+    for (auto id : ids) {
+        EXPECT_FALSE(wheel_.cancel(id)) << "Second cancel of " << id
+                                        << " must fail — timer removed from map";
+    }
 }

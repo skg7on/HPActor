@@ -29,6 +29,7 @@ target_sources(hpactor_lib PRIVATE
     commands/reliable_commands.cpp
     commands/scheduler_commands.cpp
     commands/system_commands.cpp
+    commands/timer_commands.cpp
     commands/tracing_commands.cpp
     format/json_formatter.cpp
     format/pretty_formatter.cpp

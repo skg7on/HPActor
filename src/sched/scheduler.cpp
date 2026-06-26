@@ -52,6 +52,10 @@ HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                                   make_storage, destroy_storage);
             break;
         }
+        case TimerBackend::TimerPlane:
+            timer_backend_.emplace<TimerPlane>(
+                num_workers_ > 0 ? num_workers_ : 1, 1'000'000);
+            break;
     }
 }
 
@@ -100,9 +104,20 @@ void HybridScheduler::start() {
                 int64_t sleep_ns = std::max(
                     std::min(next_ns - now, static_cast<int64_t>(100'000'000)),
                     static_cast<int64_t>(1'000'000));
-                std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));
+                std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
+                timer_wakeup_cv_.wait_for(
+                    lk, std::chrono::nanoseconds(sleep_ns), [this] {
+                        return !running_.load(std::memory_order_acquire) ||
+                               timer_needs_recheck_.exchange(
+                                   false, std::memory_order_acq_rel);
+                    });
             } else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
+                timer_wakeup_cv_.wait_for(lk, std::chrono::milliseconds(1), [this] {
+                    return !running_.load(std::memory_order_acquire) ||
+                           timer_needs_recheck_.exchange(
+                               false, std::memory_order_acq_rel);
+                });
             }
         }
     });
@@ -117,6 +132,10 @@ void HybridScheduler::stop() {
     // Wake any workers parked in wait_if_paused so they see running_ == false
     // and exit their loop.
     resume_workers();
+
+    // Wake the timer thread so it sees running_ == false and exits.
+    timer_needs_recheck_.store(true, std::memory_order_release);
+    timer_wakeup_cv_.notify_one();
 
     // Stop the timer thread first: workers may be blocked on
     // TimingWheel::schedule() waiting for the mutex held by advance().
@@ -324,6 +343,10 @@ TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns)
     auto id =
         std::visit([&](auto& backend) { return backend.schedule(delay_ns, cb); },
                    timer_backend_);
+    // Wake the timer thread so it re-evaluates next_deadline().
+    // A new short timer may have an earlier deadline than the current sleep.
+    timer_needs_recheck_.store(true, std::memory_order_release);
+    timer_wakeup_cv_.notify_one();
     return TimerHandle{id};
 }
 
@@ -356,6 +379,8 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
     auto id = std::visit(
         [&](auto& backend) { return backend.schedule(*interval, *recurring); },
         timer_backend_);
+    timer_needs_recheck_.store(true, std::memory_order_release);
+    timer_wakeup_cv_.notify_one();
     {
         std::lock_guard<std::mutex> lock(cancellation_mutex_);
         recurring_cancellations_[id] = cancelled;
@@ -525,6 +550,39 @@ int64_t HybridScheduler::edf_next_deadline() noexcept {
         }
     }
     return earliest;
+}
+
+TimerStatsSnapshot HybridScheduler::timer_snapshot() const {
+    TimerStatsSnapshot snap;
+    std::visit(
+        [&](const auto& backend) {
+            using T = std::decay_t<decltype(backend)>;
+            if constexpr (std::is_same_v<T, TimerPlane>) {
+                snap.num_shards = backend.num_shards();
+                snap.next_deadline = backend.next_deadline();
+
+                for (uint32_t i = 0; i < snap.num_shards; ++i) {
+                    const auto& shard = backend.shard(i);
+                    snap.total_pending += shard.pending_count();
+                    snap.total_scheduled += shard.scheduled_count();
+                    snap.total_fired += shard.fired_count();
+                    snap.total_cancelled += shard.cancelled_count();
+                    snap.total_late += shard.late_count();
+                    snap.total_dropped += shard.dropped_count();
+
+                    TimerStatsSnapshot::ShardStats ss;
+                    ss.pending = shard.pending_count();
+                    ss.cmd_queue_depth = shard.cmd_queue_depth();
+                    ss.fired = shard.fired_count();
+                    ss.late = shard.late_count();
+                    ss.dropped = shard.dropped_count();
+                    ss.min_deadline = shard.min_deadline_ns();
+                    snap.shards.push_back(ss);
+                }
+            }
+        },
+        timer_backend_);
+    return snap;
 }
 
 } // namespace hpactor::sched

@@ -144,7 +144,18 @@ class CalendarQueue {
     ///
     /// \return The count of timers that have not yet fired or been cancelled.
     size_t size() const {
-        return timer_map_.size();
+        return size_.load(std::memory_order_relaxed);
+    }
+
+    /// \brief Return the current wall-clock reference time (last advance time).
+    ///
+    /// \return The value of last_advance_ns_, acquired under the internal
+    /// mutex.
+    /// \note Thread-safe.  Useful for tests that need to compute expiry times
+    ///       relative to the queue's current reference clock.
+    int64_t current_time() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return last_advance_ns_;
     }
 
   private:
@@ -173,6 +184,8 @@ class CalendarQueue {
         void unlink(Timer* t);
     };
 
+    /// \brief Internal schedule_at with the lock already held.
+    uint64_t schedule_at_locked(int64_t expire_ns, TimerCallback cb);
     void insert_timer(Timer* timer, int64_t now_ns);
     void cascade_coarse(int64_t now_ns);
     void cascade_remote(int64_t now_ns);
@@ -202,6 +215,7 @@ class CalendarQueue {
     int64_t last_advance_ns_ = 0;
 
     std::atomic<uint64_t> next_id_{1};
+    std::atomic<size_t> size_{0};
     mutable std::mutex mutex_;
 
     TimerStorageFactory make_storage_;

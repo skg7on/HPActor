@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace hpactor::sched {
@@ -68,6 +69,8 @@ class TimingWheel {
                                 ///< clock, nanoseconds).
         uint64_t id;            ///< Unique timer identifier.
         TimerCallback callback; ///< Callback to invoke on expiry.
+        uint32_t level{0};      ///< Which wheel level this timer resides in.
+        uint32_t bucket{0};     ///< Which bucket within that level.
     };
 
     /// \brief Construct a timing wheel.
@@ -217,6 +220,12 @@ class TimingWheel {
     /// a callback that calls back into \c schedule() or \c cancel()
     /// acquires the mutex as a new owner — recursion is not required.
     mutable std::mutex mutex_;
+
+    /// \brief O(1) lookup from timer id to Timer pointer.
+    ///
+    /// Keyed by the base timer id (low 48 bits).  Updated under mutex_
+    /// during schedule(), cancel(), advance(), and the destructor.
+    std::unordered_map<uint64_t, Timer*> timer_map_;
 };
 
 } // namespace hpactor::sched

@@ -474,6 +474,17 @@ void Aggregator::on_event(const MetricEvent& e) {
             // Reliable messaging metrics — counters incremented in
             // OutboundDeliveryTracker.
             break;
+        case MetricEventType::kTimerScheduled:
+        case MetricEventType::kTimerFired:
+        case MetricEventType::kTimerCancelled:
+        case MetricEventType::kTimerLate:
+        case MetricEventType::kTimerDropped:
+        case MetricEventType::kTimerFiringLatency:
+        case MetricEventType::kTimerCallbackDuration:
+            // TimerPlane metrics — counters incremented in
+            // TimerPlaneShard / TimingWheel.
+            break;
+
         case MetricEventType::kBatchFrameReceived:
         case MetricEventType::kBatchMessagesReceived:
         case MetricEventType::kBatchFrameSent:

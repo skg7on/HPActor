@@ -1163,4 +1163,9 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
     (void)transport_->try_send(target, encoded);
 }
 
+sched::TimerStatsSnapshot ActorSystem::timer_stats() const {
+    auto* hs = static_cast<sched::HybridScheduler*>(scheduler_.get());
+    return hs->timer_snapshot();
+}
+
 } // namespace hpactor

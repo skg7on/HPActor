@@ -27,6 +27,7 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/timer/timer_options.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <algorithm>
@@ -264,6 +265,15 @@ class ActorContext {
     /// \return An \c AlarmHandle that can be used with \c cancel_schedule().
     AlarmHandle schedule_to(const ActorAddress& target,
                             std::chrono::milliseconds delay, TypedMessage msg);
+
+    /// \brief Schedule self-delivery with options (priority, deadline, trace).
+    AlarmHandle schedule(std::chrono::milliseconds delay, TypedMessage msg,
+                         sched::TimerOptions opts);
+
+    /// \brief Schedule delivery to target with options.
+    AlarmHandle
+    schedule_to(const ActorAddress& target, std::chrono::milliseconds delay,
+                TypedMessage msg, sched::TimerOptions opts);
 
     /// \brief Cancel a previously scheduled message.
     ///

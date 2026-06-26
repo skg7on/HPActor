@@ -25,6 +25,8 @@
 #include <hpactor/sched/work_placement_scheduler.hpp>
 #include <hpactor/sched/work_queue.hpp>
 #include <hpactor/timer/calendar_queue.hpp>
+#include <hpactor/timer/timer_plane.hpp>
+#include <hpactor/timer/timer_stats_snapshot.hpp>
 #include <hpactor/timer/timing_wheel.hpp>
 
 #include <atomic>
@@ -57,6 +59,7 @@ class WorkerThread;        // forward decl
 enum class TimerBackend : uint8_t {
     TimingWheel = 0,   ///< Hierarchical timing wheel (O(1) insert/cancel).
     CalendarQueue = 1, ///< Calendar queue (good for sparse timers).
+    TimerPlane = 2,    ///< Sharded timer plane (per-worker shards).
 };
 
 /// \brief Result of draining the ready queue.
@@ -295,6 +298,15 @@ class HybridScheduler : public IScheduler {
 
     std::vector<WorkerSnapshot> worker_snapshots() const override;
 
+    /// \brief Collect a snapshot of timer statistics from the active backend.
+    ///
+    /// For \c TimerPlane, collects per-shard metrics including pending,
+    /// fired, late, and dropped counts.  For \c TimingWheel and
+    /// \c CalendarQueue, returns an empty snapshot with zero shards.
+    ///
+    /// \return A populated \c TimerStatsSnapshot.
+    TimerStatsSnapshot timer_snapshot() const;
+
     // Worker control (deterministic testing)
     void pause_workers() noexcept override;
     void resume_workers() noexcept override;
@@ -381,7 +393,7 @@ class HybridScheduler : public IScheduler {
     std::atomic<bool> running_{false};
     std::vector<std::unique_ptr<WorkerThread>> worker_threads_;
 
-    std::variant<TimingWheel, CalendarQueue> timer_backend_;
+    std::variant<TimingWheel, CalendarQueue, TimerPlane> timer_backend_;
 
     void set_metrics_ring_buffer(void* buf) noexcept override {
         metrics_ring_buffer_ =
@@ -394,6 +406,13 @@ class HybridScheduler : public IScheduler {
 
     std::unordered_map<uint64_t, std::shared_ptr<std::atomic<bool>>> recurring_cancellations_;
     std::mutex cancellation_mutex_;
+
+    /// Wakeup mechanism for the timer thread.
+    /// schedule_after() notifies this when a new timer is registered so
+    /// the timer thread can re-evaluate next_deadline() immediately.
+    std::condition_variable timer_wakeup_cv_;
+    std::mutex timer_wakeup_mutex_;
+    std::atomic<bool> timer_needs_recheck_{false};
 
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 
