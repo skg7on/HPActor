@@ -20,6 +20,7 @@
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -89,6 +90,19 @@ class ActorDirectory {
     std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>>
     find_mailbox(ActorId id) const;
 
+    /// \brief Lock-free lookup of the raw mailbox pointer.
+    ///
+    /// Reads an atomic array indexed by ActorId with acquire ordering.
+    /// No mutex is taken. Returns \c nullptr if the actor has not been
+    /// inserted yet or the ID is out of range.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return Raw pointer to the mailbox, or \c nullptr if not found.
+    /// \note Thread safety: lock-free. Safe to call from any thread.
+    ///       The returned pointer is stable for the lifetime of the actor.
+    mailbox::MPSCActorMailbox<TypedMessage>*
+    find_mailbox_fast(ActorId id) const noexcept;
+
     /// \brief Find the execution context for an actor.
     ///
     /// \param[in] id Actor identifier.
@@ -137,10 +151,22 @@ class ActorDirectory {
     std::size_t size() const noexcept;
 
   private:
+    /// \brief Grow the lock-free fast-index array to accommodate \p id.
+    void ensure_fast_index_capacity(uint64_t id);
+
     mutable std::mutex mutex_;
     uint64_t next_actor_id_{1};
     std::unordered_map<ActorId, ActorDirectoryEntry> entries_;
     std::unordered_map<std::string, ActorAddress> names_;
+    /// \brief Lock-free fast path: atomic array of raw mailbox pointers
+    ///        indexed by ActorId::value().  Populated on insert(), read
+    ///        without a lock on the hot path via find_mailbox_fast().
+    ///        Grows on demand to accommodate new actor IDs.  Using a raw
+    ///        dynamically-allocated array because std::vector<std::atomic<T*>>
+    ///        requires Cpp17MoveInsertable which std::atomic does not satisfy
+    ///        in some standard library implementations.
+    mutable std::unique_ptr<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>[]> fast_mailboxes_;
+    mutable size_t fast_mailboxes_capacity_{0};
 };
 
 } // namespace hpactor
