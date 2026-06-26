@@ -1359,13 +1359,21 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void prefill_node_pool() noexcept {
-        node_pool_size_ = config_.capacity.max_messages;
+        // Cap prefill at 256 to avoid excessive memory use for
+        // system-internal mailboxes and prevent OOM on CI.
+        static constexpr size_t kMaxPrefill = 256;
+        node_pool_size_ = static_cast<size_t>(std::min(
+            static_cast<size_t>(config_.capacity.max_messages), kMaxPrefill));
         if (node_pool_size_ == 0)
             return;
         node_pool_ = std::make_unique<T*[]>(node_pool_size_);
         for (size_t i = 0; i < node_pool_size_; ++i) {
             void* raw =
                 mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            if (!raw) {
+                node_pool_size_ = i;
+                break;
+            }
             node_pool_[i] = new (raw) T();
         }
     }
