@@ -32,6 +32,8 @@
 #if HPACTOR_ENABLE_AI_ACCELERATORS
 #    include <hpactor/ai/accelerator_config.hpp>
 #endif
+#include <hpactor/actor/stream_config.hpp>
+#include <hpactor/actor/stream_handle.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
@@ -64,6 +66,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <thread>
 #include <unordered_map>
 
@@ -395,18 +398,18 @@ class ActorSystem {
         return scheduler_.get();
     }
 
-    /// \brief Collect a snapshot of timer statistics from the active backend.
-    ///
-    /// Delegates to \c HybridScheduler::timer_snapshot().  Returns an
-    /// empty snapshot when the timer backend is not \c TimerPlane.
-    sched::TimerStatsSnapshot timer_stats() const;
-
     /// \brief Returns \c true if coroutine-based execution is configured.
     ///
     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.
     bool use_coroutines() const {
         return config_.use_coroutines;
     }
+
+    /// \brief Collect a snapshot of timer statistics from the active backend.
+    ///
+    /// Delegates to \c HybridScheduler::timer_snapshot().  Returns an
+    /// empty snapshot when the timer backend is not \c TimerPlane.
+    sched::TimerStatsSnapshot timer_stats() const;
 
     // ── RPC ───────────────────────────────────────────────────────────────
 
@@ -753,13 +756,26 @@ class ActorSystem {
     void deliver_remote(const net::WireFrame& frame);
 
     /// \brief Deliver a batch frame to local actors.
-    ///
-    /// Decodes the \c BatchMsgFrame from the \c WireEnvelope, creates a
-    /// \c TypedMessage for each \c BatchEntry, and enqueues all messages
-    /// via \c try_push_batch() on the target mailbox.
-    ///
-    /// \param[in] frame Decoded wire frame with \c payload_type() == Batch.
     void deliver_remote_batch(const net::WireFrame& frame);
+
+    // ── Stream routing ───────────────────────────────────────────────────
+
+    /// Register a stream sender for inbound ack routing.
+    void register_stream_sender(uint64_t stream_id, ActorId actor_id);
+
+    /// Register a stream receiver for inbound data routing.
+    void register_stream_receiver(uint64_t stream_id, ActorId actor_id);
+
+    /// Remove stream registrations on close/error.
+    void unregister_stream(uint64_t stream_id);
+
+    /// Allocate a unique stream ID from sender_id + monotonic counter.
+    uint64_t allocate_stream_id(ActorId sender_id);
+
+    /// Open a streaming session to a target actor.
+    /// \return StreamHandle on success, std::nullopt if target unreachable.
+    std::optional<StreamHandle>
+    open_stream(ActorId target, StreamConfig config = {});
 
     // ── Node death ────────────────────────────────────────────────────────
 
@@ -937,6 +953,18 @@ class ActorSystem {
     std::unique_ptr<ShutdownCoordinator> shutdown_coordinator_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;
     Actor system_actor_;
+
+    // Stream registry: stream_id → actor
+    std::unordered_map<uint64_t, ActorId> stream_senders_;
+    std::unordered_map<uint64_t, ActorId> stream_receivers_;
+    std::atomic<uint64_t> stream_counter_{0};
+
+    // Stream frame delivery
+    void deliver_remote_stream_open(const net::WireFrame& frame);
+    void deliver_remote_stream_data(const net::WireFrame& frame);
+    void deliver_remote_stream_ack(const net::WireFrame& frame);
+    void deliver_remote_stream_close(const net::WireFrame& frame);
+    void deliver_remote_stream_error(const net::WireFrame& frame);
 
     // Actor storage consolidated into actor_directory_ above.
     // Use actor_directory_.find() / find_actor() / find_mailbox() /

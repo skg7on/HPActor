@@ -476,5 +476,24 @@ const FaultPointRegistrar kPassivationMemoryPressureLruSelect{
     "hpactor.passivation.memory_pressure.lru_select", FaultDomain::kPassivation,
     "Selected LRU actor is skipped, tests cascading selection"};
 
+// ── Stream fault points ─────────────────────────
+const FaultPointRegistrar kStreamOpenFail{
+    "hpactor.stream.open", FaultDomain::kStream, "Stream open fails with error"};
+
+const FaultPointRegistrar kStreamDataFail{"hpactor.stream.data",
+                                          FaultDomain::kStream,
+                                          "Stream data operation fails with "
+                                          "error"};
+
+const FaultPointRegistrar kStreamAckFail{"hpactor.stream.ack", FaultDomain::kStream,
+                                         "Stream ack operation fails with error"};
+
+const FaultPointRegistrar kStreamCloseFail{"hpactor.stream.close",
+                                           FaultDomain::kStream,
+                                           "Stream close fails with error"};
+
+const FaultPointRegistrar kStreamErrorFail{
+    "hpactor.stream.error", FaultDomain::kStream, "Stream error injection"};
+
 } // anonymous namespace
 } // namespace hpactor::fault

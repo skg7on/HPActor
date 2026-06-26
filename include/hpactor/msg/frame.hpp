@@ -52,7 +52,18 @@ struct WireFrame {
     // ── Oneof discriminator ─────────────────────────────────────────────
 
     /// \brief Which oneof field is populated in the envelope.
-    enum class PayloadType { Data, Ack, Nack, Batch, Unknown };
+    enum class PayloadType : uint8_t {
+        Data,
+        Ack,
+        Nack,
+        Batch,
+        StreamOpen,
+        StreamData,
+        StreamAck,
+        StreamClose,
+        StreamError,
+        Unknown
+    };
 
     /// \brief Return the payload type based on the oneof discriminator.
     PayloadType payload_type() const {
@@ -65,6 +76,16 @@ struct WireFrame {
                 return PayloadType::Nack;
             case ::hpactor::net::WireEnvelope::kBatchFrame:
                 return PayloadType::Batch;
+            case ::hpactor::net::WireEnvelope::kStreamOpen:
+                return PayloadType::StreamOpen;
+            case ::hpactor::net::WireEnvelope::kStreamData:
+                return PayloadType::StreamData;
+            case ::hpactor::net::WireEnvelope::kStreamAck:
+                return PayloadType::StreamAck;
+            case ::hpactor::net::WireEnvelope::kStreamClose:
+                return PayloadType::StreamClose;
+            case ::hpactor::net::WireEnvelope::kStreamError:
+                return PayloadType::StreamError;
             default:
                 return PayloadType::Unknown;
         }
@@ -81,6 +102,48 @@ struct WireFrame {
     static WireFrame from_batch(::hpactor::net::BatchMsgFrame batch) {
         WireFrame f;
         *f.pb_envelope.mutable_batch_frame() = std::move(batch);
+        return f;
+    }
+
+    static WireFrame from_ack(::hpactor::net::AckFrame ack) {
+        WireFrame f;
+        *f.pb_envelope.mutable_ack_frame() = std::move(ack);
+        return f;
+    }
+
+    static WireFrame from_nack(::hpactor::net::NackFrame nack) {
+        WireFrame f;
+        *f.pb_envelope.mutable_nack_frame() = std::move(nack);
+        return f;
+    }
+
+    static WireFrame from_stream_open(::hpactor::net::StreamOpenFrame open) {
+        WireFrame f;
+        *f.pb_envelope.mutable_stream_open() = std::move(open);
+        return f;
+    }
+
+    static WireFrame from_stream_data(::hpactor::net::StreamDataFrame data) {
+        WireFrame f;
+        *f.pb_envelope.mutable_stream_data() = std::move(data);
+        return f;
+    }
+
+    static WireFrame from_stream_ack(::hpactor::net::StreamAckFrame ack) {
+        WireFrame f;
+        *f.pb_envelope.mutable_stream_ack() = std::move(ack);
+        return f;
+    }
+
+    static WireFrame from_stream_close(::hpactor::net::StreamCloseFrame close) {
+        WireFrame f;
+        *f.pb_envelope.mutable_stream_close() = std::move(close);
+        return f;
+    }
+
+    static WireFrame from_stream_error(::hpactor::net::StreamErrorFrame error) {
+        WireFrame f;
+        *f.pb_envelope.mutable_stream_error() = std::move(error);
         return f;
     }
 

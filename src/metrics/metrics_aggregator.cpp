@@ -481,16 +481,20 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kTimerDropped:
         case MetricEventType::kTimerFiringLatency:
         case MetricEventType::kTimerCallbackDuration:
-            // TimerPlane metrics — counters incremented in
-            // TimerPlaneShard / TimingWheel.
-            break;
-
         case MetricEventType::kBatchFrameReceived:
         case MetricEventType::kBatchMessagesReceived:
         case MetricEventType::kBatchFrameSent:
         case MetricEventType::kBatchMessagesSent:
-            // Batch messaging metrics — counters incremented in
-            // BatchFrame codec / batch transport layer.
+            // TimerPlane and Batch metrics — handled upstream.
+            break;
+        case MetricEventType::kStreamOpened:
+        case MetricEventType::kStreamClosed:
+        case MetricEventType::kStreamBytesSent:
+        case MetricEventType::kStreamBytesReceived:
+        case MetricEventType::kStreamChunkSent:
+        case MetricEventType::kStreamChunkReceived:
+        case MetricEventType::kStreamWindowBytes:
+            // Stream metrics — full metric handlers wired in MSG-008 follow-up.
             break;
     }
 }

@@ -27,6 +27,8 @@ target_sources(hpactor_lib PRIVATE
     lifecycle/quarantine_reason.cpp
     lifecycle/shutdown_coordinator.cpp
     receptionist/receptionist.cpp
+    stream_receiver_actor.cpp
+    stream_sender_actor.cpp
     routing/group_router.cpp
     routing/pool_router.cpp
     routing/routing_logic.cpp

@@ -258,7 +258,7 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
     } // end PayloadType::Data guard
 
     // Route non-RPC Data frames and all other payload types
-    // (Batch/Ack/Nack/Unknown) to deliver_remote() for dispatch.
+    // (including Batch/Stream/Ack/Nack) to deliver_remote() for dispatch.
     if (actor_message_handler_) {
         actor_message_handler_(frame);
     }

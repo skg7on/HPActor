@@ -63,6 +63,44 @@ message BatchMsgFrame {
   repeated BatchEntry entries = 3;
 }
 
+// ── Stream protocol ───────────────────────────────────────────────────────
+
+message StreamOpenFrame {
+  uint64 stream_id = 1;
+  hpactor.PbActorAddress sender = 2;
+  hpactor.PbActorAddress receiver = 3;
+  uint32 initial_window_bytes = 4;
+  PbTraceContext trace_context = 5;
+}
+
+message StreamDataFrame {
+  uint64 stream_id = 1;
+  uint64 sequence = 2;
+  bytes payload = 3;
+}
+
+message StreamAckFrame {
+  uint64 stream_id = 1;
+  uint64 last_sequence = 2;
+  uint32 window_bytes = 3;
+}
+
+message StreamCloseFrame {
+  uint64 stream_id = 1;
+  enum CloseReason {
+    COMPLETE = 0;
+    CANCELLED = 1;
+    TIMEOUT = 2;
+  }
+  CloseReason reason = 2;
+}
+
+message StreamErrorFrame {
+  uint64 stream_id = 1;
+  uint32 error_code = 2;
+  string description = 3;
+}
+
 // Envelope wrapper for frame type dispatch.
 // Replaces raw ActorMsgFrame on the wire when the peer supports
 // reliable messaging (negotiated in handshake, follow-up issue).
@@ -72,5 +110,10 @@ message WireEnvelope {
     AckFrame ack_frame = 2;
     NackFrame nack_frame = 3;
     BatchMsgFrame batch_frame = 4;
+    StreamOpenFrame stream_open = 5;
+    StreamDataFrame stream_data = 6;
+    StreamAckFrame stream_ack = 7;
+    StreamCloseFrame stream_close = 8;
+    StreamErrorFrame stream_error = 9;
   }
 }

@@ -82,7 +82,6 @@ enum class MetricEventType : uint8_t {
     kReliableExhausted = 50,    ///< Retries exhausted; code carries
                                 ///< total_attempts.
     kReliableCancelled = 51,    ///< DeliveryReceipt::cancel() called.
-
     // TimerPlane metric events
     kTimerScheduled = 52,     ///< Timer scheduled (per-shard, per-type_tag).
     kTimerFired = 53,         ///< Timer fired on time.
@@ -97,6 +96,15 @@ enum class MetricEventType : uint8_t {
     kBatchMessagesReceived = 60, ///< Total messages received via batch frames.
     kBatchFrameSent = 61,        ///< A batch frame was sent.
     kBatchMessagesSent = 62,     ///< Total messages sent via batch frames.
+
+    // Stream protocol metric events
+    kStreamOpened = 63,         ///< Stream session opened.
+    kStreamClosed = 64,         ///< Stream session closed.
+    kStreamBytesSent = 65,      ///< Stream bytes sent count.
+    kStreamBytesReceived = 66,  ///< Stream bytes received count.
+    kStreamChunkSent = 67,      ///< Stream chunk sent.
+    kStreamChunkReceived = 68,  ///< Stream chunk received.
+    kStreamWindowBytes = 69,    ///< Stream window size in bytes.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

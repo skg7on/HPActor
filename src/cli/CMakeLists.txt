@@ -28,6 +28,7 @@ target_sources(hpactor_lib PRIVATE
     commands/quit_command.cpp
     commands/reliable_commands.cpp
     commands/scheduler_commands.cpp
+    commands/stream_commands.cpp
     commands/system_commands.cpp
     commands/timer_commands.cpp
     commands/tracing_commands.cpp
