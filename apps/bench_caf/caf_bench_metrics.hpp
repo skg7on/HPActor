@@ -21,6 +21,8 @@
 
 namespace hpactor::apps::bench_caf {
 
+inline constexpr size_t kHistogramBuckets = 8;
+
 struct TrialMetrics {
     uint32_t trial = 0;
     bool completed = false;
@@ -37,6 +39,21 @@ struct TrialMetrics {
     double throughput_msgps = 0.0;
     uint64_t peak_rss_bytes = 0;
     std::vector<uint64_t> rss_samples_bytes;
+
+    // Phase 2 fields
+    uint64_t bytes_sent = 0;
+    uint64_t bytes_received = 0;
+    double bytes_per_second = 0.0;
+    uint64_t admission_failures = 0;
+    uint64_t dlq_handoffs = 0;
+    uint64_t dedup_suppressions = 0;
+    uint64_t deadline_expiries = 0;
+    uint64_t max_receiver_depth = 0;
+    uint64_t min_receiver_messages = 0;
+    uint64_t max_receiver_messages = 0;
+    double min_sender_throughput = 0.0;
+    double max_sender_throughput = 0.0;
+    std::vector<uint64_t> size_histogram;
 };
 
 struct CafBenchReport {
@@ -58,6 +75,55 @@ inline double throughput(uint64_t messages, uint64_t runtime_ms) {
     if (runtime_ms == 0)
         return 0.0;
     return static_cast<double>(messages) * 1000.0 / static_cast<double>(runtime_ms);
+}
+
+inline std::pair<uint64_t, uint64_t>
+compute_receiver_skew(const std::vector<uint64_t>& counts) {
+    if (counts.empty())
+        return {0, 0};
+    uint64_t min_v = UINT64_MAX;
+    uint64_t max_v = 0;
+    for (auto v : counts) {
+        if (v < min_v)
+            min_v = v;
+        if (v > max_v)
+            max_v = v;
+    }
+    return {min_v, max_v};
+}
+
+inline std::pair<double, double>
+compute_sender_spread(const std::vector<double>& throughputs) {
+    if (throughputs.empty())
+        return {0.0, 0.0};
+    double min_v = throughputs[0];
+    double max_v = throughputs[0];
+    for (auto v : throughputs) {
+        if (v < min_v)
+            min_v = v;
+        if (v > max_v)
+            max_v = v;
+    }
+    return {min_v, max_v};
+}
+
+inline std::vector<uint64_t>
+build_size_histogram(const std::vector<size_t>& sizes) {
+    std::vector<uint64_t> hist(kHistogramBuckets, 0);
+    // Bucket boundaries: 0, 16, 64, 256, 1024, 4096, 16384, MAX
+    constexpr size_t boundaries[] = {0,    16,   64,    256,
+                                     1024, 4096, 16384, SIZE_MAX};
+    for (auto sz : sizes) {
+        for (size_t b = 0; b < kHistogramBuckets; ++b) {
+            if (sz <= boundaries[b]) {
+                ++hist[b];
+                break;
+            }
+            if (b == kHistogramBuckets - 1)
+                ++hist[b];
+        }
+    }
+    return hist;
 }
 
 } // namespace hpactor::apps::bench_caf
