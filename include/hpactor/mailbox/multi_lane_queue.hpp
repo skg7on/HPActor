@@ -142,21 +142,11 @@ template <typename T> class MultiLaneQueue {
     /// \param[in] node Node to stage for deferred destruction. Ownership
     ///                 transfers to the queue.
     /// \note Thread safety: NOT internally locked — caller must serialize.
-    /// \brief Optional recycling hook with context.  When set, freed nodes
-    ///        are passed to this function instead of being deallocated.
-    void (*recycle_hook_)(void* ctx, T*) = nullptr;
-    void* recycle_ctx_ = nullptr;
-
     void set_pending_free(T* node) noexcept {
         if (pending_free_count_ == kPendingFreeRingSize) {
             T* oldest = pending_free_ring_[pending_free_write_idx_];
-            if (recycle_hook_) {
-                // Node stays live — move-assignment on reuse handles cleanup.
-                recycle_hook_(recycle_ctx_, oldest);
-            } else {
-                oldest->~T();
-                mem::deallocate(oldest);
-            }
+            oldest->~T();
+            mem::deallocate(oldest);
         } else {
             pending_free_count_++;
         }
@@ -182,12 +172,8 @@ template <typename T> class MultiLaneQueue {
             kPendingFreeRingSize);
         for (uint8_t i = 0; i < count; ++i) {
             T* node = pending_free_ring_[idx];
-            if (recycle_hook_) {
-                recycle_hook_(recycle_ctx_, node);
-            } else {
-                node->~T();
-                mem::deallocate(node);
-            }
+            node->~T();
+            mem::deallocate(node);
             idx = static_cast<uint8_t>((idx + 1) % kPendingFreeRingSize);
         }
         pending_free_count_ = 0;

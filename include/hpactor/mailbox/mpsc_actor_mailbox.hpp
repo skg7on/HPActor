@@ -140,17 +140,7 @@ template <typename T> class MPSCActorMailbox {
     /// \note The caller must ensure no concurrent \c try_push() or
     ///       \c dequeue() calls are in flight during destruction.
     ~MPSCActorMailbox() {
-        // Disable recycling so drain_pending_free deallocates nodes
-        // instead of pushing them to the freelist.
-        lanes_.recycle_hook_ = nullptr;
         lanes_.drain_pending_free();
-        // Drain remaining freelist nodes and deallocate them.
-        T* node = try_acquire_node();
-        while (node) {
-            node->~T();
-            mem::deallocate(node);
-            node = try_acquire_node();
-        }
     }
 
     /// \brief Register a callback invoked on the empty→non-empty transition.
@@ -1350,54 +1340,34 @@ template <typename T> class MPSCActorMailbox {
     MailboxConfig config_;            ///< Active mailbox configuration.
 
     // --- Pre-allocated node pool ---
-    /// \brief Lock-free LIFO freelist of recycled nodes.  Reuses
-    ///        \c mpsc_next as the link field (a node is either in the
-    ///        freelist or in a mailbox lane, never both).
-    std::atomic<T*> node_freelist_{nullptr};
+    /// \brief One-shot pre-allocated node pool.  Nodes are distributed via
+    ///        fetch_add and never recycled.  Eliminates mem::allocate for
+    ///        the first N messages per mailbox without the complexity and
+    ///        safety risks of a recycling freelist (which would require
+    ///        reusing \c mpsc_next as a link field, creating a race with
+    ///        preempted producers).
+    std::unique_ptr<T*[]> node_pool_;
+    size_t node_pool_size_{0};
+    std::atomic<size_t> node_pool_idx_{0};
 
-    /// \brief Push a node to the recycling freelist (lock-free, MP-safe).
-    void recycle_node(T* node) noexcept {
-        T* head = node_freelist_.load(std::memory_order_acquire);
-        do {
-            node->mpsc_next.store(head, std::memory_order_relaxed);
-        } while (!node_freelist_.compare_exchange_weak(
-            head, node, std::memory_order_acq_rel, std::memory_order_acquire));
-    }
-
-    /// \brief Try to pop a node from the recycling freelist.
-    /// \note Thread safety: lock-free CAS, safe for multiple producers.
     T* try_acquire_node() noexcept {
-        T* head = node_freelist_.load(std::memory_order_acquire);
-        while (head != nullptr) {
-            T* next = head->mpsc_next.load(std::memory_order_acquire);
-            if (node_freelist_.compare_exchange_weak(head, next,
-                                                     std::memory_order_acq_rel,
-                                                     std::memory_order_acquire)) {
-                return head;
-            }
+        size_t idx = node_pool_idx_.fetch_add(1, std::memory_order_relaxed);
+        if (idx < node_pool_size_) {
+            return node_pool_[idx];
         }
         return nullptr;
     }
 
-    /// \brief Pre-fill the freelist with capacity-sized pre-allocations.
     void prefill_node_pool() noexcept {
-        size_t count = config_.capacity.max_messages;
-        if (count == 0)
+        node_pool_size_ = config_.capacity.max_messages;
+        if (node_pool_size_ == 0)
             return;
-        // Seed the freelist with pre-allocated nodes so the first N
-        // messages after startup never hit mem::allocate.  Recycled
-        // nodes re-enter the freelist via the MultiLaneQueue recycle hook.
-        for (size_t i = 0; i < count; ++i) {
+        node_pool_ = std::make_unique<T*[]>(node_pool_size_);
+        for (size_t i = 0; i < node_pool_size_; ++i) {
             void* raw =
                 mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
-            auto* node = new (raw) T();
-            recycle_node(node);
+            node_pool_[i] = new (raw) T();
         }
-        // Wire the recycling hook so freed nodes return to the freelist.
-        lanes_.recycle_ctx_ = this;
-        lanes_.recycle_hook_ = [](void* ctx, T* n) {
-            static_cast<MPSCActorMailbox*>(ctx)->recycle_node(n);
-        };
     }
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for
                                                         ///< consumer
