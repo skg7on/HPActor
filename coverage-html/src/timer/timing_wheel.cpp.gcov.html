@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">97.7&nbsp;%</td>
+            <td class="headerCovTableEntryHi">90.1&nbsp;%</td>
             <td class="headerCovTableEntry">172</td>
-            <td class="headerCovTableEntry">168</td>
+            <td class="headerCovTableEntry">155</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 04:28:34</td>
+            <td class="headerValue">2026-06-26 05:09:23</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryMed">82.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
             <td class="headerCovTableEntry">100</td>
-            <td class="headerCovTableEntry">82</td>
+            <td class="headerCovTableEntry">80</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -138,37 +138,37 @@
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">        1513 :     timer_map_.clear();</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">        1513 : }</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">        1224 : uint64_t TimingWheel::schedule(int64_t delay_ns, TimerCallback callback) {</span></span>
-<span id="L64"><span class="lineNum">      64</span>   [<span class="tlaGBC" title="Branch 0 was taken 204 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1020 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 204 times"> + </span> :<span class="tlaGNC">        1224 :     FAULT_INJECT(&quot;hpactor.timing_wheel.schedule.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1224 times"> + </span>]
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">        1216 : uint64_t TimingWheel::schedule(int64_t delay_ns, TimerCallback callback) {</span></span>
+<span id="L64"><span class="lineNum">      64</span>   [<span class="tlaGBC" title="Branch 0 was taken 196 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1020 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 196 times"> + </span> :<span class="tlaGNC">        1216 :     FAULT_INJECT(&quot;hpactor.timing_wheel.schedule.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1216 times"> + </span>]
 <span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return 0;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC tlaBgGNC">        3672 :     return schedule_at(current_time_.load(std::memory_order_relaxed) + delay_ns,</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">        2448 :                        std::move(callback));</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC tlaBgGNC">        3648 :     return schedule_at(current_time_.load(std::memory_order_relaxed) + delay_ns,</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">        2432 :                        std::move(callback));</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : }</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             : </span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        1233 : uint64_t TimingWheel::schedule_at(int64_t expire_ns, TimerCallback callback) {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        1233 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">        1233 :     return add_timer_internal(expire_ns, std::move(callback));</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        1233 : }</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        1225 : uint64_t TimingWheel::schedule_at(int64_t expire_ns, TimerCallback callback) {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        1225 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">        1225 :     return add_timer_internal(expire_ns, std::move(callback));</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        1225 : }</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : </span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : uint64_t</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        1233 : TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">        1233 :     auto* timer = new Timer;</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">        1233 :     timer-&gt;expire_ns = expire_ns;</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">        1233 :     timer-&gt;id = next_timer_id_++;</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">        1233 :     timer-&gt;callback = std::move(callback);</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        1225 : TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">        1225 :     auto* timer = new Timer;</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">        1225 :     timer-&gt;expire_ns = expire_ns;</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">        1225 :     timer-&gt;id = next_timer_id_++;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">        1225 :     timer-&gt;callback = std::move(callback);</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">        1233 :     timer_map_[timer-&gt;id] = timer;</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">        1225 :     timer_map_[timer-&gt;id] = timer;</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             : </span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     // Update the cached minimum deadline (mutex_ already held by caller).</span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">        1233 :     int64_t cur = min_deadline_.load(std::memory_order_relaxed);</span></span>
-<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 173 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1060 times"> + </span>]:<span class="tlaGNC">        1233 :     if (expire_ns &lt; cur) {</span></span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         173 :         min_deadline_.store(expire_ns, std::memory_order_release);</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">        1225 :     int64_t cur = min_deadline_.load(std::memory_order_relaxed);</span></span>
+<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 171 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1054 times"> + </span>]:<span class="tlaGNC">        1225 :     if (expire_ns &lt; cur) {</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         171 :         min_deadline_.store(expire_ns, std::memory_order_release);</span></span>
 <span id="L89"><span class="lineNum">      89</span>                 :             :     }</span>
 <span id="L90"><span class="lineNum">      90</span>                 :             : </span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">        1233 :     insert_timer(timer);</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">        1233 :     return timer-&gt;id;</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">        1225 :     insert_timer(timer);</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">        1225 :     return timer-&gt;id;</span></span>
 <span id="L93"><span class="lineNum">      93</span>                 :             : }</span>
 <span id="L94"><span class="lineNum">      94</span>                 :             : </span>
 <span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">        2027 : bool TimingWheel::cancel(uint64_t timer_id) {</span></span>
@@ -189,37 +189,37 @@
 <span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">        1010 :     return false;</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">        2027 : }</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : </span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        1233 : void TimingWheel::insert_timer(Timer* timer) {</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        1233 :     int64_t expire = timer-&gt;expire_ns;</span></span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">        1233 :     int64_t now = current_time_.load(std::memory_order_relaxed);</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        1225 : void TimingWheel::insert_timer(Timer* timer) {</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        1225 :     int64_t expire = timer-&gt;expire_ns;</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">        1225 :     int64_t now = current_time_.load(std::memory_order_relaxed);</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :             : </span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">        1233 :     expire = std::max(expire, now);</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">        1225 :     expire = std::max(expire, now);</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :             : </span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :     // Calculate which level and bucket</span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">        1233 :     int64_t diff = expire - now;</span></span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">        1233 :     uint32_t level = num_levels_ - 1; // default to highest level</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">        1225 :     int64_t diff = expire - now;</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">        1225 :     uint32_t level = num_levels_ - 1; // default to highest level</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : </span>
 <span id="L122"><span class="lineNum">     122</span>                 :             :     // Find the appropriate level for this timer using precomputed ranges.</span>
-<span id="L123"><span class="lineNum">     123</span>         [<span class="tlaGBC" title="Branch 0 was taken 1319 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        1320 :     for (uint32_t l = 0; l &lt; num_levels_; ++l) {</span></span>
-<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 1232 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span>]:<span class="tlaGNC">        1319 :         if (diff &lt; level_ranges_[l]) {</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">        1232 :             level = l;</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">        1232 :             break;</span></span>
+<span id="L123"><span class="lineNum">     123</span>         [<span class="tlaGBC" title="Branch 0 was taken 1311 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        1312 :     for (uint32_t l = 0; l &lt; num_levels_; ++l) {</span></span>
+<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 1224 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span>]:<span class="tlaGNC">        1311 :         if (diff &lt; level_ranges_[l]) {</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">        1224 :             level = l;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">        1224 :             break;</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             :         }</span>
 <span id="L128"><span class="lineNum">     128</span>                 :             :     }</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : </span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     // Calculate bucket index for this level</span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">        1233 :     int64_t level_offset = expire / tick_ns_;</span></span>
-<span id="L132"><span class="lineNum">     132</span>         [<span class="tlaGBC" title="Branch 0 was taken 86 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1233 times"> + </span>]:<span class="tlaGNC">        1319 :     for (uint32_t l = 0; l &lt; level; ++l) {</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">        1225 :     int64_t level_offset = expire / tick_ns_;</span></span>
+<span id="L132"><span class="lineNum">     132</span>         [<span class="tlaGBC" title="Branch 0 was taken 86 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1225 times"> + </span>]:<span class="tlaGNC">        1311 :     for (uint32_t l = 0; l &lt; level; ++l) {</span></span>
 <span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">          86 :         level_offset /= 256;</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     }</span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">        1233 :     uint32_t bucket = static_cast&lt;uint32_t&gt;(level_offset) &amp; levels_[level].mask;</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">        1225 :     uint32_t bucket = static_cast&lt;uint32_t&gt;(level_offset) &amp; levels_[level].mask;</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        1233 :     timer-&gt;level = level;</span></span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">        1233 :     timer-&gt;bucket = bucket;</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        1233 :     timer-&gt;id |= (static_cast&lt;uint64_t&gt;(level) &lt;&lt; 48); // Store level in high</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        1225 :     timer-&gt;level = level;</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">        1225 :     timer-&gt;bucket = bucket;</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        1225 :     timer-&gt;id |= (static_cast&lt;uint64_t&gt;(level) &lt;&lt; 48); // Store level in high</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :                                                        // bits</span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">        1233 :     levels_[level].buckets[bucket].push_back(timer);</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">        1233 : }</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">        1225 :     levels_[level].buckets[bucket].push_back(timer);</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">        1225 : }</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             : </span>
 <span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">        2027 : TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {</span></span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :     // Strip level bits — map is keyed by base id only.</span>
@@ -247,22 +247,22 @@
 <span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">        1017 :     return timer;</span></span>
 <span id="L167"><span class="lineNum">     167</span>                 :             : }</span>
 <span id="L168"><span class="lineNum">     168</span>                 :             : </span>
-<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">        1631 : uint32_t TimingWheel::advance(int64_t now_ns) {</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">        1635 : uint32_t TimingWheel::advance(int64_t now_ns) {</span></span>
 <span id="L170"><span class="lineNum">     170</span>                 :             :     // Collect expired timer callbacks under the lock, then fire them</span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :     // outside the lock.  This prevents deadlocks where a callback</span>
 <span id="L172"><span class="lineNum">     172</span>                 :             :     // (e.g. deliver_local → notify_ready → enqueue_admitted) acquires</span>
 <span id="L173"><span class="lineNum">     173</span>                 :             :     // another mutex while a worker thread is blocked on mutex_ inside</span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :     // schedule().</span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">        1631 :     std::vector&lt;TimerCallback&gt; pending;</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">        1635 :     std::vector&lt;TimerCallback&gt; pending;</span></span>
 <span id="L176"><span class="lineNum">     176</span>                 :             : </span>
 <span id="L177"><span class="lineNum">     177</span>                 :             :     {</span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">        1631 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L179"><span class="lineNum">     179</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1631 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        1631 :         FAULT_INJECT(&quot;hpactor.timing_wheel.advance.skip&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1631 times"> + </span>]
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">        1635 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L179"><span class="lineNum">     179</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1635 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        1635 :         FAULT_INJECT(&quot;hpactor.timing_wheel.advance.skip&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1635 times"> + </span>]
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return 0;</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :             :         }</span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC tlaBgGNC">        1631 :         int64_t old_time = current_time_.load(std::memory_order_relaxed);</span></span>
-<span id="L183"><span class="lineNum">     183</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1630 times"> + </span>]:<span class="tlaGNC">        1631 :         if (now_ns &lt;= old_time) {</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC tlaBgGNC">        1635 :         int64_t old_time = current_time_.load(std::memory_order_relaxed);</span></span>
+<span id="L183"><span class="lineNum">     183</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1634 times"> + </span>]:<span class="tlaGNC">        1635 :         if (now_ns &lt;= old_time) {</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">           1 :             return 0;</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :         }</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             : </span>
@@ -274,93 +274,93 @@
 <span id="L192"><span class="lineNum">     192</span>                 :             :         // guarantee bounded work per call and let the timer thread</span>
 <span id="L193"><span class="lineNum">     193</span>                 :             :         // catch up over successive iterations.</span>
 <span id="L194"><span class="lineNum">     194</span>                 :             :         static constexpr int64_t kMaxAdvanceNs = 100'000'000; // 100 ms</span>
-<span id="L195"><span class="lineNum">     195</span>         [<span class="tlaGBC" title="Branch 0 was taken 637 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 993 times"> + </span>]:<span class="tlaGNC">        1630 :         if (now_ns - old_time &gt; kMaxAdvanceNs) {</span></span>
-<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">         637 :             now_ns = old_time + kMaxAdvanceNs;</span></span>
+<span id="L195"><span class="lineNum">     195</span>         [<span class="tlaGBC" title="Branch 0 was taken 646 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 988 times"> + </span>]:<span class="tlaGNC">        1634 :         if (now_ns - old_time &gt; kMaxAdvanceNs) {</span></span>
+<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">         646 :             now_ns = old_time + kMaxAdvanceNs;</span></span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :         }</span>
 <span id="L198"><span class="lineNum">     198</span>                 :             : </span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">        1630 :         current_time_.store(now_ns, std::memory_order_relaxed);</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">        1634 :         current_time_.store(now_ns, std::memory_order_relaxed);</span></span>
 <span id="L200"><span class="lineNum">     200</span>                 :             : </span>
 <span id="L201"><span class="lineNum">     201</span>                 :             :         // Process all levels</span>
-<span id="L202"><span class="lineNum">     202</span>         [<span class="tlaGBC" title="Branch 0 was taken 6520 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1630 times"> + </span>]:<span class="tlaGNC">        8150 :         for (uint32_t level = 0; level &lt; num_levels_; ++level) {</span></span>
-<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">        6520 :             uint64_t level_offset = static_cast&lt;uint64_t&gt;(old_time / tick_ns_);</span></span>
-<span id="L204"><span class="lineNum">     204</span>         [<span class="tlaGBC" title="Branch 0 was taken 9780 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6520 times"> + </span>]:<span class="tlaGNC">       16300 :             for (uint32_t l = 0; l &lt; level; ++l) {</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">        9780 :                 level_offset /= 256;</span></span>
+<span id="L202"><span class="lineNum">     202</span>         [<span class="tlaGBC" title="Branch 0 was taken 6536 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1634 times"> + </span>]:<span class="tlaGNC">        8170 :         for (uint32_t level = 0; level &lt; num_levels_; ++level) {</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">        6536 :             uint64_t level_offset = static_cast&lt;uint64_t&gt;(old_time / tick_ns_);</span></span>
+<span id="L204"><span class="lineNum">     204</span>         [<span class="tlaGBC" title="Branch 0 was taken 9804 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6536 times"> + </span>]:<span class="tlaGNC">       16340 :             for (uint32_t l = 0; l &lt; level; ++l) {</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">        9804 :                 level_offset /= 256;</span></span>
 <span id="L206"><span class="lineNum">     206</span>                 :             :             }</span>
 <span id="L207"><span class="lineNum">     207</span>                 :             :             uint32_t start_bucket =</span>
-<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">        6520 :                 static_cast&lt;uint32_t&gt;(level_offset) &amp; levels_[level].mask;</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">        6536 :                 static_cast&lt;uint32_t&gt;(level_offset) &amp; levels_[level].mask;</span></span>
 <span id="L209"><span class="lineNum">     209</span>                 :             : </span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">        6520 :             uint64_t end_offset = static_cast&lt;uint64_t&gt;(now_ns / tick_ns_);</span></span>
-<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaGBC" title="Branch 0 was taken 9780 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6520 times"> + </span>]:<span class="tlaGNC">       16300 :             for (uint32_t l = 0; l &lt; level; ++l) {</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">        9780 :                 end_offset /= 256;</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">        6536 :             uint64_t end_offset = static_cast&lt;uint64_t&gt;(now_ns / tick_ns_);</span></span>
+<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaGBC" title="Branch 0 was taken 9804 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6536 times"> + </span>]:<span class="tlaGNC">       16340 :             for (uint32_t l = 0; l &lt; level; ++l) {</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">        9804 :                 end_offset /= 256;</span></span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :             }</span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :             uint32_t end_bucket =</span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">        6520 :                 static_cast&lt;uint32_t&gt;(end_offset) &amp; levels_[level].mask;</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">        6536 :                 static_cast&lt;uint32_t&gt;(end_offset) &amp; levels_[level].mask;</span></span>
 <span id="L216"><span class="lineNum">     216</span>                 :             : </span>
 <span id="L217"><span class="lineNum">     217</span>                 :             :             // Process buckets from start to end (wrapping around)</span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">        6520 :             uint32_t num_buckets = levels_[level].num_buckets;</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">        6520 :             uint32_t count =</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">        6520 :                 ((end_bucket - start_bucket + num_buckets) % num_buckets) + 1;</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">        6536 :             uint32_t num_buckets = levels_[level].num_buckets;</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">        6536 :             uint32_t count =</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">        6536 :                 ((end_bucket - start_bucket + num_buckets) % num_buckets) + 1;</span></span>
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
-<span id="L222"><span class="lineNum">     222</span>         [<span class="tlaGBC" title="Branch 0 was taken 95910 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6520 times"> + </span>]:<span class="tlaGNC">      102430 :             for (uint32_t i = 0; i &lt; count; ++i) {</span></span>
-<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">       95910 :                 uint32_t bucket_idx = (start_bucket + i) % num_buckets;</span></span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">       95910 :                 auto&amp; bucket = levels_[level].buckets[bucket_idx];</span></span>
+<span id="L222"><span class="lineNum">     222</span>         [<span class="tlaGBC" title="Branch 0 was taken 102900 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6536 times"> + </span>]:<span class="tlaGNC">      109436 :             for (uint32_t i = 0; i &lt; count; ++i) {</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">      102900 :                 uint32_t bucket_idx = (start_bucket + i) % num_buckets;</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">      102900 :                 auto&amp; bucket = levels_[level].buckets[bucket_idx];</span></span>
 <span id="L225"><span class="lineNum">     225</span>                 :             : </span>
-<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaGBC" title="Branch 0 was taken 188 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 95910 times"> + </span>]:<span class="tlaGNC">       96098 :                 for (auto it = bucket.begin(); it != bucket.end();) {</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         188 :                     Timer* timer = *it;</span></span>
+<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaGBC" title="Branch 0 was taken 179 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 102900 times"> + </span>]:<span class="tlaGNC">      103079 :                 for (auto it = bucket.begin(); it != bucket.end();) {</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         179 :                     Timer* timer = *it;</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :             : </span>
-<span id="L229"><span class="lineNum">     229</span>         [<span class="tlaGBC" title="Branch 0 was taken 128 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 60 times"> + </span>]:<span class="tlaGNC">         188 :                     if (timer-&gt;expire_ns &lt;= now_ns) {</span></span>
+<span id="L229"><span class="lineNum">     229</span>         [<span class="tlaGBC" title="Branch 0 was taken 120 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 59 times"> + </span>]:<span class="tlaGNC">         179 :                     if (timer-&gt;expire_ns &lt;= now_ns) {</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             :                         // Collect for deferred fire outside the lock.</span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">         128 :                         timer_map_.erase(timer-&gt;id &amp; 0xFFFFFFFFFFFFULL);</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">         128 :                         it = bucket.erase(it);</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">         128 :                         pending.push_back(std::move(timer-&gt;callback));</span></span>
-<span id="L234"><span class="lineNum">     234</span>         [<span class="tlaGBC" title="Branch 0 was taken 128 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         128 :                         delete timer;</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">         120 :                         timer_map_.erase(timer-&gt;id &amp; 0xFFFFFFFFFFFFULL);</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">         120 :                         it = bucket.erase(it);</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">         120 :                         pending.push_back(std::move(timer-&gt;callback));</span></span>
+<span id="L234"><span class="lineNum">     234</span>         [<span class="tlaGBC" title="Branch 0 was taken 120 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         120 :                         delete timer;</span></span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :                     } else {</span>
 <span id="L236"><span class="lineNum">     236</span>                 :             :                         // Timer not yet expired, might need to cascade to lower</span>
 <span id="L237"><span class="lineNum">     237</span>                 :             :                         // level</span>
-<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 59 times"> + </span>]:<span class="tlaGNC">          60 :                         if (level &gt; 0) {</span></span>
+<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 59 times"> + </span>]:<span class="tlaGNC">          59 :                         if (level &gt; 0) {</span></span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :                             // Recalculate which bucket this timer should be in</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             :                             // at this (lower) level</span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">           1 :                             uint32_t lower_level = level - 1;</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">           1 :                             int64_t lower_offset = timer-&gt;expire_ns / tick_ns_;</span></span>
-<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :                             for (uint32_t l = 0; l &lt; lower_level; ++l) {</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                                 lower_offset /= 256;</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                             uint32_t lower_level = level - 1;</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaUNC">           0 :                             int64_t lower_offset = timer-&gt;expire_ns / tick_ns_;</span></span>
+<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                             for (uint32_t l = 0; l &lt; lower_level; ++l) {</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaUNC">           0 :                                 lower_offset /= 256;</span></span>
 <span id="L245"><span class="lineNum">     245</span>                 :             :                             }</span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :                             uint32_t lower_bucket =</span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC tlaBgGNC">           1 :                                 static_cast&lt;uint32_t&gt;(lower_offset) &amp;</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">           1 :                                 levels_[lower_level].mask;</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaUNC">           0 :                                 static_cast&lt;uint32_t&gt;(lower_offset) &amp;</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaUNC">           0 :                                 levels_[lower_level].mask;</span></span>
 <span id="L249"><span class="lineNum">     249</span>                 :             : </span>
-<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">           1 :                             timer-&gt;level = lower_level;</span></span>
-<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">           1 :                             timer-&gt;bucket = lower_bucket;</span></span>
-<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaGNC">           1 :                             timer-&gt;id &amp;= 0xFFFFFFFFFFFFULL;</span></span>
-<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">           1 :                             timer-&gt;id |= (static_cast&lt;uint64_t&gt;(lower_level) &lt;&lt; 48);</span></span>
-<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">           1 :                             it = bucket.erase(it);</span></span>
-<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaGNC">           1 :                             levels_[lower_level].buckets[lower_bucket].push_back(</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaUNC">           0 :                             timer-&gt;level = lower_level;</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaUNC">           0 :                             timer-&gt;bucket = lower_bucket;</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaUNC">           0 :                             timer-&gt;id &amp;= 0xFFFFFFFFFFFFULL;</span></span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaUNC">           0 :                             timer-&gt;id |= (static_cast&lt;uint64_t&gt;(lower_level) &lt;&lt; 48);</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaUNC">           0 :                             it = bucket.erase(it);</span></span>
+<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaUNC">           0 :                             levels_[lower_level].buckets[lower_bucket].push_back(</span></span>
 <span id="L256"><span class="lineNum">     256</span>                 :             :                                 timer);</span>
-<span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC">           1 :                             continue;</span></span>
-<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC">           1 :                         }</span></span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">          59 :                         ++it;</span></span>
+<span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaUNC">           0 :                             continue;</span></span>
+<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaUNC">           0 :                         }</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC tlaBgGNC">          59 :                         ++it;</span></span>
 <span id="L260"><span class="lineNum">     260</span>                 :             :                     }</span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :                 }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :             }</span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :         }</span>
-<span id="L264"><span class="lineNum">     264</span>         [<span class="tlaGBC" title="Branch 0 was taken 108 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1522 times"> + </span>]:<span class="tlaGNC">        1630 :         if (!pending.empty()) {</span></span>
-<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">         108 :             recompute_min_deadline();</span></span>
+<span id="L264"><span class="lineNum">     264</span>         [<span class="tlaGBC" title="Branch 0 was taken 99 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1535 times"> + </span>]:<span class="tlaGNC">        1634 :         if (!pending.empty()) {</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">          99 :             recompute_min_deadline();</span></span>
 <span id="L266"><span class="lineNum">     266</span>                 :             :         }</span>
-<span id="L267"><span class="lineNum">     267</span>         [<span class="tlaGBC" title="Branch 0 was taken 1630 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        1631 :     }</span></span>
+<span id="L267"><span class="lineNum">     267</span>         [<span class="tlaGBC" title="Branch 0 was taken 1634 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        1635 :     }</span></span>
 <span id="L268"><span class="lineNum">     268</span>                 :             :     // Lock released — fire callbacks safely outside the critical section.</span>
 <span id="L269"><span class="lineNum">     269</span>                 :             : </span>
-<span id="L270"><span class="lineNum">     270</span>         [<span class="tlaGBC" title="Branch 0 was taken 128 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1630 times"> + </span>]:<span class="tlaGNC">        1758 :     for (auto&amp; cb : pending) {</span></span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">         128 :         cb();</span></span>
+<span id="L270"><span class="lineNum">     270</span>         [<span class="tlaGBC" title="Branch 0 was taken 120 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1634 times"> + </span>]:<span class="tlaGNC">        1754 :     for (auto&amp; cb : pending) {</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">         120 :         cb();</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :             :     }</span>
 <span id="L273"><span class="lineNum">     273</span>                 :             : </span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">        1630 :     return static_cast&lt;uint32_t&gt;(pending.size());</span></span>
-<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">        1631 : }</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">        1634 :     return static_cast&lt;uint32_t&gt;(pending.size());</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">        1635 : }</span></span>
 <span id="L276"><span class="lineNum">     276</span>                 :             : </span>
 <span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">          14 : bool TimingWheel::empty() const {</span></span>
 <span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaGNC">          14 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
 <span id="L279"><span class="lineNum">     279</span>         [<span class="tlaGBC" title="Branch 0 was taken 50 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          61 :     for (const auto&amp; level : levels_) {</span></span>
-<span id="L280"><span class="lineNum">     280</span>         [<span class="tlaGBC" title="Branch 0 was taken 12170 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 47 times"> + </span>]:<span class="tlaGNC">       12217 :         for (const auto&amp; bucket : level.buckets) {</span></span>
-<span id="L281"><span class="lineNum">     281</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12167 times"> + </span>]:<span class="tlaGNC">       12170 :             if (!bucket.empty()) {</span></span>
+<span id="L280"><span class="lineNum">     280</span>         [<span class="tlaGBC" title="Branch 0 was taken 12439 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 47 times"> + </span>]:<span class="tlaGNC">       12486 :         for (const auto&amp; bucket : level.buckets) {</span></span>
+<span id="L281"><span class="lineNum">     281</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12436 times"> + </span>]:<span class="tlaGNC">       12439 :             if (!bucket.empty()) {</span></span>
 <span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">           3 :                 return false;</span></span>
 <span id="L283"><span class="lineNum">     283</span>                 :             :             }</span>
 <span id="L284"><span class="lineNum">     284</span>                 :             :         }</span>
@@ -379,23 +379,23 @@
 <span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">          14 :     return count;</span></span>
 <span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L299"><span class="lineNum">     299</span>                 :             : </span>
-<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">        1613 : int64_t TimingWheel::next_deadline() const {</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">        1617 : int64_t TimingWheel::next_deadline() const {</span></span>
 <span id="L301"><span class="lineNum">     301</span>                 :             :     // Lock-free read of the cached minimum.  Updated under mutex_ by</span>
 <span id="L302"><span class="lineNum">     302</span>                 :             :     // schedule(), advance(), and cancel().</span>
-<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">        3226 :     return min_deadline_.load(std::memory_order_acquire);</span></span>
+<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">        3234 :     return min_deadline_.load(std::memory_order_acquire);</span></span>
 <span id="L304"><span class="lineNum">     304</span>                 :             : }</span>
 <span id="L305"><span class="lineNum">     305</span>                 :             : </span>
-<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">        1125 : void TimingWheel::recompute_min_deadline() {</span></span>
-<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">        1125 :     int64_t m = INT64_MAX;</span></span>
-<span id="L308"><span class="lineNum">     308</span>         [<span class="tlaGBC" title="Branch 0 was taken 4500 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1125 times"> + </span>]:<span class="tlaGNC">        5625 :     for (const auto&amp; level : levels_) {</span></span>
-<span id="L309"><span class="lineNum">     309</span>         [<span class="tlaGBC" title="Branch 0 was taken 1152000 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4500 times"> + </span>]:<span class="tlaGNC">     1156500 :         for (const auto&amp; bucket : level.buckets) {</span></span>
-<span id="L310"><span class="lineNum">     310</span>         [<span class="tlaGBC" title="Branch 0 was taken 499899 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1152000 times"> + </span>]:<span class="tlaGNC">     1651899 :             for (const Timer* timer : bucket) {</span></span>
-<span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaGNC">      499899 :                 m = std::min(m, timer-&gt;expire_ns);</span></span>
+<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">        1116 : void TimingWheel::recompute_min_deadline() {</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">        1116 :     int64_t m = INT64_MAX;</span></span>
+<span id="L308"><span class="lineNum">     308</span>         [<span class="tlaGBC" title="Branch 0 was taken 4464 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1116 times"> + </span>]:<span class="tlaGNC">        5580 :     for (const auto&amp; level : levels_) {</span></span>
+<span id="L309"><span class="lineNum">     309</span>         [<span class="tlaGBC" title="Branch 0 was taken 1142784 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4464 times"> + </span>]:<span class="tlaGNC">     1147248 :         for (const auto&amp; bucket : level.buckets) {</span></span>
+<span id="L310"><span class="lineNum">     310</span>         [<span class="tlaGBC" title="Branch 0 was taken 499862 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1142784 times"> + </span>]:<span class="tlaGNC">     1642646 :             for (const Timer* timer : bucket) {</span></span>
+<span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaGNC">      499862 :                 m = std::min(m, timer-&gt;expire_ns);</span></span>
 <span id="L312"><span class="lineNum">     312</span>                 :             :             }</span>
 <span id="L313"><span class="lineNum">     313</span>                 :             :         }</span>
 <span id="L314"><span class="lineNum">     314</span>                 :             :     }</span>
-<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">        1125 :     min_deadline_.store(m, std::memory_order_release);</span></span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">        1125 : }</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">        1116 :     min_deadline_.store(m, std::memory_order_release);</span></span>
+<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">        1116 : }</span></span>
 <span id="L317"><span class="lineNum">     317</span>                 :             : </span>
 <span id="L318"><span class="lineNum">     318</span>                 :             : } // namespace hpactor::sched</span>
         </pre>

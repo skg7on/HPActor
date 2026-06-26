@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 04:28:34</td>
+            <td class="headerValue">2026-06-26 05:09:23</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
@@ -116,14 +116,14 @@
 <span id="L38"><span class="lineNum">      38</span>                 :             :                                       TypeTag expected_tag,</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :                                       std::chrono::milliseconds timeout) {</span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           6 :     auto deadline = std::chrono::steady_clock::now() + timeout;</span></span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          12 :     while (std::chrono::steady_clock::now() &lt; deadline) {</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">          12 :         TypedMessage msg;</span></span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          12 :         if (mbox-&gt;try_pop(msg)) {</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          13 :     while (std::chrono::steady_clock::now() &lt; deadline) {</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">          13 :         TypedMessage msg;</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">          13 :         if (mbox-&gt;try_pop(msg)) {</span></span>
 <span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :             if (msg.type_id() == expected_tag)</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           6 :                 return std::move(msg).payload();</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :         }</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           6 :         std::this_thread::sleep_for(std::chrono::milliseconds(1));</span></span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          12 :     }</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           7 :         std::this_thread::sleep_for(std::chrono::milliseconds(1));</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          13 :     }</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return std::nullopt;</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>

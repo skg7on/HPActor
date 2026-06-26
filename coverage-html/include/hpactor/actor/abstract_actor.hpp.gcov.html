@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 04:28:34</td>
+            <td class="headerValue">2026-06-26 05:09:23</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">72.0&nbsp;%</td>
@@ -139,8 +139,8 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC tlaBgGNC">        2088 :     virtual ~AbstractActor() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \brief Globally-unique actor identifier assigned at spawn.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        7799 :     ActorId id() const {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        7799 :         return id_;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        7776 :     ActorId id() const {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        7776 :         return id_;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     /// \brief Pointer to the actor's \c ActorId for consumers that need</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///        an address without copying.</span>
@@ -152,12 +152,12 @@
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        1942 :         return type_;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     /// \brief Full network-addressable identity.</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        2614 :     ActorAddress address() const {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">        2614 :         return address_;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        2590 :     ActorAddress address() const {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">        2590 :         return address_;</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :     /// \brief Owning \c ActorSystem reference.</span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">        3036 :     ActorSystem&amp; system() {</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">        3036 :         return system_;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">        3013 :     ActorSystem&amp; system() {</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">        3013 :         return system_;</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     }</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     const ActorSystem&amp; system() const {</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :         return system_;</span>
@@ -211,8 +211,8 @@
 <span id="L133"><span class="lineNum">     133</span>                 :             :     /// \brief RTTI-free downcast to the \c LifecycleActor mixin.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// Returns \c nullptr for actors that do not opt into lifecycle management.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">        6267 :     virtual LifecycleActor* as_lifecycle() {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        6267 :         return nullptr;</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">        6246 :     virtual LifecycleActor* as_lifecycle() {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        6246 :         return nullptr;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">          10 :     virtual const LifecycleActor* as_lifecycle() const {</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          10 :         return nullptr;</span></span>
