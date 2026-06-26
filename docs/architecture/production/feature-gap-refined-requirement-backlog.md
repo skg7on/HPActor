@@ -849,6 +849,7 @@ Tests:
 Priority: `P1`
 Status: `Missing`
 Release lane: `Cluster`
+Design: [Production Distributed Leadership Election Design](distributed-leadership-election-design.md)
 
 Gap:
 
@@ -2093,4 +2094,3 @@ Exit criteria:
 - Schema and protocol compatibility checks exist.
 - Streaming and batch protocols have negotiated support.
 - Secret redaction and rotation are tested.
-
