@@ -164,39 +164,35 @@ class SaturateSenderActor : public EventBasedActor {
         if (!running_ || receiver_addrs_.empty())
             return;
 
+        // ── Rate throttling (once per activation) ──────────────────
+        uint64_t sent = sent_count_.load(std::memory_order_relaxed);
+        auto now = std::chrono::steady_clock::now();
+        uint64_t elapsed_us = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::microseconds>(now - start_time_)
+                .count());
+        if (elapsed_us > 0 && current_rate_msgps_ > 0) {
+            uint64_t expected_us = sent * 1'000'000ULL / current_rate_msgps_;
+            if (expected_us > elapsed_us + 500) {
+                uint64_t sleep_us = expected_us - elapsed_us;
+                if (sleep_us > 10000)
+                    sleep_us = 10000;
+                auto sleep_ms = std::chrono::milliseconds(
+                    std::max<uint64_t>(1, sleep_us / 1000));
+                pending_tick_ =
+                    context()->schedule(sleep_ms, make_msg(SendTickTag));
+                return;
+            }
+        }
+        uint64_t now_us = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                now.time_since_epoch())
+                .count());
+
         // ── True cooperative loop ────────────────────────────────────
-        // Process up to kMaxBatchesPerActivation batches per activation
-        // without timer scheduling.  Only schedule a timer when
-        // rate-throttling or the batch budget is exhausted.
+        // Process up to kMaxBatchesPerActivation batches per activation.
         for (uint32_t batch = 0; batch < kMaxBatchesPerActivation; ++batch) {
             if (!running_)
                 return;
-
-            // ── Rate throttling ──────────────────────────────────────
-            uint64_t sent = sent_count_.load(std::memory_order_relaxed);
-            auto now = std::chrono::steady_clock::now();
-            uint64_t elapsed_us = static_cast<uint64_t>(
-                std::chrono::duration_cast<std::chrono::microseconds>(now - start_time_)
-                    .count());
-            if (elapsed_us > 0 && current_rate_msgps_ > 0) {
-                uint64_t expected_us = sent * 1'000'000ULL / current_rate_msgps_;
-                if (expected_us > elapsed_us + 500) {
-                    uint64_t sleep_us = expected_us - elapsed_us;
-                    if (sleep_us > 10000)
-                        sleep_us = 10000;
-                    auto sleep_ms = std::chrono::milliseconds(
-                        std::max<uint64_t>(1, sleep_us / 1000));
-                    pending_tick_ =
-                        context()->schedule(sleep_ms, make_msg(SendTickTag));
-                    return;
-                }
-            }
-
-            // ── Send one batch ────────────────────────────────────────
-            uint64_t now_us = static_cast<uint64_t>(
-                std::chrono::duration_cast<std::chrono::microseconds>(
-                    now.time_since_epoch())
-                    .count());
 
             mailbox::MailboxEnvelopeMeta meta;
             meta.type_tag = LoadMessageTag;
