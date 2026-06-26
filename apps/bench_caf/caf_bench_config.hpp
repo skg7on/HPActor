@@ -41,6 +41,10 @@ enum class OutputFormat {
 enum class MessageShape {
     HeaderOnly,
     FixedBytes,
+    ProtobufSmall,
+    ProtobufNested,
+    SharedBuffer,
+    Mixed80_20,
 };
 
 enum class TrafficDistribution {
@@ -100,7 +104,21 @@ inline const char* output_format_name(OutputFormat format) {
 }
 
 inline const char* message_shape_name(MessageShape shape) {
-    return shape == MessageShape::FixedBytes ? "fixed-bytes" : "header-only";
+    switch (shape) {
+        case MessageShape::HeaderOnly:
+            return "header-only";
+        case MessageShape::FixedBytes:
+            return "fixed-bytes";
+        case MessageShape::ProtobufSmall:
+            return "protobuf-small";
+        case MessageShape::ProtobufNested:
+            return "protobuf-nested";
+        case MessageShape::SharedBuffer:
+            return "shared-buffer";
+        case MessageShape::Mixed80_20:
+            return "mixed-80-20";
+    }
+    return "header-only";
 }
 
 inline bool parse_scenario(const std::string& value, ScenarioKind& out) {
@@ -158,6 +176,22 @@ inline bool parse_message_shape(const std::string& value, MessageShape& out) {
     }
     if (value == "fixed-bytes") {
         out = MessageShape::FixedBytes;
+        return true;
+    }
+    if (value == "protobuf-small") {
+        out = MessageShape::ProtobufSmall;
+        return true;
+    }
+    if (value == "protobuf-nested") {
+        out = MessageShape::ProtobufNested;
+        return true;
+    }
+    if (value == "shared-buffer") {
+        out = MessageShape::SharedBuffer;
+        return true;
+    }
+    if (value == "mixed-80-20") {
+        out = MessageShape::Mixed80_20;
         return true;
     }
     return false;
