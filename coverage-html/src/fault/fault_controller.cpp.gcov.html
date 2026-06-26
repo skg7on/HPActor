@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 05:09:23</td>
+            <td class="headerValue">2026-06-26 05:26:27</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">88.9&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">70.5&nbsp;%</td>
+            <td class="headerCovTableEntryLo">71.8&nbsp;%</td>
             <td class="headerCovTableEntry">78</td>
-            <td class="headerCovTableEntry">55</td>
+            <td class="headerCovTableEntry">56</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -106,7 +106,7 @@
 <span id="L28"><span class="lineNum">      28</span>                 :             : thread_local FaultController* FaultController::tls_instance_ = nullptr;</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC tlaBgGNC">        2405 : FaultController::InstanceList&amp; FaultController::instance_list() {</span></span>
-<span id="L31"><span class="lineNum">      31</span>   [<span class="tlaGBC" title="Branch 0 was taken 748 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1657 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 748 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        2405 :     static InstanceList list;</span></span>
+<span id="L31"><span class="lineNum">      31</span>   [<span class="tlaGBC" title="Branch 0 was taken 749 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1656 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 748 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span>]:<span class="tlaGNC">        2405 :     static InstanceList list;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">        2405 :     return list;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : }</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
@@ -176,9 +176,9 @@
 <span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaUNC">           0 :     domain_ticks_[idx]++;</span></span>
 <span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L100"><span class="lineNum">     100</span>                 :             : </span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC tlaBgGNC">       33526 : bool FaultController::check(std::string_view path,</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC tlaBgGNC">       34200 : bool FaultController::check(std::string_view path,</span></span>
 <span id="L102"><span class="lineNum">     102</span>                 :             :                              std::optional&lt;ActorId&gt; target) {</span>
-<span id="L103"><span class="lineNum">     103</span>         [<span class="tlaGBC" title="Branch 0 was taken 31898 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1628 times"> + </span>]:<span class="tlaGNC">       33526 :     if (HPACTOR_UNLIKELY(!enabled_.load(std::memory_order_acquire))) return false;</span></span>
+<span id="L103"><span class="lineNum">     103</span>         [<span class="tlaGBC" title="Branch 0 was taken 32572 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1628 times"> + </span>]:<span class="tlaGNC">       34200 :     if (HPACTOR_UNLIKELY(!enabled_.load(std::memory_order_acquire))) return false;</span></span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : </span>
 <span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">        1628 :     auto&amp; registry = FaultPointRegistry::instance();</span></span>
 <span id="L106"><span class="lineNum">     106</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1626 times"> + </span>]:<span class="tlaGNC">        1628 :     if (!registry.matches_prefix(path, active_scope_)) return false;</span></span>
@@ -310,8 +310,8 @@
 <span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        1172 :     tls_instance_ = nullptr;</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">        1172 : }</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :             : </span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">      788258 : FaultController* FaultController::instance() {</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">      788258 :     return tls_instance_;</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">      795498 : FaultController* FaultController::instance() {</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">      795498 :     return tls_instance_;</span></span>
 <span id="L234"><span class="lineNum">     234</span>                 :             : }</span>
 <span id="L235"><span class="lineNum">     235</span>                 :             : </span>
 <span id="L236"><span class="lineNum">     236</span>                 :             : } // namespace hpactor::fault</span>

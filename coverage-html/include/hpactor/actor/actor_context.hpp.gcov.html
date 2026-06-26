@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 05:09:23</td>
+            <td class="headerValue">2026-06-26 05:26:27</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -309,18 +309,18 @@
 <span id="L231"><span class="lineNum">     231</span>                 :             :         return current_sender_;</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     }</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             :     /// \brief Set the current sender address (called by message dispatch).</span>
-<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC tlaBgGNC">        1164 :     void set_current_sender(const ActorAddress&amp; sender) {</span></span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">        1164 :         current_sender_ = sender;</span></span>
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">        1164 :     }</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC tlaBgGNC">        1174 :     void set_current_sender(const ActorAddress&amp; sender) {</span></span>
+<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">        1174 :         current_sender_ = sender;</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">        1174 :     }</span></span>
 <span id="L237"><span class="lineNum">     237</span>                 :             : </span>
 <span id="L238"><span class="lineNum">     238</span>                 :             :     /// \brief Current ask message ID for reply routing through AskManager.</span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :     uint64_t current_ask_message_id() const {</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             :         return current_ask_message_id_;</span>
 <span id="L241"><span class="lineNum">     241</span>                 :             :     }</span>
 <span id="L242"><span class="lineNum">     242</span>                 :             :     /// \brief Set the ask message ID (called by message dispatch).</span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        2322 :     void set_current_ask_message_id(uint64_t id) {</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">        2322 :         current_ask_message_id_ = id;</span></span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">        2322 :     }</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        2342 :     void set_current_ask_message_id(uint64_t id) {</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">        2342 :         current_ask_message_id_ = id;</span></span>
+<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">        2342 :     }</span></span>
 <span id="L246"><span class="lineNum">     246</span>                 :             : </span>
 <span id="L247"><span class="lineNum">     247</span>                 :             :     // ── Scheduled delivery ────────────────────────────────────────────────</span>
 <span id="L248"><span class="lineNum">     248</span>                 :             : </span>

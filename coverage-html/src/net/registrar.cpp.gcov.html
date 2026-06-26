@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">43.7&nbsp;%</td>
+            <td class="headerCovTableEntryLo">44.8&nbsp;%</td>
             <td class="headerCovTableEntry">524</td>
-            <td class="headerCovTableEntry">229</td>
+            <td class="headerCovTableEntry">235</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 05:09:23</td>
+            <td class="headerValue">2026-06-26 05:26:27</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">55.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">32.2&nbsp;%</td>
+            <td class="headerCovTableEntryLo">34.2&nbsp;%</td>
             <td class="headerCovTableEntry">199</td>
-            <td class="headerCovTableEntry">64</td>
+            <td class="headerCovTableEntry">68</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -846,10 +846,10 @@
 <span id="L766"><span class="lineNum">     766</span>                 :             : }</span>
 <span id="L767"><span class="lineNum">     767</span>                 :             : </span>
 <span id="L768"><span class="lineNum">     768</span>                 :<span class="tlaGNC tlaBgGNC">           7 : std::vector&lt;NodeEndpoint&gt; UdpRegistrar::get_all_endpoints() const {</span></span>
-<span id="L769"><span class="lineNum">     769</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           7 :     if (server_) {</span></span>
-<span id="L770"><span class="lineNum">     770</span>                 :<span class="tlaGNC">           5 :         return server_-&gt;registry()-&gt;all();</span></span>
+<span id="L769"><span class="lineNum">     769</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           7 :     if (server_) {</span></span>
+<span id="L770"><span class="lineNum">     770</span>                 :<span class="tlaGNC">           4 :         return server_-&gt;registry()-&gt;all();</span></span>
 <span id="L771"><span class="lineNum">     771</span>                 :             :     }</span>
-<span id="L772"><span class="lineNum">     772</span>                 :<span class="tlaGNC">           2 :     return {};</span></span>
+<span id="L772"><span class="lineNum">     772</span>                 :<span class="tlaGNC">           3 :     return {};</span></span>
 <span id="L773"><span class="lineNum">     773</span>                 :             : }</span>
 <span id="L774"><span class="lineNum">     774</span>                 :             : </span>
 <span id="L775"><span class="lineNum">     775</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void UdpRegistrar::set_node_callback(node_callback cb) {</span></span>
@@ -971,30 +971,30 @@
 <span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         result.push_back(to_member(ep));</span></span>
 <span id="L892"><span class="lineNum">     892</span>                 :             : </span>
 <span id="L893"><span class="lineNum">     893</span>                 :             :     // Also collect from client registry (static routes)</span>
-<span id="L894"><span class="lineNum">     894</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           7 :     if (client_registry_) {</span></span>
-<span id="L895"><span class="lineNum">     895</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto client_eps = client_registry_-&gt;all();</span></span>
-<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaUNC">           0 :         result.reserve(result.size() + client_eps.size());</span></span>
-<span id="L897"><span class="lineNum">     897</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (const auto&amp; ep : client_eps)</span></span>
-<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaUNC">           0 :             result.push_back(to_member(ep));</span></span>
-<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L894"><span class="lineNum">     894</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           7 :     if (client_registry_) {</span></span>
+<span id="L895"><span class="lineNum">     895</span>                 :<span class="tlaGNC">           1 :         auto client_eps = client_registry_-&gt;all();</span></span>
+<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaGNC">           1 :         result.reserve(result.size() + client_eps.size());</span></span>
+<span id="L897"><span class="lineNum">     897</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         for (const auto&amp; ep : client_eps)</span></span>
+<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             result.push_back(to_member(ep));</span></span>
+<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     }</span></span>
 <span id="L900"><span class="lineNum">     900</span>                 :             : </span>
-<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     return result;</span></span>
+<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC">           7 :     return result;</span></span>
 <span id="L902"><span class="lineNum">     902</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L903"><span class="lineNum">     903</span>                 :             : </span>
 <span id="L904"><span class="lineNum">     904</span>                 :<span class="tlaGNC">           4 : const Member* UdpRegistrar::discover(EndPoint ep) const {</span></span>
 <span id="L905"><span class="lineNum">     905</span>                 :             :     // Check server registry first</span>
-<span id="L906"><span class="lineNum">     906</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (server_) {</span></span>
-<span id="L907"><span class="lineNum">     907</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto* node_ep = server_-&gt;registry()-&gt;get(ep);</span></span>
-<span id="L908"><span class="lineNum">     908</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (node_ep) {</span></span>
-<span id="L909"><span class="lineNum">     909</span>                 :<span class="tlaUNC">           0 :             endpoint_to_member_[ep] = to_member(*node_ep);</span></span>
+<span id="L906"><span class="lineNum">     906</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :     if (server_) {</span></span>
+<span id="L907"><span class="lineNum">     907</span>                 :<span class="tlaGNC">           1 :         auto* node_ep = server_-&gt;registry()-&gt;get(ep);</span></span>
+<span id="L908"><span class="lineNum">     908</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (node_ep) {</span></span>
+<span id="L909"><span class="lineNum">     909</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             endpoint_to_member_[ep] = to_member(*node_ep);</span></span>
 <span id="L910"><span class="lineNum">     910</span>                 :<span class="tlaUNC">           0 :             return &amp;endpoint_to_member_[ep];</span></span>
 <span id="L911"><span class="lineNum">     911</span>                 :             :         }</span>
 <span id="L912"><span class="lineNum">     912</span>                 :             :     }</span>
 <span id="L913"><span class="lineNum">     913</span>                 :             : </span>
 <span id="L914"><span class="lineNum">     914</span>                 :             :     // Check client registry</span>
-<span id="L915"><span class="lineNum">     915</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           4 :     if (client_registry_) {</span></span>
-<span id="L916"><span class="lineNum">     916</span>                 :<span class="tlaGNC">           2 :         auto* node_ep = client_registry_-&gt;get(ep);</span></span>
-<span id="L917"><span class="lineNum">     917</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :         if (node_ep) {</span></span>
+<span id="L915"><span class="lineNum">     915</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           4 :     if (client_registry_) {</span></span>
+<span id="L916"><span class="lineNum">     916</span>                 :<span class="tlaGNC">           1 :         auto* node_ep = client_registry_-&gt;get(ep);</span></span>
+<span id="L917"><span class="lineNum">     917</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (node_ep) {</span></span>
 <span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             endpoint_to_member_[ep] = to_member(*node_ep);</span></span>
 <span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaUNC">           0 :             return &amp;endpoint_to_member_[ep];</span></span>
 <span id="L920"><span class="lineNum">     920</span>                 :             :         }</span>

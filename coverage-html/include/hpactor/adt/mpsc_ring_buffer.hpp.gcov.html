@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 05:09:23</td>
+            <td class="headerValue">2026-06-26 05:26:27</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">97.7&nbsp;%</td>
@@ -134,53 +134,53 @@
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     // Try to push a value. Returns false if the buffer is full.</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     // Safe to call from any number of threads concurrently.</span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">       85075 :     bool try_push(const T&amp; value) noexcept {</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">      170150 :         uint64_t w = write_cursor_.load(std::memory_order_relaxed);</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">        9275 :         for (;;) {</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">       94350 :             uint64_t slot = w &amp; mask_;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">       58140 :     bool try_push(const T&amp; value) noexcept {</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">      116280 :         uint64_t w = write_cursor_.load(std::memory_order_relaxed);</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">        5932 :         for (;;) {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">       64072 :             uint64_t slot = w &amp; mask_;</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :             // Slot is writable when its sequence number equals w.</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :             // The acquire load synchronizes with the consumer's release store,</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :             // ensuring we see the slot as free only after the consumer has</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :             // finished reading the previous occupant.</span>
-<span id="L67"><span class="lineNum">      67</span>         [<span class="tlaGBC" title="Branch 0 was taken 54938 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 39412 times"> + </span>]:<span class="tlaGNC">      188700 :             if (seq_[slot].load(std::memory_order_acquire) != w) {</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       54938 :                 events_lost_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">       54938 :                 return false;</span></span>
+<span id="L67"><span class="lineNum">      67</span>         [<span class="tlaGBC" title="Branch 0 was taken 34302 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 29770 times"> + </span>]:<span class="tlaGNC">      128144 :             if (seq_[slot].load(std::memory_order_acquire) != w) {</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       34302 :                 events_lost_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">       34302 :                 return false;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :             }</span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 30137 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9275 times"> + </span>]:<span class="tlaGNC">       78824 :             if (write_cursor_.compare_exchange_weak(w, w + 1,</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 23838 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5932 times"> + </span>]:<span class="tlaGNC">       59540 :             if (write_cursor_.compare_exchange_weak(w, w + 1,</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :                                                     std::memory_order_relaxed)) {</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">       30137 :                 break;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">       23838 :                 break;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :             }</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :         }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :         // w is now exclusively claimed by this producer.</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">       30137 :         buffer_[w &amp; mask_] = value;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">       23838 :         buffer_[w &amp; mask_] = value;</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :         // Publish: the release store ensures the buffer_ write is visible</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :         // before the consumer observes the published sequence number.</span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">       30137 :         seq_[w &amp; mask_].store(w + 1, std::memory_order_release);</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">       30137 :         return true;</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">       23838 :         seq_[w &amp; mask_].store(w + 1, std::memory_order_release);</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">       23838 :         return true;</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : </span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     // Drain all published elements. Must be called from a single consumer</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     // thread.</span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">       77953 :     template &lt;typename Fn&gt; size_t drain(Fn&amp;&amp; callback) {</span></span>
-<span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">       77953 :         uint64_t r = read_cursor_.load(std::memory_order_relaxed);</span></span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">       77953 :         size_t count = 0;</span></span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">       19132 :         for (;;) {</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">       97085 :             uint64_t slot = r &amp; mask_;</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">       57759 :     template &lt;typename Fn&gt; size_t drain(Fn&amp;&amp; callback) {</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">       57759 :         uint64_t r = read_cursor_.load(std::memory_order_relaxed);</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">       57759 :         size_t count = 0;</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">       12767 :         for (;;) {</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">       70526 :             uint64_t slot = r &amp; mask_;</span></span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :             // Slot is ready when its sequence number equals r + 1.</span>
 <span id="L92"><span class="lineNum">      92</span>                 :             :             // The acquire load synchronizes with the producer's release store,</span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :             // ensuring the payload write is visible.</span>
-<span id="L94"><span class="lineNum">      94</span>         [<span class="tlaGBC" title="Branch 0 was taken 77953 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 19132 times"> + </span>]:<span class="tlaGNC">      194170 :             if (seq_[slot].load(std::memory_order_acquire) != (r + 1)) {</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">       77953 :                 break;</span></span>
+<span id="L94"><span class="lineNum">      94</span>         [<span class="tlaGBC" title="Branch 0 was taken 57759 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12767 times"> + </span>]:<span class="tlaGNC">      141052 :             if (seq_[slot].load(std::memory_order_acquire) != (r + 1)) {</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">       57759 :                 break;</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :             }</span>
-<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">       19132 :             callback(buffer_[slot]);</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">       12767 :             callback(buffer_[slot]);</span></span>
 <span id="L98"><span class="lineNum">      98</span>                 :             :             // Mark slot free for reuse. The release store ensures buffer_ read</span>
 <span id="L99"><span class="lineNum">      99</span>                 :             :             // completes before a producer observes the freed slot.</span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">       19132 :             seq_[slot].store(r + Capacity, std::memory_order_release);</span></span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">       19132 :             ++r;</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">       19132 :             ++count;</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">       12767 :             seq_[slot].store(r + Capacity, std::memory_order_release);</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">       12767 :             ++r;</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">       12767 :             ++count;</span></span>
 <span id="L103"><span class="lineNum">     103</span>                 :             :         }</span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">       77953 :         read_cursor_.store(r, std::memory_order_release);</span></span>
-<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">       77953 :         return count;</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">       57759 :         read_cursor_.store(r, std::memory_order_release);</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">       57759 :         return count;</span></span>
 <span id="L106"><span class="lineNum">     106</span>                 :             :     }</span>
 <span id="L107"><span class="lineNum">     107</span>                 :             : </span>
 <span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           3 :     uint64_t events_lost() const noexcept {</span></span>
@@ -237,39 +237,39 @@
 <span id="L159"><span class="lineNum">     159</span>                 :             :         }</span>
 <span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">         784 :     }</span></span>
 <span id="L161"><span class="lineNum">     161</span>                 :             : </span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">       44445 :     bool try_push(const T&amp; value) noexcept {</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">       88890 :         uint64_t w = write_cursor_.load(std::memory_order_relaxed);</span></span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">         584 :         for (;;) {</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">       45029 :             uint64_t slot = w &amp; mask_;</span></span>
-<span id="L166"><span class="lineNum">     166</span>         [<span class="tlaGBC" title="Branch 0 was taken 38887 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6142 times"> + </span>]:<span class="tlaGNC">       90058 :             if (seq_[slot].load(std::memory_order_acquire) != w) {</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">       38887 :                 events_lost_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">       38887 :                 return false;</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">       46914 :     bool try_push(const T&amp; value) noexcept {</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">       93828 :         uint64_t w = write_cursor_.load(std::memory_order_relaxed);</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">         948 :         for (;;) {</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">       47862 :             uint64_t slot = w &amp; mask_;</span></span>
+<span id="L166"><span class="lineNum">     166</span>         [<span class="tlaGBC" title="Branch 0 was taken 41411 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6451 times"> + </span>]:<span class="tlaGNC">       95724 :             if (seq_[slot].load(std::memory_order_acquire) != w) {</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">       41411 :                 events_lost_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">       41411 :                 return false;</span></span>
 <span id="L169"><span class="lineNum">     169</span>                 :             :             }</span>
-<span id="L170"><span class="lineNum">     170</span>         [<span class="tlaGBC" title="Branch 0 was taken 5558 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 584 times"> + </span>]:<span class="tlaGNC">       12284 :             if (write_cursor_.compare_exchange_weak(w, w + 1,</span></span>
+<span id="L170"><span class="lineNum">     170</span>         [<span class="tlaGBC" title="Branch 0 was taken 5503 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 948 times"> + </span>]:<span class="tlaGNC">       12902 :             if (write_cursor_.compare_exchange_weak(w, w + 1,</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :                                                     std::memory_order_relaxed)) {</span>
-<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">        5558 :                 break;</span></span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">        5503 :                 break;</span></span>
 <span id="L173"><span class="lineNum">     173</span>                 :             :             }</span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :         }</span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">        5558 :         buffer_[w &amp; mask_] = value;</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">        5558 :         seq_[w &amp; mask_].store(w + 1, std::memory_order_release);</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">        5558 :         return true;</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">        5503 :         buffer_[w &amp; mask_] = value;</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">        5503 :         seq_[w &amp; mask_].store(w + 1, std::memory_order_release);</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">        5503 :         return true;</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :             :     }</span>
 <span id="L179"><span class="lineNum">     179</span>                 :             : </span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">       23541 :     template &lt;typename Fn&gt; size_t drain(Fn&amp;&amp; callback) {</span></span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">       23541 :         uint64_t r = read_cursor_.load(std::memory_order_relaxed);</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">       23541 :         size_t count = 0;</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5523 :         for (;;) {</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">       29064 :             uint64_t slot = r &amp; mask_;</span></span>
-<span id="L185"><span class="lineNum">     185</span>         [<span class="tlaGBC" title="Branch 0 was taken 23541 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5523 times"> + </span>]:<span class="tlaGNC">       58128 :             if (seq_[slot].load(std::memory_order_acquire) != (r + 1)) {</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">       23541 :                 break;</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">       28899 :     template &lt;typename Fn&gt; size_t drain(Fn&amp;&amp; callback) {</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">       28899 :         uint64_t r = read_cursor_.load(std::memory_order_relaxed);</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">       28899 :         size_t count = 0;</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5468 :         for (;;) {</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">       34367 :             uint64_t slot = r &amp; mask_;</span></span>
+<span id="L185"><span class="lineNum">     185</span>         [<span class="tlaGBC" title="Branch 0 was taken 28899 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5468 times"> + </span>]:<span class="tlaGNC">       68734 :             if (seq_[slot].load(std::memory_order_acquire) != (r + 1)) {</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">       28899 :                 break;</span></span>
 <span id="L187"><span class="lineNum">     187</span>                 :             :             }</span>
-<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">        5523 :             callback(buffer_[slot]);</span></span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">        5523 :             seq_[slot].store(r + capacity_, std::memory_order_release);</span></span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">        5523 :             ++r;</span></span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        5523 :             ++count;</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">        5468 :             callback(buffer_[slot]);</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">        5468 :             seq_[slot].store(r + capacity_, std::memory_order_release);</span></span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">        5468 :             ++r;</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        5468 :             ++count;</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :             :         }</span>
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">       23541 :         read_cursor_.store(r, std::memory_order_release);</span></span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">       23541 :         return count;</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">       28899 :         read_cursor_.store(r, std::memory_order_release);</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">       28899 :         return count;</span></span>
 <span id="L195"><span class="lineNum">     195</span>                 :             :     }</span>
 <span id="L196"><span class="lineNum">     196</span>                 :             : </span>
 <span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">          12 :     uint64_t events_lost() const noexcept {</span></span>
