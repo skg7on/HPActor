@@ -149,10 +149,8 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
     // it with other work.
     // Skip the cap when workers are paused (deterministic test mode).
     static constexpr uint64_t kRequeueBudget = 64;
-    uint64_t budget_limit = context.requeue_budget_override > 0
-                                ? context.requeue_budget_override
-                                : kRequeueBudget;
-    bool budget_exhausted = !context.workers_paused && item.sequence >= budget_limit;
+    bool budget_exhausted =
+        !context.workers_paused && item.sequence >= kRequeueBudget;
 
     if (!mailbox->empty() && !budget_exhausted) {
         auto admission = ready_gate_.mark_ready_already_admitted(actor);
