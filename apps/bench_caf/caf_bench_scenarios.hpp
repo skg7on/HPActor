@@ -16,6 +16,7 @@
 
 #include "actors/actor_creation_actor.hpp"
 #include "actors/mailbox_n1_actor.hpp"
+#include "actors/mandelbrot_actor.hpp"
 #include "actors/mixed_case_actor.hpp"
 #include "actors/traffic_distribution_actor.hpp"
 #include "caf_bench_config.hpp"
@@ -688,6 +689,57 @@ run_bursty_waves_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                         metrics.total_received >= kMessagesPerWave;
     metrics.throughput_msgps =
         throughput(metrics.total_received, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+// ── Mandelbrot CPU scheduling ─────────────────────────────────
+
+inline TrialMetrics
+run_mandelbrot_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    auto dims = mandel_dimensions_for_preset(cfg.preset);
+    MandelCounters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    ActorSystem system(make_bench_actor_config(cfg));
+
+    double xmin = -2.0, xmax = 1.0, ymin = -1.5, ymax = 1.5;
+    uint32_t rows_per_worker = dims.height / dims.workers;
+    metrics.actors_created = dims.workers;
+
+    for (uint32_t w = 0; w < dims.workers; ++w) {
+        uint32_t row_start = w * rows_per_worker;
+        uint32_t row_end =
+            (w == dims.workers - 1) ? dims.height : (w + 1) * rows_per_worker;
+        auto worker = system.spawn<MandelWorkerActor>(
+            &counters, xmin, xmax, ymin, ymax, dims.width, row_start, row_end,
+            dims.max_iterations);
+        system.deliver_local(worker.id(), make_bench_msg(MandelTaskTag));
+    }
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (counters.workers_done.load(std::memory_order_acquire) < dims.workers &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.cpu_tasks_completed = counters.workers_done.load();
+    metrics.completed =
+        shutdown.has_value() && metrics.cpu_tasks_completed >= dims.workers;
+    metrics.throughput_msgps = throughput(
+        static_cast<uint64_t>(dims.width) * dims.height, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
     return metrics;
