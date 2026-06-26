@@ -16,6 +16,7 @@
 
 #include "caf_bench_config.hpp"
 #include "caf_bench_metrics.hpp"
+#include "caf_bench_micro.hpp"
 #include "caf_bench_scenarios.hpp"
 #include "caf_bench_sweep.hpp"
 
@@ -43,6 +44,8 @@ inline TrialMetrics run_one_trial(const CafBenchConfig& cfg, uint32_t trial_inde
             return run_zipf_hotspot_trial(cfg, trial_index);
         case ScenarioKind::TrafficBursty:
             return run_bursty_waves_trial(cfg, trial_index);
+        case ScenarioKind::MessageCreation:
+            return run_message_creation_trial(cfg, trial_index);
     }
     return run_actor_creation_trial(cfg, trial_index);
 }

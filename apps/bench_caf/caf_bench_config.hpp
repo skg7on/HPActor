@@ -31,6 +31,12 @@ enum class ScenarioKind {
     TrafficPipeline,
     TrafficZipf,
     TrafficBursty,
+    MessageCreation,
+    DispatchMatch,
+    Serialization,
+    Mandelbrot,
+    SchedulingMix,
+    DistributedPing,
 };
 
 enum class PresetKind {
@@ -109,6 +115,18 @@ inline const char* scenario_name(ScenarioKind scenario) {
             return "traffic-zipf";
         case ScenarioKind::TrafficBursty:
             return "traffic-bursty";
+        case ScenarioKind::MessageCreation:
+            return "message-creation";
+        case ScenarioKind::DispatchMatch:
+            return "dispatch-match";
+        case ScenarioKind::Serialization:
+            return "serialization";
+        case ScenarioKind::Mandelbrot:
+            return "mandelbrot";
+        case ScenarioKind::SchedulingMix:
+            return "scheduling-mix";
+        case ScenarioKind::DistributedPing:
+            return "distributed-ping";
     }
     return "actor-creation";
 }
@@ -188,6 +206,30 @@ inline bool parse_scenario(const std::string& value, ScenarioKind& out) {
     }
     if (value == "traffic-bursty") {
         out = ScenarioKind::TrafficBursty;
+        return true;
+    }
+    if (value == "message-creation") {
+        out = ScenarioKind::MessageCreation;
+        return true;
+    }
+    if (value == "dispatch-match") {
+        out = ScenarioKind::DispatchMatch;
+        return true;
+    }
+    if (value == "serialization") {
+        out = ScenarioKind::Serialization;
+        return true;
+    }
+    if (value == "mandelbrot") {
+        out = ScenarioKind::Mandelbrot;
+        return true;
+    }
+    if (value == "scheduling-mix") {
+        out = ScenarioKind::SchedulingMix;
+        return true;
+    }
+    if (value == "distributed-ping") {
+        out = ScenarioKind::DistributedPing;
         return true;
     }
     return false;
