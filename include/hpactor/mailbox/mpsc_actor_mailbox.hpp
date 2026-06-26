@@ -128,6 +128,7 @@ template <typename T> class MPSCActorMailbox {
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
         lanes_.set_num_user_lanes(config_.priority_levels);
+        prefill_node_pool();
     }
 
     /// \brief Destroy the mailbox.
@@ -419,9 +420,14 @@ template <typename T> class MPSCActorMailbox {
                     meta.estimated_bytes, config_.capacity.max_messages,
                     config_.capacity.max_bytes);
                 if (reserve_result == detail::ReservationResult::Reserved) {
-                    void* raw = mem::allocate(mem::RegionType::kMessage,
-                                              sizeof(T), actor_id_);
-                    auto* node = new (raw) T(std::move(msg));
+                    auto* node = try_acquire_node();
+                    if (node) {
+                        *node = std::move(msg);
+                    } else {
+                        void* raw = mem::allocate(mem::RegionType::kMessage,
+                                                  sizeof(T), actor_id_);
+                        node = new (raw) T(std::move(msg));
+                    }
                     enqueue_reserved(node, meta, lane);
                     return make_result(pressure_state_.code_after_accept());
                 }
@@ -432,8 +438,15 @@ template <typename T> class MPSCActorMailbox {
             return result;
         }
 
-        void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
-        auto* node = new (raw) T(std::move(msg));
+        // Try pre-allocated pool first, fall back to heap allocation.
+        auto* node = try_acquire_node();
+        if (node) {
+            *node = std::move(msg);
+        } else {
+            void* raw =
+                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            node = new (raw) T(std::move(msg));
+        }
         enqueue_reserved(node, meta, lane);
         return make_result(pressure_state_.code_after_accept());
     }
@@ -487,9 +500,14 @@ template <typename T> class MPSCActorMailbox {
         uint8_t lane = route_lane(meta);
         bool first = true;
         for (auto it = begin; it != end; ++it) {
-            void* raw =
-                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
-            auto* node = new (raw) T(std::move(*it));
+            auto* node = try_acquire_node();
+            if (node) {
+                *node = std::move(*it);
+            } else {
+                void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T),
+                                          actor_id_);
+                node = new (raw) T(std::move(*it));
+            }
             // Suppress wakeup for all nodes after the first — the
             // edge-triggered CAS on the first node claims the wakeup
             // right, and subsequent nodes see mailbox_was_empty_=false.
@@ -1320,6 +1338,57 @@ template <typename T> class MPSCActorMailbox {
     MultiLaneQueue<T> lanes_{1};      ///< System + user lane storage.
     OverflowQueue<T> overflow_queue_; ///< Spill-overflow queue.
     MailboxConfig config_;            ///< Active mailbox configuration.
+
+    // --- Pre-allocated node pool ---
+    /// \brief Lock-free LIFO freelist of recycled nodes.  Reuses
+    ///        \c mpsc_next as the link field (a node is either in the
+    ///        freelist or in a mailbox lane, never both).
+    std::atomic<T*> node_freelist_{nullptr};
+
+    /// \brief Push a node to the recycling freelist (lock-free, MP-safe).
+    void recycle_node(T* node) noexcept {
+        T* head = node_freelist_.load(std::memory_order_acquire);
+        do {
+            node->mpsc_next.store(head, std::memory_order_relaxed);
+        } while (!node_freelist_.compare_exchange_weak(
+            head, node, std::memory_order_acq_rel, std::memory_order_acquire));
+    }
+
+    /// \brief Try to pop a node from the recycling freelist.
+    /// \note Thread safety: lock-free CAS, safe for multiple producers.
+    T* try_acquire_node() noexcept {
+        T* head = node_freelist_.load(std::memory_order_acquire);
+        while (head != nullptr) {
+            T* next = head->mpsc_next.load(std::memory_order_acquire);
+            if (node_freelist_.compare_exchange_weak(head, next,
+                                                     std::memory_order_acq_rel,
+                                                     std::memory_order_acquire)) {
+                return head;
+            }
+        }
+        return nullptr;
+    }
+
+    /// \brief Pre-fill the freelist with capacity-sized pre-allocations.
+    void prefill_node_pool() noexcept {
+        size_t count = config_.capacity.max_messages;
+        if (count == 0)
+            return;
+        // Seed the freelist with pre-allocated nodes so the first N
+        // messages after startup never hit mem::allocate.  Recycled
+        // nodes re-enter the freelist via the MultiLaneQueue recycle hook.
+        for (size_t i = 0; i < count; ++i) {
+            void* raw =
+                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            auto* node = new (raw) T();
+            recycle_node(node);
+        }
+        // Wire the recycling hook so freed nodes return to the freelist.
+        lanes_.recycle_ctx_ = this;
+        lanes_.recycle_hook_ = [](void* ctx, T* n) {
+            static_cast<MPSCActorMailbox*>(ctx)->recycle_node(n);
+        };
+    }
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for
                                                         ///< consumer
                                                         ///< serialization.
