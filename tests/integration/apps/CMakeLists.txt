@@ -33,3 +33,8 @@ add_executable(test_bench_caf_mandelbrot test_bench_caf_mandelbrot.cpp)
 target_include_directories(test_bench_caf_mandelbrot PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_bench_caf_mandelbrot hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_bench_caf_mandelbrot PROPERTIES TIMEOUT 30)
+
+add_executable(test_bench_caf_scheduling_mix test_bench_caf_scheduling_mix.cpp)
+target_include_directories(test_bench_caf_scheduling_mix PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_scheduling_mix hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_scheduling_mix PROPERTIES TIMEOUT 30)

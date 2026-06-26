@@ -18,6 +18,7 @@
 #include "actors/mailbox_n1_actor.hpp"
 #include "actors/mandelbrot_actor.hpp"
 #include "actors/mixed_case_actor.hpp"
+#include "actors/scheduling_mix_actor.hpp"
 #include "actors/traffic_distribution_actor.hpp"
 #include "caf_bench_config.hpp"
 #include "caf_bench_metrics.hpp"
@@ -740,6 +741,83 @@ run_mandelbrot_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         shutdown.has_value() && metrics.cpu_tasks_completed >= dims.workers;
     metrics.throughput_msgps = throughput(
         static_cast<uint64_t>(dims.width) * dims.height, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+// ── Scheduling-mix: concurrent spawn + CPU + ring workloads ────
+
+inline TrialMetrics
+run_scheduling_mix_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    auto dims = sched_mix_dimensions_for_preset(cfg.preset);
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    ActorSystem system(make_bench_actor_config(cfg));
+
+    // Separate counters per workload type for type safety.
+    ActorCreationCounters ac_counters;
+    MixedCaseCounters mc_counters;
+
+    // Wave 1: spawn creation trees.
+    for (uint32_t w = 0; w < dims.waves; ++w) {
+        auto root =
+            system.spawn<ActorCreationNodeActor>(&ac_counters, dims.tree_depth);
+        system.deliver_local(root.id(), make_bench_msg(ActorCreationStartTag));
+    }
+
+    // Wave 2: fire CPU tasks.
+    for (uint32_t i = 0; i < dims.pool_size; ++i) {
+        auto cpu = system.spawn<MixedCpuActor>(&mc_counters);
+        system.deliver_local(cpu.id(), make_bench_msg(MixedCpuTaskTag));
+    }
+
+    // Wave 3: start a token ring.
+    std::vector<ActorAddress> nodes(dims.ring_size);
+    for (uint32_t i = 0; i < dims.ring_size; ++i) {
+        auto n = system.spawn<MixedRingNodeActor>(&mc_counters, ActorAddress{});
+        nodes[i] = n.address();
+    }
+    for (uint32_t i = 0; i < dims.ring_size; ++i) {
+        auto actor = std::static_pointer_cast<MixedRingNodeActor>(
+            system.get_actor(nodes[i].id));
+        actor->set_next(nodes[(i + 1) % dims.ring_size]);
+    }
+    BenchPayloadHeader init;
+    init.sequence = dims.ring_messages - 1;
+    system.deliver_local(
+        nodes[0].id,
+        make_bench_msg(MixedTokenTag, encode_bench_payload(init, 0, uint64_t{0})));
+
+    uint64_t expected_actors =
+        actor_creation_expected_count(dims.tree_depth) * dims.waves;
+    uint64_t expected_cpu = dims.pool_size;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while ((ac_counters.created.load(std::memory_order_acquire) < expected_actors ||
+            mc_counters.cpu_tasks_completed.load(std::memory_order_acquire) <
+                expected_cpu) &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.actors_created = ac_counters.created.load();
+    metrics.cpu_tasks_completed = mc_counters.cpu_tasks_completed.load();
+    metrics.token_hops = mc_counters.token_hops.load();
+    metrics.completed = shutdown.has_value() &&
+                        metrics.actors_created >= expected_actors &&
+                        metrics.cpu_tasks_completed >= expected_cpu;
+    metrics.throughput_msgps = throughput(metrics.token_hops, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
     return metrics;
