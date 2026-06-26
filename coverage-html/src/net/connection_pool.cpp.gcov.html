@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:44:48</td>
+            <td class="headerValue">2026-06-26 04:28:34</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">72.7&nbsp;%</td>
@@ -341,7 +341,7 @@
 <span id="L258"><span class="lineNum">     258</span>                 :             :     } // end PayloadType::Data guard</span>
 <span id="L259"><span class="lineNum">     259</span>                 :             : </span>
 <span id="L260"><span class="lineNum">     260</span>                 :             :     // Route non-RPC Data frames and all other payload types</span>
-<span id="L261"><span class="lineNum">     261</span>                 :             :     // (Batch/Ack/Nack/Unknown) to deliver_remote() for dispatch.</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             :     // (including Batch/Stream/Ack/Nack) to deliver_remote() for dispatch.</span>
 <span id="L262"><span class="lineNum">     262</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (actor_message_handler_) {</span></span>
 <span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaUNC">           0 :         actor_message_handler_(frame);</span></span>
 <span id="L264"><span class="lineNum">     264</span>                 :             :     }</span>

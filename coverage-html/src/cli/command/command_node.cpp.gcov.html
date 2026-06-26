@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:44:48</td>
+            <td class="headerValue">2026-06-26 04:28:34</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -97,28 +97,28 @@
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : namespace cli {</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">        3209 : CommandNode* CommandNode::add_child(std::string kw, std::string help, bool is_param) {</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">        3209 :     auto node = std::make_unique&lt;CommandNode&gt;();</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        3209 :     node-&gt;keyword = std::move(kw);</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        3209 :     node-&gt;help_text = std::move(help);</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        3209 :     node-&gt;is_parameter = is_param;</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        3209 :     CommandNode* ptr = node.get();</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        3209 :     children.push_back(std::move(node));</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        6418 :     return ptr;</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">        3209 : }</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">        3323 : CommandNode* CommandNode::add_child(std::string kw, std::string help, bool is_param) {</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">        3323 :     auto node = std::make_unique&lt;CommandNode&gt;();</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        3323 :     node-&gt;keyword = std::move(kw);</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        3323 :     node-&gt;help_text = std::move(help);</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        3323 :     node-&gt;is_parameter = is_param;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        3323 :     CommandNode* ptr = node.get();</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        3323 :     children.push_back(std::move(node));</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        6646 :     return ptr;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">        3323 : }</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          94 : CommandNode* CommandNode::find_child(const std::string&amp; token,</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :                                       std::string&amp; param_value) const {</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     // Exact keyword match first.</span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 190 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 24 times"> + </span>]:<span class="tlaGNC">         214 :     for (auto&amp; child : children) {</span></span>
-<span id="L36"><span class="lineNum">      36</span>   [<span class="tlaGBC" title="Branch 0 was taken 175 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 70 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 105 times"> + </span> :<span class="tlaGNC">         190 :         if (!child-&gt;is_parameter &amp;&amp; child-&gt;keyword == token) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 70 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 120 times"> + </span>]
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 191 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 24 times"> + </span>]:<span class="tlaGNC">         215 :     for (auto&amp; child : children) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>   [<span class="tlaGBC" title="Branch 0 was taken 176 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 70 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 106 times"> + </span> :<span class="tlaGNC">         191 :         if (!child-&gt;is_parameter &amp;&amp; child-&gt;keyword == token) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 70 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 121 times"> + </span>]
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          70 :             return child.get();</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :         }</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     }</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     // Parameter match: any child with is_parameter=true matches any token.</span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 51 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">          61 :     for (auto&amp; child : children) {</span></span>
-<span id="L42"><span class="lineNum">      42</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 37 times"> + </span>]:<span class="tlaGNC">          51 :         if (child-&gt;is_parameter) {</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">          62 :     for (auto&amp; child : children) {</span></span>
+<span id="L42"><span class="lineNum">      42</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 38 times"> + </span>]:<span class="tlaGNC">          52 :         if (child-&gt;is_parameter) {</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">          14 :             param_value = token;</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">          14 :             return child.get();</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :         }</span>
@@ -126,19 +126,19 @@
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          10 :     return nullptr;</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : }</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          63 : static int levenshtein(const std::string&amp; a, const std::string&amp; b) {</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          63 :     size_t m = a.size(), n = b.size();</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          64 : static int levenshtein(const std::string&amp; a, const std::string&amp; b) {</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          64 :     size_t m = a.size(), n = b.size();</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     // Small strings — simple DP on stack is fine.</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     int d[32][32];</span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 393 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 63 times"> + </span>]:<span class="tlaGNC">         456 :     for (size_t i = 0; i &lt;= m; ++i) d[i][0] = static_cast&lt;int&gt;(i);</span></span>
-<span id="L55"><span class="lineNum">      55</span>         [<span class="tlaGBC" title="Branch 0 was taken 394 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 63 times"> + </span>]:<span class="tlaGNC">         457 :     for (size_t j = 0; j &lt;= n; ++j) d[0][j] = static_cast&lt;int&gt;(j);</span></span>
-<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 330 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 63 times"> + </span>]:<span class="tlaGNC">         393 :     for (size_t i = 1; i &lt;= m; ++i) {</span></span>
-<span id="L57"><span class="lineNum">      57</span>         [<span class="tlaGBC" title="Branch 0 was taken 1737 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 330 times"> + </span>]:<span class="tlaGNC">        2067 :         for (size_t j = 1; j &lt;= n; ++j) {</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">        1737 :             int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">        1737 :             d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost});</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 399 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 64 times"> + </span>]:<span class="tlaGNC">         463 :     for (size_t i = 0; i &lt;= m; ++i) d[i][0] = static_cast&lt;int&gt;(i);</span></span>
+<span id="L55"><span class="lineNum">      55</span>         [<span class="tlaGBC" title="Branch 0 was taken 401 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 64 times"> + </span>]:<span class="tlaGNC">         465 :     for (size_t j = 0; j &lt;= n; ++j) d[0][j] = static_cast&lt;int&gt;(j);</span></span>
+<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 335 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 64 times"> + </span>]:<span class="tlaGNC">         399 :     for (size_t i = 1; i &lt;= m; ++i) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>         [<span class="tlaGBC" title="Branch 0 was taken 1767 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 335 times"> + </span>]:<span class="tlaGNC">        2102 :         for (size_t j = 1; j &lt;= n; ++j) {</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">        1767 :             int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">        1767 :             d[i][j] = std::min({d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost});</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :         }</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     }</span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          63 :     return d[m][n];</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          64 :     return d[m][n];</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : }</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
 <span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          14 : CommandNode* CommandNode::find_child_prefix(const std::string&amp; prefix) const {</span></span>
@@ -167,10 +167,10 @@
 <span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">          21 : std::string CommandNode::suggest(const std::string&amp; token) const {</span></span>
 <span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">          21 :     std::string best;</span></span>
 <span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">          21 :     int best_dist = 999;</span></span>
-<span id="L90"><span class="lineNum">      90</span>         [<span class="tlaGBC" title="Branch 0 was taken 63 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21 times"> + </span>]:<span class="tlaGNC">          84 :     for (auto&amp; child : children) {</span></span>
-<span id="L91"><span class="lineNum">      91</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 63 times"> + </span>]:<span class="tlaGNC">          63 :         if (child-&gt;is_parameter) continue;</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">          63 :         int dist = levenshtein(token, child-&gt;keyword);</span></span>
-<span id="L93"><span class="lineNum">      93</span>   [<span class="tlaGBC" title="Branch 0 was taken 16 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span>]:<span class="tlaGNC">          63 :         if (dist &lt;= 2 &amp;&amp; dist &lt; best_dist) {</span></span>
+<span id="L90"><span class="lineNum">      90</span>         [<span class="tlaGBC" title="Branch 0 was taken 64 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21 times"> + </span>]:<span class="tlaGNC">          85 :     for (auto&amp; child : children) {</span></span>
+<span id="L91"><span class="lineNum">      91</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 64 times"> + </span>]:<span class="tlaGNC">          64 :         if (child-&gt;is_parameter) continue;</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">          64 :         int dist = levenshtein(token, child-&gt;keyword);</span></span>
+<span id="L93"><span class="lineNum">      93</span>   [<span class="tlaGBC" title="Branch 0 was taken 16 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 48 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span>]:<span class="tlaGNC">          64 :         if (dist &lt;= 2 &amp;&amp; dist &lt; best_dist) {</span></span>
 <span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">          14 :             best_dist = dist;</span></span>
 <span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">          14 :             best = child-&gt;keyword;</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :         }</span>
@@ -178,24 +178,24 @@
 <span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">          21 :     return best;</span></span>
 <span id="L99"><span class="lineNum">      99</span>                 :             : }</span>
 <span id="L100"><span class="lineNum">     100</span>                 :             : </span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">          67 : std::string CommandNode::help(int indent) const {</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">          67 :     std::string out;</span></span>
-<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">          67 :     std::string pad(static_cast&lt;size_t&gt;(indent), ' ');</span></span>
-<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaGBC" title="Branch 0 was taken 175 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 67 times"> + </span>]:<span class="tlaGNC">         242 :     for (auto&amp; child : children) {</span></span>
-<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">         175 :         out += pad;</span></span>
-<span id="L106"><span class="lineNum">     106</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 158 times"> + </span>]:<span class="tlaGNC">         175 :         if (child-&gt;is_parameter) {</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">          69 : std::string CommandNode::help(int indent) const {</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">          69 :     std::string out;</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">          69 :     std::string pad(static_cast&lt;size_t&gt;(indent), ' ');</span></span>
+<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaGBC" title="Branch 0 was taken 181 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 69 times"> + </span>]:<span class="tlaGNC">         250 :     for (auto&amp; child : children) {</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">         181 :         out += pad;</span></span>
+<span id="L106"><span class="lineNum">     106</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 164 times"> + </span>]:<span class="tlaGNC">         181 :         if (child-&gt;is_parameter) {</span></span>
 <span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">          17 :             out += &quot;&lt;&quot; + child-&gt;keyword + &quot;&gt;&quot;;</span></span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :         } else {</span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">         158 :             out += child-&gt;keyword;</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">         164 :             out += child-&gt;keyword;</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             :         }</span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">         175 :         out += &quot;  —  &quot; + child-&gt;help_text + &quot;\n&quot;;</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">         181 :         out += &quot;  —  &quot; + child-&gt;help_text + &quot;\n&quot;;</span></span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : </span>
-<span id="L113"><span class="lineNum">     113</span>         [<span class="tlaGBC" title="Branch 0 was taken 60 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 115 times"> + </span>]:<span class="tlaGNC">         175 :         if (!child-&gt;children.empty()) {</span></span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">          60 :             out += child-&gt;help(indent + 2);</span></span>
+<span id="L113"><span class="lineNum">     113</span>         [<span class="tlaGBC" title="Branch 0 was taken 62 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 119 times"> + </span>]:<span class="tlaGNC">         181 :         if (!child-&gt;children.empty()) {</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">          62 :             out += child-&gt;help(indent + 2);</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :             :         }</span>
 <span id="L116"><span class="lineNum">     116</span>                 :             :     }</span>
-<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">          67 :     return out;</span></span>
-<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">          67 : }</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">          69 :     return out;</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">          69 : }</span></span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : </span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : }  // namespace cli</span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : }  // namespace hpactor</span>

@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:44:48</td>
+            <td class="headerValue">2026-06-26 04:28:34</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">98.2&nbsp;%</td>
-            <td class="headerCovTableEntry">56</td>
-            <td class="headerCovTableEntry">55</td>
+            <td class="headerCovTableEntryHi">98.3&nbsp;%</td>
+            <td class="headerCovTableEntry">58</td>
+            <td class="headerCovTableEntry">57</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -116,7 +116,7 @@
 <span id="L38"><span class="lineNum">      38</span>                 :             : ///       \c CommandRegistry singleton for the lifetime of the process.</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : class ICommand {</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :   public:</span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC tlaBgGNC">      141429 :     virtual ~ICommand() = default;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC tlaBgGNC">      147876 :     virtual ~ICommand() = default;</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     /// \brief Slash-separated command path.</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :     ///</span>
@@ -198,9 +198,9 @@
 <span id="L120"><span class="lineNum">     120</span>                 :             : ///                 constructor.</span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : template &lt;typename CommandT&gt; class CommandRegistration {</span>
 <span id="L122"><span class="lineNum">     122</span>                 :             :   public:</span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">      162162 :     CommandRegistration() {</span></span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">      162162 :         CommandRegistry::instance().add(std::make_unique&lt;CommandT&gt;());</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">      162162 :     }</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">      169411 :     CommandRegistration() {</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">      169411 :         CommandRegistry::instance().add(std::make_unique&lt;CommandT&gt;());</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">      169411 :     }</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :             : };</span>
 <span id="L127"><span class="lineNum">     127</span>                 :             : </span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : /// \brief Split a command path string into segment tokens.</span>
@@ -210,21 +210,21 @@
 <span id="L132"><span class="lineNum">     132</span>                 :             : ///</span>
 <span id="L133"><span class="lineNum">     133</span>                 :             : /// \param[in] path A slash-separated path, e.g. &quot;actor/&lt;id&gt;/show&quot;.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             : /// \return Ordered vector of non-empty segments.</span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">        1958 : inline std::vector&lt;std::string&gt; parse_command_path(std::string_view path) {</span></span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">        1958 :     std::vector&lt;std::string&gt; segs;</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        1958 :     size_t start = 0;</span></span>
-<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaGBC" title="Branch 0 was taken 4684 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">        4688 :     while (start &lt; path.size()) {</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        4684 :         size_t slash = path.find('/', start);</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">        2034 : inline std::vector&lt;std::string&gt; parse_command_path(std::string_view path) {</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">        2034 :     std::vector&lt;std::string&gt; segs;</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        2034 :     size_t start = 0;</span></span>
+<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaGBC" title="Branch 0 was taken 4836 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">        4840 :     while (start &lt; path.size()) {</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        4836 :         size_t slash = path.find('/', start);</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :         std::string_view seg = (slash == std::string_view::npos)</span>
-<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaGBC" title="Branch 0 was taken 1954 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2730 times"> + </span>]:<span class="tlaGNC">        4684 :                                    ? path.substr(start)</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">        2730 :                                    : path.substr(start, slash - start);</span></span>
-<span id="L143"><span class="lineNum">     143</span>         [<span class="tlaGBC" title="Branch 0 was taken 4679 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">        4684 :         if (!seg.empty())</span></span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">        4679 :             segs.emplace_back(seg);</span></span>
-<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 1954 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2730 times"> + </span>]:<span class="tlaGNC">        4684 :         if (slash == std::string_view::npos)</span></span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">        1954 :             break;</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">        2730 :         start = slash + 1;</span></span>
+<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaGBC" title="Branch 0 was taken 2030 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2806 times"> + </span>]:<span class="tlaGNC">        4836 :                                    ? path.substr(start)</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">        2806 :                                    : path.substr(start, slash - start);</span></span>
+<span id="L143"><span class="lineNum">     143</span>         [<span class="tlaGBC" title="Branch 0 was taken 4831 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">        4836 :         if (!seg.empty())</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">        4831 :             segs.emplace_back(seg);</span></span>
+<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 2030 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2806 times"> + </span>]:<span class="tlaGNC">        4836 :         if (slash == std::string_view::npos)</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">        2030 :             break;</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">        2806 :         start = slash + 1;</span></span>
 <span id="L148"><span class="lineNum">     148</span>                 :             :     }</span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">        1958 :     return segs;</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">        2034 :     return segs;</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :             : }</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             : </span>
 <span id="L152"><span class="lineNum">     152</span>                 :             : /// \brief Test whether a path segment represents a parameter placeholder.</span>
@@ -235,8 +235,8 @@
 <span id="L157"><span class="lineNum">     157</span>                 :             : /// \param[in] seg A single path segment.</span>
 <span id="L158"><span class="lineNum">     158</span>                 :             : /// \retval true  The segment is a parameter placeholder.</span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : /// \retval false The segment is a literal keyword.</span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">        4682 : inline bool is_param_segment(const std::string&amp; seg) {</span></span>
-<span id="L161"><span class="lineNum">     161</span>   [<span class="tlaGBC" title="Branch 0 was taken 4680 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 697 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3983 times"> + </span> :<span class="tlaGNC">        4682 :     return !seg.empty() &amp;&amp; seg.front() == '&lt;' &amp;&amp; seg.back() == '&gt;';</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">        4834 : inline bool is_param_segment(const std::string&amp; seg) {</span></span>
+<span id="L161"><span class="lineNum">     161</span>   [<span class="tlaGBC" title="Branch 0 was taken 4832 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 697 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 4135 times"> + </span> :<span class="tlaGNC">        4834 :     return !seg.empty() &amp;&amp; seg.front() == '&lt;' &amp;&amp; seg.back() == '&gt;';</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 694 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 3 times"> + </span>]
 <span id="L162"><span class="lineNum">     162</span>                 :             : }</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             : </span>

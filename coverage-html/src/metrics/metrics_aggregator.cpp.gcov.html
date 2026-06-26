@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 03:44:48</td>
+            <td class="headerValue">2026-06-26 04:28:34</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
@@ -568,21 +568,25 @@
 <span id="L481"><span class="lineNum">     481</span>                 :             :         case MetricEventType::kTimerDropped:</span>
 <span id="L482"><span class="lineNum">     482</span>                 :             :         case MetricEventType::kTimerFiringLatency:</span>
 <span id="L483"><span class="lineNum">     483</span>                 :             :         case MetricEventType::kTimerCallbackDuration:</span>
-<span id="L484"><span class="lineNum">     484</span>                 :             :             // TimerPlane metrics — counters incremented in</span>
-<span id="L485"><span class="lineNum">     485</span>                 :             :             // TimerPlaneShard / TimingWheel.</span>
-<span id="L486"><span class="lineNum">     486</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
-<span id="L487"><span class="lineNum">     487</span>                 :             : </span>
-<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaUNC">           0 :         case MetricEventType::kBatchFrameReceived:</span></span>
-<span id="L489"><span class="lineNum">     489</span>                 :             :         case MetricEventType::kBatchMessagesReceived:</span>
-<span id="L490"><span class="lineNum">     490</span>                 :             :         case MetricEventType::kBatchFrameSent:</span>
-<span id="L491"><span class="lineNum">     491</span>                 :             :         case MetricEventType::kBatchMessagesSent:</span>
-<span id="L492"><span class="lineNum">     492</span>                 :             :             // Batch messaging metrics — counters incremented in</span>
-<span id="L493"><span class="lineNum">     493</span>                 :             :             // BatchFrame codec / batch transport layer.</span>
-<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
-<span id="L495"><span class="lineNum">     495</span>                 :             :     }</span>
-<span id="L496"><span class="lineNum">     496</span>                 :             : }</span>
-<span id="L497"><span class="lineNum">     497</span>                 :             : </span>
-<span id="L498"><span class="lineNum">     498</span>                 :             : } // namespace hpactor::metrics</span>
+<span id="L484"><span class="lineNum">     484</span>                 :             :         case MetricEventType::kBatchFrameReceived:</span>
+<span id="L485"><span class="lineNum">     485</span>                 :             :         case MetricEventType::kBatchMessagesReceived:</span>
+<span id="L486"><span class="lineNum">     486</span>                 :             :         case MetricEventType::kBatchFrameSent:</span>
+<span id="L487"><span class="lineNum">     487</span>                 :             :         case MetricEventType::kBatchMessagesSent:</span>
+<span id="L488"><span class="lineNum">     488</span>                 :             :             // TimerPlane and Batch metrics — handled upstream.</span>
+<span id="L489"><span class="lineNum">     489</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L490"><span class="lineNum">     490</span>                 :<span class="tlaUNC">           0 :         case MetricEventType::kStreamOpened:</span></span>
+<span id="L491"><span class="lineNum">     491</span>                 :             :         case MetricEventType::kStreamClosed:</span>
+<span id="L492"><span class="lineNum">     492</span>                 :             :         case MetricEventType::kStreamBytesSent:</span>
+<span id="L493"><span class="lineNum">     493</span>                 :             :         case MetricEventType::kStreamBytesReceived:</span>
+<span id="L494"><span class="lineNum">     494</span>                 :             :         case MetricEventType::kStreamChunkSent:</span>
+<span id="L495"><span class="lineNum">     495</span>                 :             :         case MetricEventType::kStreamChunkReceived:</span>
+<span id="L496"><span class="lineNum">     496</span>                 :             :         case MetricEventType::kStreamWindowBytes:</span>
+<span id="L497"><span class="lineNum">     497</span>                 :             :             // Stream metrics — full metric handlers wired in MSG-008 follow-up.</span>
+<span id="L498"><span class="lineNum">     498</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L499"><span class="lineNum">     499</span>                 :             :     }</span>
+<span id="L500"><span class="lineNum">     500</span>                 :             : }</span>
+<span id="L501"><span class="lineNum">     501</span>                 :             : </span>
+<span id="L502"><span class="lineNum">     502</span>                 :             : } // namespace hpactor::metrics</span>
         </pre>
               </td>
             </tr>
