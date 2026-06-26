@@ -258,15 +258,15 @@ TEST(WireFrameTest, DefaultFrameHasCorrectMagic) {
 TEST(WireFrameTest, EncodeProducesNonEmptyBuffer) {
     net::WireFrame frame;
     // Set basic proto fields available on ActorMsgFrame
-    frame.pb_frame.set_message_id(42);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(42);
     StreamBuffer encoded = frame.encode();
     EXPECT_GE(encoded.size(), net::WireFrame::HeaderSize);
 }
 
 TEST(WireFrameTest, EncodeRoundTrip) {
     net::WireFrame frame;
-    frame.pb_frame.set_message_id(1234);
-    frame.pb_frame.set_type_tag(0x1000);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(1234);
+    frame.pb_envelope.mutable_data_frame()->set_type_tag(0x1000);
 
     StreamBuffer encoded = frame.encode();
     ASSERT_GE(encoded.size(), net::WireFrame::HeaderSize);
@@ -274,8 +274,8 @@ TEST(WireFrameTest, EncodeRoundTrip) {
     // Decode the buffer
     net::WireFrame decoded = net::WireFrame::decode(encoded);
     EXPECT_EQ(decoded.magic_hdr, net::WireFrame::MagicHeader);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 1234U);
-    EXPECT_EQ(decoded.pb_frame.type_tag(), 0x1000U);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 1234U);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().type_tag(), 0x1000U);
 }
 
 TEST(WireFrameTest, DecodeShortBufferDoesNotCrash) {

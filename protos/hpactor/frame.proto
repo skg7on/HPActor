@@ -47,6 +47,22 @@ message NackFrame {
   uint32 retry_after_ms = 5;
 }
 
+// ── Batch messaging ──────────────────────────────────────────────────────
+
+message BatchEntry {
+  uint32 type_tag = 1;
+  uint64 message_id = 2;
+  uint32 flags = 3;
+  bytes payload = 4;
+  PbTraceContext trace_context = 5;
+}
+
+message BatchMsgFrame {
+  hpactor.PbActorAddress sender = 1;
+  hpactor.PbActorAddress receiver = 2;
+  repeated BatchEntry entries = 3;
+}
+
 // Envelope wrapper for frame type dispatch.
 // Replaces raw ActorMsgFrame on the wire when the peer supports
 // reliable messaging (negotiated in handshake, follow-up issue).
@@ -55,5 +71,6 @@ message WireEnvelope {
     ActorMsgFrame data_frame = 1;
     AckFrame ack_frame = 2;
     NackFrame nack_frame = 3;
+    BatchMsgFrame batch_frame = 4;
   }
 }

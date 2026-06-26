@@ -34,26 +34,31 @@ TEST(SpawnIntegrationTest, FrameEncoding) {
     auto rcv_addr = ActorAddress{endpoint_ops::parse_endpoint("node2:12345"),
                                  SystemActorType, SpawnReceiverId, 0};
 
-    net::to_proto(frame.pb_frame.mutable_sender(), snd_addr);
-    net::to_proto(frame.pb_frame.mutable_receiver(), rcv_addr);
-    frame.pb_frame.set_message_id(12345);
-    frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                  snd_addr);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  rcv_addr);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(12345);
+    frame.pb_envelope.mutable_data_frame()->set_flags(net::WireFrame::RpcRequest);
 
     StreamBuffer encoded = frame.encode();
     EXPECT_GT(encoded.size(), 0u);
 
     net::WireFrame decoded = net::WireFrame::decode(encoded);
 
-    auto dec_sender = net::from_proto(decoded.pb_frame.sender());
-    auto dec_receiver = net::from_proto(decoded.pb_frame.receiver());
+    auto dec_sender = net::from_proto(decoded.pb_envelope.data_frame().sender());
+    auto dec_receiver =
+        net::from_proto(decoded.pb_envelope.data_frame().receiver());
     EXPECT_EQ(dec_sender.endpoint, snd_addr.endpoint);
     EXPECT_EQ(dec_sender.id, snd_addr.id);
     EXPECT_EQ(dec_sender.incarnation, snd_addr.incarnation);
     EXPECT_EQ(dec_receiver.endpoint, rcv_addr.endpoint);
     EXPECT_EQ(dec_receiver.id, rcv_addr.id);
     EXPECT_EQ(dec_receiver.incarnation, rcv_addr.incarnation);
-    EXPECT_EQ(decoded.pb_frame.message_id(), frame.pb_frame.message_id());
-    EXPECT_EQ(decoded.pb_frame.flags(), frame.pb_frame.flags());
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(),
+              frame.pb_envelope.data_frame().message_id());
+    EXPECT_EQ(decoded.pb_envelope.data_frame().flags(),
+              frame.pb_envelope.data_frame().flags());
 }
 
 TEST(SpawnIntegrationTest, SpawnRequestProtobuf) {
@@ -90,16 +95,19 @@ TEST(SpawnIntegrationTest, MessageIdCorrelation) {
     uint64_t request_message_id = generate_message_id().value();
 
     net::WireFrame request_frame;
-    request_frame.pb_frame.set_message_id(request_message_id);
-    request_frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
+    request_frame.pb_envelope.mutable_data_frame()->set_message_id(request_message_id);
+    request_frame.pb_envelope.mutable_data_frame()->set_flags(
+        net::WireFrame::RpcRequest);
 
     net::WireFrame response_frame;
-    response_frame.pb_frame.set_message_id(request_message_id);
-    response_frame.pb_frame.set_flags(net::WireFrame::RpcResponse);
+    response_frame.pb_envelope.mutable_data_frame()->set_message_id(
+        request_message_id);
+    response_frame.pb_envelope.mutable_data_frame()->set_flags(
+        net::WireFrame::RpcResponse);
 
-    EXPECT_EQ(response_frame.pb_frame.message_id(),
-              request_frame.pb_frame.message_id());
+    EXPECT_EQ(response_frame.pb_envelope.data_frame().message_id(),
+              request_frame.pb_envelope.data_frame().message_id());
 
-    uint64_t matched_id = response_frame.pb_frame.message_id();
+    uint64_t matched_id = response_frame.pb_envelope.data_frame().message_id();
     EXPECT_EQ(matched_id, request_message_id);
 }

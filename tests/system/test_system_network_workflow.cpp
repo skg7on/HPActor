@@ -122,9 +122,9 @@ TEST(NetworkWorkflow, TransportDisabledByDefault) {
 TEST(NetworkWorkflow, WireFrameProtocolEncodeDecode) {
     // Create a WireFrame and verify encode/decode round-trip
     net::WireFrame frame;
-    frame.pb_frame.set_type_tag(42);
-    frame.pb_frame.set_message_id(100);
-    frame.pb_frame.set_flags(net::WireFrame::Important);
+    frame.pb_envelope.mutable_data_frame()->set_type_tag(42);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(100);
+    frame.pb_envelope.mutable_data_frame()->set_flags(net::WireFrame::Important);
 
     // Encode to wire format
     StreamBuffer encoded = frame.encode();
@@ -132,9 +132,9 @@ TEST(NetworkWorkflow, WireFrameProtocolEncodeDecode) {
 
     // Decode back from wire format
     net::WireFrame decoded = net::WireFrame::decode(encoded);
-    EXPECT_EQ(decoded.pb_frame.type_tag(), 42);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 100);
-    EXPECT_EQ(decoded.pb_frame.flags(), net::WireFrame::Important);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().type_tag(), 42);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 100);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().flags(), net::WireFrame::Important);
     EXPECT_EQ(decoded.magic_hdr, net::WireFrame::MagicHeader);
 }
 

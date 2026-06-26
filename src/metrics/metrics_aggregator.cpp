@@ -481,7 +481,16 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kTimerDropped:
         case MetricEventType::kTimerFiringLatency:
         case MetricEventType::kTimerCallbackDuration:
-            // TimerPlane metrics — wired in the TimerPlane subsystem.
+            // TimerPlane metrics — counters incremented in
+            // TimerPlaneShard / TimingWheel.
+            break;
+
+        case MetricEventType::kBatchFrameReceived:
+        case MetricEventType::kBatchMessagesReceived:
+        case MetricEventType::kBatchFrameSent:
+        case MetricEventType::kBatchMessagesSent:
+            // Batch messaging metrics — counters incremented in
+            // BatchFrame codec / batch transport layer.
             break;
     }
 }

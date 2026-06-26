@@ -92,6 +92,11 @@ enum class MetricEventType : uint8_t {
     kTimerFiringLatency = 57, ///< Firing lateness distribution in microseconds.
     kTimerCallbackDuration = 58, ///< Callback wall-clock duration in
                                  ///< microseconds.
+
+    kBatchFrameReceived = 59,    ///< A batch frame was received.
+    kBatchMessagesReceived = 60, ///< Total messages received via batch frames.
+    kBatchFrameSent = 61,        ///< A batch frame was sent.
+    kBatchMessagesSent = 62,     ///< Total messages sent via batch frames.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

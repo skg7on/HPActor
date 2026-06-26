@@ -752,6 +752,15 @@ class ActorSystem {
     /// \param[in] frame WireFrame containing the remote message.
     void deliver_remote(const net::WireFrame& frame);
 
+    /// \brief Deliver a batch frame to local actors.
+    ///
+    /// Decodes the \c BatchMsgFrame from the \c WireEnvelope, creates a
+    /// \c TypedMessage for each \c BatchEntry, and enqueues all messages
+    /// via \c try_push_batch() on the target mailbox.
+    ///
+    /// \param[in] frame Decoded wire frame with \c payload_type() == Batch.
+    void deliver_remote_batch(const net::WireFrame& frame);
+
     // ── Node death ────────────────────────────────────────────────────────
 
     /// \brief Handle a remote node becoming unreachable.

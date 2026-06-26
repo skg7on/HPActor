@@ -52,15 +52,17 @@ TEST(RemoteBackpressureSignalsTest, DeliverRemoteSignalInvokesLocalHandler) {
     signal.sequence = 44;
 
     net::WireFrame frame;
-    net::to_proto(frame.pb_frame.mutable_sender(), signal.target);
-    net::to_proto(frame.pb_frame.mutable_receiver(), signal.sender);
-    frame.pb_frame.set_type_tag(
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                  signal.target);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  signal.sender);
+    frame.pb_envelope.mutable_data_frame()->set_type_tag(
         static_cast<uint32_t>(TypeTag::BackpressureSignalTag));
-    frame.pb_frame.set_message_id(signal.sequence);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(signal.sequence);
     auto payload = mailbox::serialize_backpressure_signal(
         signal, mailbox::MailboxPressureState::HardPressure);
-    frame.pb_frame.set_payload(reinterpret_cast<const char*>(payload.data()),
-                               payload.size());
+    frame.pb_envelope.mutable_data_frame()->set_payload(
+        reinterpret_cast<const char*>(payload.data()), payload.size());
 
     system.deliver_remote(frame);
 
@@ -112,10 +114,10 @@ TEST(RemoteBackpressureSignalsTest, RemoteSenderReceivesControlFrame) {
     EXPECT_EQ(wire_receiver.id, ActorId{55});
 
     auto frame = net::WireFrame::decode(wire_payload);
-    EXPECT_EQ(static_cast<TypeTag>(frame.pb_frame.type_tag()),
+    EXPECT_EQ(static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()),
               TypeTag::BackpressureSignalTag);
-    StreamBuffer payload(frame.pb_frame.payload().begin(),
-                         frame.pb_frame.payload().end());
+    StreamBuffer payload(frame.pb_envelope.data_frame().payload().begin(),
+                         frame.pb_envelope.data_frame().payload().end());
     auto decoded = mailbox::deserialize_backpressure_signal(payload);
     ASSERT_TRUE(decoded.has_value());
     if (!decoded)

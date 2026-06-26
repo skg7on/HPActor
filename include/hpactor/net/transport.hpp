@@ -188,6 +188,25 @@ class Transport {
     virtual TransportSendResult
     try_send(const ActorAddress& target, const StreamBuffer& encoded) = 0;
 
+    /// \brief Try to send a batch-encoded frame to a remote node.
+    ///
+    /// The \p encoded buffer already contains a serialized \c WireEnvelope
+    /// with the \c batch_frame oneof field set.
+    ///
+    /// \param[in] target  Destination actor address.
+    /// \param[in] encoded Pre-encoded \c WireEnvelope containing a batch_frame.
+    /// \return \c TransportSendResult describing acceptance or rejection.
+    ///
+    /// \note The default implementation returns \c NotConnected to make
+    ///       missing overrides loudly observable.  Subclasses that support
+    ///       batch transmission MUST override this method.
+    virtual TransportSendResult
+    try_send_batch(const ActorAddress& target, const StreamBuffer& encoded) {
+        (void)target;
+        (void)encoded;
+        return TransportSendResult::NotConnected;
+    }
+
     /// \brief Send a message to a remote actor (fire-and-forget).
     ///
     /// Default implementation calls \c try_send() and discards the result.

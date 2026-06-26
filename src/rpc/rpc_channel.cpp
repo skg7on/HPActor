@@ -156,19 +156,22 @@ void RpcChannel::send_request(PendingCall& call, bool is_retry) {
         _fc->stall(hpactor::fault::FaultDomain::kRpc, 5);
     }
     net::WireFrame frame;
-    net::to_proto(frame.pb_frame.mutable_sender(), ActorAddress{});
-    net::to_proto(frame.pb_frame.mutable_receiver(), call.target);
-    frame.pb_frame.set_payload(
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                  ActorAddress{});
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  call.target);
+    frame.pb_envelope.mutable_data_frame()->set_payload(
         reinterpret_cast<const char*>(call.encoded_request.data()),
         call.encoded_request.size());
-    frame.pb_frame.set_message_id(call.msg_id.value());
-    frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(call.msg_id.value());
+    frame.pb_envelope.mutable_data_frame()->set_flags(net::WireFrame::RpcRequest);
     if (is_retry) {
-        frame.pb_frame.set_flags(frame.pb_frame.flags() |
-                                 net::WireFrame::RpcIdempotent);
+        frame.pb_envelope.mutable_data_frame()->set_flags(
+            frame.pb_envelope.data_frame().flags() | net::WireFrame::RpcIdempotent);
     }
     if (call.has_trace_context) {
-        net::to_proto(frame.pb_frame.mutable_trace_context(), call.trace_context);
+        net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_trace_context(),
+                      call.trace_context);
     }
 
     StreamBuffer encoded = frame.encode();

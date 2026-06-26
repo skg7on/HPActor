@@ -70,19 +70,24 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req,
         pb_resp.set_error_code(response.error_code);
 
         net::WireFrame response_frame;
-        net::to_proto(response_frame.pb_frame.mutable_sender(), address());
-        response_frame.pb_frame.mutable_receiver()->CopyFrom(
-            frame.pb_frame.sender());
-        response_frame.pb_frame.set_message_id(frame.pb_frame.message_id());
-        response_frame.pb_frame.set_flags(net::WireFrame::RpcResponse);
-        response_frame.pb_frame.set_type_tag(
+        net::to_proto(
+            response_frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+            address());
+        response_frame.pb_envelope.mutable_data_frame()->mutable_receiver()->CopyFrom(
+            frame.pb_envelope.data_frame().sender());
+        response_frame.pb_envelope.mutable_data_frame()->set_message_id(
+            frame.pb_envelope.data_frame().message_id());
+        response_frame.pb_envelope.mutable_data_frame()->set_flags(
+            net::WireFrame::RpcResponse);
+        response_frame.pb_envelope.mutable_data_frame()->set_type_tag(
             static_cast<uint32_t>(TypeTag::SpawnResponseTag));
         auto serialized = system().proto_registry().serialize(pb_resp);
-        response_frame.pb_frame.set_payload(
+        response_frame.pb_envelope.mutable_data_frame()->set_payload(
             reinterpret_cast<const char*>(serialized.data()), serialized.size());
 
-        transport_->send(net::from_proto(response_frame.pb_frame.receiver()),
-                         response_frame.encode());
+        transport_->send(
+            net::from_proto(response_frame.pb_envelope.data_frame().receiver()),
+            response_frame.encode());
     }
 }
 
