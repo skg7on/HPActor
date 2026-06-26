@@ -167,7 +167,6 @@ static int run_headless(const std::string& preset_name, const std::string& forma
     config.scheduler_threads = 8;
     config.max_queue_depth = 4096;
     config.mailbox.default_capacity = 16384;
-    config.disable_metrics = true;
     config.cli = hpactor::cli::CliConfig{};
 
     hpactor::ActorSystem system(config);

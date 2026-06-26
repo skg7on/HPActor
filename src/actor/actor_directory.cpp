@@ -25,51 +25,7 @@ ActorId ActorDirectory::allocate_id() {
 bool ActorDirectory::insert(ActorDirectoryEntry entry) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto id = entry.actor.id();
-    auto [it, inserted] = entries_.emplace(id, std::move(entry));
-    if (inserted) {
-        // Populate the lock-free fast index so hot-path lookups can
-        // bypass the mutex.  The raw pointer is stable for the actor's
-        // lifetime (entries are never erased).
-        ensure_fast_index_capacity(id.value());
-        fast_mailboxes_[id.value()].store(it->second.mailbox.get(),
-                                          std::memory_order_release);
-    }
-    return inserted;
-}
-
-void ActorDirectory::ensure_fast_index_capacity(uint64_t id_val) {
-    if (id_val < fast_mailboxes_capacity_.load(std::memory_order_relaxed))
-        return;
-    size_t new_cap = id_val + 1024;
-    auto new_array =
-        std::make_unique<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>[]>(
-            new_cap);
-    size_t old_cap = fast_mailboxes_capacity_.load(std::memory_order_relaxed);
-    for (size_t i = 0; i < old_cap; ++i) {
-        new_array[i].store(fast_mailboxes_[i].load(std::memory_order_relaxed),
-                           std::memory_order_relaxed);
-    }
-    for (size_t i = old_cap; i < new_cap; ++i) {
-        new_array[i].store(nullptr, std::memory_order_relaxed);
-    }
-    // Publish new array pointer and capacity with release ordering so
-    // lock-free readers in find_mailbox_fast() see a consistent pair.
-    fast_mailboxes_ptr_.store(new_array.get(), std::memory_order_release);
-    fast_mailboxes_capacity_.store(new_cap, std::memory_order_release);
-    fast_mailboxes_ = std::move(new_array);
-}
-
-mailbox::MPSCActorMailbox<TypedMessage>*
-ActorDirectory::find_mailbox_fast(ActorId id) const noexcept {
-    const uint64_t idx = id.value();
-    size_t cap = fast_mailboxes_capacity_.load(std::memory_order_acquire);
-    if (idx < cap) {
-        auto* array = fast_mailboxes_ptr_.load(std::memory_order_acquire);
-        if (array) {
-            return array[idx].load(std::memory_order_acquire);
-        }
-    }
-    return nullptr;
+    return entries_.emplace(id, std::move(entry)).second;
 }
 
 std::optional<ActorDirectoryEntry> ActorDirectory::find(ActorId id) const {

@@ -20,7 +20,6 @@
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <atomic>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -55,8 +54,7 @@ struct ActorDirectoryEntry {
 /// consistent copy under the internal mutex.
 ///
 /// \note Thread safety: All public methods are internally synchronized via
-///       \c std::shared_mutex (reader-writer lock). Reads may proceed
-///       concurrently; writes are exclusive. Safe to call from any thread.
+///       \c std::mutex. Safe to call from any thread.
 class ActorDirectory {
   public:
     /// \brief Allocate a fresh, monotonically increasing actor ID.
@@ -89,19 +87,6 @@ class ActorDirectory {
     /// \return Shared pointer to the mailbox, or \c nullptr if not found.
     std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>>
     find_mailbox(ActorId id) const;
-
-    /// \brief Lock-free lookup of the raw mailbox pointer.
-    ///
-    /// Reads an atomic array indexed by ActorId with acquire ordering.
-    /// No mutex is taken. Returns \c nullptr if the actor has not been
-    /// inserted yet or the ID is out of range.
-    ///
-    /// \param[in] id Actor identifier.
-    /// \return Raw pointer to the mailbox, or \c nullptr if not found.
-    /// \note Thread safety: lock-free. Safe to call from any thread.
-    ///       The returned pointer is stable for the lifetime of the actor.
-    mailbox::MPSCActorMailbox<TypedMessage>*
-    find_mailbox_fast(ActorId id) const noexcept;
 
     /// \brief Find the execution context for an actor.
     ///
@@ -151,23 +136,10 @@ class ActorDirectory {
     std::size_t size() const noexcept;
 
   private:
-    /// \brief Grow the lock-free fast-index array to accommodate \p id.
-    void ensure_fast_index_capacity(uint64_t id);
-
     mutable std::mutex mutex_;
     uint64_t next_actor_id_{1};
     std::unordered_map<ActorId, ActorDirectoryEntry> entries_;
     std::unordered_map<std::string, ActorAddress> names_;
-    /// \brief Lock-free fast path: atomic array of raw mailbox pointers
-    ///        indexed by ActorId::value().  Populated on insert(), read
-    ///        without a lock on the hot path via find_mailbox_fast().
-    ///        The atomic pointer+capacity pair is updated with release
-    ///        ordering and read with acquire ordering to prevent a data
-    ///        race during array growth.
-    mutable std::unique_ptr<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>[]> fast_mailboxes_;
-    mutable std::atomic<std::atomic<mailbox::MPSCActorMailbox<TypedMessage>*>*> fast_mailboxes_ptr_{
-        nullptr};
-    mutable std::atomic<size_t> fast_mailboxes_capacity_{0};
 };
 
 } // namespace hpactor

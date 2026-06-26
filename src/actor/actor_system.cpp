@@ -118,12 +118,7 @@ ActorSystem::ActorSystem(const Config& config)
             auto entry = actor_directory_.find(id);
             return entry.has_value() ? entry->instance : nullptr;
         };
-        pipeline_cfg.get_mailbox =
-            [this](ActorId id) -> mailbox::MPSCActorMailbox<TypedMessage>* {
-            // Fast path: lock-free lookup — no mutex on the hot path.
-            auto* fast = actor_directory_.find_mailbox_fast(id);
-            if (fast)
-                return fast;
+        pipeline_cfg.get_mailbox = [this](ActorId id) {
             auto mailbox = actor_directory_.find_mailbox(id);
             return mailbox.get();
         };
@@ -153,7 +148,7 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     // ── Metrics subsystem ──────────────────────────────────────────────
-    if (metrics_config_.enabled && !config.disable_metrics) {
+    if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
         scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
@@ -535,12 +530,6 @@ std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
 }
 
 mailbox::MPSCActorMailbox<TypedMessage>* ActorSystem::get_mailbox(ActorId id) {
-    // Fast path: lock-free atomic array lookup — no mutex, no shared_ptr copy.
-    auto* fast = actor_directory_.find_mailbox_fast(id);
-    if (fast) {
-        return fast;
-    }
-    // Slow path: mutex-protected map lookup (actor not in fast index yet).
     auto mailbox = actor_directory_.find_mailbox(id);
     return mailbox.get();
 }

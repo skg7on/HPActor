@@ -150,11 +150,6 @@ struct Config {
     /// \brief Registrar configuration for service discovery.
     net::RegistrarConfig registrar = {};
 
-    /// \brief Disable the metrics subsystem even when compiled in.
-    ///        Eliminates per-message \c steady_clock::now() calls in
-    ///        \c dispatch_user_message() — useful for benchmarks.
-    bool disable_metrics = false;
-
     /// \brief Enable the HTTP client subsystem.
     ///        Requires \c enable_network = true.
     bool enable_http_client = false;
