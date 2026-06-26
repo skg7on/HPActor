@@ -128,7 +128,6 @@ template <typename T> class MPSCActorMailbox {
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
         lanes_.set_num_user_lanes(config_.priority_levels);
-        prefill_node_pool();
     }
 
     /// \brief Destroy the mailbox.
@@ -420,14 +419,9 @@ template <typename T> class MPSCActorMailbox {
                     meta.estimated_bytes, config_.capacity.max_messages,
                     config_.capacity.max_bytes);
                 if (reserve_result == detail::ReservationResult::Reserved) {
-                    auto* node = try_acquire_node();
-                    if (node) {
-                        *node = std::move(msg);
-                    } else {
-                        void* raw = mem::allocate(mem::RegionType::kMessage,
-                                                  sizeof(T), actor_id_);
-                        node = new (raw) T(std::move(msg));
-                    }
+                    void* raw = mem::allocate(mem::RegionType::kMessage,
+                                              sizeof(T), actor_id_);
+                    auto* node = new (raw) T(std::move(msg));
                     enqueue_reserved(node, meta, lane);
                     return make_result(pressure_state_.code_after_accept());
                 }
@@ -438,15 +432,8 @@ template <typename T> class MPSCActorMailbox {
             return result;
         }
 
-        // Try pre-allocated pool first, fall back to heap allocation.
-        auto* node = try_acquire_node();
-        if (node) {
-            *node = std::move(msg);
-        } else {
-            void* raw =
-                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
-            node = new (raw) T(std::move(msg));
-        }
+        void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+        auto* node = new (raw) T(std::move(msg));
         enqueue_reserved(node, meta, lane);
         return make_result(pressure_state_.code_after_accept());
     }
@@ -500,14 +487,9 @@ template <typename T> class MPSCActorMailbox {
         uint8_t lane = route_lane(meta);
         bool first = true;
         for (auto it = begin; it != end; ++it) {
-            auto* node = try_acquire_node();
-            if (node) {
-                *node = std::move(*it);
-            } else {
-                void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T),
-                                          actor_id_);
-                node = new (raw) T(std::move(*it));
-            }
+            void* raw =
+                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            auto* node = new (raw) T(std::move(*it));
             // Suppress wakeup for all nodes after the first — the
             // edge-triggered CAS on the first node claims the wakeup
             // right, and subsequent nodes see mailbox_was_empty_=false.
@@ -1338,45 +1320,6 @@ template <typename T> class MPSCActorMailbox {
     MultiLaneQueue<T> lanes_{1};      ///< System + user lane storage.
     OverflowQueue<T> overflow_queue_; ///< Spill-overflow queue.
     MailboxConfig config_;            ///< Active mailbox configuration.
-
-    // --- Pre-allocated node pool ---
-    /// \brief One-shot pre-allocated node pool.  Nodes are distributed via
-    ///        fetch_add and never recycled.  Eliminates mem::allocate for
-    ///        the first N messages per mailbox without the complexity and
-    ///        safety risks of a recycling freelist (which would require
-    ///        reusing \c mpsc_next as a link field, creating a race with
-    ///        preempted producers).
-    std::unique_ptr<T*[]> node_pool_;
-    size_t node_pool_size_{0};
-    std::atomic<size_t> node_pool_idx_{0};
-
-    T* try_acquire_node() noexcept {
-        size_t idx = node_pool_idx_.fetch_add(1, std::memory_order_relaxed);
-        if (idx < node_pool_size_) {
-            return node_pool_[idx];
-        }
-        return nullptr;
-    }
-
-    void prefill_node_pool() noexcept {
-        // Cap prefill at 256 to avoid excessive memory use for
-        // system-internal mailboxes and prevent OOM on CI.
-        static constexpr size_t kMaxPrefill = 256;
-        node_pool_size_ = static_cast<size_t>(std::min(
-            static_cast<size_t>(config_.capacity.max_messages), kMaxPrefill));
-        if (node_pool_size_ == 0)
-            return;
-        node_pool_ = std::make_unique<T*[]>(node_pool_size_);
-        for (size_t i = 0; i < node_pool_size_; ++i) {
-            void* raw =
-                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
-            if (!raw) {
-                node_pool_size_ = i;
-                break;
-            }
-            node_pool_[i] = new (raw) T();
-        }
-    }
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for
                                                         ///< consumer
                                                         ///< serialization.

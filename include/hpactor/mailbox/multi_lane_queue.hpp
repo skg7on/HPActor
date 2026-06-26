@@ -143,6 +143,8 @@ template <typename T> class MultiLaneQueue {
     ///                 transfers to the queue.
     /// \note Thread safety: NOT internally locked — caller must serialize.
     void set_pending_free(T* node) noexcept {
+        // When the ring is full the slot we are about to overwrite
+        // holds the oldest entry — destroy and deallocate it.
         if (pending_free_count_ == kPendingFreeRingSize) {
             T* oldest = pending_free_ring_[pending_free_write_idx_];
             oldest->~T();
