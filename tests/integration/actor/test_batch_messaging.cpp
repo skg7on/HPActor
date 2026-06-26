@@ -137,7 +137,7 @@ TEST(BatchMessagingTest, DecodeTruncatedReturnsUnknown) {
     BatchMsgFrame batch;
     auto* entry = batch.add_entries();
     entry->set_type_tag(static_cast<uint32_t>(TypeTag::User));
-    entry->set_payload("hello", 5);
+    entry->set_payload("hello", 5u);
     auto frame = WireFrame::from_batch(batch);
     auto full = frame.encode();
 
