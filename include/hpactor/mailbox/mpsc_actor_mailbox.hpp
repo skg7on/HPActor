@@ -140,7 +140,17 @@ template <typename T> class MPSCActorMailbox {
     /// \note The caller must ensure no concurrent \c try_push() or
     ///       \c dequeue() calls are in flight during destruction.
     ~MPSCActorMailbox() {
+        // Disable recycling so drain_pending_free deallocates nodes
+        // instead of pushing them to the freelist.
+        lanes_.recycle_hook_ = nullptr;
         lanes_.drain_pending_free();
+        // Drain remaining freelist nodes and deallocate them.
+        T* node = try_acquire_node();
+        while (node) {
+            node->~T();
+            mem::deallocate(node);
+            node = try_acquire_node();
+        }
     }
 
     /// \brief Register a callback invoked on the empty→non-empty transition.
