@@ -1,7 +1,7 @@
 # HPActor CAF Performance Benchmark Port - Design Spec
 
 **Date:** 2026-06-26
-**Status:** Phase 1 implemented
+**Status:** Phase 2 implemented
 **Issue:** [#371](https://github.com/skg7on/HPActor/issues/371)
 **Proposed app:** `apps/bench_caf/` - CAF-style actor benchmark suite for HPActor
 
