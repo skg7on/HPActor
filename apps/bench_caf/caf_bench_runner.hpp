@@ -54,6 +54,8 @@ inline TrialMetrics run_one_trial(const CafBenchConfig& cfg, uint32_t trial_inde
             return run_mandelbrot_trial(cfg, trial_index);
         case ScenarioKind::SchedulingMix:
             return run_scheduling_mix_trial(cfg, trial_index);
+        case ScenarioKind::DistributedPing:
+            return run_distributed_ping_trial(cfg, trial_index);
     }
     return run_actor_creation_trial(cfg, trial_index);
 }

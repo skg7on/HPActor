@@ -15,6 +15,7 @@
 #pragma once
 
 #include "actors/actor_creation_actor.hpp"
+#include "actors/distributed_ping_actor.hpp"
 #include "actors/mailbox_n1_actor.hpp"
 #include "actors/mandelbrot_actor.hpp"
 #include "actors/mixed_case_actor.hpp"
@@ -818,6 +819,80 @@ run_scheduling_mix_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                         metrics.actors_created >= expected_actors &&
                         metrics.cpu_tasks_completed >= expected_cpu;
     metrics.throughput_msgps = throughput(metrics.token_hops, metrics.runtime_ms);
+    metrics.peak_rss_bytes = peak_rss(samples);
+    metrics.rss_samples_bytes = std::move(samples);
+    return metrics;
+}
+
+// ── Distributed ping/pong (loopback smoke) ─────────────────────
+
+inline TrialMetrics
+run_distributed_ping_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
+    TrialMetrics metrics;
+    metrics.trial = trial_index;
+
+    constexpr uint32_t kActorsPerNode = 2;
+    constexpr uint32_t kPingsPerTarget = 100;
+    DistributedPingCounters counters;
+    RssSampler sampler(cfg.sample_rss_ms);
+    auto start = std::chrono::steady_clock::now();
+    sampler.start();
+
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.mailbox.default_capacity = 4096;
+    ActorSystem system(system_cfg);
+
+    // Two logical "nodes" of actors.  Group A actors ping Group B actors.
+    std::vector<ActorAddress> group_a, group_b;
+    for (uint32_t i = 0; i < kActorsPerNode; ++i) {
+        auto a = system.spawn<PingActor>(&counters, std::vector<ActorAddress>{},
+                                         0, cfg.seed + i);
+        auto b = system.spawn<PingActor>(&counters, std::vector<ActorAddress>{},
+                                         0, cfg.seed + 100 + i);
+        group_a.push_back(a.address());
+        group_b.push_back(b.address());
+    }
+
+    // Configure cross-targets: each A actor pings all B actors.
+    for (auto& addr : group_a) {
+        auto actor =
+            std::static_pointer_cast<PingActor>(system.get_actor(addr.id));
+        actor->set_targets(group_b);
+        actor->set_pings_per_target(kPingsPerTarget);
+    }
+    for (auto& addr : group_b) {
+        auto actor =
+            std::static_pointer_cast<PingActor>(system.get_actor(addr.id));
+        actor->set_targets(group_a);
+        actor->set_pings_per_target(kPingsPerTarget);
+    }
+
+    // Kick off ping/pong from group A.
+    for (const auto& addr : group_a) {
+        system.deliver_local(addr.id, make_bench_msg(MailboxLoadTag));
+    }
+
+    uint64_t expected_pongs =
+        static_cast<uint64_t>(kActorsPerNode) * kActorsPerNode * kPingsPerTarget;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (counters.pongs_received.load(std::memory_order_acquire) < expected_pongs &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    auto shutdown = system.shutdown();
+    auto end = std::chrono::steady_clock::now();
+    auto samples = sampler.stop();
+
+    metrics.runtime_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+    metrics.total_sent = counters.pings_sent.load();
+    metrics.total_received = counters.pongs_received.load();
+    metrics.completed = shutdown.has_value() &&
+                        metrics.total_sent >= expected_pongs &&
+                        metrics.total_received >= expected_pongs;
+    metrics.throughput_msgps =
+        throughput(metrics.total_received, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
     return metrics;
