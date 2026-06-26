@@ -17,6 +17,7 @@
 #include "caf_bench_config.hpp"
 #include "caf_bench_metrics.hpp"
 #include "caf_bench_scenarios.hpp"
+#include "caf_bench_sweep.hpp"
 
 namespace hpactor::apps::bench_caf {
 
@@ -50,12 +51,18 @@ inline CafBenchReport run_caf_benchmark(const CafBenchConfig& cfg) {
     CafBenchReport report;
     report.config = cfg;
 
+    auto sweep = expand_sweep(cfg);
+
+    // Run warmup trials on the first sweep entry.
     for (uint32_t i = 0; i < cfg.warmups; ++i) {
-        (void)run_one_trial(cfg, i + 1);
+        (void)run_one_trial(sweep[0].config, i + 1);
     }
 
-    for (uint32_t i = 0; i < cfg.trials; ++i) {
-        report.trials.push_back(run_one_trial(cfg, i + 1));
+    // Run measured trials for every sweep entry.
+    for (const auto& entry : sweep) {
+        for (uint32_t i = 0; i < cfg.trials; ++i) {
+            report.trials.push_back(run_one_trial(entry.config, i + 1));
+        }
     }
     return report;
 }
