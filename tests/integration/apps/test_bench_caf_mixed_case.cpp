@@ -32,6 +32,6 @@ TEST(BenchCafMixedCase, SmokeCompletesRingsAndCpuWork) {
     EXPECT_EQ(metrics.trial, 1u);
     EXPECT_EQ(metrics.rings_completed, 4u);
     EXPECT_EQ(metrics.cpu_tasks_completed, 4u);
-    EXPECT_EQ(metrics.token_hops, 400u);
+    EXPECT_EQ(metrics.token_hops, 100u);
     EXPECT_GT(metrics.actors_created, 0u);
 }

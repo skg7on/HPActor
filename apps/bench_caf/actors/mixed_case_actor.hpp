@@ -44,7 +44,7 @@ struct MixedCaseDimensions {
 inline MixedCaseDimensions mixed_case_dimensions_for_preset(PresetKind preset) {
     switch (preset) {
         case PresetKind::Smoke:
-            return {4, 16, 100, 1};
+            return {4, 16, 25, 1};
         case PresetKind::Nightly:
             return {32, 64, 500, 2};
         case PresetKind::PaperScale:
