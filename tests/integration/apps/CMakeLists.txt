@@ -8,3 +8,38 @@ target_include_directories(test_integration_apps PRIVATE
     ${CMAKE_SOURCE_DIR}/apps/cli_demo
 )
 gtest_discover_tests(test_integration_apps)
+
+add_executable(test_bench_caf_actor_creation test_bench_caf_actor_creation.cpp)
+target_include_directories(test_bench_caf_actor_creation PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_actor_creation hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_actor_creation PROPERTIES TIMEOUT 30)
+
+add_executable(test_bench_caf_mailbox_n1 test_bench_caf_mailbox_n1.cpp)
+target_include_directories(test_bench_caf_mailbox_n1 PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_mailbox_n1 hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_mailbox_n1 PROPERTIES TIMEOUT 30)
+
+add_executable(test_bench_caf_mixed_case test_bench_caf_mixed_case.cpp)
+target_include_directories(test_bench_caf_mixed_case PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_mixed_case hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_mixed_case PROPERTIES TIMEOUT 30)
+
+add_executable(test_bench_caf_distribution test_bench_caf_distribution.cpp)
+target_include_directories(test_bench_caf_distribution PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_distribution hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_distribution PROPERTIES TIMEOUT 60)
+
+add_executable(test_bench_caf_mandelbrot test_bench_caf_mandelbrot.cpp)
+target_include_directories(test_bench_caf_mandelbrot PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_mandelbrot hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_mandelbrot PROPERTIES TIMEOUT 30)
+
+add_executable(test_bench_caf_scheduling_mix test_bench_caf_scheduling_mix.cpp)
+target_include_directories(test_bench_caf_scheduling_mix PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_scheduling_mix hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_scheduling_mix PROPERTIES TIMEOUT 30)
+
+add_executable(test_bench_caf_distributed_ping test_bench_caf_distributed_ping.cpp)
+target_include_directories(test_bench_caf_distributed_ping PRIVATE ${CMAKE_SOURCE_DIR})
+target_link_libraries(test_bench_caf_distributed_ping hpactor hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_bench_caf_distributed_ping PROPERTIES TIMEOUT 30)
