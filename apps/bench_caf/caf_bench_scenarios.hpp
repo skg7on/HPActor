@@ -38,7 +38,7 @@ namespace hpactor::apps::bench_caf {
 inline size_t scheduler_threads_for_preset(PresetKind preset) {
     switch (preset) {
         case PresetKind::Smoke:
-            return 2;
+            return 1;
         case PresetKind::Nightly:
             return 4;
         case PresetKind::PaperScale:

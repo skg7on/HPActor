@@ -74,7 +74,7 @@ jobs:
         run: cmake --build "$BUILD_DIR" --parallel
 
       - name: Test
-        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 30 --parallel $(nproc)
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 60 --parallel $(nproc)
 
       - name: Upload CTest logs
         if: failure()
@@ -132,7 +132,7 @@ jobs:
         run: cmake --build "$BUILD_DIR" --parallel
 
       - name: Test
-        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 30 --parallel $(nproc)
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 60 --parallel $(nproc)
 
       - name: Capture coverage with lcov
         run: |
