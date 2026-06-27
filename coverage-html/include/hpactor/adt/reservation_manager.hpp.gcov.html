@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 12:14:48</td>
+            <td class="headerValue">2026-06-27 01:43:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -107,42 +107,42 @@
 <span id="L29"><span class="lineNum">      29</span>                 :             : // on failure. Template parameter T exists for future typed-memory integration.</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : template &lt;typename T&gt; class ReservationManager {</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :   public:</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">        2128 :     ReservationManager() = default;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">        6712 :     ReservationManager() = default;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">      298063 :     ReservationResult try_reserve(uint64_t bytes, uint32_t max_messages,</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">      441739 :     ReservationResult try_reserve(uint64_t bytes, uint32_t max_messages,</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :                                   uint64_t max_bytes) noexcept {</span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 297957 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 106 times"> + </span>]:<span class="tlaGNC">      298063 :         if (max_messages &gt; 0) {</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      595914 :             uint32_t cur = reserved_messages_.load(std::memory_order_acquire);</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 441633 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 106 times"> + </span>]:<span class="tlaGNC">      441739 :         if (max_messages &gt; 0) {</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      883266 :             uint32_t cur = reserved_messages_.load(std::memory_order_acquire);</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :             do {</span>
-<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 219162 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 80422 times"> + </span>]:<span class="tlaGNC">      299584 :                 if (cur &gt;= max_messages)</span></span>
+<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 219162 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 225269 times"> + </span>]:<span class="tlaGNC">      444431 :                 if (cur &gt;= max_messages)</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">      219162 :                     return ReservationResult::CountCapacity;</span></span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 1627 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 78795 times"> + </span>]:<span class="tlaGNC">      160844 :             } while (!reserved_messages_.compare_exchange_weak(</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 2798 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 222471 times"> + </span>]:<span class="tlaGNC">      450538 :             } while (!reserved_messages_.compare_exchange_weak(</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :                 cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire));</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :         }</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 74791 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4110 times"> + </span>]:<span class="tlaGNC">       78901 :         if (max_bytes &gt; 0) {</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      149582 :             uint64_t cur = queued_bytes_.load(std::memory_order_acquire);</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 78336 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 144241 times"> + </span>]:<span class="tlaGNC">      222577 :         if (max_bytes &gt; 0) {</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      156672 :             uint64_t cur = queued_bytes_.load(std::memory_order_acquire);</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :             do {</span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 75331 times"> + </span>]:<span class="tlaGNC">       75336 :                 if (cur + bytes &gt; max_bytes) {</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79276 times"> + </span>]:<span class="tlaGNC">       79281 :                 if (cur + bytes &gt; max_bytes) {</span></span>
 <span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :                     if (max_messages &gt; 0)</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           3 :                         reserved_messages_.fetch_sub(1, std::memory_order_release);</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           5 :                     return ReservationResult::ByteCapacity;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :                 }</span>
-<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 545 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 74786 times"> + </span>]:<span class="tlaGNC">      150662 :             } while (!queued_bytes_.compare_exchange_weak(</span></span>
+<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 945 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 78331 times"> + </span>]:<span class="tlaGNC">      158552 :             } while (!queued_bytes_.compare_exchange_weak(</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :                 cur, cur + bytes, std::memory_order_acq_rel,</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :                 std::memory_order_acquire));</span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">       74786 :             return ReservationResult::Reserved;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">       78331 :             return ReservationResult::Reserved;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :         }</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : </span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">        4110 :         queued_bytes_.fetch_add(bytes, std::memory_order_release);</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">        4110 :         return ReservationResult::Reserved;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">      144241 :         queued_bytes_.fetch_add(bytes, std::memory_order_release);</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">      144241 :         return ReservationResult::Reserved;</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     }</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">       76838 :     void release(uint64_t bytes) noexcept {</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">       76838 :         reserved_messages_.fetch_sub(1, std::memory_order_release);</span></span>
-<span id="L65"><span class="lineNum">      65</span>         [<span class="tlaGBC" title="Branch 0 was taken 76838 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       76838 :         if (bytes &gt; 0)</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">       76838 :             queued_bytes_.fetch_sub(bytes, std::memory_order_release);</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       76838 :     }</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      220514 :     void release(uint64_t bytes) noexcept {</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      220514 :         reserved_messages_.fetch_sub(1, std::memory_order_release);</span></span>
+<span id="L65"><span class="lineNum">      65</span>         [<span class="tlaGBC" title="Branch 0 was taken 220514 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      220514 :         if (bytes &gt; 0)</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      220514 :             queued_bytes_.fetch_sub(bytes, std::memory_order_release);</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      220514 :     }</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">          68 :     void inject_count(uint64_t bytes) noexcept {</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">          68 :         reserved_messages_.fetch_add(1, std::memory_order_relaxed);</span></span>
@@ -152,8 +152,8 @@
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           5 :     uint32_t reserved_count() const noexcept {</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          10 :         return reserved_messages_.load(std::memory_order_acquire);</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      678588 :     uint64_t queued_bytes() const noexcept {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">     1357176 :         return queued_bytes_.load(std::memory_order_acquire);</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      836991 :     uint64_t queued_bytes() const noexcept {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">     1673982 :         return queued_bytes_.load(std::memory_order_acquire);</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :   private:</span>

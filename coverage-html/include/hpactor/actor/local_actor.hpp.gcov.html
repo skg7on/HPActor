@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 12:14:48</td>
+            <td class="headerValue">2026-06-27 01:43:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -102,17 +102,17 @@
 <span id="L24"><span class="lineNum">      24</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : class LocalActor : public AbstractActor {</span>
 <span id="L26"><span class="lineNum">      26</span>                 :             :   public:</span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">        6228 :     ActorContext* context() {</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        6228 :         return ctx_;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">      697049 :     ActorContext* context() {</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      697049 :         return ctx_;</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :     }</span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          94 :     ActorSystem&amp; home_system() {</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          94 :         return system();</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             :     }</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     // Set the actor context (called by ActorSystem during spawn)</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        2038 :     void set_context(ActorContext* ctx) {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        2038 :         ctx_ = ctx;</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">        2038 :     }</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        6622 :     void set_context(ActorContext* ctx) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        6622 :         ctx_ = ctx;</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">        6622 :     }</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :   protected:</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     LocalActor(ActorContext* ctx, ActorSystem&amp; sys);</span>

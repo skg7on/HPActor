@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-26 12:14:48</td>
+            <td class="headerValue">2026-06-27 01:43:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -115,8 +115,8 @@
 <span id="L37"><span class="lineNum">      37</span>                 :             :     ///</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     /// \param[in] priority_levels Number of priority levels (default 4).</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     ///            Level 0 is the highest priority.</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC tlaBgGNC">         427 :     explicit MultiPriorityWorkQueue(uint32_t priority_levels = 4)</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         854 :         : levels_(priority_levels) {}</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC tlaBgGNC">         460 :     explicit MultiPriorityWorkQueue(uint32_t priority_levels = 4)</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         920 :         : levels_(priority_levels) {}</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     /// \brief Push an item onto the bottom of the given priority level.</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :     ///</span>
@@ -132,13 +132,13 @@
 <span id="L54"><span class="lineNum">      54</span>                 :             :     /// \param[out] out Set to the popped element on success.</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     /// \retval true An element was popped into \p out.</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     /// \retval false All levels are empty.</span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          72 :     bool pop(T&amp; out) {</span></span>
-<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaGBC" title="Branch 0 was taken 244 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span>]:<span class="tlaGNC">         297 :         for (uint32_t i = 0; i &lt; levels_.size(); ++i) {</span></span>
-<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaGBC" title="Branch 0 was taken 19 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 225 times"> + </span>]:<span class="tlaGNC">         244 :             if (levels_[i].pop_bottom(out)) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          85 :     bool pop(T&amp; out) {</span></span>
+<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaGBC" title="Branch 0 was taken 296 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">         362 :         for (uint32_t i = 0; i &lt; levels_.size(); ++i) {</span></span>
+<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaGBC" title="Branch 0 was taken 19 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 277 times"> + </span>]:<span class="tlaGNC">         296 :             if (levels_[i].pop_bottom(out)) {</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          19 :                 return true;</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :             }</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :         }</span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">          53 :         return false;</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">          66 :         return false;</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     /// \brief Steal an item from the highest-priority non-empty level.</span>
