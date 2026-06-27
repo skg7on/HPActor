@@ -62,6 +62,10 @@ class RssSampler {
     }
 
     void start() {
+        // Join any previous worker to prevent concurrent access to samples_
+        // if start() is called twice without an intervening stop().
+        if (worker_.joinable())
+            worker_.join();
         running_.store(true, std::memory_order_release);
         samples_.clear();
         worker_ = std::thread([this]() {

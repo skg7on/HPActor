@@ -93,7 +93,7 @@ run_message_creation_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
 }
 
 inline TrialMetrics
-run_dispatch_match_trial(const CafBenchConfig& /*cfg*/, uint32_t trial_index) {
+run_dispatch_match_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     TrialMetrics metrics;
     metrics.trial = trial_index;
 
@@ -101,8 +101,10 @@ run_dispatch_match_trial(const CafBenchConfig& /*cfg*/, uint32_t trial_index) {
     std::atomic<uint64_t> count{0};
 
     Config system_cfg;
-    system_cfg.scheduler_threads = 1;
+    system_cfg.scheduler_threads =
+        static_cast<size_t>(std::max<uint32_t>(cfg.scheduler_threads, 1));
     system_cfg.mailbox.default_capacity = kMessages + 1024;
+    system_cfg.max_queue_depth = kMessages + 1024;
     system_cfg.enable_network = false;
     system_cfg.enable_receptionist = false;
     system_cfg.cli.enabled = false;
@@ -127,8 +129,15 @@ run_dispatch_match_trial(const CafBenchConfig& /*cfg*/, uint32_t trial_index) {
     };
 
     auto actor = system.spawn<DispatchActor>(&count);
+
+    // Use the configured message shape and size for dispatch messages.
+    BenchPayloadHeader header{0, 0, 0};
     for (uint32_t i = 0; i < kMessages; ++i) {
-        system.deliver_local(actor.id(), make_bench_msg(MailboxLoadTag));
+        header.sequence = i;
+        auto payload = encode_shaped_payload(header, cfg.message_size_bytes,
+                                             cfg.message_shape, cfg.seed + i);
+        system.deliver_local(actor.id(),
+                             make_bench_msg(MailboxLoadTag, std::move(payload)));
     }
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);

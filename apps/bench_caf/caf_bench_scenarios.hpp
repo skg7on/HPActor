@@ -93,9 +93,12 @@ run_mailbox_n1_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     uint64_t expected =
         static_cast<uint64_t>(dims.senders) * dims.messages_per_sender;
 
-    // Size the mailbox to hold all expected messages so the bounded
-    // admission policy does not reject before the receiver drains them.
+    // Size the mailbox and system queue depth to hold all expected
+    // messages so the bounded admission policy does not reject before
+    // the receiver drains them.
     auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(expected, 4096));
     system_cfg.mailbox.default_capacity =
         static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
 
@@ -253,6 +256,8 @@ run_one_to_one_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     sampler.start();
 
     auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(messages, 4096));
     system_cfg.mailbox.default_capacity =
         static_cast<uint32_t>(std::max<uint64_t>(messages, 4096));
     ActorSystem system(system_cfg);
@@ -301,6 +306,8 @@ run_one_to_n_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     sampler.start();
 
     auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(expected, 4096));
     system_cfg.mailbox.default_capacity =
         static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
     ActorSystem system(system_cfg);
@@ -354,6 +361,8 @@ run_n_to_n_random_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     sampler.start();
 
     auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(expected, 4096));
     system_cfg.mailbox.default_capacity =
         static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
     ActorSystem system(system_cfg);
@@ -396,21 +405,44 @@ run_n_to_n_random_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
 
 // ── Ring traffic: M actors in a ring, token loops K times ─────
 
+struct RingTrafficDimensions {
+    uint32_t nodes = 16;
+    uint32_t laps = 100;
+};
+
+inline RingTrafficDimensions ring_traffic_dimensions_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return {16, 100};
+        case PresetKind::Nightly:
+            return {32, 500};
+        case PresetKind::PaperScale:
+            return {64, 2000};
+        case PresetKind::Stress:
+            return {128, 5000};
+    }
+    return {16, 100};
+}
+
 inline TrialMetrics
 run_ring_traffic_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     TrialMetrics metrics;
     metrics.trial = trial_index;
 
-    constexpr uint32_t kNodes = 16;
-    constexpr uint32_t kLaps = 100;
-    constexpr uint64_t kExpectedHops = kNodes * kLaps;
+    auto dims = ring_traffic_dimensions_for_preset(cfg.preset);
+    uint64_t expected_hops = static_cast<uint64_t>(dims.nodes) * dims.laps;
 
     DistributionCounters counters;
     RssSampler sampler(cfg.sample_rss_ms);
     auto start = std::chrono::steady_clock::now();
     sampler.start();
 
-    ActorSystem system(make_bench_actor_config(cfg));
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(expected_hops, 4096));
+    system_cfg.mailbox.default_capacity =
+        static_cast<uint32_t>(std::max<uint64_t>(expected_hops, 4096));
+    ActorSystem system(system_cfg);
 
     // Spawn ring nodes; each sends to the next.
     // Use RingNode inline (derived from EventBasedActor pattern).
@@ -445,21 +477,21 @@ run_ring_traffic_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         }
     };
 
-    std::vector<ActorAddress> nodes(kNodes);
-    for (uint32_t i = 0; i < kNodes; ++i) {
+    std::vector<ActorAddress> nodes(dims.nodes);
+    for (uint32_t i = 0; i < dims.nodes; ++i) {
         auto n = system.spawn<RingNode>(&counters, ActorAddress{});
         nodes[i] = n.address();
     }
-    for (uint32_t i = 0; i < kNodes; ++i) {
+    for (uint32_t i = 0; i < dims.nodes; ++i) {
         auto actor =
             std::static_pointer_cast<RingNode>(system.get_actor(nodes[i].id));
-        actor->set_next(nodes[(i + 1) % kNodes]);
+        actor->set_next(nodes[(i + 1) % dims.nodes]);
         actor->seed_ = cfg.seed + i;
     }
 
-    // Start token at first node.  Token will loop kLaps * kNodes hop distance.
+    // Start token at first node. Token will loop laps * nodes hop distance.
     BenchPayloadHeader init;
-    init.sequence = kLaps * kNodes - 1;
+    init.sequence = expected_hops - 1;
     system.deliver_local(
         nodes[0].id, make_bench_msg(MailboxLoadTag,
                                     encode_bench_payload(init, 0, uint64_t{0})));
@@ -477,9 +509,9 @@ run_ring_traffic_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     metrics.runtime_ms = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
     metrics.token_hops = counters.token_hops.load();
-    metrics.total_sent = kExpectedHops;
-    metrics.total_received = kExpectedHops;
-    metrics.completed = shutdown.has_value() && metrics.token_hops >= kExpectedHops;
+    metrics.total_sent = expected_hops;
+    metrics.total_received = expected_hops;
+    metrics.completed = shutdown.has_value() && metrics.token_hops >= expected_hops;
     metrics.throughput_msgps = throughput(metrics.token_hops, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
     metrics.rss_samples_bytes = std::move(samples);
@@ -488,20 +520,44 @@ run_ring_traffic_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
 
 // ── Pipeline: M stages, stage 0 generates, each forwards ───────
 
+struct PipelineDimensions {
+    uint32_t stages = 4;
+    uint32_t messages = 20;
+};
+
+inline PipelineDimensions pipeline_dimensions_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return {4, 20};
+        case PresetKind::Nightly:
+            return {8, 200};
+        case PresetKind::PaperScale:
+            return {16, 2000};
+        case PresetKind::Stress:
+            return {32, 10000};
+    }
+    return {4, 20};
+}
+
 inline TrialMetrics
 run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     TrialMetrics metrics;
     metrics.trial = trial_index;
 
-    constexpr uint32_t kStages = 4;
-    constexpr uint32_t kMessages = 20;
+    auto dims = pipeline_dimensions_for_preset(cfg.preset);
+    uint64_t expected = static_cast<uint64_t>(dims.messages);
 
     DistributionCounters counters;
     RssSampler sampler(cfg.sample_rss_ms);
     auto start = std::chrono::steady_clock::now();
     sampler.start();
 
-    ActorSystem system(make_bench_actor_config(cfg));
+    auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(expected * dims.stages, 4096));
+    system_cfg.mailbox.default_capacity =
+        static_cast<uint32_t>(std::max<uint64_t>(expected * dims.stages, 4096));
+    ActorSystem system(system_cfg);
 
     struct PipelineStage : public EventBasedActor {
         DistributionCounters* c;
@@ -532,19 +588,19 @@ run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         }
     };
 
-    std::vector<ActorAddress> stages(kStages);
-    for (uint32_t i = 0; i < kStages; ++i) {
+    std::vector<ActorAddress> stages(dims.stages);
+    for (uint32_t i = 0; i < dims.stages; ++i) {
         auto s = system.spawn<PipelineStage>(&counters, ActorAddress{});
         stages[i] = s.address();
     }
-    for (uint32_t i = 0; i < kStages - 1; ++i) {
+    for (uint32_t i = 0; i < dims.stages - 1; ++i) {
         auto actor = std::static_pointer_cast<PipelineStage>(
             system.get_actor(stages[i].id));
         actor->next = stages[i + 1];
     }
 
     // Inject messages at stage 0.
-    for (uint32_t i = 0; i < kMessages; ++i) {
+    for (uint32_t i = 0; i < dims.messages; ++i) {
         BenchPayloadHeader h;
         h.sender_id = i + 1;
         h.sequence = i;
@@ -555,7 +611,7 @@ run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     }
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-    while (counters.receivers_done.load(std::memory_order_acquire) < kMessages &&
+    while (counters.receivers_done.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -568,8 +624,8 @@ run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
     metrics.total_sent = counters.sent.load();
     metrics.total_received = counters.receivers_done.load();
-    metrics.completed = shutdown.has_value() && metrics.total_sent == kMessages &&
-                        counters.receivers_done.load() >= kMessages;
+    metrics.completed = shutdown.has_value() && metrics.total_sent >= expected &&
+                        counters.receivers_done.load() >= expected;
     metrics.throughput_msgps =
         throughput(metrics.total_received, metrics.runtime_ms);
     metrics.peak_rss_bytes = peak_rss(samples);
@@ -579,15 +635,103 @@ run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
 
 // ── Zipf hotspot: skewed receiver selection ─────────────────────
 
+struct ZipfDimensions {
+    uint32_t senders = 4;
+    uint32_t receivers = 4;
+    uint32_t messages_per_sender = 5000;
+};
+
+inline ZipfDimensions zipf_dimensions_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return {4, 4, 5000};
+        case PresetKind::Nightly:
+            return {8, 8, 20000};
+        case PresetKind::PaperScale:
+            return {16, 16, 50000};
+        case PresetKind::Stress:
+            return {32, 32, 100000};
+    }
+    return {4, 4, 5000};
+}
+
+// Sender that selects receivers with Zipf (power-law) distribution:
+// receiver rank r gets probability proportional to 1/(r+1).
+class ZipfSender : public EventBasedActor {
+  public:
+    ZipfSender(ActorContext* ctx, ActorSystem& sys, DistributionCounters* counters,
+               std::vector<ActorAddress> receivers, uint32_t sender_id,
+               uint32_t messages, uint32_t payload_size, uint64_t seed)
+        : EventBasedActor(ctx, sys), counters_(counters),
+          receivers_(std::move(receivers)), sender_id_(sender_id),
+          messages_(messages), payload_size_(payload_size), seed_(seed) {
+        // Precompute Zipf weights and CDF for receiver selection.
+        size_t n = receivers_.size();
+        weights_.reserve(n);
+        double sum = 0.0;
+        for (size_t r = 0; r < n; ++r) {
+            double w = 1.0 / static_cast<double>(r + 1);
+            weights_.push_back(w);
+            sum += w;
+        }
+        cdf_.reserve(n);
+        double acc = 0.0;
+        for (size_t r = 0; r < n; ++r) {
+            acc += weights_[r] / sum;
+            cdf_.push_back(acc);
+        }
+        become(make_behavior());
+    }
+
+    Behavior make_behavior() override {
+        return Behavior{[this](TypedMessage& msg) {
+            if (msg.type_id() != MailboxLoadTag)
+                return;
+            uint64_t lcg = seed_ + sender_id_;
+            for (uint32_t i = 0; i < messages_; ++i) {
+                BenchPayloadHeader header;
+                header.sender_id = sender_id_;
+                header.sequence = i;
+                auto payload =
+                    encode_bench_payload(header, payload_size_, seed_ + i);
+                // Map LCG through Zipf CDF to select receiver.
+                lcg = lcg * 6364136223846793005ULL + 1442695040888963407ULL;
+                double uniform = static_cast<double>(lcg >> 32) /
+                                 static_cast<double>(UINT32_MAX);
+                uint32_t idx = 0;
+                for (size_t r = 0; r < cdf_.size(); ++r) {
+                    if (uniform <= cdf_[r]) {
+                        idx = static_cast<uint32_t>(r);
+                        break;
+                    }
+                }
+                context()->send(receivers_[idx],
+                                make_bench_msg(MailboxLoadTag, std::move(payload)));
+                counters_->sent.fetch_add(1, std::memory_order_relaxed);
+            }
+            counters_->senders_done.fetch_add(1, std::memory_order_release);
+        }};
+    }
+
+  private:
+    DistributionCounters* counters_ = nullptr;
+    std::vector<ActorAddress> receivers_;
+    uint32_t sender_id_ = 0;
+    uint32_t messages_ = 0;
+    uint32_t payload_size_ = 0;
+    uint64_t seed_ = 0;
+    std::vector<double> weights_;
+    std::vector<double> cdf_;
+};
+
 inline TrialMetrics
 run_zipf_hotspot_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     TrialMetrics metrics;
     metrics.trial = trial_index;
 
-    constexpr uint32_t kSenders = 4;
-    constexpr uint32_t kReceivers = 4;
-    constexpr uint32_t kMessagesPerSender = 5000;
-    uint64_t expected = kSenders * kMessagesPerSender;
+    auto dims = zipf_dimensions_for_preset(cfg.preset);
+    uint64_t expected =
+        static_cast<uint64_t>(dims.senders) * dims.messages_per_sender;
 
     DistributionCounters counters;
     RssSampler sampler(cfg.sample_rss_ms);
@@ -595,23 +739,23 @@ run_zipf_hotspot_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     sampler.start();
 
     auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(expected, 4096));
     system_cfg.mailbox.default_capacity =
         static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
     ActorSystem system(system_cfg);
 
     std::vector<ActorAddress> receivers;
-    receivers.reserve(kReceivers);
-    for (uint32_t i = 0; i < kReceivers; ++i) {
+    receivers.reserve(dims.receivers);
+    for (uint32_t i = 0; i < dims.receivers; ++i) {
         auto r = system.spawn<OneToNReceiver>(&counters);
         receivers.push_back(r.address());
     }
 
-    // Zipf-distributed senders: each sender uses a weighted LCG to select
-    // receivers with Zipf-like skew (rank 0 gets ~50%, rank 1 ~25%, etc.).
-    for (uint32_t s = 0; s < kSenders; ++s) {
-        auto sender = system.spawn<NToNRandomSender>(
-            &counters, receivers, s, kMessagesPerSender, cfg.message_size_bytes,
-            cfg.seed + s);
+    for (uint32_t s = 0; s < dims.senders; ++s) {
+        auto sender = system.spawn<ZipfSender>(
+            &counters, receivers, s, dims.messages_per_sender,
+            cfg.message_size_bytes, cfg.seed + s);
         system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
     }
 
@@ -648,7 +792,10 @@ run_bursty_waves_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     constexpr uint32_t kWaves = 5;
     constexpr uint32_t kMessagesPerWave = 4000;
     constexpr uint32_t kSenders = 4;
-    uint64_t expected = kWaves * kMessagesPerWave;
+    // Mailbox-sized for multi-wave capacity, but the current implementation
+    // fires a single wave (all senders run once). Multi-wave pacing requires
+    // timer-based scheduling not yet implemented.
+    uint64_t bursty_capacity = kWaves * kMessagesPerWave;
 
     DistributionCounters counters;
     RssSampler sampler(cfg.sample_rss_ms);
@@ -656,8 +803,10 @@ run_bursty_waves_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     sampler.start();
 
     auto system_cfg = make_bench_actor_config(cfg);
+    system_cfg.max_queue_depth =
+        static_cast<size_t>(std::max<uint64_t>(bursty_capacity, 4096));
     system_cfg.mailbox.default_capacity =
-        static_cast<uint32_t>(std::max<uint64_t>(expected, 4096));
+        static_cast<uint32_t>(std::max<uint64_t>(bursty_capacity, 4096));
     ActorSystem system(system_cfg);
 
     auto receiver = system.spawn<OneToOneReceiver>(&counters);
@@ -668,9 +817,8 @@ run_bursty_waves_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
     }
 
-    // The senders all run at once (wave 1). For a real multi-wave benchmark,
-    // we'd need timer-based pacing. For smoke, single-wave burst suffices
-    // to validate the topology. The counters track sent/received.
+    // A single burst wave suffices to validate the topology and counters.
+    // Multi-wave pacing with timer-based scheduling is future work.
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
     while (counters.received.load(std::memory_order_acquire) < kMessagesPerWave &&
