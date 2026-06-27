@@ -1048,6 +1048,13 @@ Exit criteria:
 
 ### Phase 1: introduce `ActorSystem::Impl` and `Runtime` ownership shell
 
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-27-actor-system-phase1-runtime-shell-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-27-actor-system-phase1-runtime-shell-implementation.md`
+
 Scope:
 
 - Add PImpl to the public facade.
@@ -1066,6 +1073,13 @@ Exit criteria:
   by the end of the phase.
 
 ### Phase 2: complete `ActorRuntime` and unified spawning
+
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-27-actor-system-phase2-actor-runtime-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-27-actor-system-phase2-actor-runtime-implementation.md`
 
 Scope:
 
