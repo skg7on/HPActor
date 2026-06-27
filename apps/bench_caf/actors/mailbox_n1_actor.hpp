@@ -74,6 +74,9 @@ class MailboxN1ReceiverActor : public EventBasedActor {
 
 class MailboxN1SenderActor : public EventBasedActor {
   public:
+    /// Messages sent per behavior invocation before yielding the worker thread.
+    static constexpr uint32_t kBatchSize = 500;
+
     MailboxN1SenderActor(ActorContext* ctx, ActorSystem& sys,
                          MailboxN1Counters* counters, ActorAddress receiver,
                          uint32_t sender_id, uint32_t messages_to_send,
@@ -88,7 +91,8 @@ class MailboxN1SenderActor : public EventBasedActor {
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() != MailboxLoadTag)
                 return;
-            for (uint32_t i = 0; i < messages_to_send_; ++i) {
+            uint32_t end = std::min(sent_so_far_ + kBatchSize, messages_to_send_);
+            for (uint32_t i = sent_so_far_; i < end; ++i) {
                 BenchPayloadHeader header;
                 header.sender_id = sender_id_;
                 header.sequence = i;
@@ -98,7 +102,14 @@ class MailboxN1SenderActor : public EventBasedActor {
                                                           std::move(payload)));
                 counters_->sent.fetch_add(1, std::memory_order_relaxed);
             }
-            counters_->senders_done.fetch_add(1, std::memory_order_release);
+            sent_so_far_ = end;
+            if (sent_so_far_ < messages_to_send_) {
+                // Yield the worker thread so the receiver can drain.
+                // Self-delivery re-enters this handler for the next batch.
+                context()->send(this->address(), make_bench_msg(MailboxLoadTag));
+            } else {
+                counters_->senders_done.fetch_add(1, std::memory_order_release);
+            }
         }};
     }
 
@@ -107,6 +118,7 @@ class MailboxN1SenderActor : public EventBasedActor {
     ActorAddress receiver_;
     uint32_t sender_id_ = 0;
     uint32_t messages_to_send_ = 0;
+    uint32_t sent_so_far_ = 0;
     uint32_t payload_size_ = 0;
     uint64_t seed_ = 0;
 };

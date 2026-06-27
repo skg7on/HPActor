@@ -33,9 +33,41 @@
 
 namespace hpactor::apps::bench_caf {
 
+// Scale scheduler threads with preset so senders and receivers can
+// make progress concurrently under load.
+inline size_t scheduler_threads_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return 2;
+        case PresetKind::Nightly:
+            return 4;
+        case PresetKind::PaperScale:
+            return 8;
+        case PresetKind::Stress:
+            return 16;
+    }
+    return 2;
+}
+
+// Scale the per-trial deadline with preset so large workloads have
+// enough time to drain their mailboxes.
+inline std::chrono::seconds deadline_for_preset(PresetKind preset) {
+    switch (preset) {
+        case PresetKind::Smoke:
+            return std::chrono::seconds{30};
+        case PresetKind::Nightly:
+            return std::chrono::seconds{120};
+        case PresetKind::PaperScale:
+            return std::chrono::seconds{300};
+        case PresetKind::Stress:
+            return std::chrono::seconds{600};
+    }
+    return std::chrono::seconds{30};
+}
+
 inline Config make_bench_actor_config(const CafBenchConfig& cfg) {
     Config runtime;
-    runtime.scheduler_threads = static_cast<size_t>(cfg.scheduler_threads);
+    runtime.scheduler_threads = scheduler_threads_for_preset(cfg.preset);
     runtime.max_queue_depth = static_cast<size_t>(cfg.mailbox_capacity);
     runtime.mailbox.default_capacity = cfg.mailbox_capacity;
     runtime.enable_network = false;
@@ -62,7 +94,8 @@ run_actor_creation_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     auto root = system.spawn<ActorCreationNodeActor>(&counters, depth);
     system.deliver_local(root.id(), make_bench_msg(ActorCreationStartTag));
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.completed.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -117,7 +150,8 @@ run_mailbox_n1_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.received.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -186,7 +220,8 @@ run_mixed_case_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         }
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while ((counters.rings_completed.load(std::memory_order_acquire) < expected_rings ||
             counters.cpu_tasks_completed.load(std::memory_order_acquire) <
                 expected_cpu) &&
@@ -268,7 +303,8 @@ run_one_to_one_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                                      cfg.message_size_bytes, cfg.seed);
     system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.received.load(std::memory_order_acquire) < messages &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -323,7 +359,8 @@ run_one_to_n_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                                              cfg.message_size_bytes, cfg.seed);
     system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.received.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -380,7 +417,8 @@ run_n_to_n_random_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         system.deliver_local(s.id(), make_bench_msg(MailboxLoadTag));
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.received.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -496,7 +534,8 @@ run_ring_traffic_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         nodes[0].id, make_bench_msg(MailboxLoadTag,
                                     encode_bench_payload(init, 0, uint64_t{0})));
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.receivers_done.load(std::memory_order_acquire) < 1 &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -610,7 +649,8 @@ run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         counters.sent.fetch_add(1, std::memory_order_relaxed);
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.receivers_done.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -659,6 +699,8 @@ inline ZipfDimensions zipf_dimensions_for_preset(PresetKind preset) {
 // receiver rank r gets probability proportional to 1/(r+1).
 class ZipfSender : public EventBasedActor {
   public:
+    static constexpr uint32_t kBatchSize = 500;
+
     ZipfSender(ActorContext* ctx, ActorSystem& sys, DistributionCounters* counters,
                std::vector<ActorAddress> receivers, uint32_t sender_id,
                uint32_t messages, uint32_t payload_size, uint64_t seed)
@@ -687,8 +729,9 @@ class ZipfSender : public EventBasedActor {
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() != MailboxLoadTag)
                 return;
-            uint64_t lcg = seed_ + sender_id_;
-            for (uint32_t i = 0; i < messages_; ++i) {
+            uint32_t end = std::min(sent_so_far_ + kBatchSize, messages_);
+            uint64_t lcg = seed_ + sender_id_ + sent_so_far_;
+            for (uint32_t i = sent_so_far_; i < end; ++i) {
                 BenchPayloadHeader header;
                 header.sender_id = sender_id_;
                 header.sequence = i;
@@ -709,7 +752,12 @@ class ZipfSender : public EventBasedActor {
                                 make_bench_msg(MailboxLoadTag, std::move(payload)));
                 counters_->sent.fetch_add(1, std::memory_order_relaxed);
             }
-            counters_->senders_done.fetch_add(1, std::memory_order_release);
+            sent_so_far_ = end;
+            if (sent_so_far_ < messages_) {
+                context()->send(this->address(), make_bench_msg(MailboxLoadTag));
+            } else {
+                counters_->senders_done.fetch_add(1, std::memory_order_release);
+            }
         }};
     }
 
@@ -718,6 +766,7 @@ class ZipfSender : public EventBasedActor {
     std::vector<ActorAddress> receivers_;
     uint32_t sender_id_ = 0;
     uint32_t messages_ = 0;
+    uint32_t sent_so_far_ = 0;
     uint32_t payload_size_ = 0;
     uint64_t seed_ = 0;
     std::vector<double> weights_;
@@ -759,7 +808,8 @@ run_zipf_hotspot_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         system.deliver_local(sender.id(), make_bench_msg(MailboxLoadTag));
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.received.load(std::memory_order_acquire) < expected &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -820,7 +870,8 @@ run_bursty_waves_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     // A single burst wave suffices to validate the topology and counters.
     // Multi-wave pacing with timer-based scheduling is future work.
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.received.load(std::memory_order_acquire) < kMessagesPerWave &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -873,7 +924,8 @@ run_mandelbrot_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         system.deliver_local(worker.id(), make_bench_msg(MandelTaskTag));
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.workers_done.load(std::memory_order_acquire) < dims.workers &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -946,7 +998,8 @@ run_scheduling_mix_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     uint64_t expected_actors =
         actor_creation_expected_count(dims.tree_depth) * dims.waves;
     uint64_t expected_cpu = dims.pool_size;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while ((ac_counters.created.load(std::memory_order_acquire) < expected_actors ||
             mc_counters.cpu_tasks_completed.load(std::memory_order_acquire) <
                 expected_cpu) &&
@@ -1022,7 +1075,8 @@ run_distributed_ping_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
 
     uint64_t expected_pongs =
         static_cast<uint64_t>(kActorsPerNode) * kActorsPerNode * kPingsPerTarget;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    auto deadline =
+        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
     while (counters.pongs_received.load(std::memory_order_acquire) < expected_pongs &&
            std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

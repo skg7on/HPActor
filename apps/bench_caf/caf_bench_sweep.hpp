@@ -35,16 +35,20 @@ inline std::vector<SweepEntry> expand_sweep(const CafBenchConfig& base_cfg) {
 
     // Nightly and PaperScale sweep message sizes for mailbox-n1.
     if (base_cfg.scenario == ScenarioKind::MailboxN1) {
-        // Nightly: 6 sizes (0, 16, 64, 256, 1KB, 4KB)
-        // PaperScale: Nightly + 16KB, 64KB
-        constexpr uint32_t nightly_sizes[] = {0, 16, 64, 256, 1024, 4096};
+        // Nightly: 5 sizes (0–1KB). 4KB+ is paper-scale only;
+        // nightly volumes (32 senders × 100K) would OOM with large payloads.
+        constexpr uint32_t nightly_sizes[] = {0, 16, 64, 256, 1024};
+        // PaperScale: 8 sizes (0–64KB).
         constexpr uint32_t all_sizes[] = {0,    16,   64,    256,
                                           1024, 4096, 16384, 65536};
+        constexpr size_t kNightlyCount =
+            sizeof(nightly_sizes) / sizeof(nightly_sizes[0]);
+        constexpr size_t kAllCount = sizeof(all_sizes) / sizeof(all_sizes[0]);
         const uint32_t* sizes = all_sizes;
-        size_t count = 8;
+        size_t count = kAllCount;
         if (base_cfg.preset == PresetKind::Nightly) {
             sizes = nightly_sizes;
-            count = 6;
+            count = kNightlyCount;
         }
 
         std::vector<SweepEntry> entries;
