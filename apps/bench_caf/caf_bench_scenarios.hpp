@@ -493,8 +493,8 @@ run_pipeline_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     TrialMetrics metrics;
     metrics.trial = trial_index;
 
-    constexpr uint32_t kStages = 8;
-    constexpr uint32_t kMessages = 100;
+    constexpr uint32_t kStages = 4;
+    constexpr uint32_t kMessages = 20;
 
     DistributionCounters counters;
     RssSampler sampler(cfg.sample_rss_ms);

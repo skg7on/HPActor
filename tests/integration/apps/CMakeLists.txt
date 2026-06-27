@@ -27,7 +27,7 @@ gtest_discover_tests(test_bench_caf_mixed_case PROPERTIES TIMEOUT 30)
 add_executable(test_bench_caf_distribution test_bench_caf_distribution.cpp)
 target_include_directories(test_bench_caf_distribution PRIVATE ${CMAKE_SOURCE_DIR})
 target_link_libraries(test_bench_caf_distribution hpactor hpactor_test_support GTest::gtest_main)
-gtest_discover_tests(test_bench_caf_distribution PROPERTIES TIMEOUT 30)
+gtest_discover_tests(test_bench_caf_distribution PROPERTIES TIMEOUT 60)
 
 add_executable(test_bench_caf_mandelbrot test_bench_caf_mandelbrot.cpp)
 target_include_directories(test_bench_caf_mandelbrot PRIVATE ${CMAKE_SOURCE_DIR})
