@@ -153,30 +153,36 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     // ── Metrics subsystem ──────────────────────────────────────────────
-    if (metrics_config_.enabled) {
-        metrics_ring_buffer_ =
+    if (impl_->operations.metrics_config.enabled) {
+        impl_->operations.metrics_ring_buffer =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
-        scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
-        impl_->messaging.delivery_pipeline->set_metrics(metrics_ring_buffer_.get());
+        scheduler_->set_metrics_ring_buffer(
+            impl_->operations.metrics_ring_buffer.get());
+        impl_->messaging.delivery_pipeline->set_metrics(
+            impl_->operations.metrics_ring_buffer.get());
         impl_->messaging.backpressure->set_metrics_ring_buffer(
-            metrics_ring_buffer_.get());
+            impl_->operations.metrics_ring_buffer.get());
 
-        auto m_actor = spawn<metrics::MetricsActor>(metrics_ring_buffer_);
-        metrics_actor_ = static_cast<metrics::MetricsActor*>(m_actor.get().get());
+        auto m_actor =
+            spawn<metrics::MetricsActor>(impl_->operations.metrics_ring_buffer);
+        impl_->operations.metrics_actor =
+            static_cast<metrics::MetricsActor*>(m_actor.get().get());
     }
 
     // ── Logging subsystem ──────────────────────────────────────────────
-    if (logging_config_.enabled) {
-        log_manager_ = std::make_unique<log::LogManager>(logging_config_);
-        log_manager_->start();
-        logger_ = &log_manager_->logger();
+    if (impl_->operations.logging_config.enabled) {
+        impl_->operations.log_manager =
+            std::make_unique<log::LogManager>(impl_->operations.logging_config);
+        impl_->operations.log_manager->start();
+        impl_->operations.logger = &impl_->operations.log_manager->logger();
     }
 
-    if (logger_) [[unlikely]] {
-        scheduler_->set_logger(logger_);
+    if (impl_->operations.logger) [[unlikely]] {
+        scheduler_->set_logger(impl_->operations.logger);
     }
 
-    fault_controller_.set_log_manager(log_manager_.get());
+    impl_->operations.fault_controller.set_log_manager(
+        impl_->operations.log_manager.get());
 
     // Initialize process-mode subystem (daemonize, pidfile, signal handling).
     // Must happen before scheduler_->start() so daemonization forks before
@@ -247,9 +253,9 @@ ActorSystem::ActorSystem(const Config& config)
             endpoint_, config.tls, config.pool, nullptr);
         impl_->messaging.backpressure->set_transport(impl_->network.transport.get());
 
-        if (metrics_ring_buffer_) {
+        if (impl_->operations.metrics_ring_buffer) {
             impl_->network.transport->set_metrics_ring_buffer(
-                metrics_ring_buffer_.get());
+                impl_->operations.metrics_ring_buffer.get());
         }
 
         impl_->network.rpc_channel = std::make_unique<RpcChannel>(
@@ -332,7 +338,7 @@ ActorSystem::ActorSystem(const Config& config)
             std::static_pointer_cast<receptionist::Receptionist>(spawned.get());
     }
 
-    fault_controller_.install();
+    impl_->operations.fault_controller.install();
 
     shutdown_coordinator_ =
         std::make_unique<ShutdownCoordinator>(ShutdownCoordinatorDependencies{
@@ -391,27 +397,28 @@ ActorSystem::~ActorSystem() {
             impl_->network.discovery->stop();
         }
     }
-    if (log_manager_) {
-        log_manager_->stop();
+    if (impl_->operations.log_manager) {
+        impl_->operations.log_manager->stop();
     }
-    if (trace_manager_) {
-        trace_manager_->stop();
+    if (impl_->operations.trace_manager) {
+        impl_->operations.trace_manager->stop();
     }
     scheduler_->stop();
-    fault_controller_.remove();
+    impl_->operations.fault_controller.remove();
 }
 
 void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
-    tracing_config_ = config;
-    if (!tracing_config_.enabled) {
-        if (trace_manager_) {
-            trace_manager_->stop();
-            trace_manager_.reset();
+    impl_->operations.tracing_config = config;
+    if (!impl_->operations.tracing_config.enabled) {
+        if (impl_->operations.trace_manager) {
+            impl_->operations.trace_manager->stop();
+            impl_->operations.trace_manager.reset();
         }
         return;
     }
-    trace_manager_ = std::make_unique<tracing::TraceManager>(tracing_config_, this);
-    trace_manager_->start();
+    impl_->operations.trace_manager = std::make_unique<tracing::TraceManager>(
+        impl_->operations.tracing_config, this);
+    impl_->operations.trace_manager->start();
 }
 
 sched::TimerStatsSnapshot ActorSystem::timer_stats() const {
@@ -562,7 +569,7 @@ cli::CliActor* ActorSystem::cli_actor() const {
 }
 
 metrics::MetricsActor* ActorSystem::metrics_actor() const {
-    return metrics_actor_;
+    return impl_->operations.metrics_actor;
 }
 
 receptionist::Receptionist* ActorSystem::receptionist() const {
@@ -634,6 +641,54 @@ net::UdpRegistrar* ActorSystem::registrar() {
 
 RpcChannel& ActorSystem::rpc_channel() {
     return *impl_->network.rpc_channel;
+}
+
+tracing::TraceManager* ActorSystem::trace_manager() noexcept {
+    return impl_->operations.trace_manager.get();
+}
+
+const tracing::TraceManager* ActorSystem::trace_manager() const noexcept {
+    return impl_->operations.trace_manager.get();
+}
+
+log::LogManager* ActorSystem::log_manager() noexcept {
+    return impl_->operations.log_manager.get();
+}
+
+const log::LogManager* ActorSystem::log_manager() const noexcept {
+    return impl_->operations.log_manager.get();
+}
+
+fault::FaultController& ActorSystem::fault_controller() noexcept {
+    return impl_->operations.fault_controller;
+}
+
+const fault::FaultController& ActorSystem::fault_controller() const noexcept {
+    return impl_->operations.fault_controller;
+}
+
+metrics::MpscRingBuffer<metrics::MetricEvent>*
+ActorSystem::metrics_ring_buffer() const {
+    return impl_->operations.metrics_ring_buffer.get();
+}
+
+bool ActorSystem::cluster_enabled() const {
+    return impl_->cluster.enabled;
+}
+
+cluster::ClusterFailureModel* ActorSystem::cluster_failure_model() {
+    return static_cast<cluster::ClusterFailureModel*>(
+        impl_->cluster.failure_model.get());
+}
+
+cluster::singleton::SingletonManagerActor* ActorSystem::singleton_manager() {
+    return static_cast<cluster::singleton::SingletonManagerActor*>(
+        impl_->cluster.singleton_manager.get());
+}
+
+cluster::RouteInvalidation* ActorSystem::route_invalidation() {
+    return static_cast<cluster::RouteInvalidation*>(
+        impl_->cluster.route_invalidation.get());
 }
 
 // ── Mailbox config helpers ──────────────────────────────────────────────────
@@ -807,7 +862,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
                      std::move(payload));
     msg.set_sender_address(net::from_proto(frame.pb_envelope.data_frame().sender()));
     if (frame.pb_envelope.data_frame().has_trace_context()) {
-        uint16_t max_state = tracing_config_.max_tracestate_len;
+        uint16_t max_state = impl_->operations.tracing_config.max_tracestate_len;
         auto parsed = net::trace_context_from_proto(
             frame.pb_envelope.data_frame().trace_context(), max_state);
         if (parsed.has_value()) {
@@ -934,14 +989,14 @@ Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> act
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mbox);
 
-    if (metrics_ring_buffer_) [[unlikely]] {
-        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
-        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
+        actor->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
     }
 
-    if (logger_) [[unlikely]] {
-        mbox->set_logger(logger_);
-        actor->set_logger(logger_);
+    if (impl_->operations.logger) [[unlikely]] {
+        mbox->set_logger(impl_->operations.logger);
+        actor->set_logger(impl_->operations.logger);
     }
 
     switch (actor->dispatch_policy()) {
@@ -968,12 +1023,12 @@ Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> act
                      "actor spawned",
                      log::field_lit("type", actor->type_name().data()));
 
-    if (metrics_ring_buffer_) [[unlikely]] {
+    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
         metrics::MetricEvent evt{};
         evt.actor_id = id;
         evt.event_type = metrics::MetricEventType::kActorSpawned;
         evt.value_hi = 1;
-        metrics_ring_buffer_->try_push(evt);
+        impl_->operations.metrics_ring_buffer->try_push(evt);
     }
 
     return Actor(actor);
@@ -1008,14 +1063,14 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mbox);
 
-    if (metrics_ring_buffer_) [[unlikely]] {
-        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
-        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
+        actor->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
     }
 
-    if (logger_) [[unlikely]] {
-        mbox->set_logger(logger_);
-        actor->set_logger(logger_);
+    if (impl_->operations.logger) [[unlikely]] {
+        mbox->set_logger(impl_->operations.logger);
+        actor->set_logger(impl_->operations.logger);
     }
 
     auto policy = actor->dispatch_policy();
@@ -1064,12 +1119,12 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
                      "actor spawned",
                      log::field_lit("type", actor->type_name().data()));
 
-    if (metrics_ring_buffer_) [[unlikely]] {
+    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
         metrics::MetricEvent event{};
         event.actor_id = id;
         event.event_type = metrics::MetricEventType::kActorSpawned;
         event.value_hi = 1;
-        metrics_ring_buffer_->try_push(event);
+        impl_->operations.metrics_ring_buffer->try_push(event);
     }
 
     return Actor(actor);
@@ -1086,13 +1141,13 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     auto& model = parse_result.value();
 
     if (model.system.metrics_enabled) {
-        metrics_config_.enabled = model.system.metrics_enabled;
-        metrics_config_.ring_buffer_capacity =
+        impl_->operations.metrics_config.enabled = model.system.metrics_enabled;
+        impl_->operations.metrics_config.ring_buffer_capacity =
             model.system.metrics_ring_buffer_capacity;
-        metrics_config_.metrics_path = model.system.metrics_path;
+        impl_->operations.metrics_config.metrics_path = model.system.metrics_path;
     }
 
-    logging_config_ = model.system.logging;
+    impl_->operations.logging_config = model.system.logging;
 
 #define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
     config_.name = static_cast<decltype(config_.name)>(model.system.name);

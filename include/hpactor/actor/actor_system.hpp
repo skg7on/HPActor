@@ -446,32 +446,20 @@ class ActorSystem {
     // ── Distributed tracing ───────────────────────────────────────────────
 
     /// \brief Trace manager (nullptr if tracing is disabled).
-    tracing::TraceManager* trace_manager() noexcept {
-        return trace_manager_.get();
-    }
-    const tracing::TraceManager* trace_manager() const noexcept {
-        return trace_manager_.get();
-    }
+    tracing::TraceManager* trace_manager() noexcept;
+    const tracing::TraceManager* trace_manager() const noexcept;
 
     /// \brief Log manager (nullptr if logging is disabled).
-    log::LogManager* log_manager() noexcept {
-        return log_manager_.get();
-    }
-    const log::LogManager* log_manager() const noexcept {
-        return log_manager_.get();
-    }
+    log::LogManager* log_manager() noexcept;
+    const log::LogManager* log_manager() const noexcept;
 
     /// \brief Apply a new tracing configuration at runtime.
     void apply_tracing_config(const tracing::TraceConfig& config);
 
     // ── Fault injection ───────────────────────────────────────────────────
 
-    fault::FaultController& fault_controller() noexcept {
-        return fault_controller_;
-    }
-    const fault::FaultController& fault_controller() const noexcept {
-        return fault_controller_;
-    }
+    fault::FaultController& fault_controller() noexcept;
+    const fault::FaultController& fault_controller() const noexcept;
 
     // ── Actor lookup ──────────────────────────────────────────────────────
 
@@ -487,9 +475,7 @@ class ActorSystem {
     /// \brief Metrics ring buffer pointer.
     ///
     /// Returns \c nullptr if metrics are disabled.
-    auto* metrics_ring_buffer() const {
-        return metrics_ring_buffer_.get();
-    }
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer() const;
 
     /// \brief MetricsActor instance.
     ///
@@ -521,26 +507,16 @@ class ActorSystem {
     void enable_cluster(const std::string& node_id);
 
     /// \brief Returns \c true when the cluster subsystem is enabled.
-    bool cluster_enabled() const {
-        return cluster_enabled_;
-    }
+    bool cluster_enabled() const;
 
     /// \brief Cluster failure model (nullptr when cluster is disabled).
-    cluster::ClusterFailureModel* cluster_failure_model() {
-        return static_cast<cluster::ClusterFailureModel*>(
-            cluster_failure_model_.get());
-    }
+    cluster::ClusterFailureModel* cluster_failure_model();
 
     /// \brief Singleton manager actor wrapper (nullptr when cluster disabled).
-    cluster::singleton::SingletonManagerActor* singleton_manager() {
-        return static_cast<cluster::singleton::SingletonManagerActor*>(
-            singleton_manager_.get());
-    }
+    cluster::singleton::SingletonManagerActor* singleton_manager();
 
     /// \brief Route invalidation coordinator (nullptr when cluster disabled).
-    cluster::RouteInvalidation* route_invalidation() {
-        return static_cast<cluster::RouteInvalidation*>(route_invalidation_.get());
-    }
+    cluster::RouteInvalidation* route_invalidation();
 
     // ── Mailbox ───────────────────────────────────────────────────────────
 
@@ -998,14 +974,14 @@ class ActorSystem {
     std::shared_ptr<receptionist::Receptionist> receptionist_;
 
     // Metrics configuration, ring buffer, and actor
-    metrics::MetricsConfig metrics_config_;
-    std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer_;
-    metrics::MetricsActor* metrics_actor_{nullptr};
+    // moved to impl_->operations
+    // moved to impl_->operations
+    // moved to impl_->operations
 
     // Logging subsystem
-    log::LogConfig logging_config_;
-    std::unique_ptr<log::LogManager> log_manager_;
-    log::Logger* logger_ = nullptr;
+    // moved to impl_->operations
+    // moved to impl_->operations
+    // moved to impl_->operations
 
     // Dead-letter queue owned by impl_->messaging.dead_letters
 
@@ -1019,11 +995,11 @@ class ActorSystem {
     std::unique_ptr<adt::DedupCache> dedup_cache_;
 
     // Tracing subsystem
-    tracing::TraceConfig tracing_config_;
-    std::unique_ptr<tracing::TraceManager> trace_manager_;
+    // moved to impl_->operations
+    // moved to impl_->operations
 
     // Fault injection
-    fault::FaultController fault_controller_;
+    // moved to impl_->operations
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
@@ -1031,13 +1007,13 @@ class ActorSystem {
     // Cluster subsystem (type-erased to avoid link cycle between
     // hpactor_lib ↔ hpactor_cluster).
     using cluster_cleanup_fn = void (*)(void*);
-    bool cluster_enabled_ = false;
-    std::unique_ptr<void, cluster_cleanup_fn> cluster_failure_model_{
-        nullptr, +[](void*) {}};
-    std::unique_ptr<void, cluster_cleanup_fn> singleton_manager_{nullptr,
-                                                                 +[](void*) {}};
-    std::unique_ptr<void, cluster_cleanup_fn> route_invalidation_{nullptr,
-                                                                  +[](void*) {}};
+    // moved to impl_->cluster
+    // moved to impl_->cluster
+    // moved to impl_->cluster
+    // moved to impl_->cluster
+    // moved to impl_->cluster
+    // moved to impl_->cluster
+    // moved to impl_->cluster
 };
 
 // -----------------------------------------------------------------------------
