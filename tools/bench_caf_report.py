@@ -178,7 +178,19 @@ def extract_metrics(data: dict) -> dict:
     # Aggregate across trials
     completed = [t for t in trials if t.get("completed")]
     if not completed:
-        return {"completed_trials": 0, "total_trials": len(trials)}
+        return {
+            "completed_trials": 0,
+            "total_trials": len(trials),
+            "runtime_ms_mean": 0,
+            "runtime_ms_min": 0,
+            "runtime_ms_max": 0,
+            "throughput_mean": 0,
+            "throughput_p95": 0,
+            "total_sent": 0,
+            "total_received": 0,
+            "total_dropped": 0,
+            "peak_rss_bytes": 0,
+        }
 
     def _mean(vals):
         return sum(vals) / len(vals) if vals else 0.0
@@ -284,7 +296,7 @@ def generate_report(results: dict, preset: str, binary: str) -> str:
 
         for name, meta in sorted(phase_scenarios.items(),
                                   key=lambda x: SCENARIOS[x[0]]["category"]):
-            if meta is None:
+            if meta is None or meta.get("completed_trials", 0) == 0:
                 lines.append(f"| `{name}` | ❌ FAILED | — | — | "
                               "— | — | — | — |")
                 continue
