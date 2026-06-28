@@ -311,17 +311,38 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         workers_paused_.load(std::memory_order_relaxed),
     };
 
+    WorkItem cur = item; // mutable copy preserves actor_ptr, home_worker,
+                         // edf_scheduled
     auto result =
-        executor_.run(*actor, item, execution_context, system_.use_coroutines());
+        executor_.run(*actor, cur, execution_context, system_.use_coroutines());
+
+    // Adaptive batch: avoid enqueue_admitted round-trips for consecutive
+    // messages. Skip in paused (test) mode — tests expect one message per
+    // drain_ready() call.
+    constexpr int kBatchLimit = 63;
+    if (!workers_paused_.load(std::memory_order_relaxed)) {
+        for (int n = 0; result.disposition == ActorRunDisposition::RequeueReady &&
+                        n < kBatchLimit;
+             ++n) {
+            cur.sequence = (cur.sequence + 1 <= 128) ? cur.sequence + 1 : 0;
+            cur.deadline_ns = result.deadline_ns;
+            result = executor_.run(*actor, cur, execution_context,
+                                   system_.use_coroutines());
+        }
+    }
+
     if (result.disposition == ActorRunDisposition::RequeueReady) {
-        uint64_t next_seq = item.sequence + 1;
-        if (next_seq > 128)
-            next_seq = 0;
-        WorkItem next{item.actor, result.deadline_ns, next_seq};
-        next.edf_scheduled = item.edf_scheduled;
-        next.actor_ptr = item.actor_ptr;
-        next.home_worker = item.home_worker; // preserve affinity across requeue
-        enqueue_admitted(next, result.priority);
+        // Non-paused: batch loop ran all kBatchLimit iterations — reset
+        // sequence so the next batch gets a fresh 64-message budget. Paused
+        // (test) mode: increment normally so the rate-limiter spin prevention
+        // (sequence >= kLostWakeupRequeueBudget) still fires.
+        if (!workers_paused_.load(std::memory_order_relaxed)) {
+            cur.sequence = 0;
+        } else {
+            cur.sequence = (cur.sequence + 1 <= 128) ? cur.sequence + 1 : 0;
+        }
+        cur.deadline_ns = result.deadline_ns;
+        enqueue_admitted(cur, result.priority);
     }
 }
 

@@ -17,6 +17,7 @@ add_executable(test_unit_sched
     test_sched_branches.cpp
     test_actor_ptr_workitem.cpp
     test_home_worker_affinity.cpp
+    test_adaptive_batch.cpp
 )
 target_link_libraries(test_unit_sched hpactor hpactor_test_support GTest::gtest_main pthread)
 gtest_discover_tests(test_unit_sched)
