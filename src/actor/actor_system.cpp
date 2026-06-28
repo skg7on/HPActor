@@ -68,19 +68,20 @@ namespace hpactor {
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
 ActorSystem::ActorSystem(const Config& config)
-    : impl_(std::make_unique<Impl>(*this, config)), config_(config),
-      endpoint_(config.endpoint), registry_(actor_directory_),
-      start_time_(std::chrono::steady_clock::now()),
-      scheduler_(std::make_unique<sched::HybridScheduler>(
-          *this, config.scheduler_threads, 4, config.timer_backend,
-          config.scheduler_start_paused)),
-      actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
+    : impl_(std::make_unique<Impl>(*this, config)) {
+    impl_->core.config = config;
+    impl_->core.endpoint = config.endpoint;
+    impl_->core.start_time = std::chrono::steady_clock::now();
+    impl_->core.scheduler = std::make_unique<sched::HybridScheduler>(
+        *this, config.scheduler_threads, 4, config.timer_backend,
+        config.scheduler_start_paused);
+    impl_->actors.type_registry = std::make_unique<ActorTypeRegistry>();
     // ── System protobuf types ──────────────────────────────────────────
-    proto_registry_.register_system_types();
+    impl_->core.proto_registry.register_system_types();
 
     // ── Dead-letter queue ──────────────────────────────────────────────
     impl_->messaging.dead_letters =
-        std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+        std::make_unique<mailbox::DeadLetterQueue>(impl_->core.config.dead_letters);
 
     // ── Receiver dedup cache ───────────────────────────────────────────
     impl_->messaging.dedup_cache =
@@ -88,13 +89,13 @@ ActorSystem::ActorSystem(const Config& config)
 
     // ── Extracted runtime components ───────────────────────────────────
     impl_->messaging.local_delivery_engine =
-        std::make_unique<LocalDeliveryEngine>(actor_directory_);
+        std::make_unique<LocalDeliveryEngine>(impl_->actors.directory);
     {
         BackpressureCoordinator::Config bp_cfg;
         bp_cfg.metrics_ring_buffer = nullptr;
         bp_cfg.transport = nullptr;
-        bp_cfg.actor_directory = &actor_directory_;
-        bp_cfg.endpoint = endpoint_;
+        bp_cfg.actor_directory = &impl_->actors.directory;
+        bp_cfg.endpoint = impl_->core.endpoint;
         impl_->messaging.backpressure =
             std::make_unique<BackpressureCoordinator>(std::move(bp_cfg));
     }
@@ -116,15 +117,16 @@ ActorSystem::ActorSystem(const Config& config)
         pipeline_cfg.outbound_tracker = impl_->messaging.outbound_tracker.get();
         pipeline_cfg.metrics = nullptr;
         pipeline_cfg.dedup_cache = impl_->messaging.dedup_cache.get();
-        pipeline_cfg.endpoint = endpoint_;
-        pipeline_cfg.default_message_ttl_ms = config_.default_message_ttl_ms;
+        pipeline_cfg.endpoint = impl_->core.endpoint;
+        pipeline_cfg.default_message_ttl_ms =
+            impl_->core.config.default_message_ttl_ms;
 
         pipeline_cfg.get_actor = [this](ActorId id) {
-            auto entry = actor_directory_.find(id);
+            auto entry = impl_->actors.directory.find(id);
             return entry.has_value() ? entry->instance : nullptr;
         };
         pipeline_cfg.get_mailbox = [this](ActorId id) {
-            auto mailbox = actor_directory_.find_mailbox(id);
+            auto mailbox = impl_->actors.directory.find_mailbox(id);
             return mailbox.get();
         };
         pipeline_cfg.emit_local_backpressure =
@@ -144,7 +146,7 @@ ActorSystem::ActorSystem(const Config& config)
             // The acker is the local endpoint (the pipeline doesn't know
             // which specific actor).  For ACK/NACK, the endpoint + msg_id
             // is sufficient identification.
-            ActorAddress acker{endpoint_, ActorType{0}, ActorId{0}, 0};
+            ActorAddress acker{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0};
             send_reliable_ack(sender, acker, msg_id, status, retry_after_ms);
         };
 
@@ -156,7 +158,7 @@ ActorSystem::ActorSystem(const Config& config)
     if (impl_->operations.metrics_config.enabled) {
         impl_->operations.metrics_ring_buffer =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
-        scheduler_->set_metrics_ring_buffer(
+        impl_->core.scheduler->set_metrics_ring_buffer(
             impl_->operations.metrics_ring_buffer.get());
         impl_->messaging.delivery_pipeline->set_metrics(
             impl_->operations.metrics_ring_buffer.get());
@@ -178,20 +180,20 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     if (impl_->operations.logger) [[unlikely]] {
-        scheduler_->set_logger(impl_->operations.logger);
+        impl_->core.scheduler->set_logger(impl_->operations.logger);
     }
 
     impl_->operations.fault_controller.set_log_manager(
         impl_->operations.log_manager.get());
 
     // Initialize process-mode subystem (daemonize, pidfile, signal handling).
-    // Must happen before scheduler_->start() so daemonization forks before
-    // any worker threads are created.
-    (void)process::ProcessManager::init(config_.process);
+    // Must happen before impl_->core.scheduler->start() so daemonization forks
+    // before any worker threads are created.
+    (void)process::ProcessManager::init(impl_->core.config.process);
 
-    scheduler_->start();
+    impl_->core.scheduler->start();
 
-    apply_tracing_config(config_.tracing);
+    apply_tracing_config(impl_->core.config.tracing);
 
     if (config.enable_network) {
         impl_->network.event_loop = std::make_unique<net::EventLoop>();
@@ -201,7 +203,8 @@ ActorSystem::ActorSystem(const Config& config)
             impl_->network.discovery = config.service_discovery;
         } else if (config.registrar.udp_port > 0) {
             auto reg = std::make_shared<net::UdpRegistrar>(
-                config.registrar, endpoint_, impl_->network.event_loop.get());
+                config.registrar, impl_->core.endpoint,
+                impl_->network.event_loop.get());
             impl_->network.discovery = reg;
             impl_->network.registrar = reg;
         } else {
@@ -250,7 +253,7 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         impl_->network.transport = std::make_unique<net::TcpTransport>(
-            endpoint_, config.tls, config.pool, nullptr);
+            impl_->core.endpoint, config.tls, config.pool, nullptr);
         impl_->messaging.backpressure->set_transport(impl_->network.transport.get());
 
         if (impl_->operations.metrics_ring_buffer) {
@@ -259,19 +262,20 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         impl_->network.rpc_channel = std::make_unique<RpcChannel>(
-            impl_->network.transport.get(), scheduler_.get(),
-            config_.default_ask_max_retries);
+            impl_->network.transport.get(), impl_->core.scheduler.get(),
+            impl_->core.config.default_ask_max_retries);
 
-        ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
+        impl_->actors.ask =
+            std::make_unique<AskManager>(impl_->core.scheduler.get(), this);
 
-        if (config_.enable_http_client) {
-            http_client_ =
+        if (impl_->core.config.enable_http_client) {
+            impl_->actors.http_client =
                 std::make_unique<net::HttpClient>(impl_->network.event_loop.get());
         }
 
-        if (config_.enable_http_gateway) {
-            http_gateway_actor_ = spawn<net::HTTPGatewayActor>(
-                config_.http_bind_host, config_.http_port);
+        if (impl_->core.config.enable_http_gateway) {
+            impl_->actors.http_gateway_actor = spawn<net::HTTPGatewayActor>(
+                impl_->core.config.http_bind_host, impl_->core.config.http_port);
         }
 
         if (config.tcp_port > 0) {
@@ -295,13 +299,14 @@ ActorSystem::ActorSystem(const Config& config)
         });
 
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
-            *this, *actor_type_registry_, impl_->network.transport.get());
-        spawn_receiver->set_address(
-            ActorAddress{endpoint_, SystemActorType, SpawnReceiverId, 0});
+            *this, *impl_->actors.type_registry, impl_->network.transport.get());
+        spawn_receiver->set_address(ActorAddress{
+            impl_->core.endpoint, SystemActorType, SpawnReceiverId, 0});
 
         auto spawn_mailbox =
             std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-                SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn());
+                SpawnReceiverId, impl_->core.scheduler.get(),
+                mailbox_config_for_spawn());
         auto spawn_ctx =
             std::make_shared<ActorContext>(Actor(spawn_receiver), this);
         spawn_receiver->set_context(spawn_ctx.get());
@@ -311,46 +316,47 @@ ActorSystem::ActorSystem(const Config& config)
         spawn_entry.instance = spawn_receiver;
         spawn_entry.mailbox = spawn_mailbox;
         spawn_entry.context = spawn_ctx;
-        actor_directory_.insert(std::move(spawn_entry));
+        impl_->actors.directory.insert(std::move(spawn_entry));
     }
 
     {
         auto durable_store = std::make_unique<InMemoryStateStore>();
         PassivationConfig defaults;
-        passivation_manager_ = std::make_unique<PassivationManager>(
+        impl_->actors.passivation = std::make_unique<PassivationManager>(
             *this, durable_store.release(), defaults);
     }
 
     // CliActor reads from stdin — only appropriate in foreground mode.
     // In daemon/systemd modes, CLI access goes through CliLegacyServerActor
     // or CliProtoServerActor via UDS/TCP sockets instead.
-    if (config_.cli.enabled &&
+    if (impl_->core.config.cli.enabled &&
         process::ProcessManager::mode() == process::ProcessMode::Foreground) {
-        auto spawned = spawn<cli::CliActor>(config_.cli);
-        cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
+        auto spawned = spawn<cli::CliActor>(impl_->core.config.cli);
+        impl_->actors.cli_actor =
+            std::static_pointer_cast<cli::CliActor>(spawned.get());
     }
 
     // Spawn the Receptionist system actor for service-key-based actor
     // discovery. Can be disabled via Config::enable_receptionist.
-    if (config_.enable_receptionist) {
+    if (impl_->core.config.enable_receptionist) {
         auto spawned = spawn<receptionist::Receptionist>();
-        receptionist_ =
+        impl_->actors.receptionist =
             std::static_pointer_cast<receptionist::Receptionist>(spawned.get());
     }
 
     impl_->operations.fault_controller.install();
 
-    shutdown_coordinator_ =
+    impl_->actors.shutdown_coordinator =
         std::make_unique<ShutdownCoordinator>(ShutdownCoordinatorDependencies{
-            .phase = &shutdown_phase_,
-            .running = &running_,
+            .phase = &impl_->core.shutdown_phase,
+            .running = &impl_->core.running,
             .set_ready =
                 [this](bool ready) {
-                    is_ready_.store(ready, std::memory_order_release);
+                    impl_->core.is_ready.store(ready, std::memory_order_release);
                 },
             .actor_snapshot =
                 [this]() {
-                    auto entries = actor_directory_.snapshot();
+                    auto entries = impl_->actors.directory.snapshot();
                     std::vector<std::pair<ActorId, bool>> ids;
                     ids.reserve(entries.size());
                     for (const auto& entry : entries) {
@@ -361,7 +367,7 @@ ActorSystem::ActorSystem(const Config& config)
                 },
             .get_actor = [this](ActorId id) { return get_actor(id); },
             .get_mailbox_raw = [this](ActorId id) -> void* {
-                auto mailbox = actor_directory_.find_mailbox(id);
+                auto mailbox = impl_->actors.directory.find_mailbox(id);
                 return static_cast<void*>(mailbox.get());
             },
             .stop_remote_runtime =
@@ -376,14 +382,15 @@ ActorSystem::ActorSystem(const Config& config)
                     // Metrics ring buffer is NOT destroyed here — scheduler
                     // workers hold raw pointers to it and may still be running.
                     // The ActorSystem destructor cleans it up after
-                    // scheduler_->stop() ensures all workers have exited.
+                    // impl_->core.scheduler->stop() ensures all workers have
+                    // exited.
                 },
         });
 }
 
 ActorSystem::~ActorSystem() {
-    running_.store(false);
-    if (config_.enable_network) {
+    impl_->core.running.store(false);
+    if (impl_->core.config.enable_network) {
         if (impl_->network.event_loop) {
             impl_->network.event_loop->stop();
         }
@@ -403,7 +410,7 @@ ActorSystem::~ActorSystem() {
     if (impl_->operations.trace_manager) {
         impl_->operations.trace_manager->stop();
     }
-    scheduler_->stop();
+    impl_->core.scheduler->stop();
     impl_->operations.fault_controller.remove();
 }
 
@@ -422,12 +429,12 @@ void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
 }
 
 sched::TimerStatsSnapshot ActorSystem::timer_stats() const {
-    auto* hs = static_cast<sched::HybridScheduler*>(scheduler_.get());
+    auto* hs = static_cast<sched::HybridScheduler*>(impl_->core.scheduler.get());
     return hs->timer_snapshot();
 }
 
 void ActorSystem::on_node_dead(EndPoint dead_ep) {
-    auto entries = actor_directory_.snapshot();
+    auto entries = impl_->actors.directory.snapshot();
     for (const auto& entry : entries) {
         if (!entry.context)
             continue;
@@ -512,11 +519,11 @@ void ActorSystem::set_backpressure_signal_wire_sink_for_test(
 // ── Actor registry ──────────────────────────────────────────────────────────
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
-    registry_.put(name, actor.address());
+    impl_->actors.registry.put(name, actor.address());
 }
 
 Actor ActorSystem::resolve_actor(const std::string& name) {
-    auto actor_opt = actor_directory_.resolve_actor(name);
+    auto actor_opt = impl_->actors.directory.resolve_actor(name);
     if (actor_opt.has_value()) {
         return actor_opt.value();
     }
@@ -524,23 +531,23 @@ Actor ActorSystem::resolve_actor(const std::string& name) {
 }
 
 void ActorSystem::unregister_actor(const std::string& name) {
-    registry_.erase(name);
+    impl_->actors.registry.erase(name);
 }
 
 void ActorSystem::register_actor_type(const ActorTypeDef& def) {
-    actor_types_[def.id] = def;
+    impl_->actors.types[def.id] = def;
 }
 
 ActorTypeDef ActorSystem::get_actor_type(ActorType type) const {
-    auto it = actor_types_.find(type);
-    if (it != actor_types_.end()) {
+    auto it = impl_->actors.types.find(type);
+    if (it != impl_->actors.types.end()) {
         return it->second;
     }
     return ActorTypeDef{};
 }
 
 std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
-    auto entry = actor_directory_.find(id);
+    auto entry = impl_->actors.directory.find(id);
     if (entry.has_value()) {
         return entry->instance;
     }
@@ -548,24 +555,24 @@ std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
 }
 
 mailbox::MPSCActorMailbox<TypedMessage>* ActorSystem::get_mailbox(ActorId id) {
-    auto mailbox = actor_directory_.find_mailbox(id);
+    auto mailbox = impl_->actors.directory.find_mailbox(id);
     return mailbox.get();
 }
 
 size_t ActorSystem::actor_count() const {
-    return actor_directory_.size();
+    return impl_->actors.directory.size();
 }
 
 void ActorSystem::for_each_actor(
     std::function<void(ActorId, AbstractActor&)> callback) const {
-    auto entries = actor_directory_.snapshot();
+    auto entries = impl_->actors.directory.snapshot();
     for (const auto& entry : entries) {
         callback(entry.actor.id(), *entry.instance);
     }
 }
 
 cli::CliActor* ActorSystem::cli_actor() const {
-    return cli_actor_.get();
+    return impl_->actors.cli_actor.get();
 }
 
 metrics::MetricsActor* ActorSystem::metrics_actor() const {
@@ -573,7 +580,7 @@ metrics::MetricsActor* ActorSystem::metrics_actor() const {
 }
 
 receptionist::Receptionist* ActorSystem::receptionist() const {
-    return receptionist_.get();
+    return impl_->actors.receptionist.get();
 }
 
 // ── Dead-letter queue ───────────────────────────────────────────────────────
@@ -691,22 +698,100 @@ cluster::RouteInvalidation* ActorSystem::route_invalidation() {
         impl_->cluster.route_invalidation.get());
 }
 
+Clock& ActorSystem::clock() {
+    return impl_->core.clock;
+}
+
+Actor ActorSystem::system_actor() {
+    return impl_->actors.system_actor;
+}
+
+ActorSystem::ActorRegistry& ActorSystem::registry() {
+    return impl_->actors.registry;
+}
+
+ProtoTypeRegistry& ActorSystem::proto_registry() {
+    return impl_->core.proto_registry;
+}
+
+const ProtoTypeRegistry& ActorSystem::proto_registry() const {
+    return impl_->core.proto_registry;
+}
+
+EndPoint ActorSystem::endpoint() const {
+    return impl_->core.endpoint;
+}
+
+bool ActorSystem::is_running() const {
+    return impl_->core.running.load(std::memory_order_acquire);
+}
+
+std::chrono::milliseconds ActorSystem::uptime() const {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - impl_->core.start_time);
+}
+
+const Config& ActorSystem::config() const {
+    return impl_->core.config;
+}
+
+sched::IScheduler* ActorSystem::scheduler() {
+    return impl_->core.scheduler.get();
+}
+
+bool ActorSystem::use_coroutines() const {
+    return impl_->core.config.use_coroutines;
+}
+
+AskManager* ActorSystem::ask_manager() {
+    return impl_->actors.ask.get();
+}
+
+const AskManager* ActorSystem::ask_manager() const {
+    return impl_->actors.ask.get();
+}
+
+PassivationManager* ActorSystem::passivation_manager() {
+    return impl_->actors.passivation.get();
+}
+
+const PassivationManager* ActorSystem::passivation_manager() const {
+    return impl_->actors.passivation.get();
+}
+
+net::HttpClient& ActorSystem::http_client() {
+    return *impl_->actors.http_client;
+}
+
+ActorTypeRegistry& ActorSystem::actor_type_registry() {
+    return *impl_->actors.type_registry;
+}
+
+const ActorTypeRegistry& ActorSystem::actor_type_registry() const {
+    return *impl_->actors.type_registry;
+}
+
+ShutdownCoordinator* ActorSystem::shutdown_coordinator() const {
+    return impl_->actors.shutdown_coordinator.get();
+}
+
 // ── Mailbox config helpers ──────────────────────────────────────────────────
 
 mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
     mailbox::MailboxConfig cfg;
-    cfg.capacity.max_messages = config_.mailbox.default_capacity;
-    cfg.capacity.max_bytes = config_.mailbox.default_byte_capacity;
-    cfg.overflow_policy = config_.mailbox.default_policy;
-    cfg.high_watermark = config_.mailbox.high_watermark;
-    cfg.low_watermark = config_.mailbox.low_watermark;
-    cfg.critical_watermark = config_.mailbox.critical_watermark;
-    cfg.priority_aware = config_.mailbox.priority_aware;
-    cfg.priority_levels = config_.mailbox.priority_levels;
-    cfg.protected_system_messages = config_.mailbox.protected_system_messages;
-    cfg.max_overflow_depth = config_.mailbox.max_overflow_depth;
-    cfg.signal_min_interval_ms = config_.mailbox.signal_min_interval_ms;
-    cfg.backpressure_mode = config_.mailbox.backpressure_mode;
+    cfg.capacity.max_messages = impl_->core.config.mailbox.default_capacity;
+    cfg.capacity.max_bytes = impl_->core.config.mailbox.default_byte_capacity;
+    cfg.overflow_policy = impl_->core.config.mailbox.default_policy;
+    cfg.high_watermark = impl_->core.config.mailbox.high_watermark;
+    cfg.low_watermark = impl_->core.config.mailbox.low_watermark;
+    cfg.critical_watermark = impl_->core.config.mailbox.critical_watermark;
+    cfg.priority_aware = impl_->core.config.mailbox.priority_aware;
+    cfg.priority_levels = impl_->core.config.mailbox.priority_levels;
+    cfg.protected_system_messages =
+        impl_->core.config.mailbox.protected_system_messages;
+    cfg.max_overflow_depth = impl_->core.config.mailbox.max_overflow_depth;
+    cfg.signal_min_interval_ms = impl_->core.config.mailbox.signal_min_interval_ms;
+    cfg.backpressure_mode = impl_->core.config.mailbox.backpressure_mode;
     return cfg;
 }
 
@@ -886,7 +971,7 @@ void ActorSystem::enqueue_completion(net::OpCompletion completion) {
 }
 
 net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
-    if (!config_.enable_network) {
+    if (!impl_->core.config.enable_network) {
         return nullptr;
     }
     return impl_->network.transport.get();
@@ -907,7 +992,7 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     auto state = std::make_shared<RequestHandle<ActorRef>::State>();
     RequestHandle<ActorRef> handle(state);
 
-    if (!config_.enable_network || !impl_->network.rpc_channel) {
+    if (!impl_->core.config.enable_network || !impl_->network.rpc_channel) {
         handle.resolve_error(error(spawn_errors::node_unreachable, "networking "
                                                                    "disabled"));
         return handle;
@@ -920,12 +1005,14 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     pb_req.set_args_type(static_cast<uint32_t>(TypeTag::User));
     pb_req.set_serialized_args(reinterpret_cast<const char*>(args.data()),
                                args.size());
-    net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
+    net::to_proto(pb_req.mutable_supervisor(),
+                  impl_->actors.system_actor.address());
 
-    StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
+    StreamBuffer request_bytes = impl_->core.proto_registry.serialize(pb_req);
 
-    auto timeout_ms = timeout_override.is_default() ? config_.spawn_timeout_ms
-                                                    : timeout_override.value;
+    auto timeout_ms = timeout_override.is_default()
+                          ? impl_->core.config.spawn_timeout_ms
+                          : timeout_override.value;
 
     ActorAddress target{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
 
@@ -967,13 +1054,13 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
 
 Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
                                               std::string_view type_name) {
-    ActorId id = actor_directory_.allocate_id();
-    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    ActorId id = impl_->actors.directory.allocate_id();
+    actor->set_address(ActorAddress(impl_->core.endpoint, actor->type(), id, 0));
     actor->set_type_name(std::string{type_name});
 
     auto* local = static_cast<LocalActor*>(actor.get());
     auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-        id, scheduler_.get(), mailbox_config_for_spawn());
+        id, impl_->core.scheduler.get(), mailbox_config_for_spawn());
     auto* mbox = mailbox_ptr.get();
 
     auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
@@ -984,9 +1071,9 @@ Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> act
     entry.instance = actor;
     entry.mailbox = mailbox_ptr;
     entry.context = actor_ctx;
-    actor_directory_.insert(std::move(entry));
+    impl_->actors.directory.insert(std::move(entry));
 
-    actor->set_scheduler(scheduler_.get());
+    actor->set_scheduler(impl_->core.scheduler.get());
     actor->set_mailbox(mbox);
 
     if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
@@ -1001,14 +1088,15 @@ Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> act
 
     switch (actor->dispatch_policy()) {
         case sched::DispatchPolicy::Cooperative:
-            scheduler_->notify_ready(id, 0, INT64_MAX);
+            impl_->core.scheduler->notify_ready(id, 0, INT64_MAX);
             break;
         case sched::DispatchPolicy::DedicatedThread:
-            scheduler_->register_dedicated_thread(
+            impl_->core.scheduler->register_dedicated_thread(
                 id, actor->dispatch_hints().cpu_affinity);
             break;
         case sched::DispatchPolicy::DedicatedPool:
-            scheduler_->register_dedicated_pool(id, actor->dispatch_hints().pool_size);
+            impl_->core.scheduler->register_dedicated_pool(
+                id, actor->dispatch_hints().pool_size);
             break;
     }
 
@@ -1041,12 +1129,12 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     FAULT_INJECT("hpactor.actor.spawn.fail") {
         return {};
     }
-    ActorId id = actor_directory_.allocate_id();
-    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    ActorId id = impl_->actors.directory.allocate_id();
+    actor->set_address(ActorAddress(impl_->core.endpoint, actor->type(), id, 0));
     actor->set_type_name(def.behavior);
 
     auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-        id, scheduler_.get(), mailbox_config_for_actor_def(def));
+        id, impl_->core.scheduler.get(), mailbox_config_for_actor_def(def));
     auto* mbox = mailbox_ptr.get();
 
     auto* local = static_cast<LocalActor*>(actor.get());
@@ -1058,9 +1146,9 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     entry.instance = actor;
     entry.mailbox = mailbox_ptr;
     entry.context = actor_ctx;
-    actor_directory_.insert(std::move(entry));
+    impl_->actors.directory.insert(std::move(entry));
 
-    actor->set_scheduler(scheduler_.get());
+    actor->set_scheduler(impl_->core.scheduler.get());
     actor->set_mailbox(mbox);
 
     if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
@@ -1090,13 +1178,13 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
 
     switch (policy) {
         case sched::DispatchPolicy::Cooperative:
-            scheduler_->notify_ready(id, 0, INT64_MAX);
+            impl_->core.scheduler->notify_ready(id, 0, INT64_MAX);
             break;
         case sched::DispatchPolicy::DedicatedThread:
-            scheduler_->register_dedicated_thread(id, hints.cpu_affinity);
+            impl_->core.scheduler->register_dedicated_thread(id, hints.cpu_affinity);
             break;
         case sched::DispatchPolicy::DedicatedPool:
-            scheduler_->register_dedicated_pool(id, hints.pool_size);
+            impl_->core.scheduler->register_dedicated_pool(id, hints.pool_size);
             break;
     }
 
@@ -1150,18 +1238,19 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     impl_->operations.logging_config = model.system.logging;
 
 #define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
-    config_.name = static_cast<decltype(config_.name)>(model.system.name);
+    impl_->core.config.name =                                                  \
+        static_cast<decltype(impl_->core.config.name)>(model.system.name);
 #include <hpactor/config/system_toml_fields.def>
 #undef HPACTOR_SYSTEM_TOML_FIELD
 
 #define HPACTOR_MAILBOX_FIELD(name, type, toml, def)                           \
-    config_.mailbox.name = model.system.mailbox.name;
+    impl_->core.config.mailbox.name = model.system.mailbox.name;
 #include <hpactor/config/mailbox_fields.def>
 #undef HPACTOR_MAILBOX_FIELD
 
-    config_.dead_letters = model.system.dead_letters;
+    impl_->core.config.dead_letters = model.system.dead_letters;
     if (impl_->messaging.dead_letters) {
-        impl_->messaging.dead_letters->reconfigure(config_.dead_letters);
+        impl_->messaging.dead_letters->reconfigure(impl_->core.config.dead_letters);
     }
 
     apply_tracing_config(model.system.tracing);
@@ -1169,15 +1258,16 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     // Sync process config from TOML (pidfile, watchdog, working directory).
     // Daemonization must have already occurred via the constructor path;
     // this updates in-memory config for notification and signal handling.
-    config_.process = model.system.process;
+    impl_->core.config.process = model.system.process;
 #if HPACTOR_ENABLE_AI_ACCELERATORS
-    config_.ai_accelerators = model.system.ai_accelerators;
+    impl_->core.config.ai_accelerators = model.system.ai_accelerators;
 #endif
 
-    config_.pool.outbound_limits = model.system.transport_outbound_limits;
-    config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;
+    impl_->core.config.pool.outbound_limits = model.system.transport_outbound_limits;
+    impl_->core.config.pool.circuit_breaker_cfg =
+        model.system.transport_circuit_breaker;
     if (impl_->network.transport) {
-        impl_->network.transport->set_pool_config(config_.pool);
+        impl_->network.transport->set_pool_config(impl_->core.config.pool);
     }
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
@@ -1192,7 +1282,7 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     }
 
     std::vector<ActorId, mem::MemStdAllocator<ActorId>> spawned_ids(
-        mem::MemStdAllocator<ActorId>(system_actor_.id(),
+        mem::MemStdAllocator<ActorId>(impl_->actors.system_actor.id(),
                                       mem::RegionType::kInternal));
     for (const auto& actor_def : model.actors) {
         auto factory = registry.get_factory(actor_def.behavior);
@@ -1200,12 +1290,12 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
         Actor actor_handle = spawn_configured(std::move(actor_ptr), actor_def);
 
-        registry_.put(actor_def.id, actor_handle.address());
+        impl_->actors.registry.put(actor_def.id, actor_handle.address());
 
         spawned_ids.push_back(actor_handle.id());
     }
 
-    ActorAddress sys_addr = system_actor_.address();
+    ActorAddress sys_addr = impl_->actors.system_actor.address();
     StreamBuffer empty_payload;
     for (ActorId id : spawned_ids) {
         TypedMessage init_msg(TypeTag::SystemInitTag, std::move(empty_payload));
@@ -1224,20 +1314,20 @@ result<void> ActorSystem::shutdown() {
 }
 
 result<void> ActorSystem::shutdown(const ShutdownOptions& opts) {
-    shutdown_coordinator_->execute(opts);
+    impl_->actors.shutdown_coordinator->execute(opts);
     return result<void>::make();
 }
 
 ShutdownPhase ActorSystem::shutdown_phase() const noexcept {
-    return shutdown_phase_.load(std::memory_order_acquire);
+    return impl_->core.shutdown_phase.load(std::memory_order_acquire);
 }
 
 bool ActorSystem::is_ready() const noexcept {
-    return is_ready_.load(std::memory_order_acquire);
+    return impl_->core.is_ready.load(std::memory_order_acquire);
 }
 
 bool ActorSystem::is_draining() const noexcept {
-    return shutdown_phase_.load(std::memory_order_acquire) ==
+    return impl_->core.shutdown_phase.load(std::memory_order_acquire) ==
            ShutdownPhase::DrainingActors;
 }
 
@@ -1389,7 +1479,7 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
 
     // Resolve target address
     ActorAddress target_addr = actor->address();
-    bool is_local_target = target_addr.endpoint == endpoint_;
+    bool is_local_target = target_addr.endpoint == impl_->core.endpoint;
 
     // Spawn StreamSenderActor
     auto sender = spawn<StreamSenderActor>(target, stream_id, config, trace_ctx);
@@ -1400,7 +1490,8 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
     if (is_local_target) {
         // Local target: spawn StreamReceiverActor directly
         auto receiver = spawn<StreamReceiverActor>(
-            target, stream_id, ActorAddress{endpoint_, ActorType{0}, ActorId{0}, 0},
+            target, stream_id,
+            ActorAddress{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0},
             config.initial_window_bytes, trace_ctx);
         if (receiver) {
             register_stream_receiver(stream_id, receiver.id());
@@ -1412,7 +1503,8 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
             net::StreamOpenFrame open;
             open.set_stream_id(stream_id);
             net::to_proto(open.mutable_sender(),
-                          ActorAddress{endpoint_, ActorType{0}, ActorId{0}, 0});
+                          ActorAddress{impl_->core.endpoint, ActorType{0},
+                                       ActorId{0}, 0});
             net::to_proto(open.mutable_receiver(), target_addr);
             open.set_initial_window_bytes(config.initial_window_bytes);
             if (trace_ctx.valid()) {

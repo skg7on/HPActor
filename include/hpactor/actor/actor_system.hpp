@@ -314,16 +314,12 @@ class ActorSystem {
     // ── Clock ─────────────────────────────────────────────────────────────
 
     /// \brief Reference to the system monotonic clock.
-    Clock& clock() {
-        return clock_;
-    }
+    Clock& clock();
 
     // ── System actor ──────────────────────────────────────────────────────
 
     /// \brief The system pseudo-actor handle.
-    Actor system_actor() {
-        return system_actor_;
-    }
+    Actor system_actor();
 
     // ── Registry access ───────────────────────────────────────────────────
 
@@ -352,60 +348,41 @@ class ActorSystem {
     };
 
     /// \brief Mutable access to the actor registry.
-    ActorRegistry& registry() {
-        return registry_;
-    }
+    ActorRegistry& registry();
 
     // ── Protobuf type registry ────────────────────────────────────────────
 
     /// \brief Registry mapping \c TypeTag to protobuf message types.
-    ProtoTypeRegistry& proto_registry() {
-        return proto_registry_;
-    }
-    const ProtoTypeRegistry& proto_registry() const {
-        return proto_registry_;
-    }
+    ProtoTypeRegistry& proto_registry();
+    const ProtoTypeRegistry& proto_registry() const;
 
     // ── Node identity ─────────────────────────────────────────────────────
 
     /// \brief Network endpoint of this node.
-    EndPoint endpoint() const {
-        return endpoint_;
-    }
+    EndPoint endpoint() const;
 
     // ── Running state ─────────────────────────────────────────────────────
 
     /// \brief Returns \c true while the system is accepting messages.
-    bool is_running() const {
-        return running_.load(std::memory_order_acquire);
-    }
+    bool is_running() const;
 
     /// \brief System uptime since construction.
     ///
     /// \return Elapsed time in milliseconds since \c ActorSystem construction.
-    std::chrono::milliseconds uptime() const {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start_time_);
-    }
+    std::chrono::milliseconds uptime() const;
 
     /// \brief Read-only access to the system configuration.
-    const Config& config() const {
-        return config_;
-    }
+    const Config& config() const;
 
     // ── Scheduler ─────────────────────────────────────────────────────────
 
     /// \brief Pointer to the scheduler for direct scheduling operations.
-    sched::IScheduler* scheduler() {
-        return scheduler_.get();
-    }
+    sched::IScheduler* scheduler();
 
     /// \brief Returns \c true if coroutine-based execution is configured.
     ///
     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.
-    bool use_coroutines() const {
-        return config_.use_coroutines;
-    }
+    bool use_coroutines() const;
 
     /// \brief Collect a snapshot of timer statistics from the active backend.
     ///
@@ -421,27 +398,17 @@ class ActorSystem {
     // ── Ask ───────────────────────────────────────────────────────────────
 
     /// \brief AskManager for local ask() request tracking.
-    AskManager* ask_manager() {
-        return ask_manager_.get();
-    }
-    const AskManager* ask_manager() const {
-        return ask_manager_.get();
-    }
+    AskManager* ask_manager();
+    const AskManager* ask_manager() const;
 
     /// \brief PassivationManager for actor passivation and reactivation.
-    PassivationManager* passivation_manager() {
-        return passivation_manager_.get();
-    }
-    const PassivationManager* passivation_manager() const {
-        return passivation_manager_.get();
-    }
+    PassivationManager* passivation_manager();
+    const PassivationManager* passivation_manager() const;
 
     // ── HTTP ──────────────────────────────────────────────────────────────
 
     /// \brief Reference to the HTTP client for outbound requests.
-    net::HttpClient& http_client() {
-        return *http_client_;
-    }
+    net::HttpClient& http_client();
 
     // ── Distributed tracing ───────────────────────────────────────────────
 
@@ -848,12 +815,8 @@ class ActorSystem {
     // ── Actor type registry ───────────────────────────────────────────────
 
     /// \brief Registry of spawnable actor types for remote spawning.
-    ActorTypeRegistry& actor_type_registry() {
-        return *actor_type_registry_;
-    }
-    const ActorTypeRegistry& actor_type_registry() const {
-        return *actor_type_registry_;
-    }
+    ActorTypeRegistry& actor_type_registry();
+    const ActorTypeRegistry& actor_type_registry() const;
 
     // ── Shutdown ──────────────────────────────────────────────────────────
 
@@ -874,9 +837,7 @@ class ActorSystem {
 
     /// \brief Access the ShutdownCoordinator for registering user-defined
     ///        shutdown phases.
-    ShutdownCoordinator* shutdown_coordinator() const {
-        return shutdown_coordinator_.get();
-    }
+    ShutdownCoordinator* shutdown_coordinator() const;
 
     // ── Health/readiness ──────────────────────────────────────────────────
 
@@ -910,21 +871,6 @@ class ActorSystem {
     class Impl;
     std::unique_ptr<Impl> impl_;
 
-    // Temporary: existing fields remain until migration tasks move them into
-    // Impl.
-    Config config_;
-    EndPoint endpoint_;
-    Clock clock_;
-    ActorDirectory actor_directory_;
-    ActorRegistry registry_;
-    // local_delivery_engine_, delivery_pipeline_, backpressure_coordinator_
-    // moved to impl_->messaging
-    std::unique_ptr<ShutdownCoordinator> shutdown_coordinator_;
-    std::unordered_map<ActorType, ActorTypeDef> actor_types_;
-    Actor system_actor_;
-
-    // Stream registry: stream_id → actor — moved to impl_->messaging
-
     // Stream frame delivery
     void deliver_remote_stream_open(const net::WireFrame& frame);
     void deliver_remote_stream_data(const net::WireFrame& frame);
@@ -938,50 +884,32 @@ class ActorSystem {
     // instead of the previous separate maps + mutexes + ID generator.
 
     // System start time for uptime tracking
-    std::chrono::steady_clock::time_point start_time_;
 
     // Running flag for network thread loop
-    std::atomic<bool> running_{true};
 
     // Shutdown state
-    std::atomic<ShutdownPhase> shutdown_phase_{ShutdownPhase::Running};
-    std::atomic<bool> is_ready_{true};
 
     // Scheduler
-    std::unique_ptr<sched::IScheduler> scheduler_;
 
     // Network components — moved to impl_->network
 
     // Actor type registry for remote spawning (owned via pointer to avoid
     // circular dep)
-    std::unique_ptr<ActorTypeRegistry> actor_type_registry_;
 
     // RPC channel for remote calls — moved to impl_->network
     // Ask manager for local ask() request tracking
-    std::unique_ptr<AskManager> ask_manager_;
     // Passivation manager for actor passivation and reactivation
-    std::unique_ptr<PassivationManager> passivation_manager_;
     // HTTP client for outbound HTTP calls
-    std::unique_ptr<net::HttpClient> http_client_;
 
     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)
-    Actor http_gateway_actor_{nullptr};
 
     // CLI actor (DaemonActor, spawned when cli.enabled = true)
-    std::shared_ptr<cli::CliActor> cli_actor_;
 
     // Receptionist system actor (service-key-based actor discovery)
-    std::shared_ptr<receptionist::Receptionist> receptionist_;
 
     // Metrics configuration, ring buffer, and actor
-    // moved to impl_->operations
-    // moved to impl_->operations
-    // moved to impl_->operations
 
     // Logging subsystem
-    // moved to impl_->operations
-    // moved to impl_->operations
-    // moved to impl_->operations
 
     // Dead-letter queue owned by impl_->messaging.dead_letters
 
@@ -995,25 +923,14 @@ class ActorSystem {
     std::unique_ptr<adt::DedupCache> dedup_cache_;
 
     // Tracing subsystem
-    // moved to impl_->operations
-    // moved to impl_->operations
 
     // Fault injection
-    // moved to impl_->operations
 
     // Proto type registry for protobuf message serialization
-    ProtoTypeRegistry proto_registry_;
 
     // Cluster subsystem (type-erased to avoid link cycle between
     // hpactor_lib ↔ hpactor_cluster).
     using cluster_cleanup_fn = void (*)(void*);
-    // moved to impl_->cluster
-    // moved to impl_->cluster
-    // moved to impl_->cluster
-    // moved to impl_->cluster
-    // moved to impl_->cluster
-    // moved to impl_->cluster
-    // moved to impl_->cluster
 };
 
 // -----------------------------------------------------------------------------
