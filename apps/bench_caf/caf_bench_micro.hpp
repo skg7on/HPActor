@@ -97,7 +97,21 @@ run_dispatch_match_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     TrialMetrics metrics;
     metrics.trial = trial_index;
 
-    constexpr uint32_t kMessages = 10000;
+    // Scale message count by preset so smoke completes reliably even under
+    // coverage instrumentation (where per-branch counters slow dispatch ~10x).
+    const uint32_t kMessages = [&]() -> uint32_t {
+        switch (cfg.preset) {
+            case PresetKind::Smoke:
+                return 1000;
+            case PresetKind::Nightly:
+                return 10000;
+            case PresetKind::PaperScale:
+                return 100000;
+            case PresetKind::Stress:
+                return 1000000;
+        }
+        return 1000;
+    }();
     std::atomic<uint64_t> count{0};
 
     Config system_cfg;
