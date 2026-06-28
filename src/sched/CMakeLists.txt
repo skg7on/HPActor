@@ -10,5 +10,6 @@ target_sources(hpactor_lib PRIVATE
     edf_queue.cpp
     scheduler.cpp
     work_placement_scheduler.cpp
+    worker_park.cpp
     worker_thread.cpp
 )

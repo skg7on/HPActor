@@ -314,6 +314,49 @@ bool WorkerThread::enter_cv_block() {
     }
 
     auto& ws = owner_->placement_workers()[config_.worker_index];
+    bool notified = false;
+
+#ifdef __linux__
+    // Futex fast path — no mutex on producer wakeup.
+    uint32_t snap = ws.park.begin_park();
+
+    // Double-check for work that arrived between last poll and begin_park().
+    {
+        WorkItem item;
+        if (owner_->pop_local(item, config_.worker_index) || try_steal(item)) {
+            ws.park.end_park();
+            process_work_item(item);
+            return true;
+        }
+    }
+
+    diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
+    in_cv_model_.store(true, std::memory_order_relaxed);
+
+    // Compute EDF-aware timeout in nanoseconds for futex_wait.
+    auto now = std::chrono::steady_clock::now();
+    int64_t timeout_ns = 100'000'000LL; // 100 ms default
+    int64_t edf_ns = owner_->edf_next_deadline();
+    if (edf_ns != INT64_MAX) {
+        int64_t now_ns = now.time_since_epoch().count();
+        int64_t delta_ns = edf_ns - now_ns;
+        if (delta_ns <= 0)
+            delta_ns = 1'000'000;
+        int64_t margin_ns = 1'000'000;
+        timeout_ns = std::max(delta_ns - margin_ns, margin_ns);
+        timeout_ns = std::min(timeout_ns, int64_t{100'000'000});
+    } else {
+        // Exponential safety-net, 500ms base, capped at 30s.
+        uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);
+        uint32_t shift = std::min(c, 9u);
+        timeout_ns = std::min(500'000'000LL << shift, 30'000'000'000LL);
+    }
+
+    ws.park.wait(snap, timeout_ns);
+    notified = (ws.park.seq.load(std::memory_order_relaxed) != snap);
+    ws.park.end_park();
+
+#else  // !__linux__ — macOS / fallback CV
 
     // Advertise blocking intent with seq_cst to prevent the enqueue path
     // from reordering its is_blocking_ load before this store (lost-wakeup
@@ -372,16 +415,18 @@ bool WorkerThread::enter_cv_block() {
                stop_requested_.load(std::memory_order_relaxed) ||
                !running_.load(std::memory_order_relaxed);
     });
-    if (timed_out) {
+    notified = !timed_out;
+#endif // __linux__
+
+    // Shared diag tracking (common to both futex and CV paths).
+    if (notified) {
+        diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
+        consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
+    } else {
         diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);
         consecutive_empty_wakes_.fetch_add(1, std::memory_order_relaxed);
-    } else {
-        diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
-        // A notify indicates the system is active — reset the empty-wake
-        // streak so the next CV entry doesn't use a stale inflated timeout.
-        consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
     }
-    return false; // CV wait completed; caller resets backoff and loops
+    return false;
 }
 
 void WorkerThread::thread_loop() {

@@ -20,6 +20,7 @@
 #include <hpactor/sched/a2ws.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/work_queue.hpp>
+#include <hpactor/sched/worker_park.hpp>
 
 #include <atomic>
 #include <condition_variable>
@@ -280,6 +281,10 @@ class WorkPlacementScheduler {
         /// fallback).
         std::atomic<SharedInputNode*> shared_input{nullptr};
 
+        /// Linux-only futex park (replaces CV on the wakeup hot path).
+        /// No-op on macOS/other — existing is_blocking_/sleep_cv_ used.
+        WorkerPark park;
+
         /// Set by owner when entering CV-blocking sleep.  Enqueue threads
         /// read this flag; if true they acquire \c sleep_mutex_ and notify
         /// \c sleep_cv_ so the owner wakes immediately.
@@ -294,14 +299,17 @@ class WorkPlacementScheduler {
         /// adequate — upgrade to lock-free if profiling shows contention.
         mutable std::mutex edf_push_mutex_;
 
-        /// Wake a worker blocked on \c sleep_cv_ (idempotent, safe from
-        /// any thread).  If the worker is not blocking this is a no-op.
+        /// Wake a worker (lock-free futex on Linux, CV on other platforms).
         void wake_if_blocking() {
+#ifdef __linux__
+            park.wake();
+#else
             if (is_blocking_.load(std::memory_order_acquire)) {
                 std::lock_guard<std::mutex> lk(sleep_mutex_);
                 is_blocking_.store(false, std::memory_order_release);
                 sleep_cv_.notify_one();
             }
+#endif
         }
     };
 
