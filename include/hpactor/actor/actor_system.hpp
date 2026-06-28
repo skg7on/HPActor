@@ -314,16 +314,12 @@ class ActorSystem {
     // ── Clock ─────────────────────────────────────────────────────────────
 
     /// \brief Reference to the system monotonic clock.
-    Clock& clock() {
-        return clock_;
-    }
+    Clock& clock();
 
     // ── System actor ──────────────────────────────────────────────────────
 
     /// \brief The system pseudo-actor handle.
-    Actor system_actor() {
-        return system_actor_;
-    }
+    Actor system_actor();
 
     // ── Registry access ───────────────────────────────────────────────────
 
@@ -352,60 +348,41 @@ class ActorSystem {
     };
 
     /// \brief Mutable access to the actor registry.
-    ActorRegistry& registry() {
-        return registry_;
-    }
+    ActorRegistry& registry();
 
     // ── Protobuf type registry ────────────────────────────────────────────
 
     /// \brief Registry mapping \c TypeTag to protobuf message types.
-    ProtoTypeRegistry& proto_registry() {
-        return proto_registry_;
-    }
-    const ProtoTypeRegistry& proto_registry() const {
-        return proto_registry_;
-    }
+    ProtoTypeRegistry& proto_registry();
+    const ProtoTypeRegistry& proto_registry() const;
 
     // ── Node identity ─────────────────────────────────────────────────────
 
     /// \brief Network endpoint of this node.
-    EndPoint endpoint() const {
-        return endpoint_;
-    }
+    EndPoint endpoint() const;
 
     // ── Running state ─────────────────────────────────────────────────────
 
     /// \brief Returns \c true while the system is accepting messages.
-    bool is_running() const {
-        return running_.load(std::memory_order_acquire);
-    }
+    bool is_running() const;
 
     /// \brief System uptime since construction.
     ///
     /// \return Elapsed time in milliseconds since \c ActorSystem construction.
-    std::chrono::milliseconds uptime() const {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start_time_);
-    }
+    std::chrono::milliseconds uptime() const;
 
     /// \brief Read-only access to the system configuration.
-    const Config& config() const {
-        return config_;
-    }
+    const Config& config() const;
 
     // ── Scheduler ─────────────────────────────────────────────────────────
 
     /// \brief Pointer to the scheduler for direct scheduling operations.
-    sched::IScheduler* scheduler() {
-        return scheduler_.get();
-    }
+    sched::IScheduler* scheduler();
 
     /// \brief Returns \c true if coroutine-based execution is configured.
     ///
     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.
-    bool use_coroutines() const {
-        return config_.use_coroutines;
-    }
+    bool use_coroutines() const;
 
     /// \brief Collect a snapshot of timer statistics from the active backend.
     ///
@@ -416,64 +393,40 @@ class ActorSystem {
     // ── RPC ───────────────────────────────────────────────────────────────
 
     /// \brief Reference to the RPC channel for remote calls.
-    RpcChannel& rpc_channel() {
-        return *rpc_channel_;
-    }
+    RpcChannel& rpc_channel();
 
     // ── Ask ───────────────────────────────────────────────────────────────
 
     /// \brief AskManager for local ask() request tracking.
-    AskManager* ask_manager() {
-        return ask_manager_.get();
-    }
-    const AskManager* ask_manager() const {
-        return ask_manager_.get();
-    }
+    AskManager* ask_manager();
+    const AskManager* ask_manager() const;
 
     /// \brief PassivationManager for actor passivation and reactivation.
-    PassivationManager* passivation_manager() {
-        return passivation_manager_.get();
-    }
-    const PassivationManager* passivation_manager() const {
-        return passivation_manager_.get();
-    }
+    PassivationManager* passivation_manager();
+    const PassivationManager* passivation_manager() const;
 
     // ── HTTP ──────────────────────────────────────────────────────────────
 
     /// \brief Reference to the HTTP client for outbound requests.
-    net::HttpClient& http_client() {
-        return *http_client_;
-    }
+    net::HttpClient& http_client();
 
     // ── Distributed tracing ───────────────────────────────────────────────
 
     /// \brief Trace manager (nullptr if tracing is disabled).
-    tracing::TraceManager* trace_manager() noexcept {
-        return trace_manager_.get();
-    }
-    const tracing::TraceManager* trace_manager() const noexcept {
-        return trace_manager_.get();
-    }
+    tracing::TraceManager* trace_manager() noexcept;
+    const tracing::TraceManager* trace_manager() const noexcept;
 
     /// \brief Log manager (nullptr if logging is disabled).
-    log::LogManager* log_manager() noexcept {
-        return log_manager_.get();
-    }
-    const log::LogManager* log_manager() const noexcept {
-        return log_manager_.get();
-    }
+    log::LogManager* log_manager() noexcept;
+    const log::LogManager* log_manager() const noexcept;
 
     /// \brief Apply a new tracing configuration at runtime.
     void apply_tracing_config(const tracing::TraceConfig& config);
 
     // ── Fault injection ───────────────────────────────────────────────────
 
-    fault::FaultController& fault_controller() noexcept {
-        return fault_controller_;
-    }
-    const fault::FaultController& fault_controller() const noexcept {
-        return fault_controller_;
-    }
+    fault::FaultController& fault_controller() noexcept;
+    const fault::FaultController& fault_controller() const noexcept;
 
     // ── Actor lookup ──────────────────────────────────────────────────────
 
@@ -489,9 +442,7 @@ class ActorSystem {
     /// \brief Metrics ring buffer pointer.
     ///
     /// Returns \c nullptr if metrics are disabled.
-    auto* metrics_ring_buffer() const {
-        return metrics_ring_buffer_.get();
-    }
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer() const;
 
     /// \brief MetricsActor instance.
     ///
@@ -523,26 +474,16 @@ class ActorSystem {
     void enable_cluster(const std::string& node_id);
 
     /// \brief Returns \c true when the cluster subsystem is enabled.
-    bool cluster_enabled() const {
-        return cluster_enabled_;
-    }
+    bool cluster_enabled() const;
 
     /// \brief Cluster failure model (nullptr when cluster is disabled).
-    cluster::ClusterFailureModel* cluster_failure_model() {
-        return static_cast<cluster::ClusterFailureModel*>(
-            cluster_failure_model_.get());
-    }
+    cluster::ClusterFailureModel* cluster_failure_model();
 
     /// \brief Singleton manager actor wrapper (nullptr when cluster disabled).
-    cluster::singleton::SingletonManagerActor* singleton_manager() {
-        return static_cast<cluster::singleton::SingletonManagerActor*>(
-            singleton_manager_.get());
-    }
+    cluster::singleton::SingletonManagerActor* singleton_manager();
 
     /// \brief Route invalidation coordinator (nullptr when cluster disabled).
-    cluster::RouteInvalidation* route_invalidation() {
-        return static_cast<cluster::RouteInvalidation*>(route_invalidation_.get());
-    }
+    cluster::RouteInvalidation* route_invalidation();
 
     // ── Mailbox ───────────────────────────────────────────────────────────
 
@@ -681,12 +622,8 @@ class ActorSystem {
     /// \brief Direct access to the dead-letter queue.
     ///
     /// Returns nullptr if dead-letter queue is not initialized.
-    mailbox::DeadLetterQueue* dead_letter_queue() noexcept {
-        return dead_letters_.get();
-    }
-    const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept {
-        return dead_letters_.get();
-    }
+    mailbox::DeadLetterQueue* dead_letter_queue() noexcept;
+    const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept;
 
     /// \brief Access the outbound delivery tracker for at-least-once delivery.
     ///
@@ -695,21 +632,15 @@ class ActorSystem {
     ///         always initialized when the \c ActorSystem is constructed.
     /// \note Thread safety: The returned pointer is stable for the lifetime
     ///       of the \c ActorSystem. Callers may cache it.
-    msg::OutboundDeliveryTracker* outbound_tracker() noexcept {
-        return outbound_tracker_.get();
-    }
+    msg::OutboundDeliveryTracker* outbound_tracker() noexcept;
 
     /// \brief Access the reliable messaging OutboundTracker.
     ///
     /// Tracks pending outbound messages with ACK/NACK/retry/expiry support.
     /// \return Pointer to the \c mailbox::OutboundTracker, or \c nullptr
     ///         if not yet initialized.
-    mailbox::OutboundTracker* reliable_tracker() noexcept {
-        return reliable_tracker_.get();
-    }
-    const mailbox::OutboundTracker* reliable_tracker() const noexcept {
-        return reliable_tracker_.get();
-    }
+    mailbox::OutboundTracker* reliable_tracker() noexcept;
+    const mailbox::OutboundTracker* reliable_tracker() const noexcept;
 
     /// \brief Send a reliable ACK/NACK frame back to a message sender.
     ///
@@ -728,12 +659,8 @@ class ActorSystem {
                       uint64_t msg_id, uint8_t status, uint32_t retry_after_ms);
 
     // Receiver dedup cache for at-least-once delivery
-    adt::DedupCache* dedup_cache() {
-        return dedup_cache_.get();
-    }
-    const adt::DedupCache* dedup_cache() const {
-        return dedup_cache_.get();
-    }
+    adt::DedupCache* dedup_cache();
+    const adt::DedupCache* dedup_cache() const;
 
     // Build a MailboxConfig from system-wide defaults in Config::mailbox.
     // ── Mailbox configuration ─────────────────────────────────────────────
@@ -830,16 +757,12 @@ class ActorSystem {
     /// \brief Access the network event loop.
     ///
     /// Returns \c nullptr if networking is not enabled.
-    net::EventLoop* event_loop() {
-        return network_loop_.get();
-    }
+    net::EventLoop* event_loop();
 
     /// \brief Primary transport for remote messaging.
     ///
     /// Returns \c nullptr if networking is not enabled.
-    net::Transport* transport() {
-        return transport_.get();
-    }
+    net::Transport* transport();
 
     /// \brief Get transport for a specific remote endpoint.
     ///
@@ -852,9 +775,7 @@ class ActorSystem {
     net::Transport* get_transport_for(const EndPoint& endpoint);
 
     /// \brief UDP registrar for same-host service discovery.
-    net::UdpRegistrar* registrar() {
-        return registrar_.get();
-    }
+    net::UdpRegistrar* registrar();
 
     // ── Remote spawn ──────────────────────────────────────────────────────
 
@@ -894,12 +815,8 @@ class ActorSystem {
     // ── Actor type registry ───────────────────────────────────────────────
 
     /// \brief Registry of spawnable actor types for remote spawning.
-    ActorTypeRegistry& actor_type_registry() {
-        return *actor_type_registry_;
-    }
-    const ActorTypeRegistry& actor_type_registry() const {
-        return *actor_type_registry_;
-    }
+    ActorTypeRegistry& actor_type_registry();
+    const ActorTypeRegistry& actor_type_registry() const;
 
     // ── Shutdown ──────────────────────────────────────────────────────────
 
@@ -920,9 +837,7 @@ class ActorSystem {
 
     /// \brief Access the ShutdownCoordinator for registering user-defined
     ///        shutdown phases.
-    ShutdownCoordinator* shutdown_coordinator() const {
-        return shutdown_coordinator_.get();
-    }
+    ShutdownCoordinator* shutdown_coordinator() const;
 
     // ── Health/readiness ──────────────────────────────────────────────────
 
@@ -956,24 +871,6 @@ class ActorSystem {
     class Impl;
     std::unique_ptr<Impl> impl_;
 
-    // Temporary: existing fields remain until migration tasks move them into
-    // Impl.
-    Config config_;
-    EndPoint endpoint_;
-    Clock clock_;
-    ActorDirectory actor_directory_;
-    ActorRegistry registry_;
-    std::unique_ptr<LocalDeliveryEngine> local_delivery_engine_;
-    std::unique_ptr<mailbox::DeliveryPipeline> delivery_pipeline_;
-    std::unique_ptr<BackpressureCoordinator> backpressure_coordinator_;
-    std::unique_ptr<ShutdownCoordinator> shutdown_coordinator_;
-    std::unordered_map<ActorType, ActorTypeDef> actor_types_;
-    Actor system_actor_;
-
-    // Stream registry: stream_id → actor
-    StreamRegistry stream_registry_;
-    std::atomic<uint64_t> stream_counter_{0};
-
     // Stream frame delivery
     void deliver_remote_stream_open(const net::WireFrame& frame);
     void deliver_remote_stream_data(const net::WireFrame& frame);
@@ -987,63 +884,34 @@ class ActorSystem {
     // instead of the previous separate maps + mutexes + ID generator.
 
     // System start time for uptime tracking
-    std::chrono::steady_clock::time_point start_time_;
 
     // Running flag for network thread loop
-    std::atomic<bool> running_{true};
 
     // Shutdown state
-    std::atomic<ShutdownPhase> shutdown_phase_{ShutdownPhase::Running};
-    std::atomic<bool> is_ready_{true};
 
     // Scheduler
-    std::unique_ptr<sched::IScheduler> scheduler_;
 
-    // Network components (owned)
-    std::unique_ptr<net::TcpTransport> transport_;
-    BackpressureSignalWireSink backpressure_signal_wire_sink_for_test_;
-    std::shared_ptr<net::UdpRegistrar> registrar_;
-    std::shared_ptr<net::IServiceDiscovery> discovery_;
-    std::shared_ptr<net::ActorLocationCache> location_cache_;
-    uint64_t cache_purge_timer_ = 0;
-    uint64_t retry_timer_ = 0;
-    std::unique_ptr<net::EventLoop> network_loop_;
-    std::thread network_thread_;
+    // Network components — moved to impl_->network
 
     // Actor type registry for remote spawning (owned via pointer to avoid
     // circular dep)
-    std::unique_ptr<ActorTypeRegistry> actor_type_registry_;
 
-    // RPC channel for remote calls (after transport_ creation)
-    std::unique_ptr<RpcChannel> rpc_channel_;
+    // RPC channel for remote calls — moved to impl_->network
     // Ask manager for local ask() request tracking
-    std::unique_ptr<AskManager> ask_manager_;
     // Passivation manager for actor passivation and reactivation
-    std::unique_ptr<PassivationManager> passivation_manager_;
     // HTTP client for outbound HTTP calls
-    std::unique_ptr<net::HttpClient> http_client_;
 
     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)
-    Actor http_gateway_actor_{nullptr};
 
     // CLI actor (DaemonActor, spawned when cli.enabled = true)
-    std::shared_ptr<cli::CliActor> cli_actor_;
 
     // Receptionist system actor (service-key-based actor discovery)
-    std::shared_ptr<receptionist::Receptionist> receptionist_;
 
     // Metrics configuration, ring buffer, and actor
-    metrics::MetricsConfig metrics_config_;
-    std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer_;
-    metrics::MetricsActor* metrics_actor_{nullptr};
 
     // Logging subsystem
-    log::LogConfig logging_config_;
-    std::unique_ptr<log::LogManager> log_manager_;
-    log::Logger* logger_ = nullptr;
 
-    // Dead-letter queue
-    std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
+    // Dead-letter queue owned by impl_->messaging.dead_letters
 
     // Outbound delivery tracker for at-least-once delivery
     std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker_;
@@ -1055,25 +923,14 @@ class ActorSystem {
     std::unique_ptr<adt::DedupCache> dedup_cache_;
 
     // Tracing subsystem
-    tracing::TraceConfig tracing_config_;
-    std::unique_ptr<tracing::TraceManager> trace_manager_;
 
     // Fault injection
-    fault::FaultController fault_controller_;
 
     // Proto type registry for protobuf message serialization
-    ProtoTypeRegistry proto_registry_;
 
     // Cluster subsystem (type-erased to avoid link cycle between
     // hpactor_lib ↔ hpactor_cluster).
     using cluster_cleanup_fn = void (*)(void*);
-    bool cluster_enabled_ = false;
-    std::unique_ptr<void, cluster_cleanup_fn> cluster_failure_model_{
-        nullptr, +[](void*) {}};
-    std::unique_ptr<void, cluster_cleanup_fn> singleton_manager_{nullptr,
-                                                                 +[](void*) {}};
-    std::unique_ptr<void, cluster_cleanup_fn> route_invalidation_{nullptr,
-                                                                  +[](void*) {}};
 };
 
 // -----------------------------------------------------------------------------
