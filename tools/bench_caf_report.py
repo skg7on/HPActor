@@ -525,8 +525,11 @@ def main():
     results = {}
     start_all = time.time()
 
+    # Run mixed-case last: its sustained multi-ring workload can trigger
+    # macOS thermal / resource throttling that degrades subsequent benchmarks.
     for i, (name, info) in enumerate(sorted(selected.items(),
-                                              key=lambda x: (x[1]["phase"],
+                                              key=lambda x: (x[0] == "mixed-case",
+                                                            x[1]["phase"],
                                                             x[1]["category"])), 1):
         sys.stdout.write(f"{i:>3}  {name:<28} ")
         sys.stdout.flush()
