@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">73.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">70.4&nbsp;%</td>
             <td class="headerCovTableEntry">108</td>
-            <td class="headerCovTableEntry">79</td>
+            <td class="headerCovTableEntry">76</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-27 01:43:05</td>
+            <td class="headerValue">2026-06-28 01:26:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">61.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">55.6&nbsp;%</td>
             <td class="headerCovTableEntry">72</td>
-            <td class="headerCovTableEntry">44</td>
+            <td class="headerCovTableEntry">40</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -111,11 +111,11 @@
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : namespace {</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC tlaBgGNC">      141244 : uint64_t steady_now_ns() noexcept {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC tlaBgGNC">      141569 : uint64_t steady_now_ns() noexcept {</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     return static_cast&lt;uint64_t&gt;(</span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">      141244 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      282488 :             std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">      141244 :             .count());</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">      141569 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      283138 :             std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">      141569 :             .count());</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : }</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           1 : void emit_expired_metric(const ActorExecutionContext&amp; context, ActorId actor,</span></span>
@@ -139,12 +139,12 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         763 :     : system_(system), ready_gate_(ready_gate) {}</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : ActorRunResult</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      142366 : BehaviorActorRunner::run(EventBasedActor&amp; actor, const WorkItem&amp; item,</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      142154 : BehaviorActorRunner::run(EventBasedActor&amp; actor, const WorkItem&amp; item,</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :                          const ActorExecutionContext&amp; context) noexcept {</span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      142366 :     auto&amp; actor_state = actor.actor_state();</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      142154 :     auto&amp; actor_state = actor.actor_state();</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      142366 :     uint32_t expected = ActorState::kReady;</span></span>
-<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 142366 times"> + </span>]:<span class="tlaGNC">      142366 :     if (!actor_state.cas(expected, ActorState::kRunning)) {</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      142154 :     uint32_t expected = ActorState::kReady;</span></span>
+<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 142154 times"> + </span>]:<span class="tlaGNC">      142154 :     if (!actor_state.cas(expected, ActorState::kRunning)) {</span></span>
 <span id="L70"><span class="lineNum">      70</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (actor_state.is_terminated()) {</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaUNC">           0 :             actor.set_exit_reason(errors::actor_down);</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaUNC">           0 :             actor.on_exit();</span></span>
@@ -153,16 +153,16 @@
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC">           0 :         return {ActorRunDisposition::Skipped, 0, INT64_MAX};</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC tlaBgGNC">      142366 :     auto mailbox = system_.get_mailbox(item.actor);</span></span>
-<span id="L79"><span class="lineNum">      79</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 142366 times"> + </span>]:<span class="tlaGNC">      142366 :     if (!mailbox) {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC tlaBgGNC">      142154 :     auto mailbox = system_.get_mailbox(item.actor);</span></span>
+<span id="L79"><span class="lineNum">      79</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 142154 times"> + </span>]:<span class="tlaGNC">      142154 :     if (!mailbox) {</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         actor_state.set(ActorState::kIdle);</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaUNC">           0 :         return {ActorRunDisposition::Skipped, 0, INT64_MAX};</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : </span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC tlaBgGNC">      142366 :     TypedMessage msg;</span></span>
-<span id="L85"><span class="lineNum">      85</span>         [<span class="tlaGBC" title="Branch 0 was taken 141244 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1122 times"> + </span>]:<span class="tlaGNC">      142366 :     if (mailbox-&gt;try_pop(msg)) {</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">      141244 :         uint64_t now_ns = steady_now_ns();</span></span>
-<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 141243 times"> + </span>]:<span class="tlaGNC">      141244 :         if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC tlaBgGNC">      142154 :     TypedMessage msg;</span></span>
+<span id="L85"><span class="lineNum">      85</span>         [<span class="tlaGBC" title="Branch 0 was taken 141569 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 585 times"> + </span>]:<span class="tlaGNC">      142154 :     if (mailbox-&gt;try_pop(msg)) {</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">      141569 :         uint64_t now_ns = steady_now_ns();</span></span>
+<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 141568 times"> + </span>]:<span class="tlaGNC">      141569 :         if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {</span></span>
 <span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">           1 :             emit_expired_metric(context, item.actor, now_ns);</span></span>
 <span id="L89"><span class="lineNum">      89</span>                 :             : </span>
 <span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">           1 :             auto* dlq = system_.dead_letter_queue();</span></span>
@@ -186,7 +186,7 @@
 <span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC tlaBgGNC">           1 :                 (void)dlq-&gt;try_push(std::move(dl));</span></span>
 <span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           1 :             }</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :         } else {</span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">      141243 :             actor.receive(msg);</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">      141568 :             actor.receive(msg);</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :         }</span>
 <span id="L112"><span class="lineNum">     112</span>                 :             :     } else {</span>
 <span id="L113"><span class="lineNum">     113</span>                 :             :         // try_pop returned nullptr (MPSC chain in progress, genuinely</span>
@@ -207,16 +207,16 @@
 <span id="L128"><span class="lineNum">     128</span>                 :             :         // and the next external wakeup (timer, cross-actor message)</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :         // retries when tokens have refilled.</span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :         static constexpr uint64_t kLostWakeupRequeueBudget = 1;</span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">        1122 :         actor_state.set(ActorState::kIdle);</span></span>
-<span id="L132"><span class="lineNum">     132</span>   [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1110 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">        1122 :         if (!mailbox-&gt;empty() &amp;&amp; item.sequence &lt; kLostWakeupRequeueBudget) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1112 times"> + </span>]
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">          10 :             auto admission = ready_gate_.try_mark_ready(item.actor);</span></span>
-<span id="L134"><span class="lineNum">     134</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          10 :             if (admission.accepted() ||</span></span>
-<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 admission.code == ReadyAdmissionCode::AlreadyReady) {</span></span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC tlaBgGNC">          10 :                 return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">         585 :         actor_state.set(ActorState::kIdle);</span></span>
+<span id="L132"><span class="lineNum">     132</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 583 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">         585 :         if (!mailbox-&gt;empty() &amp;&amp; item.sequence &lt; kLostWakeupRequeueBudget) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 585 times"> + </span>]
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             auto admission = ready_gate_.try_mark_ready(item.actor);</span></span>
+<span id="L134"><span class="lineNum">     134</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (admission.accepted() ||</span></span>
+<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 admission.code == ReadyAdmissionCode::AlreadyReady) {</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaUNC">           0 :                 return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};</span></span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :             }</span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :         }</span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        1112 :         return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC tlaBgGNC">         585 :         return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :     }</span>
 <span id="L141"><span class="lineNum">     141</span>                 :             : </span>
 <span id="L142"><span class="lineNum">     142</span>                 :             :     // Cap RequeueReady cycles to prevent one high-traffic actor from</span>
@@ -229,30 +229,30 @@
 <span id="L149"><span class="lineNum">     149</span>                 :             :     // it with other work.</span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :     // Skip the cap when workers are paused (deterministic test mode).</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     static constexpr uint64_t kRequeueBudget = 64;</span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">      141244 :     bool budget_exhausted =</span></span>
-<span id="L153"><span class="lineNum">     153</span>   [<span class="tlaGBC" title="Branch 0 was taken 140388 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 856 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67023 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 73365 times"> + </span>]:<span class="tlaGNC">      141244 :         !context.workers_paused &amp;&amp; item.sequence &gt;= kRequeueBudget;</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">      141569 :     bool budget_exhausted =</span></span>
+<span id="L153"><span class="lineNum">     153</span>   [<span class="tlaGBC" title="Branch 0 was taken 140713 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 856 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67050 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 73663 times"> + </span>]:<span class="tlaGNC">      141569 :         !context.workers_paused &amp;&amp; item.sequence &gt;= kRequeueBudget;</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :             : </span>
-<span id="L155"><span class="lineNum">     155</span>   [<span class="tlaGBC" title="Branch 0 was taken 134398 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6846 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67397 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 67001 times"> + </span> :<span class="tlaGNC">      141244 :     if (!mailbox-&gt;empty() &amp;&amp; !budget_exhausted) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 67397 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 73847 times"> + </span>]
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">       67397 :         auto admission = ready_gate_.mark_ready_already_admitted(actor);</span></span>
-<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 67397 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67397 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       67397 :         if (admission.accepted() ||</span></span>
+<span id="L155"><span class="lineNum">     155</span>   [<span class="tlaGBC" title="Branch 0 was taken 134654 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6915 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67629 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 67025 times"> + </span> :<span class="tlaGNC">      141569 :     if (!mailbox-&gt;empty() &amp;&amp; !budget_exhausted) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 67629 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 73940 times"> + </span>]
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">       67629 :         auto admission = ready_gate_.mark_ready_already_admitted(actor);</span></span>
+<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 67629 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67629 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       67629 :         if (admission.accepted() ||</span></span>
 <span id="L158"><span class="lineNum">     158</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             admission.code == ReadyAdmissionCode::AlreadyReady) {</span></span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">       67397 :             return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">       67629 :             return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};</span></span>
 <span id="L160"><span class="lineNum">     160</span>                 :             :         }</span>
 <span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return {ActorRunDisposition::Skipped, 0, INT64_MAX};</span></span>
 <span id="L162"><span class="lineNum">     162</span>                 :             :     }</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             : </span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC tlaBgGNC">       73847 :     actor_state.set(ActorState::kIdle);</span></span>
-<span id="L165"><span class="lineNum">     165</span>         [<span class="tlaGBC" title="Branch 0 was taken 67001 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6846 times"> + </span>]:<span class="tlaGNC">       73847 :     if (!mailbox-&gt;empty()) {</span></span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">       67001 :         auto admission = ready_gate_.try_mark_ready(item.actor);</span></span>
-<span id="L167"><span class="lineNum">     167</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 67001 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67001 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       67001 :         if (admission.accepted() ||</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC tlaBgGNC">       73940 :     actor_state.set(ActorState::kIdle);</span></span>
+<span id="L165"><span class="lineNum">     165</span>         [<span class="tlaGBC" title="Branch 0 was taken 67025 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6915 times"> + </span>]:<span class="tlaGNC">       73940 :     if (!mailbox-&gt;empty()) {</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">       67025 :         auto admission = ready_gate_.try_mark_ready(item.actor);</span></span>
+<span id="L167"><span class="lineNum">     167</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 67025 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 67025 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       67025 :         if (admission.accepted() ||</span></span>
 <span id="L168"><span class="lineNum">     168</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             admission.code == ReadyAdmissionCode::AlreadyReady) {</span></span>
-<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC tlaBgGNC">       67001 :             return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC tlaBgGNC">       67025 :             return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};</span></span>
 <span id="L170"><span class="lineNum">     170</span>                 :             :         }</span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :     }</span>
 <span id="L172"><span class="lineNum">     172</span>                 :             : </span>
-<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">        6846 :     return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};</span></span>
-<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">      142366 : }</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">        6915 :     return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">      142154 : }</span></span>
 <span id="L175"><span class="lineNum">     175</span>                 :             : </span>
 <span id="L176"><span class="lineNum">     176</span>                 :             : #if HPACTOR_SUPPORT_COROUTINES</span>
 <span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">         761 : CoroutineActorRunner::CoroutineActorRunner(ActorSystem&amp; system) noexcept</span></span>
@@ -310,17 +310,17 @@
 <span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         761 : }</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             : </span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : ActorRunResult</span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">      142381 : ActorExecutionEngine::run(EventBasedActor&amp; actor, const WorkItem&amp; item,</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">      142169 : ActorExecutionEngine::run(EventBasedActor&amp; actor, const WorkItem&amp; item,</span></span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :                           const ActorExecutionContext&amp; context,</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             :                           bool use_coroutines) noexcept {</span>
 <span id="L234"><span class="lineNum">     234</span>                 :             : #if HPACTOR_SUPPORT_COROUTINES</span>
-<span id="L235"><span class="lineNum">     235</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 142363 times"> + </span>]:<span class="tlaGNC">      142381 :     if (use_coroutines) {</span></span>
+<span id="L235"><span class="lineNum">     235</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 142151 times"> + </span>]:<span class="tlaGNC">      142169 :     if (use_coroutines) {</span></span>
 <span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">          18 :         return coroutine_runner_.run(actor, item, context);</span></span>
 <span id="L237"><span class="lineNum">     237</span>                 :             :     }</span>
 <span id="L238"><span class="lineNum">     238</span>                 :             : #else</span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :     (void)use_coroutines;</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             : #endif</span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">      142363 :     return behavior_runner_.run(actor, item, context);</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">      142151 :     return behavior_runner_.run(actor, item, context);</span></span>
 <span id="L242"><span class="lineNum">     242</span>                 :             : }</span>
 <span id="L243"><span class="lineNum">     243</span>                 :             : </span>
 <span id="L244"><span class="lineNum">     244</span>                 :             : } // namespace hpactor::sched</span>

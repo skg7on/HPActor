@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-27 01:43:05</td>
+            <td class="headerValue">2026-06-28 01:26:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -124,10 +124,10 @@
 <span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">        2035 : void CalendarQueue::BucketList::push_back(Timer* t) {</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">        2035 :     t-&gt;next = nullptr;</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">        2035 :     t-&gt;prev = tail;</span></span>
-<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 2007 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 28 times"> + </span>]:<span class="tlaGNC">        2035 :     if (tail) {</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        2007 :         tail-&gt;next = t;</span></span>
+<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 1980 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 55 times"> + </span>]:<span class="tlaGNC">        2035 :     if (tail) {</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        1980 :         tail-&gt;next = t;</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     } else {</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          28 :         head = t;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          55 :         head = t;</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     }</span>
 <span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">        2035 :     tail = t;</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">        2035 :     count++;</span></span>
@@ -139,10 +139,10 @@
 <span id="L61"><span class="lineNum">      61</span>                 :             :     } else {</span>
 <span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC tlaBgGNC">        2035 :         head = t-&gt;next;</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     }</span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 2007 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 28 times"> + </span>]:<span class="tlaGNC">        2035 :     if (t-&gt;next) {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        2007 :         t-&gt;next-&gt;prev = t-&gt;prev;</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 1980 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 55 times"> + </span>]:<span class="tlaGNC">        2035 :     if (t-&gt;next) {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        1980 :         t-&gt;next-&gt;prev = t-&gt;prev;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     } else {</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          28 :         tail = t-&gt;prev;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          55 :         tail = t-&gt;prev;</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     }</span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">        2035 :     t-&gt;next = nullptr;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">        2035 :     t-&gt;prev = nullptr;</span></span>
@@ -299,11 +299,11 @@
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
 <span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">        1112 :         uint32_t buckets_processed = 0;</span></span>
 <span id="L223"><span class="lineNum">     223</span>                 :             : </span>
-<span id="L224"><span class="lineNum">     224</span>         [<span class="tlaGBC" title="Branch 0 was taken 1264 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1112 times"> + </span>]:<span class="tlaGNC">        2376 :         while (last_advance_ns_ + fine_bucket_ns_ &lt;= now_ns &amp;&amp;</span></span>
-<span id="L225"><span class="lineNum">     225</span>         [<span class="tlaGBC" title="Branch 0 was taken 1264 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1264 :                buckets_processed &lt; max_advance_buckets_) {</span></span>
-<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">        1264 :             auto&amp; bucket = fine_wheel_[current_fine_];</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">        1264 :             Timer* t = bucket.head;</span></span>
-<span id="L228"><span class="lineNum">     228</span>         [<span class="tlaGBC" title="Branch 0 was taken 2022 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1264 times"> + </span>]:<span class="tlaGNC">        3286 :             while (t) {</span></span>
+<span id="L224"><span class="lineNum">     224</span>         [<span class="tlaGBC" title="Branch 0 was taken 1265 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1112 times"> + </span>]:<span class="tlaGNC">        2377 :         while (last_advance_ns_ + fine_bucket_ns_ &lt;= now_ns &amp;&amp;</span></span>
+<span id="L225"><span class="lineNum">     225</span>         [<span class="tlaGBC" title="Branch 0 was taken 1265 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1265 :                buckets_processed &lt; max_advance_buckets_) {</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">        1265 :             auto&amp; bucket = fine_wheel_[current_fine_];</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">        1265 :             Timer* t = bucket.head;</span></span>
+<span id="L228"><span class="lineNum">     228</span>         [<span class="tlaGBC" title="Branch 0 was taken 2022 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1265 times"> + </span>]:<span class="tlaGNC">        3287 :             while (t) {</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        2022 :                 Timer* next = t-&gt;next;</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">        2022 :                 bucket.unlink(t);</span></span>
 <span id="L231"><span class="lineNum">     231</span>         [<span class="tlaGBC" title="Branch 0 was taken 2021 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        2022 :                 if (t-&gt;expire_ns &lt;= now_ns) {</span></span>
@@ -318,11 +318,11 @@
 <span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">        2022 :                 t = next;</span></span>
 <span id="L241"><span class="lineNum">     241</span>                 :             :             }</span>
 <span id="L242"><span class="lineNum">     242</span>                 :             : </span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        1264 :             last_advance_ns_ += fine_bucket_ns_;</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">        1264 :             current_fine_ = (current_fine_ + 1) &amp; fine_mask_;</span></span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">        1264 :             buckets_processed++;</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        1265 :             last_advance_ns_ += fine_bucket_ns_;</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">        1265 :             current_fine_ = (current_fine_ + 1) &amp; fine_mask_;</span></span>
+<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">        1265 :             buckets_processed++;</span></span>
 <span id="L246"><span class="lineNum">     246</span>                 :             : </span>
-<span id="L247"><span class="lineNum">     247</span>         [<span class="tlaGBC" title="Branch 0 was taken 298 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 966 times"> + </span>]:<span class="tlaGNC">        1264 :             if (current_fine_ == 0) {</span></span>
+<span id="L247"><span class="lineNum">     247</span>         [<span class="tlaGBC" title="Branch 0 was taken 298 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 967 times"> + </span>]:<span class="tlaGNC">        1265 :             if (current_fine_ == 0) {</span></span>
 <span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">         298 :                 cascade_coarse(now_ns);</span></span>
 <span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">         298 :                 current_coarse_ = (current_coarse_ + 1) &amp; coarse_mask_;</span></span>
 <span id="L250"><span class="lineNum">     250</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 292 times"> + </span>]:<span class="tlaGNC">         298 :                 if (current_coarse_ == 0) {</span></span>
