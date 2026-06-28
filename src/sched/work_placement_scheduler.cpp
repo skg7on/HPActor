@@ -191,6 +191,9 @@ bool WorkPlacementScheduler::pop_local(uint32_t worker_id, WorkItem& out) {
     if (pop_edf(worker_id, out)) {
         return true;
     }
+    if (num_priorities_ == 1) {
+        return worker.queues[0].pop_bottom(out);
+    }
     for (uint32_t p = 0; p < num_priorities_; ++p) {
         if (worker.queues[p].pop_bottom(out)) {
             return true;
@@ -227,17 +230,26 @@ bool WorkPlacementScheduler::try_steal(uint32_t thief_worker_id, WorkItem& out) 
             return true;
         }
 
-        for (uint32_t p = 0; p < num_priorities_; ++p) {
-            if (victim.queues[p].steal_top(out)) {
+        if (num_priorities_ == 1) {
+            if (victim.queues[0].steal_top(out)) {
                 a2ws_.record_steal(attempt % num_workers_, victim_idx);
                 emit_steal_metric(out, victim_idx);
-                HPACTOR_LOG_DEBUG(
-                    log::LogCategory::kScheduler, out.actor,
-                    static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
-                    "work stolen",
-                    log::field("from_worker", static_cast<uint64_t>(victim_idx)),
-                    log::field("to_worker", static_cast<uint64_t>(thief_worker_id)));
                 return true;
+            }
+        } else {
+            for (uint32_t p = 0; p < num_priorities_; ++p) {
+                if (victim.queues[p].steal_top(out)) {
+                    a2ws_.record_steal(attempt % num_workers_, victim_idx);
+                    emit_steal_metric(out, victim_idx);
+                    HPACTOR_LOG_DEBUG(
+                        log::LogCategory::kScheduler, out.actor,
+                        static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
+                        "work stolen",
+                        log::field("from_worker", static_cast<uint64_t>(victim_idx)),
+                        log::field("to_worker",
+                                   static_cast<uint64_t>(thief_worker_id)));
+                    return true;
+                }
             }
         }
 
