@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 01:26:17</td>
+            <td class="headerValue">2026-06-28 04:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -110,7 +110,7 @@
 <span id="L32"><span class="lineNum">      32</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : class EDFQueue {</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :   public:</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC tlaBgGNC">         452 :     EDFQueue() = default;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC tlaBgGNC">         454 :     EDFQueue() = default;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     EDFQueue(const EDFQueue&amp;) = delete;</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     EDFQueue&amp; operator=(const EDFQueue&amp;) = delete;</span>
@@ -129,8 +129,8 @@
 <span id="L51"><span class="lineNum">      51</span>                 :             :     bool peek(int64_t&amp; deadline_ns_out) const;</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     // Check if queue is empty</span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      160008 :     bool empty() const {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      160008 :         return items_.empty();</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">       13335 :     bool empty() const {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">       13335 :         return items_.empty();</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     }</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     // Number of items in queue</span>

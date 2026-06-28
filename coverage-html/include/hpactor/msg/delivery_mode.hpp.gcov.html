@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 01:26:17</td>
+            <td class="headerValue">2026-06-28 04:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -152,8 +152,8 @@
 <span id="L73"><span class="lineNum">      73</span>                 :             : /// \param[in] mode The delivery mode.</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : /// \return true if the mode requires runtime delivery tracking beyond a</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : ///         single fire-and-forget attempt.</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC tlaBgGNC">      141721 : constexpr bool is_tracked_delivery(DeliveryMode mode) noexcept {</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      141721 :     return mode &gt;= DeliveryMode::AtLeastOnce;</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC tlaBgGNC">      141839 : constexpr bool is_tracked_delivery(DeliveryMode mode) noexcept {</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      141839 :     return mode &gt;= DeliveryMode::AtLeastOnce;</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : }</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             : </span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : } // namespace hpactor::mailbox</span>

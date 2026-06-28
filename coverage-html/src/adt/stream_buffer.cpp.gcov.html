@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 01:26:17</td>
+            <td class="headerValue">2026-06-28 04:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
@@ -103,8 +103,8 @@
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">      291080 : StreamBuffer::StreamBuffer(size_t count)</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      582160 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      221822 : StreamBuffer::StreamBuffer(std::initializer_list&lt;uint8_t&gt; ilist)</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">      443644 :     : buf_(ilist), read_pos_(0) {}</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      221986 : StreamBuffer::StreamBuffer(std::initializer_list&lt;uint8_t&gt; ilist)</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">      443972 :     : buf_(ilist), read_pos_(0) {}</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
 <span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">         607 : StreamBuffer::StreamBuffer(size_t count, uint8_t value)</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">        1214 :     : buf_(count, value), read_pos_(0) {}</span></span>
@@ -125,8 +125,8 @@
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : // ---- Copy ----</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        2090 : StreamBuffer::StreamBuffer(const StreamBuffer&amp; other)</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">        2090 :     : buf_(other.buf_), read_pos_(other.read_pos_) {}</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        2094 : StreamBuffer::StreamBuffer(const StreamBuffer&amp; other)</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">        2094 :     : buf_(other.buf_), read_pos_(other.read_pos_) {}</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         391 : StreamBuffer&amp; StreamBuffer::operator=(const StreamBuffer&amp; other) {</span></span>
 <span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 391 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         391 :     if (this != &amp;other) {</span></span>

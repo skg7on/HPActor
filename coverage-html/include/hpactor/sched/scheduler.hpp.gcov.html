@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 01:26:17</td>
+            <td class="headerValue">2026-06-28 04:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">31.6&nbsp;%</td>
@@ -182,7 +182,7 @@
 <span id="L104"><span class="lineNum">     104</span>                 :             :                    public ITimerService,</span>
 <span id="L105"><span class="lineNum">     105</span>                 :             :                    public IActorYieldScheduler {</span>
 <span id="L106"><span class="lineNum">     106</span>                 :             :   public:</span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC tlaBgGNC">         842 :     virtual ~IScheduler() = default;</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC tlaBgGNC">         847 :     virtual ~IScheduler() = default;</span></span>
 <span id="L108"><span class="lineNum">     108</span>                 :             : </span>
 <span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     virtual void set_metrics_ring_buffer(void* /*buf*/) {}</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaUNC">           0 :     virtual void set_logger(void* /*logger*/) noexcept {}</span></span>
@@ -358,154 +358,156 @@
 <span id="L280"><span class="lineNum">     280</span>                 :             :     void notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) override;</span>
 <span id="L281"><span class="lineNum">     281</span>                 :             :     void notify_ready_edf(ActorId actor, uint8_t priority,</span>
 <span id="L282"><span class="lineNum">     282</span>                 :             :                           int64_t deadline_ns) override;</span>
-<span id="L283"><span class="lineNum">     283</span>                 :             :     void notify_idle(ActorId actor) override;</span>
-<span id="L284"><span class="lineNum">     284</span>                 :             :     void yield(ActorId actor, uint8_t priority) override;</span>
-<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     bool is_running() const override {</span></span>
-<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">          15 :         return running_.load(std::memory_order_acquire);</span></span>
-<span id="L287"><span class="lineNum">     287</span>                 :             :     }</span>
-<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">          18 :     size_t worker_count() const override {</span></span>
-<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC">          18 :         return num_workers_;</span></span>
-<span id="L290"><span class="lineNum">     290</span>                 :             :     }</span>
-<span id="L291"><span class="lineNum">     291</span>                 :             :     TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) override;</span>
-<span id="L292"><span class="lineNum">     292</span>                 :             :     TimerHandle schedule_every(timer_callback cb, int64_t interval_ns) override;</span>
-<span id="L293"><span class="lineNum">     293</span>                 :             :     void cancel_timer(TimerHandle handle) override;</span>
-<span id="L294"><span class="lineNum">     294</span>                 :             : </span>
-<span id="L295"><span class="lineNum">     295</span>                 :             :     void register_dedicated_thread(ActorId actor, int cpu_affinity) override;</span>
-<span id="L296"><span class="lineNum">     296</span>                 :             :     void register_dedicated_pool(ActorId actor, uint32_t pool_size) override;</span>
-<span id="L297"><span class="lineNum">     297</span>                 :             :     void unregister_dedicated(ActorId actor) override;</span>
-<span id="L298"><span class="lineNum">     298</span>                 :             : </span>
-<span id="L299"><span class="lineNum">     299</span>                 :             :     std::vector&lt;WorkerSnapshot&gt; worker_snapshots() const override;</span>
+<span id="L283"><span class="lineNum">     283</span>                 :             :     void notify_ready_fast(ActorId actor, EventBasedActor* actor_ptr,</span>
+<span id="L284"><span class="lineNum">     284</span>                 :             :                            uint8_t priority, int64_t deadline_ns) override;</span>
+<span id="L285"><span class="lineNum">     285</span>                 :             :     void notify_idle(ActorId actor) override;</span>
+<span id="L286"><span class="lineNum">     286</span>                 :             :     void yield(ActorId actor, uint8_t priority) override;</span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     bool is_running() const override {</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">          15 :         return running_.load(std::memory_order_acquire);</span></span>
+<span id="L289"><span class="lineNum">     289</span>                 :             :     }</span>
+<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">          18 :     size_t worker_count() const override {</span></span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">          18 :         return num_workers_;</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :             :     }</span>
+<span id="L293"><span class="lineNum">     293</span>                 :             :     TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) override;</span>
+<span id="L294"><span class="lineNum">     294</span>                 :             :     TimerHandle schedule_every(timer_callback cb, int64_t interval_ns) override;</span>
+<span id="L295"><span class="lineNum">     295</span>                 :             :     void cancel_timer(TimerHandle handle) override;</span>
+<span id="L296"><span class="lineNum">     296</span>                 :             : </span>
+<span id="L297"><span class="lineNum">     297</span>                 :             :     void register_dedicated_thread(ActorId actor, int cpu_affinity) override;</span>
+<span id="L298"><span class="lineNum">     298</span>                 :             :     void register_dedicated_pool(ActorId actor, uint32_t pool_size) override;</span>
+<span id="L299"><span class="lineNum">     299</span>                 :             :     void unregister_dedicated(ActorId actor) override;</span>
 <span id="L300"><span class="lineNum">     300</span>                 :             : </span>
-<span id="L301"><span class="lineNum">     301</span>                 :             :     /// \brief Collect a snapshot of timer statistics from the active backend.</span>
-<span id="L302"><span class="lineNum">     302</span>                 :             :     ///</span>
-<span id="L303"><span class="lineNum">     303</span>                 :             :     /// For \c TimerPlane, collects per-shard metrics including pending,</span>
-<span id="L304"><span class="lineNum">     304</span>                 :             :     /// fired, late, and dropped counts.  For \c TimingWheel and</span>
-<span id="L305"><span class="lineNum">     305</span>                 :             :     /// \c CalendarQueue, returns an empty snapshot with zero shards.</span>
-<span id="L306"><span class="lineNum">     306</span>                 :             :     ///</span>
-<span id="L307"><span class="lineNum">     307</span>                 :             :     /// \return A populated \c TimerStatsSnapshot.</span>
-<span id="L308"><span class="lineNum">     308</span>                 :             :     TimerStatsSnapshot timer_snapshot() const;</span>
-<span id="L309"><span class="lineNum">     309</span>                 :             : </span>
-<span id="L310"><span class="lineNum">     310</span>                 :             :     // Worker control (deterministic testing)</span>
-<span id="L311"><span class="lineNum">     311</span>                 :             :     void pause_workers() noexcept override;</span>
-<span id="L312"><span class="lineNum">     312</span>                 :             :     void resume_workers() noexcept override;</span>
-<span id="L313"><span class="lineNum">     313</span>                 :             :     bool workers_paused() const noexcept override;</span>
-<span id="L314"><span class="lineNum">     314</span>                 :             :     bool run_one_ready() override;</span>
-<span id="L315"><span class="lineNum">     315</span>                 :             :     SchedulerDrainResult drain_ready(size_t max_items) override;</span>
-<span id="L316"><span class="lineNum">     316</span>                 :             : </span>
-<span id="L317"><span class="lineNum">     317</span>                 :             :     // Actor-to-worker pinning (deterministic test control)</span>
-<span id="L318"><span class="lineNum">     318</span>                 :             :     void pin_actor_to_worker(ActorId actor, uint32_t worker_id) override;</span>
-<span id="L319"><span class="lineNum">     319</span>                 :             :     void unpin_actor(ActorId actor) override;</span>
-<span id="L320"><span class="lineNum">     320</span>                 :             :     bool run_actor(ActorId actor) override;</span>
-<span id="L321"><span class="lineNum">     321</span>                 :             :     bool run_one_on_worker(uint32_t worker_id) override;</span>
-<span id="L322"><span class="lineNum">     322</span>                 :             : </span>
-<span id="L323"><span class="lineNum">     323</span>                 :             :     /// \brief Try to steal work from another worker.</span>
-<span id="L324"><span class="lineNum">     324</span>                 :             :     ///</span>
-<span id="L325"><span class="lineNum">     325</span>                 :             :     /// Called when the worker's local queue is empty.</span>
-<span id="L326"><span class="lineNum">     326</span>                 :             :     /// \param[out] out Set to the stolen work item on success.</span>
-<span id="L327"><span class="lineNum">     327</span>                 :             :     /// \return \c true if work was successfully stolen.</span>
-<span id="L328"><span class="lineNum">     328</span>                 :             :     bool try_steal(WorkItem&amp; out);</span>
-<span id="L329"><span class="lineNum">     329</span>                 :             : </span>
-<span id="L330"><span class="lineNum">     330</span>                 :             :     /// \brief Pop work from the owning worker's local queues.</span>
-<span id="L331"><span class="lineNum">     331</span>                 :             :     ///</span>
-<span id="L332"><span class="lineNum">     332</span>                 :             :     /// Called by WorkerThread during the local-pop fast path.</span>
-<span id="L333"><span class="lineNum">     333</span>                 :             :     /// \param[out] out Set to the popped work item on success.</span>
-<span id="L334"><span class="lineNum">     334</span>                 :             :     /// \param[in] worker_id Owning worker index.</span>
-<span id="L335"><span class="lineNum">     335</span>                 :             :     /// \return \c true if work was available.</span>
-<span id="L336"><span class="lineNum">     336</span>                 :             :     bool pop_local(WorkItem&amp; out, uint32_t worker_id);</span>
-<span id="L337"><span class="lineNum">     337</span>                 :             : </span>
-<span id="L338"><span class="lineNum">     338</span>                 :             :     /// \brief Return the earliest EDF deadline across all workers.</span>
-<span id="L339"><span class="lineNum">     339</span>                 :             :     ///</span>
-<span id="L340"><span class="lineNum">     340</span>                 :             :     /// Peeks at every worker's EDF queue without popping.  Used by the</span>
-<span id="L341"><span class="lineNum">     341</span>                 :             :     /// worker blocking-wakeup path to compute a safe CV timeout that</span>
-<span id="L342"><span class="lineNum">     342</span>                 :             :     /// guarantees deadline-sensitive work is stolen before it expires.</span>
-<span id="L343"><span class="lineNum">     343</span>                 :             :     ///</span>
-<span id="L344"><span class="lineNum">     344</span>                 :             :     /// \return Earliest deadline in nanoseconds, or \c INT64_MAX if all</span>
-<span id="L345"><span class="lineNum">     345</span>                 :             :     ///         EDF queues are empty.</span>
-<span id="L346"><span class="lineNum">     346</span>                 :             :     int64_t edf_next_deadline() noexcept;</span>
-<span id="L347"><span class="lineNum">     347</span>                 :             : </span>
-<span id="L348"><span class="lineNum">     348</span>                 :             :     /// \brief Return a reference to the placement layer's worker state vector.</span>
-<span id="L349"><span class="lineNum">     349</span>                 :             :     ///</span>
-<span id="L350"><span class="lineNum">     350</span>                 :             :     /// Used by WorkerThread to access per-worker CV fields for adaptive</span>
-<span id="L351"><span class="lineNum">     351</span>                 :             :     /// blocking-wakeup.  Not intended for general use.</span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">        2079 :     std::vector&lt;WorkPlacementScheduler::WorkerState&gt;&amp; placement_workers() noexcept {</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">        2079 :         return placement_.workers();</span></span>
-<span id="L354"><span class="lineNum">     354</span>                 :             :     }</span>
-<span id="L355"><span class="lineNum">     355</span>                 :             : </span>
-<span id="L356"><span class="lineNum">     356</span>                 :             :     /// \brief Read the current worker ID from thread-local storage.</span>
-<span id="L357"><span class="lineNum">     357</span>                 :             :     uint32_t current_worker_id() const;</span>
-<span id="L358"><span class="lineNum">     358</span>                 :             : </span>
-<span id="L359"><span class="lineNum">     359</span>                 :             :     /// \brief Execute an actor from a work item.</span>
-<span id="L360"><span class="lineNum">     360</span>                 :             :     ///</span>
-<span id="L361"><span class="lineNum">     361</span>                 :             :     /// Handles coroutine resumption when available.</span>
-<span id="L362"><span class="lineNum">     362</span>                 :             :     void execute_actor(const WorkItem&amp; item);</span>
-<span id="L363"><span class="lineNum">     363</span>                 :             : </span>
-<span id="L364"><span class="lineNum">     364</span>                 :             :     /// \brief Schedule a timer with nanosecond resolution.</span>
-<span id="L365"><span class="lineNum">     365</span>                 :             :     ///</span>
-<span id="L366"><span class="lineNum">     366</span>                 :             :     /// \param[in] delay_ns Delay in nanoseconds from now.</span>
-<span id="L367"><span class="lineNum">     367</span>                 :             :     /// \param[in] callback Callback to invoke when the timer fires.</span>
-<span id="L368"><span class="lineNum">     368</span>                 :             :     /// \return Timer identifier for cancellation.</span>
-<span id="L369"><span class="lineNum">     369</span>                 :             :     uint64_t schedule_timer(int64_t delay_ns, timer_callback callback);</span>
-<span id="L370"><span class="lineNum">     370</span>                 :             : </span>
-<span id="L371"><span class="lineNum">     371</span>                 :             :     /// \brief Advance time and process expired timers.</span>
-<span id="L372"><span class="lineNum">     372</span>                 :             :     ///</span>
-<span id="L373"><span class="lineNum">     373</span>                 :             :     /// Called by the timer advancement thread.</span>
-<span id="L374"><span class="lineNum">     374</span>                 :             :     /// \param[in] now_ns Current time in nanoseconds.</span>
-<span id="L375"><span class="lineNum">     375</span>                 :             :     void advance_time(int64_t now_ns);</span>
-<span id="L376"><span class="lineNum">     376</span>                 :             : </span>
-<span id="L377"><span class="lineNum">     377</span>                 :             :   private:</span>
-<span id="L378"><span class="lineNum">     378</span>                 :             :     bool try_admit_ready(ActorId actor) noexcept;</span>
-<span id="L379"><span class="lineNum">     379</span>                 :             :     bool try_mark_yield_ready(ActorId actor) noexcept;</span>
-<span id="L380"><span class="lineNum">     380</span>                 :             :     void enqueue_admitted(const WorkItem&amp; item, uint8_t priority);</span>
-<span id="L381"><span class="lineNum">     381</span>                 :             : </span>
-<span id="L382"><span class="lineNum">     382</span>                 :             :     void wait_if_paused(uint32_t worker_id);</span>
-<span id="L383"><span class="lineNum">     383</span>                 :             :     bool pop_any_ready(WorkItem&amp; out);</span>
-<span id="L384"><span class="lineNum">     384</span>                 :             :     bool pop_edf(WorkItem&amp; out, uint32_t worker_id);</span>
-<span id="L385"><span class="lineNum">     385</span>                 :             :     void mark_dispatch_begin() noexcept;</span>
-<span id="L386"><span class="lineNum">     386</span>                 :             :     void mark_dispatch_end() noexcept;</span>
-<span id="L387"><span class="lineNum">     387</span>                 :             : </span>
-<span id="L388"><span class="lineNum">     388</span>                 :             :     ActorSystem&amp; system_;</span>
-<span id="L389"><span class="lineNum">     389</span>                 :             :     ActorReadyGate ready_gate_;</span>
-<span id="L390"><span class="lineNum">     390</span>                 :             :     WorkPlacementScheduler placement_;</span>
-<span id="L391"><span class="lineNum">     391</span>                 :             :     ActorExecutionEngine executor_;</span>
-<span id="L392"><span class="lineNum">     392</span>                 :             :     uint32_t num_workers_;</span>
-<span id="L393"><span class="lineNum">     393</span>                 :             :     std::atomic&lt;bool&gt; running_{false};</span>
-<span id="L394"><span class="lineNum">     394</span>                 :             :     std::vector&lt;std::unique_ptr&lt;WorkerThread&gt;&gt; worker_threads_;</span>
-<span id="L395"><span class="lineNum">     395</span>                 :             : </span>
-<span id="L396"><span class="lineNum">     396</span>                 :             :     std::variant&lt;TimingWheel, CalendarQueue, TimerPlane&gt; timer_backend_;</span>
+<span id="L301"><span class="lineNum">     301</span>                 :             :     std::vector&lt;WorkerSnapshot&gt; worker_snapshots() const override;</span>
+<span id="L302"><span class="lineNum">     302</span>                 :             : </span>
+<span id="L303"><span class="lineNum">     303</span>                 :             :     /// \brief Collect a snapshot of timer statistics from the active backend.</span>
+<span id="L304"><span class="lineNum">     304</span>                 :             :     ///</span>
+<span id="L305"><span class="lineNum">     305</span>                 :             :     /// For \c TimerPlane, collects per-shard metrics including pending,</span>
+<span id="L306"><span class="lineNum">     306</span>                 :             :     /// fired, late, and dropped counts.  For \c TimingWheel and</span>
+<span id="L307"><span class="lineNum">     307</span>                 :             :     /// \c CalendarQueue, returns an empty snapshot with zero shards.</span>
+<span id="L308"><span class="lineNum">     308</span>                 :             :     ///</span>
+<span id="L309"><span class="lineNum">     309</span>                 :             :     /// \return A populated \c TimerStatsSnapshot.</span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :     TimerStatsSnapshot timer_snapshot() const;</span>
+<span id="L311"><span class="lineNum">     311</span>                 :             : </span>
+<span id="L312"><span class="lineNum">     312</span>                 :             :     // Worker control (deterministic testing)</span>
+<span id="L313"><span class="lineNum">     313</span>                 :             :     void pause_workers() noexcept override;</span>
+<span id="L314"><span class="lineNum">     314</span>                 :             :     void resume_workers() noexcept override;</span>
+<span id="L315"><span class="lineNum">     315</span>                 :             :     bool workers_paused() const noexcept override;</span>
+<span id="L316"><span class="lineNum">     316</span>                 :             :     bool run_one_ready() override;</span>
+<span id="L317"><span class="lineNum">     317</span>                 :             :     SchedulerDrainResult drain_ready(size_t max_items) override;</span>
+<span id="L318"><span class="lineNum">     318</span>                 :             : </span>
+<span id="L319"><span class="lineNum">     319</span>                 :             :     // Actor-to-worker pinning (deterministic test control)</span>
+<span id="L320"><span class="lineNum">     320</span>                 :             :     void pin_actor_to_worker(ActorId actor, uint32_t worker_id) override;</span>
+<span id="L321"><span class="lineNum">     321</span>                 :             :     void unpin_actor(ActorId actor) override;</span>
+<span id="L322"><span class="lineNum">     322</span>                 :             :     bool run_actor(ActorId actor) override;</span>
+<span id="L323"><span class="lineNum">     323</span>                 :             :     bool run_one_on_worker(uint32_t worker_id) override;</span>
+<span id="L324"><span class="lineNum">     324</span>                 :             : </span>
+<span id="L325"><span class="lineNum">     325</span>                 :             :     /// \brief Try to steal work from another worker.</span>
+<span id="L326"><span class="lineNum">     326</span>                 :             :     ///</span>
+<span id="L327"><span class="lineNum">     327</span>                 :             :     /// Called when the worker's local queue is empty.</span>
+<span id="L328"><span class="lineNum">     328</span>                 :             :     /// \param[out] out Set to the stolen work item on success.</span>
+<span id="L329"><span class="lineNum">     329</span>                 :             :     /// \return \c true if work was successfully stolen.</span>
+<span id="L330"><span class="lineNum">     330</span>                 :             :     bool try_steal(WorkItem&amp; out);</span>
+<span id="L331"><span class="lineNum">     331</span>                 :             : </span>
+<span id="L332"><span class="lineNum">     332</span>                 :             :     /// \brief Pop work from the owning worker's local queues.</span>
+<span id="L333"><span class="lineNum">     333</span>                 :             :     ///</span>
+<span id="L334"><span class="lineNum">     334</span>                 :             :     /// Called by WorkerThread during the local-pop fast path.</span>
+<span id="L335"><span class="lineNum">     335</span>                 :             :     /// \param[out] out Set to the popped work item on success.</span>
+<span id="L336"><span class="lineNum">     336</span>                 :             :     /// \param[in] worker_id Owning worker index.</span>
+<span id="L337"><span class="lineNum">     337</span>                 :             :     /// \return \c true if work was available.</span>
+<span id="L338"><span class="lineNum">     338</span>                 :             :     bool pop_local(WorkItem&amp; out, uint32_t worker_id);</span>
+<span id="L339"><span class="lineNum">     339</span>                 :             : </span>
+<span id="L340"><span class="lineNum">     340</span>                 :             :     /// \brief Return the earliest EDF deadline across all workers.</span>
+<span id="L341"><span class="lineNum">     341</span>                 :             :     ///</span>
+<span id="L342"><span class="lineNum">     342</span>                 :             :     /// Peeks at every worker's EDF queue without popping.  Used by the</span>
+<span id="L343"><span class="lineNum">     343</span>                 :             :     /// worker blocking-wakeup path to compute a safe CV timeout that</span>
+<span id="L344"><span class="lineNum">     344</span>                 :             :     /// guarantees deadline-sensitive work is stolen before it expires.</span>
+<span id="L345"><span class="lineNum">     345</span>                 :             :     ///</span>
+<span id="L346"><span class="lineNum">     346</span>                 :             :     /// \return Earliest deadline in nanoseconds, or \c INT64_MAX if all</span>
+<span id="L347"><span class="lineNum">     347</span>                 :             :     ///         EDF queues are empty.</span>
+<span id="L348"><span class="lineNum">     348</span>                 :             :     int64_t edf_next_deadline() noexcept;</span>
+<span id="L349"><span class="lineNum">     349</span>                 :             : </span>
+<span id="L350"><span class="lineNum">     350</span>                 :             :     /// \brief Return a reference to the placement layer's worker state vector.</span>
+<span id="L351"><span class="lineNum">     351</span>                 :             :     ///</span>
+<span id="L352"><span class="lineNum">     352</span>                 :             :     /// Used by WorkerThread to access per-worker CV fields for adaptive</span>
+<span id="L353"><span class="lineNum">     353</span>                 :             :     /// blocking-wakeup.  Not intended for general use.</span>
+<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">        2180 :     std::vector&lt;WorkPlacementScheduler::WorkerState&gt;&amp; placement_workers() noexcept {</span></span>
+<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">        2180 :         return placement_.workers();</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :             :     }</span>
+<span id="L357"><span class="lineNum">     357</span>                 :             : </span>
+<span id="L358"><span class="lineNum">     358</span>                 :             :     /// \brief Read the current worker ID from thread-local storage.</span>
+<span id="L359"><span class="lineNum">     359</span>                 :             :     uint32_t current_worker_id() const;</span>
+<span id="L360"><span class="lineNum">     360</span>                 :             : </span>
+<span id="L361"><span class="lineNum">     361</span>                 :             :     /// \brief Execute an actor from a work item.</span>
+<span id="L362"><span class="lineNum">     362</span>                 :             :     ///</span>
+<span id="L363"><span class="lineNum">     363</span>                 :             :     /// Handles coroutine resumption when available.</span>
+<span id="L364"><span class="lineNum">     364</span>                 :             :     void execute_actor(const WorkItem&amp; item);</span>
+<span id="L365"><span class="lineNum">     365</span>                 :             : </span>
+<span id="L366"><span class="lineNum">     366</span>                 :             :     /// \brief Schedule a timer with nanosecond resolution.</span>
+<span id="L367"><span class="lineNum">     367</span>                 :             :     ///</span>
+<span id="L368"><span class="lineNum">     368</span>                 :             :     /// \param[in] delay_ns Delay in nanoseconds from now.</span>
+<span id="L369"><span class="lineNum">     369</span>                 :             :     /// \param[in] callback Callback to invoke when the timer fires.</span>
+<span id="L370"><span class="lineNum">     370</span>                 :             :     /// \return Timer identifier for cancellation.</span>
+<span id="L371"><span class="lineNum">     371</span>                 :             :     uint64_t schedule_timer(int64_t delay_ns, timer_callback callback);</span>
+<span id="L372"><span class="lineNum">     372</span>                 :             : </span>
+<span id="L373"><span class="lineNum">     373</span>                 :             :     /// \brief Advance time and process expired timers.</span>
+<span id="L374"><span class="lineNum">     374</span>                 :             :     ///</span>
+<span id="L375"><span class="lineNum">     375</span>                 :             :     /// Called by the timer advancement thread.</span>
+<span id="L376"><span class="lineNum">     376</span>                 :             :     /// \param[in] now_ns Current time in nanoseconds.</span>
+<span id="L377"><span class="lineNum">     377</span>                 :             :     void advance_time(int64_t now_ns);</span>
+<span id="L378"><span class="lineNum">     378</span>                 :             : </span>
+<span id="L379"><span class="lineNum">     379</span>                 :             :   private:</span>
+<span id="L380"><span class="lineNum">     380</span>                 :             :     bool try_admit_ready(ActorId actor) noexcept;</span>
+<span id="L381"><span class="lineNum">     381</span>                 :             :     bool try_mark_yield_ready(ActorId actor) noexcept;</span>
+<span id="L382"><span class="lineNum">     382</span>                 :             :     void enqueue_admitted(const WorkItem&amp; item, uint8_t priority);</span>
+<span id="L383"><span class="lineNum">     383</span>                 :             : </span>
+<span id="L384"><span class="lineNum">     384</span>                 :             :     void wait_if_paused(uint32_t worker_id);</span>
+<span id="L385"><span class="lineNum">     385</span>                 :             :     bool pop_any_ready(WorkItem&amp; out);</span>
+<span id="L386"><span class="lineNum">     386</span>                 :             :     bool pop_edf(WorkItem&amp; out, uint32_t worker_id);</span>
+<span id="L387"><span class="lineNum">     387</span>                 :             :     void mark_dispatch_begin() noexcept;</span>
+<span id="L388"><span class="lineNum">     388</span>                 :             :     void mark_dispatch_end() noexcept;</span>
+<span id="L389"><span class="lineNum">     389</span>                 :             : </span>
+<span id="L390"><span class="lineNum">     390</span>                 :             :     ActorSystem&amp; system_;</span>
+<span id="L391"><span class="lineNum">     391</span>                 :             :     ActorReadyGate ready_gate_;</span>
+<span id="L392"><span class="lineNum">     392</span>                 :             :     WorkPlacementScheduler placement_;</span>
+<span id="L393"><span class="lineNum">     393</span>                 :             :     ActorExecutionEngine executor_;</span>
+<span id="L394"><span class="lineNum">     394</span>                 :             :     uint32_t num_workers_;</span>
+<span id="L395"><span class="lineNum">     395</span>                 :             :     std::atomic&lt;bool&gt; running_{false};</span>
+<span id="L396"><span class="lineNum">     396</span>                 :             :     std::vector&lt;std::unique_ptr&lt;WorkerThread&gt;&gt; worker_threads_;</span>
 <span id="L397"><span class="lineNum">     397</span>                 :             : </span>
-<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC">         761 :     void set_metrics_ring_buffer(void* buf) noexcept override {</span></span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">         761 :         metrics_ring_buffer_ =</span></span>
-<span id="L400"><span class="lineNum">     400</span>                 :             :             static_cast&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;*&gt;(buf);</span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">         761 :     }</span></span>
-<span id="L402"><span class="lineNum">     402</span>                 :             : </span>
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">         761 :     void set_logger(void* logger) noexcept override {</span></span>
-<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">         761 :         logger_ = static_cast&lt;log::Logger*&gt;(logger);</span></span>
-<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">         761 :     }</span></span>
-<span id="L406"><span class="lineNum">     406</span>                 :             : </span>
-<span id="L407"><span class="lineNum">     407</span>                 :             :     std::unordered_map&lt;uint64_t, std::shared_ptr&lt;std::atomic&lt;bool&gt;&gt;&gt; recurring_cancellations_;</span>
-<span id="L408"><span class="lineNum">     408</span>                 :             :     std::mutex cancellation_mutex_;</span>
-<span id="L409"><span class="lineNum">     409</span>                 :             : </span>
-<span id="L410"><span class="lineNum">     410</span>                 :             :     /// Wakeup mechanism for the timer thread.</span>
-<span id="L411"><span class="lineNum">     411</span>                 :             :     /// schedule_after() notifies this when a new timer is registered so</span>
-<span id="L412"><span class="lineNum">     412</span>                 :             :     /// the timer thread can re-evaluate next_deadline() immediately.</span>
-<span id="L413"><span class="lineNum">     413</span>                 :             :     std::condition_variable timer_wakeup_cv_;</span>
-<span id="L414"><span class="lineNum">     414</span>                 :             :     std::mutex timer_wakeup_mutex_;</span>
-<span id="L415"><span class="lineNum">     415</span>                 :             :     std::atomic&lt;bool&gt; timer_needs_recheck_{false};</span>
-<span id="L416"><span class="lineNum">     416</span>                 :             : </span>
-<span id="L417"><span class="lineNum">     417</span>                 :             :     metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* metrics_ring_buffer_{nullptr};</span>
+<span id="L398"><span class="lineNum">     398</span>                 :             :     std::variant&lt;TimingWheel, CalendarQueue, TimerPlane&gt; timer_backend_;</span>
+<span id="L399"><span class="lineNum">     399</span>                 :             : </span>
+<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaGNC">         763 :     void set_metrics_ring_buffer(void* buf) noexcept override {</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">         763 :         metrics_ring_buffer_ =</span></span>
+<span id="L402"><span class="lineNum">     402</span>                 :             :             static_cast&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;*&gt;(buf);</span>
+<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">         763 :     }</span></span>
+<span id="L404"><span class="lineNum">     404</span>                 :             : </span>
+<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">         763 :     void set_logger(void* logger) noexcept override {</span></span>
+<span id="L406"><span class="lineNum">     406</span>                 :<span class="tlaGNC">         763 :         logger_ = static_cast&lt;log::Logger*&gt;(logger);</span></span>
+<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">         763 :     }</span></span>
+<span id="L408"><span class="lineNum">     408</span>                 :             : </span>
+<span id="L409"><span class="lineNum">     409</span>                 :             :     std::unordered_map&lt;uint64_t, std::shared_ptr&lt;std::atomic&lt;bool&gt;&gt;&gt; recurring_cancellations_;</span>
+<span id="L410"><span class="lineNum">     410</span>                 :             :     std::mutex cancellation_mutex_;</span>
+<span id="L411"><span class="lineNum">     411</span>                 :             : </span>
+<span id="L412"><span class="lineNum">     412</span>                 :             :     /// Wakeup mechanism for the timer thread.</span>
+<span id="L413"><span class="lineNum">     413</span>                 :             :     /// schedule_after() notifies this when a new timer is registered so</span>
+<span id="L414"><span class="lineNum">     414</span>                 :             :     /// the timer thread can re-evaluate next_deadline() immediately.</span>
+<span id="L415"><span class="lineNum">     415</span>                 :             :     std::condition_variable timer_wakeup_cv_;</span>
+<span id="L416"><span class="lineNum">     416</span>                 :             :     std::mutex timer_wakeup_mutex_;</span>
+<span id="L417"><span class="lineNum">     417</span>                 :             :     std::atomic&lt;bool&gt; timer_needs_recheck_{false};</span>
 <span id="L418"><span class="lineNum">     418</span>                 :             : </span>
-<span id="L419"><span class="lineNum">     419</span>                 :             :     log::Logger* logger_{nullptr};</span>
+<span id="L419"><span class="lineNum">     419</span>                 :             :     metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* metrics_ring_buffer_{nullptr};</span>
 <span id="L420"><span class="lineNum">     420</span>                 :             : </span>
-<span id="L421"><span class="lineNum">     421</span>                 :             :     std::atomic&lt;bool&gt; workers_paused_{false};</span>
-<span id="L422"><span class="lineNum">     422</span>                 :             :     std::atomic&lt;uint32_t&gt; active_worker_dispatches_{0};</span>
-<span id="L423"><span class="lineNum">     423</span>                 :             :     std::atomic&lt;uint32_t&gt; parked_worker_count_{0};</span>
-<span id="L424"><span class="lineNum">     424</span>                 :             :     std::mutex worker_control_mutex_;</span>
-<span id="L425"><span class="lineNum">     425</span>                 :             :     std::condition_variable worker_control_cv_;</span>
-<span id="L426"><span class="lineNum">     426</span>                 :             : </span>
-<span id="L427"><span class="lineNum">     427</span>                 :             :     std::thread timer_thread_;</span>
-<span id="L428"><span class="lineNum">     428</span>                 :             : };</span>
-<span id="L429"><span class="lineNum">     429</span>                 :             : </span>
-<span id="L430"><span class="lineNum">     430</span>                 :             : } // namespace hpactor::sched</span>
+<span id="L421"><span class="lineNum">     421</span>                 :             :     log::Logger* logger_{nullptr};</span>
+<span id="L422"><span class="lineNum">     422</span>                 :             : </span>
+<span id="L423"><span class="lineNum">     423</span>                 :             :     std::atomic&lt;bool&gt; workers_paused_{false};</span>
+<span id="L424"><span class="lineNum">     424</span>                 :             :     std::atomic&lt;uint32_t&gt; active_worker_dispatches_{0};</span>
+<span id="L425"><span class="lineNum">     425</span>                 :             :     std::atomic&lt;uint32_t&gt; parked_worker_count_{0};</span>
+<span id="L426"><span class="lineNum">     426</span>                 :             :     std::mutex worker_control_mutex_;</span>
+<span id="L427"><span class="lineNum">     427</span>                 :             :     std::condition_variable worker_control_cv_;</span>
+<span id="L428"><span class="lineNum">     428</span>                 :             : </span>
+<span id="L429"><span class="lineNum">     429</span>                 :             :     std::thread timer_thread_;</span>
+<span id="L430"><span class="lineNum">     430</span>                 :             : };</span>
+<span id="L431"><span class="lineNum">     431</span>                 :             : </span>
+<span id="L432"><span class="lineNum">     432</span>                 :             : } // namespace hpactor::sched</span>
         </pre>
               </td>
             </tr>

@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">73.9&nbsp;%</td>
+            <td class="headerCovTableEntryLo">73.2&nbsp;%</td>
             <td class="headerCovTableEntry">153</td>
-            <td class="headerCovTableEntry">113</td>
+            <td class="headerCovTableEntry">112</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 01:26:17</td>
+            <td class="headerValue">2026-06-28 04:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.3&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">51.7&nbsp;%</td>
+            <td class="headerCovTableEntryLo">49.4&nbsp;%</td>
             <td class="headerCovTableEntry">89</td>
-            <td class="headerCovTableEntry">46</td>
+            <td class="headerCovTableEntry">44</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -151,10 +151,10 @@
 <span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           9 :     return out;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : }</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : </span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">         771 : result&lt;void&gt; ProcessManager::init(const ProcessConfig&amp; config) {</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         771 :     config_ = config;</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">         771 :     mode_ = config.mode;</span></span>
-<span id="L79"><span class="lineNum">      79</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 771 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         771 :     if (mode_ == ProcessMode::Daemon &amp;&amp; !daemonized_) {</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">         773 : result&lt;void&gt; ProcessManager::init(const ProcessConfig&amp; config) {</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         773 :     config_ = config;</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">         773 :     mode_ = config.mode;</span></span>
+<span id="L79"><span class="lineNum">      79</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 773 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         773 :     if (mode_ == ProcessMode::Daemon &amp;&amp; !daemonized_) {</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         daemonized_ = true;</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaUNC">           0 :         daemonize(); // does not return in parent</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
@@ -162,11 +162,11 @@
 <span id="L84"><span class="lineNum">      84</span>                 :             :     // original process for foreground/systemd). This is safe because we are</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     // single-threaded: either the original process before any threads start,</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     // or the forked grandchild which inherits a single thread.</span>
-<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 744 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         771 :     if (!pidfile_written_) {</span></span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         744 :         pidfile_written_ = true;</span></span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">         744 :         write_pidfile();</span></span>
+<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 746 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         773 :     if (!pidfile_written_) {</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         746 :         pidfile_written_ = true;</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">         746 :         write_pidfile();</span></span>
 <span id="L90"><span class="lineNum">      90</span>                 :             :     }</span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         771 :     return result&lt;void&gt;::make();</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         773 :     return result&lt;void&gt;::make();</span></span>
 <span id="L92"><span class="lineNum">      92</span>                 :             : }</span>
 <span id="L93"><span class="lineNum">      93</span>                 :             : </span>
 <span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           3 : void ProcessManager::notify_ready() {</span></span>
@@ -181,9 +181,9 @@
 <span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">           2 : void ProcessManager::notify_stopping() {</span></span>
 <span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">           2 :     send_notify(&quot;STOPPING=1&quot;);</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">           2 : }</span></span>
-<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">           2 : void ProcessManager::notify_stopped() {</span></span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">           2 :     remove_pidfile();</span></span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">           3 : void ProcessManager::notify_stopped() {</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">           3 :     remove_pidfile();</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           3 : }</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">           6 : ProcessMode ProcessManager::mode() {</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">           6 :     return mode_;</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : }</span>
@@ -285,9 +285,9 @@
 <span id="L207"><span class="lineNum">     207</span>                 :             :     // std::string are safe.</span>
 <span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L209"><span class="lineNum">     209</span>                 :             : </span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC tlaBgGNC">         744 : void ProcessManager::write_pidfile() {</span></span>
-<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaGBC" title="Branch 0 was taken 740 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">         744 :     if (config_.pidfile_path.empty()) {</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">         740 :         return;</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC tlaBgGNC">         746 : void ProcessManager::write_pidfile() {</span></span>
+<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaGBC" title="Branch 0 was taken 742 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">         746 :     if (config_.pidfile_path.empty()) {</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">         742 :         return;</span></span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     }</span>
 <span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">           4 :     std::string dir;</span></span>
 <span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">           4 :     auto slash = config_.pidfile_path.rfind('/');</span></span>
@@ -303,11 +303,11 @@
 <span id="L225"><span class="lineNum">     225</span>                 :             :         }</span>
 <span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         ofs &lt;&lt; getpid() &lt;&lt; &quot;\n&quot; &lt;&lt; std::flush;</span></span>
 <span id="L227"><span class="lineNum">     227</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :     }</span></span>
-<span id="L228"><span class="lineNum">     228</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :     if (rename(tmp.c_str(), config_.pidfile_path.c_str()) != 0) {</span></span>
+<span id="L228"><span class="lineNum">     228</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (rename(tmp.c_str(), config_.pidfile_path.c_str()) != 0) {</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :         // If tmp is on a different filesystem (EXDEV), atomic rename is</span>
 <span id="L230"><span class="lineNum">     230</span>                 :             :         // impossible — fall back to writing the pidfile directly.</span>
-<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (errno == EXDEV) {</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             std::ofstream ofs_direct(config_.pidfile_path);</span></span>
+<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (errno == EXDEV) {</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC">           0 :             std::ofstream ofs_direct(config_.pidfile_path);</span></span>
 <span id="L233"><span class="lineNum">     233</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (ofs_direct) {</span></span>
 <span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaUNC">           0 :                 ofs_direct &lt;&lt; getpid() &lt;&lt; &quot;\n&quot; &lt;&lt; std::flush;</span></span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :             }</span>
@@ -318,11 +318,11 @@
 <span id="L240"><span class="lineNum">     240</span>                 :             :     }</span>
 <span id="L241"><span class="lineNum">     241</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">           4 : }</span></span>
 <span id="L242"><span class="lineNum">     242</span>                 :             : </span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">           2 : void ProcessManager::remove_pidfile() {</span></span>
-<span id="L244"><span class="lineNum">     244</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :     if (!config_.pidfile_path.empty()) {</span></span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">           1 :         unlink(config_.pidfile_path.c_str());</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">           3 : void ProcessManager::remove_pidfile() {</span></span>
+<span id="L244"><span class="lineNum">     244</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :     if (!config_.pidfile_path.empty()) {</span></span>
+<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">           2 :         unlink(config_.pidfile_path.c_str());</span></span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :     }</span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">           3 : }</span></span>
 <span id="L248"><span class="lineNum">     248</span>                 :             : </span>
 <span id="L249"><span class="lineNum">     249</span>                 :             : // --- Signal Handling ---</span>
 <span id="L250"><span class="lineNum">     250</span>                 :             : </span>
