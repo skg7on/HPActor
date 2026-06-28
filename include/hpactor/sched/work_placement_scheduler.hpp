@@ -263,7 +263,7 @@ class WorkPlacementScheduler {
   private:
     struct DedicatedStorage;
 
-    uint32_t choose_worker(ActorId actor, bool& is_pinned);
+    uint32_t choose_worker(const WorkItem& item, bool& is_pinned);
     void enqueue_shared(const WorkItem& item, uint8_t priority, uint32_t worker_id);
     void emit_steal_metric(const WorkItem& item, uint32_t from_worker);
 

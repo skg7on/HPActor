@@ -56,15 +56,20 @@ void WorkPlacementScheduler::set_logger(log::Logger* logger) noexcept {
     logger_ = logger;
 }
 
-uint32_t WorkPlacementScheduler::choose_worker(ActorId actor, bool& is_pinned) {
+uint32_t
+WorkPlacementScheduler::choose_worker(const WorkItem& item, bool& is_pinned) {
     is_pinned = false;
     {
         std::lock_guard<std::mutex> lock(pinned_mutex_);
-        auto it = pinned_actors_.find(actor);
+        auto it = pinned_actors_.find(item.actor);
         if (it != pinned_actors_.end()) {
             is_pinned = true;
             return it->second % num_workers_;
         }
+    }
+
+    if (item.home_worker != UINT32_MAX) {
+        return item.home_worker % num_workers_;
     }
 
     static std::atomic<uint32_t> rr_counter{0};
@@ -130,7 +135,7 @@ WorkPlacementScheduler::enqueue_admitted(const WorkItem& item, uint8_t priority,
     }
 
     bool is_pinned = false;
-    uint32_t worker_id = choose_worker(item.actor, is_pinned);
+    uint32_t worker_id = choose_worker(item, is_pinned);
     if (is_pinned && workers_paused) {
         std::lock_guard<std::mutex> lock(pinned_mutex_);
         pinned_ready_[worker_id].push_back(item);

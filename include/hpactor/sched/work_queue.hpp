@@ -34,6 +34,10 @@ struct WorkItem {
     /// Invariant: alive while queued — ActorReadyGate prevents post-termination
     /// scheduling; shutdown drains all items before destroying actors.
     EventBasedActor* actor_ptr{nullptr};
+    /// Home worker index for cache-affine routing. Set to
+    /// hash(actor_id) % num_workers at notify_ready time. UINT32_MAX means
+    /// use round-robin. Preserved across requeue cycles.
+    uint32_t home_worker{UINT32_MAX};
 };
 
 using adt::ChaselevDeque;

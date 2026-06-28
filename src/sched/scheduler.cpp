@@ -187,6 +187,7 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
     }
 
     WorkItem item{actor, deadline_ns, 0};
+    item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
 
     if (!try_admit_ready(actor)) {
         return;
@@ -206,6 +207,7 @@ void HybridScheduler::notify_ready_fast(ActorId actor, EventBasedActor* actor_pt
 
     WorkItem item{actor, deadline_ns, 0};
     item.actor_ptr = actor_ptr;
+    item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
 
     if (!try_admit_ready(actor)) {
         return;
@@ -226,6 +228,7 @@ void HybridScheduler::notify_ready_edf(ActorId actor, uint8_t priority,
 
     WorkItem item{actor, deadline_ns, 0};
     item.edf_scheduled = true;
+    item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
 
     if (!try_admit_ready(actor)) {
         return;
@@ -247,7 +250,9 @@ void HybridScheduler::yield(ActorId actor, uint8_t priority) {
     if (!try_mark_yield_ready(actor)) {
         return;
     }
-    enqueue_admitted(WorkItem{actor, INT64_MAX, 0}, priority);
+    WorkItem yield_item{actor, INT64_MAX, 0};
+    yield_item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
+    enqueue_admitted(yield_item, priority);
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
@@ -314,7 +319,8 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
             next_seq = 0;
         WorkItem next{item.actor, result.deadline_ns, next_seq};
         next.edf_scheduled = item.edf_scheduled;
-        next.actor_ptr = item.actor_ptr; // preserve for subsequent activations
+        next.actor_ptr = item.actor_ptr;
+        next.home_worker = item.home_worker; // preserve affinity across requeue
         enqueue_admitted(next, result.priority);
     }
 }
