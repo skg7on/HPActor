@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "../runtime/actor_system_impl.hpp"
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cluster/cluster_failure_model.hpp>
 #include <hpactor/cluster/route_invalidation.hpp>
@@ -22,48 +23,48 @@
 namespace hpactor {
 
 void ActorSystem::enable_cluster(const std::string& node_id) {
-    cluster_enabled_ = true;
+    impl_->cluster.enabled = true;
 
     auto* fm = new cluster::ClusterFailureModel();
-    cluster_failure_model_ = {
+    impl_->cluster.failure_model = {
         fm,
         +[](void* p) { delete static_cast<cluster::ClusterFailureModel*>(p); }};
 
     auto* ri = new cluster::RouteInvalidation();
-    route_invalidation_ = {
+    impl_->cluster.route_invalidation = {
         ri, +[](void* p) { delete static_cast<cluster::RouteInvalidation*>(p); }};
 
     auto* sm = new cluster::singleton::SingletonManagerActor(
         node_id, std::make_unique<cluster::singleton::OldestNodeElection>());
-    singleton_manager_ = {
+    impl_->cluster.singleton_manager = {
         sm, +[](void* p) {
             delete static_cast<cluster::singleton::SingletonManagerActor*>(p);
         }};
 
     // Register shard-coordinator as the first managed singleton.
     auto* sm_ptr = static_cast<cluster::singleton::SingletonManagerActor*>(
-        singleton_manager_.get());
+        impl_->cluster.singleton_manager.get());
     sm_ptr->register_singleton(
         cluster::singleton::SingletonIdentity{"shard-coordinator", 0});
 
     // Wire observer: node state changes trigger singleton election re-runs
     // and route invalidation processing.
-    auto* fm_ptr =
-        static_cast<cluster::ClusterFailureModel*>(cluster_failure_model_.get());
+    auto* fm_ptr = static_cast<cluster::ClusterFailureModel*>(
+        impl_->cluster.failure_model.get());
     fm_ptr->register_observer([this](const std::vector<std::string>& alive) {
         auto* mgr = static_cast<cluster::singleton::SingletonManagerActor*>(
-            singleton_manager_.get());
+            impl_->cluster.singleton_manager.get());
         if (mgr) {
             mgr->on_node_state_change(alive);
         }
 
         // Drain and process route invalidations for nodes that went
         // Down, Quarantined, or Removed.
-        auto* ri_ptr =
-            static_cast<cluster::RouteInvalidation*>(route_invalidation_.get());
+        auto* ri_ptr = static_cast<cluster::RouteInvalidation*>(
+            impl_->cluster.route_invalidation.get());
         if (ri_ptr) {
             auto* fm_ptr2 = static_cast<cluster::ClusterFailureModel*>(
-                cluster_failure_model_.get());
+                impl_->cluster.failure_model.get());
             if (fm_ptr2) {
                 auto invalidated = fm_ptr2->drain_invalidation_queue();
                 if (!invalidated.empty()) {
