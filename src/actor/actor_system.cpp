@@ -80,13 +80,15 @@ ActorSystem::ActorSystem(const Config& config)
 
     // ── Spawner ──────────────────────────────────────────────────────────
     // Must exist before any spawn<>() call.
+    // Metrics and logger pointers are captured by address so later
+    // assignments to the shared_ptr/pointer are visible to the spawner.
     impl_->spawner.emplace(ActorSpawner::Dependencies{
         .facade = *this,
         .endpoint = impl_->core.endpoint,
         .directory = impl_->actors.directory,
         .scheduler = *impl_->core.scheduler,
-        .metrics = impl_->operations.metrics_ring_buffer.get(),
-        .logger = impl_->operations.logger,
+        .metrics = nullptr, // set after metrics ring buffer is created
+        .logger = nullptr,  // set after logger is created
     });
     // ── System protobuf types ──────────────────────────────────────────
     impl_->core.proto_registry.register_system_types();
@@ -194,6 +196,16 @@ ActorSystem::ActorSystem(const Config& config)
     if (impl_->operations.logger) [[unlikely]] {
         impl_->core.scheduler->set_logger(impl_->operations.logger);
     }
+
+    // Reconstruct spawner with now-valid metrics/logger pointers.
+    impl_->spawner.emplace(ActorSpawner::Dependencies{
+        .facade = *this,
+        .endpoint = impl_->core.endpoint,
+        .directory = impl_->actors.directory,
+        .scheduler = *impl_->core.scheduler,
+        .metrics = impl_->operations.metrics_ring_buffer.get(),
+        .logger = impl_->operations.logger,
+    });
 
     impl_->operations.fault_controller.set_log_manager(
         impl_->operations.log_manager.get());
