@@ -79,6 +79,6 @@ TEST_F(AdaptiveBatchTest, BurstLargerThanBatchLimitDeliveredCompletely) {
     for (int i = 0; i < kMsgs; ++i)
         sys.deliver_local(actor.id(), TypedMessage{TypeTag::User, StreamBuffer{1}});
 
-    ca->wait_for(kMsgs);
+    ca->wait_for(kMsgs, std::chrono::milliseconds{10000});
     EXPECT_EQ(ca->received(), kMsgs);
 }
