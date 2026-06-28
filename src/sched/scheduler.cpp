@@ -69,8 +69,11 @@ void HybridScheduler::start() {
     for (size_t i = 0; i < placement_.worker_count(); ++i) {
         WorkerThread::Config cfg;
         cfg.worker_index = static_cast<uint32_t>(i);
-        cfg.enable_thread_allocator = true; // bug fixed by WorkerThread
-                                            // (SCHED-07)
+        cfg.enable_thread_allocator = false; // SlabCache dealloc is not
+                                             // thread-safe: TypedMessage
+                                             // allocated on producer thread,
+                                             // freed on worker thread. Needs
+                                             // per-thread free-list handoff.
         auto worker = std::make_unique<WorkerThread>(cfg);
         worker->set_owner(this);
         worker->set_work_processor([this](const WorkItem& item) {
