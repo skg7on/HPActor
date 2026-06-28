@@ -188,42 +188,44 @@ ActorSystem::ActorSystem(const Config& config)
     apply_tracing_config(config_.tracing);
 
     if (config.enable_network) {
-        network_loop_ = std::make_unique<net::EventLoop>();
-        network_loop_->set_actor_system(this);
+        impl_->network.event_loop = std::make_unique<net::EventLoop>();
+        impl_->network.event_loop->set_actor_system(this);
 
         if (config.service_discovery) {
-            discovery_ = config.service_discovery;
+            impl_->network.discovery = config.service_discovery;
         } else if (config.registrar.udp_port > 0) {
             auto reg = std::make_shared<net::UdpRegistrar>(
-                config.registrar, endpoint_, network_loop_.get());
-            discovery_ = reg;
-            registrar_ = reg;
+                config.registrar, endpoint_, impl_->network.event_loop.get());
+            impl_->network.discovery = reg;
+            impl_->network.registrar = reg;
         } else {
-            discovery_ =
+            impl_->network.discovery =
                 std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
         }
 
-        discovery_->start();
+        impl_->network.discovery->start();
 
-        discovery_->on_member_change([this](const net::Member& m, bool joined) {
-            if (!joined) {
-                on_node_dead(m.identity.endpoint);
-            }
-        });
+        impl_->network.discovery->on_member_change(
+            [this](const net::Member& m, bool joined) {
+                if (!joined) {
+                    on_node_dead(m.identity.endpoint);
+                }
+            });
 
-        location_cache_ = std::make_shared<net::ActorLocationCache>();
-        if (network_loop_) {
-            cache_purge_timer_ = network_loop_->run_every(
+        impl_->network.location_cache =
+            std::make_shared<net::ActorLocationCache>();
+        if (impl_->network.event_loop) {
+            impl_->network.cache_purge_timer = impl_->network.event_loop->run_every(
                 [this]() {
-                    if (location_cache_)
-                        location_cache_->purge_expired();
+                    if (impl_->network.location_cache)
+                        impl_->network.location_cache->purge_expired();
                 },
                 60000);
         }
 
         // Periodic retry processing for at-least-once delivery.
-        if (impl_->messaging.outbound_tracker && network_loop_) {
-            retry_timer_ = network_loop_->run_every(
+        if (impl_->messaging.outbound_tracker && impl_->network.event_loop) {
+            impl_->network.retry_timer = impl_->network.event_loop->run_every(
                 [this]() {
                     if (impl_->messaging.outbound_tracker) {
                         uint64_t now_ns = static_cast<uint64_t>(
@@ -241,21 +243,24 @@ ActorSystem::ActorSystem(const Config& config)
                 100); // poll every 100ms
         }
 
-        transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
-                                                         config.pool, nullptr);
-        impl_->messaging.backpressure->set_transport(transport_.get());
+        impl_->network.transport = std::make_unique<net::TcpTransport>(
+            endpoint_, config.tls, config.pool, nullptr);
+        impl_->messaging.backpressure->set_transport(impl_->network.transport.get());
 
         if (metrics_ring_buffer_) {
-            transport_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+            impl_->network.transport->set_metrics_ring_buffer(
+                metrics_ring_buffer_.get());
         }
 
-        rpc_channel_ = std::make_unique<RpcChannel>(
-            transport_.get(), scheduler_.get(), config_.default_ask_max_retries);
+        impl_->network.rpc_channel = std::make_unique<RpcChannel>(
+            impl_->network.transport.get(), scheduler_.get(),
+            config_.default_ask_max_retries);
 
         ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
 
         if (config_.enable_http_client) {
-            http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());
+            http_client_ =
+                std::make_unique<net::HttpClient>(impl_->network.event_loop.get());
         }
 
         if (config_.enable_http_gateway) {
@@ -264,26 +269,27 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         if (config.tcp_port > 0) {
-            transport_->set_rpc_handler(
+            impl_->network.transport->set_rpc_handler(
                 [this](const hpactor::RpcResponseFrame& response) {
-                    rpc_channel_->on_response(response);
+                    impl_->network.rpc_channel->on_response(response);
                 });
-            transport_->set_actor_message_handler([this](const net::WireFrame& frame) {
-                this->deliver_remote(frame);
-            });
-            transport_->listen(config.tcp_port);
+            impl_->network.transport->set_actor_message_handler(
+                [this](const net::WireFrame& frame) {
+                    this->deliver_remote(frame);
+                });
+            impl_->network.transport->listen(config.tcp_port);
         }
 
-        network_thread_ = std::thread([this]() {
-            while (network_loop_->wait(100) >= 0) {
-                network_loop_->process_completions();
+        impl_->network.network_thread = std::thread([this]() {
+            while (impl_->network.event_loop->wait(100) >= 0) {
+                impl_->network.event_loop->process_completions();
                 if (!is_running())
                     break;
             }
         });
 
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
-            *this, *actor_type_registry_, transport_.get());
+            *this, *actor_type_registry_, impl_->network.transport.get());
         spawn_receiver->set_address(
             ActorAddress{endpoint_, SystemActorType, SpawnReceiverId, 0});
 
@@ -354,8 +360,8 @@ ActorSystem::ActorSystem(const Config& config)
             },
             .stop_remote_runtime =
                 [this]() {
-                    if (network_loop_) {
-                        network_loop_->stop();
+                    if (impl_->network.event_loop) {
+                        impl_->network.event_loop->stop();
                     }
                 },
             .leave_discovery = []() {},
@@ -372,17 +378,17 @@ ActorSystem::ActorSystem(const Config& config)
 ActorSystem::~ActorSystem() {
     running_.store(false);
     if (config_.enable_network) {
-        if (network_loop_) {
-            network_loop_->stop();
+        if (impl_->network.event_loop) {
+            impl_->network.event_loop->stop();
         }
-        if (network_thread_.joinable()) {
-            network_thread_.join();
+        if (impl_->network.network_thread.joinable()) {
+            impl_->network.network_thread.join();
         }
-        if (transport_) {
-            transport_->stop_listening();
+        if (impl_->network.transport) {
+            impl_->network.transport->stop_listening();
         }
-        if (discovery_) {
-            discovery_->stop();
+        if (impl_->network.discovery) {
+            impl_->network.discovery->stop();
         }
     }
     if (log_manager_) {
@@ -427,8 +433,8 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
             }
         }
     }
-    if (location_cache_)
-        location_cache_->evict_node(dead_ep);
+    if (impl_->network.location_cache)
+        impl_->network.location_cache->evict_node(dead_ep);
 }
 
 // ── Backpressure API (logging wrappers around BackpressureCoordinator) ───────
@@ -479,7 +485,8 @@ void ActorSystem::emit_remote_backpressure_signal(
                        static_cast<uint64_t>(signal.retry_after.count())));
     }
     impl_->messaging.backpressure->emit_remote_signal(signal, state);
-    if (!transport_ && !backpressure_signal_wire_sink_for_test_) {
+    if (!impl_->network.transport &&
+        !impl_->network.backpressure_signal_wire_sink_for_test) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMailbox, signal.target.id, 0,
                             "backpressure_signal_remote_send_failed",
                             log::field("sender", signal.sender.id.value()));
@@ -611,6 +618,22 @@ adt::DedupCache* ActorSystem::dedup_cache() {
 
 const adt::DedupCache* ActorSystem::dedup_cache() const {
     return impl_->messaging.dedup_cache.get();
+}
+
+net::EventLoop* ActorSystem::event_loop() {
+    return impl_->network.event_loop.get();
+}
+
+net::Transport* ActorSystem::transport() {
+    return impl_->network.transport.get();
+}
+
+net::UdpRegistrar* ActorSystem::registrar() {
+    return impl_->network.registrar.get();
+}
+
+RpcChannel& ActorSystem::rpc_channel() {
+    return *impl_->network.rpc_channel;
 }
 
 // ── Mailbox config helpers ──────────────────────────────────────────────────
@@ -811,7 +834,7 @@ net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
     if (!config_.enable_network) {
         return nullptr;
     }
-    return transport_.get();
+    return impl_->network.transport.get();
 }
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
@@ -829,7 +852,7 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     auto state = std::make_shared<RequestHandle<ActorRef>::State>();
     RequestHandle<ActorRef> handle(state);
 
-    if (!config_.enable_network || !rpc_channel_) {
+    if (!config_.enable_network || !impl_->network.rpc_channel) {
         handle.resolve_error(error(spawn_errors::node_unreachable, "networking "
                                                                    "disabled"));
         return handle;
@@ -851,7 +874,8 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
 
     ActorAddress target{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
 
-    auto rpc_future = rpc_channel_->call_raw(target, request_bytes, timeout_ms);
+    auto rpc_future =
+        impl_->network.rpc_channel->call_raw(target, request_bytes, timeout_ms);
 
     std::thread([state, fut = std::move(rpc_future)]() mutable {
         RequestHandle<ActorRef> inner(state);
@@ -1097,8 +1121,8 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     config_.pool.outbound_limits = model.system.transport_outbound_limits;
     config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;
-    if (transport_) {
-        transport_->set_pool_config(config_.pool);
+    if (impl_->network.transport) {
+        impl_->network.transport->set_pool_config(config_.pool);
     }
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
@@ -1176,7 +1200,7 @@ void ActorSystem::set_drain_config(ActorId target, DrainConfig cfg) {
 void ActorSystem::send_reliable_ack(const ActorAddress& target,
                                     const ActorAddress& acker, uint64_t msg_id,
                                     uint8_t status, uint32_t retry_after_ms) {
-    if (!transport_) {
+    if (!impl_->network.transport) {
         return;
     }
 
@@ -1203,7 +1227,7 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
     }
 
     auto encoded = frame.encode();
-    (void)transport_->try_send(target, encoded);
+    (void)impl_->network.transport->try_send(target, encoded);
 }
 
 // ── Stream protocol ─────────────────────────────────────────────────────────

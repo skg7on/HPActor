@@ -416,9 +416,7 @@ class ActorSystem {
     // ── RPC ───────────────────────────────────────────────────────────────
 
     /// \brief Reference to the RPC channel for remote calls.
-    RpcChannel& rpc_channel() {
-        return *rpc_channel_;
-    }
+    RpcChannel& rpc_channel();
 
     // ── Ask ───────────────────────────────────────────────────────────────
 
@@ -816,16 +814,12 @@ class ActorSystem {
     /// \brief Access the network event loop.
     ///
     /// Returns \c nullptr if networking is not enabled.
-    net::EventLoop* event_loop() {
-        return network_loop_.get();
-    }
+    net::EventLoop* event_loop();
 
     /// \brief Primary transport for remote messaging.
     ///
     /// Returns \c nullptr if networking is not enabled.
-    net::Transport* transport() {
-        return transport_.get();
-    }
+    net::Transport* transport();
 
     /// \brief Get transport for a specific remote endpoint.
     ///
@@ -838,9 +832,7 @@ class ActorSystem {
     net::Transport* get_transport_for(const EndPoint& endpoint);
 
     /// \brief UDP registrar for same-host service discovery.
-    net::UdpRegistrar* registrar() {
-        return registrar_.get();
-    }
+    net::UdpRegistrar* registrar();
 
     // ── Remote spawn ──────────────────────────────────────────────────────
 
@@ -982,23 +974,13 @@ class ActorSystem {
     // Scheduler
     std::unique_ptr<sched::IScheduler> scheduler_;
 
-    // Network components (owned)
-    std::unique_ptr<net::TcpTransport> transport_;
-    BackpressureSignalWireSink backpressure_signal_wire_sink_for_test_;
-    std::shared_ptr<net::UdpRegistrar> registrar_;
-    std::shared_ptr<net::IServiceDiscovery> discovery_;
-    std::shared_ptr<net::ActorLocationCache> location_cache_;
-    uint64_t cache_purge_timer_ = 0;
-    uint64_t retry_timer_ = 0;
-    std::unique_ptr<net::EventLoop> network_loop_;
-    std::thread network_thread_;
+    // Network components — moved to impl_->network
 
     // Actor type registry for remote spawning (owned via pointer to avoid
     // circular dep)
     std::unique_ptr<ActorTypeRegistry> actor_type_registry_;
 
-    // RPC channel for remote calls (after transport_ creation)
-    std::unique_ptr<RpcChannel> rpc_channel_;
+    // RPC channel for remote calls — moved to impl_->network
     // Ask manager for local ask() request tracking
     std::unique_ptr<AskManager> ask_manager_;
     // Passivation manager for actor passivation and reactivation
