@@ -315,73 +315,55 @@ bool WorkerThread::enter_cv_block() {
 
     auto& ws = owner_->placement_workers()[config_.worker_index];
 
-    // Advertise blocking intent with seq_cst to prevent the enqueue path
-    // from reordering its is_blocking_ load before this store (lost-wakeup
-    // protocol).
-    ws.is_blocking_.store(true, std::memory_order_seq_cst);
+    // Advertise parking intent (seq_cst — lost-wakeup protocol in WorkerPark).
+    uint32_t snap = ws.park.begin_park();
 
-    // Double-check for work that may have arrived between our last poll and
-    // setting is_blocking_.  If work is found, clear the flag and return
-    // immediately.
+    // Double-check for work that arrived between last poll and begin_park().
     {
         WorkItem item;
         if (owner_->pop_local(item, config_.worker_index) || try_steal(item)) {
-            ws.is_blocking_.store(false, std::memory_order_release);
+            ws.park.end_park();
             process_work_item(item);
-            return true; // caller continues the main loop
+            return true;
         }
     }
 
     diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
     in_cv_model_.store(true, std::memory_order_relaxed);
 
-    // Compute EDF-aware CV timeout.  Wake before the earliest deadline
-    // expires so another worker can steal deadline work.
+    // Compute EDF-aware timeout (same logic as before).
     auto now = std::chrono::steady_clock::now();
-    auto timeout = std::chrono::milliseconds(100);
+    int64_t timeout_ns = 100'000'000LL; // 100 ms default
     int64_t edf_ns = owner_->edf_next_deadline();
     if (edf_ns != INT64_MAX) {
         int64_t now_ns = now.time_since_epoch().count();
         int64_t delta_ns = edf_ns - now_ns;
         if (delta_ns <= 0)
-            delta_ns = 1'000'000; // overdue: 1 ms floor
-        auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::nanoseconds(delta_ns));
-        // Wake 1 ms before the deadline to leave steal + dispatch headroom.
-        auto margin = std::chrono::milliseconds(1);
-        timeout = (delta_ms > margin) ? (delta_ms - margin)
-                                      : std::chrono::milliseconds(1);
-        if (timeout > std::chrono::milliseconds(100))
-            timeout = std::chrono::milliseconds(100);
+            delta_ns = 1'000'000;
+        int64_t margin_ns = 1'000'000;
+        timeout_ns = std::max(delta_ns - margin_ns, margin_ns);
+        timeout_ns = std::min(timeout_ns, int64_t{100'000'000});
     } else {
-        // No EDF deadlines: exponential safety-net timeout.
-        // Doubles each empty wake, capped at 30 seconds.
-        // 500 ms base (2 wakeups/s) is safe because real work arrival
-        // always uses the zero-latency notify path (wake_if_blocking).
-        constexpr uint32_t kBaseTimeoutMs = 500;
-        constexpr uint32_t kMaxTimeoutMs = 30'000;
+        constexpr int64_t kBaseNs = 500'000'000LL;
+        constexpr int64_t kMaxNs = 30'000'000'000LL;
         uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);
-        uint32_t shift = std::min(c, 9u); // 2^6 * 500ms = 32s > 30s cap
-        uint32_t ms = kBaseTimeoutMs << shift;
-        timeout = std::chrono::milliseconds(std::min(ms, kMaxTimeoutMs));
+        uint32_t shift = std::min(c, 9u);
+        timeout_ns = std::min(kBaseNs << shift, kMaxNs);
     }
 
-    std::unique_lock<std::mutex> lk(ws.sleep_mutex_);
-    bool timed_out = !ws.sleep_cv_.wait_for(lk, timeout, [&] {
-        return !ws.is_blocking_.load(std::memory_order_relaxed) ||
-               stop_requested_.load(std::memory_order_relaxed) ||
-               !running_.load(std::memory_order_relaxed);
-    });
-    if (timed_out) {
+    ws.park.wait(snap, timeout_ns);
+    ws.park.end_park();
+
+    // Distinguish timeout vs notify by checking if seq changed.
+    bool notified = (ws.park.seq.load(std::memory_order_relaxed) != snap);
+    if (notified) {
+        diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
+        consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
+    } else {
         diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);
         consecutive_empty_wakes_.fetch_add(1, std::memory_order_relaxed);
-    } else {
-        diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
-        // A notify indicates the system is active — reset the empty-wake
-        // streak so the next CV entry doesn't use a stale inflated timeout.
-        consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
     }
-    return false; // CV wait completed; caller resets backoff and loops
+    return false;
 }
 
 void WorkerThread::thread_loop() {
