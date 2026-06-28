@@ -312,23 +312,33 @@ ActorSystem::ActorSystem(const Config& config)
 
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
             *this, *impl_->actors.type_registry, impl_->network.transport.get());
-        spawn_receiver->set_address(ActorAddress{
-            impl_->core.endpoint, SystemActorType, SpawnReceiverId, 0});
 
-        auto spawn_mailbox =
-            std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-                SpawnReceiverId, impl_->core.scheduler.get(),
-                mailbox_config_for_spawn());
-        auto spawn_ctx =
-            std::make_shared<ActorContext>(Actor(spawn_receiver), this);
-        spawn_receiver->set_context(spawn_ctx.get());
+        SpawnSpec receiver_spec;
+        receiver_spec.type_name = "SpawnReceiver";
+        receiver_spec.mailbox = mailbox_config_for_spawn();
+        receiver_spec.dispatch_policy = spawn_receiver->dispatch_policy();
+        receiver_spec.dispatch_hints = spawn_receiver->dispatch_hints();
+        receiver_spec.reserved_id = SpawnReceiverId;
+        receiver_spec.actor_type_override = SystemActorType;
+        receiver_spec.origin = SpawnOrigin::System;
 
-        ActorDirectoryEntry spawn_entry;
-        spawn_entry.actor = Actor(spawn_receiver);
-        spawn_entry.instance = spawn_receiver;
-        spawn_entry.mailbox = spawn_mailbox;
-        spawn_entry.context = spawn_ctx;
-        impl_->actors.directory.insert(std::move(spawn_entry));
+        auto result =
+            impl_->spawner->adopt(std::move(spawn_receiver), receiver_spec);
+        if (result.is_error()) {
+            impl_->core.running.store(false, std::memory_order_release);
+            if (impl_->network.event_loop) {
+                impl_->network.event_loop->stop();
+            }
+            if (impl_->network.network_thread.joinable()) {
+                impl_->network.network_thread.join();
+            }
+            if (impl_->network.transport) {
+                impl_->network.transport->stop_listening();
+            }
+            if (impl_->network.discovery) {
+                impl_->network.discovery->stop();
+            }
+        }
     }
 
     {
