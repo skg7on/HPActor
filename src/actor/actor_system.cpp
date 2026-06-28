@@ -949,8 +949,9 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 #undef HPACTOR_MAILBOX_FIELD
 
     config_.dead_letters = model.system.dead_letters;
-    dead_letters_ =
-        std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+    if (dead_letters_) {
+        dead_letters_->reconfigure(config_.dead_letters);
+    }
 
     apply_tracing_config(model.system.tracing);
 

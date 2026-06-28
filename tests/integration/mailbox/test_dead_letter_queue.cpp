@@ -171,3 +171,47 @@ TEST(DeadLetterQueueTest, OverflowPreservesOldestWhenFull) {
     EXPECT_TRUE(q.try_pop(out));
     EXPECT_EQ(out.message_id, 2u);
 }
+
+TEST(DeadLetterQueueTest, ReconfigureShrinksInPlaceAndPreservesCounters) {
+    DeadLetterConfig initial;
+    initial.capacity = 3;
+    DeadLetterQueue queue(initial);
+    for (uint64_t id = 1; id <= 3; ++id) {
+        DeadLetterRecord record;
+        record.message_id = id;
+        ASSERT_TRUE(queue.try_push(std::move(record)));
+    }
+
+    DeadLetterConfig updated = initial;
+    updated.capacity = 2;
+    updated.max_payload_sample_bytes = 8;
+    queue.reconfigure(updated);
+
+    auto snapshot = queue.snapshot();
+    EXPECT_EQ(snapshot.capacity, 2u);
+    EXPECT_EQ(snapshot.depth, 2u);
+    EXPECT_EQ(snapshot.total_pushed, 3u);
+    EXPECT_EQ(snapshot.total_lost, 1u);
+
+    DeadLetterRecord first;
+    ASSERT_TRUE(queue.try_pop(first));
+    EXPECT_EQ(first.message_id, 2u);
+}
+
+TEST(DeadLetterQueueTest, ReconfigureTrimsExistingPayloads) {
+    DeadLetterConfig initial;
+    initial.capacity = 2;
+    initial.max_payload_sample_bytes = 16;
+    DeadLetterQueue queue(initial);
+    DeadLetterRecord record;
+    record.payload_sample = StreamBuffer{1, 2, 3, 4};
+    ASSERT_TRUE(queue.try_push(std::move(record)));
+
+    DeadLetterConfig updated = initial;
+    updated.max_payload_sample_bytes = 2;
+    queue.reconfigure(updated);
+
+    auto records = queue.snapshot_records();
+    ASSERT_EQ(records.size(), 1u);
+    EXPECT_EQ(records.front().payload_sample.size(), 2u);
+}

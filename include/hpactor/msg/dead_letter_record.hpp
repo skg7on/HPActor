@@ -445,6 +445,13 @@ class DeadLetterQueue {
     /// \note Thread safety: acquires internal mutex.
     bool try_pop(DeadLetterRecord& out) noexcept;
 
+    /// \brief Apply a new queue policy without changing this object's address.
+    ///
+    /// Existing counters are preserved. Capacity shrink evicts oldest records.
+    /// \param[in] config New configuration to apply.
+    /// \note Thread safety: acquires internal mutex.
+    void reconfigure(DeadLetterConfig config) noexcept;
+
     /// \brief Read-only access to the queue configuration.
     ///
     /// \return A const reference to the current \c DeadLetterConfig.
