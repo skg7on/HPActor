@@ -944,8 +944,18 @@ class ActorSystem {
     void set_drain_config(ActorId target, DrainConfig cfg);
 
   private:
+    /// \brief Non-template adoption helper for spawn<T>().
+    ///
+    /// Preserves the current template-spawn algorithm exactly. Constructed
+    /// by spawning code that has already created a concrete T and selected
+    /// its type-name string. This is a migration seam — Phase 2 replaces
+    /// it with ActorSpawner::adopt() and SpawnSpec.
+    Actor adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
+                                     std::string_view type_name);
+
     class Impl;
     std::unique_ptr<Impl> impl_;
+
     // Temporary: existing fields remain until migration tasks move them into
     // Impl.
     Config config_;
@@ -1072,75 +1082,11 @@ class ActorSystem {
 
 template <typename T, typename... Args>
 Actor ActorSystem::spawn(Args&&... args) {
-    ActorId id = actor_directory_.allocate_id();
     auto actor = std::make_shared<T>(nullptr, *this, std::forward<Args>(args)...);
-    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
     if constexpr (requires { T::kActorTypeName; }) {
-        actor->set_type_name(T::kActorTypeName);
-    } else {
-        actor->set_type_name("unknown");
+        return adopt_preconstructed_actor(actor, T::kActorTypeName);
     }
-
-    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-        id, scheduler_.get(), mailbox_config_for_spawn());
-    auto* mbox = mailbox_ptr.get();
-
-    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
-    actor->set_context(actor_ctx.get());
-
-    ActorDirectoryEntry entry;
-    entry.actor = Actor(actor);
-    entry.instance = actor;
-    entry.mailbox = mailbox_ptr;
-    entry.context = actor_ctx;
-    actor_directory_.insert(std::move(entry));
-
-    actor->set_scheduler(scheduler_.get());
-    actor->set_mailbox(mbox);
-
-    if (metrics_ring_buffer_) [[unlikely]] {
-        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
-        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
-    }
-
-    if (logger_) [[unlikely]] {
-        mbox->set_logger(logger_);
-        actor->set_logger(logger_);
-    }
-
-    switch (actor->dispatch_policy()) {
-        case sched::DispatchPolicy::Cooperative:
-            scheduler_->notify_ready(id, 0, INT64_MAX);
-            break;
-        case sched::DispatchPolicy::DedicatedThread:
-            scheduler_->register_dedicated_thread(
-                id, actor->dispatch_hints().cpu_affinity);
-            break;
-        case sched::DispatchPolicy::DedicatedPool:
-            scheduler_->register_dedicated_pool(id, actor->dispatch_hints().pool_size);
-            break;
-    }
-
-    actor->on_activate();
-
-    if (auto* lc = actor->as_lifecycle()) {
-        lc->transition(LifecycleState::kActive);
-    }
-
-    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
-                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
-                     "actor spawned",
-                     log::field_lit("type", actor->type_name().data()));
-
-    if (metrics_ring_buffer_) [[unlikely]] {
-        metrics::MetricEvent evt{};
-        evt.actor_id = id;
-        evt.event_type = metrics::MetricEventType::kActorSpawned;
-        evt.value_hi = 1;
-        metrics_ring_buffer_->try_push(evt);
-    }
-
-    return Actor(actor);
+    return adopt_preconstructed_actor(actor, "unknown");
 }
 
 } // namespace hpactor

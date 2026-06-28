@@ -853,6 +853,78 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     return handle;
 }
 
+// ── adopt_preconstructed_actor
+// ────────────────────────────────────────────────
+
+Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
+                                              std::string_view type_name) {
+    ActorId id = actor_directory_.allocate_id();
+    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    actor->set_type_name(std::string{type_name});
+
+    auto* local = static_cast<LocalActor*>(actor.get());
+    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+        id, scheduler_.get(), mailbox_config_for_spawn());
+    auto* mbox = mailbox_ptr.get();
+
+    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
+    local->set_context(actor_ctx.get());
+
+    ActorDirectoryEntry entry;
+    entry.actor = Actor(actor);
+    entry.instance = actor;
+    entry.mailbox = mailbox_ptr;
+    entry.context = actor_ctx;
+    actor_directory_.insert(std::move(entry));
+
+    actor->set_scheduler(scheduler_.get());
+    actor->set_mailbox(mbox);
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
+    if (logger_) [[unlikely]] {
+        mbox->set_logger(logger_);
+        actor->set_logger(logger_);
+    }
+
+    switch (actor->dispatch_policy()) {
+        case sched::DispatchPolicy::Cooperative:
+            scheduler_->notify_ready(id, 0, INT64_MAX);
+            break;
+        case sched::DispatchPolicy::DedicatedThread:
+            scheduler_->register_dedicated_thread(
+                id, actor->dispatch_hints().cpu_affinity);
+            break;
+        case sched::DispatchPolicy::DedicatedPool:
+            scheduler_->register_dedicated_pool(id, actor->dispatch_hints().pool_size);
+            break;
+    }
+
+    local->on_activate();
+
+    if (auto* lc = actor->as_lifecycle()) {
+        lc->transition(LifecycleState::kActive);
+    }
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
+                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
+                     "actor spawned",
+                     log::field_lit("type", actor->type_name().data()));
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent evt{};
+        evt.actor_id = id;
+        evt.event_type = metrics::MetricEventType::kActorSpawned;
+        evt.value_hi = 1;
+        metrics_ring_buffer_->try_push(evt);
+    }
+
+    return Actor(actor);
+}
+
 // ── spawn_configured ────────────────────────────────────────────────────────
 
 Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
