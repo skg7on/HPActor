@@ -66,7 +66,7 @@ namespace hpactor {
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
 ActorSystem::ActorSystem(const Config& config)
-    : config_(config), endpoint_(config.endpoint), registry_(endpoint_),
+    : config_(config), endpoint_(config.endpoint), registry_(actor_directory_),
       start_time_(std::chrono::steady_clock::now()),
       scheduler_(std::make_unique<sched::HybridScheduler>(
           *this, config.scheduler_threads, 4, config.timer_backend,
@@ -494,7 +494,6 @@ void ActorSystem::set_backpressure_signal_wire_sink_for_test(
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
     registry_.put(name, actor.address());
-    actor_directory_.register_name(name, actor.address());
 }
 
 Actor ActorSystem::resolve_actor(const std::string& name) {

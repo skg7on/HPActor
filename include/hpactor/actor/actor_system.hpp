@@ -330,23 +330,24 @@ class ActorSystem {
     /// external consumers).
     class ActorRegistry {
       public:
-        explicit ActorRegistry(EndPoint endpoint) : endpoint_(endpoint) {}
+        explicit ActorRegistry(ActorDirectory& directory)
+            : directory_(directory) {}
+
         void put(const std::string& name, ActorAddress addr) {
-            actors_[name] = std::move(addr);
+            (void)directory_.register_name(name, std::move(addr));
         }
+
         ActorAddress get(const std::string& name) const {
-            auto it = actors_.find(name);
-            if (it != actors_.end())
-                return it->second;
-            return {};
+            auto address = directory_.resolve_name(name);
+            return address.has_value() ? address.value() : ActorAddress{};
         }
+
         void erase(const std::string& name) {
-            actors_.erase(name);
+            (void)directory_.unregister_name(name);
         }
 
       private:
-        [[maybe_unused]] EndPoint endpoint_;
-        std::unordered_map<std::string, ActorAddress> actors_;
+        ActorDirectory& directory_;
     };
 
     /// \brief Mutable access to the actor registry.
@@ -945,8 +946,8 @@ class ActorSystem {
     Config config_;
     EndPoint endpoint_;
     Clock clock_;
-    ActorRegistry registry_;
     ActorDirectory actor_directory_;
+    ActorRegistry registry_;
     std::unique_ptr<LocalDeliveryEngine> local_delivery_engine_;
     std::unique_ptr<mailbox::DeliveryPipeline> delivery_pipeline_;
     std::unique_ptr<BackpressureCoordinator> backpressure_coordinator_;

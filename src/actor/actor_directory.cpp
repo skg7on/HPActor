@@ -68,6 +68,11 @@ bool ActorDirectory::register_name(std::string name, ActorAddress address) {
     return inserted;
 }
 
+bool ActorDirectory::unregister_name(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return names_.erase(name) > 0;
+}
+
 std::optional<ActorAddress>
 ActorDirectory::resolve_name(const std::string& name) const {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -98,7 +103,15 @@ std::vector<ActorDirectoryEntry> ActorDirectory::snapshot() const {
 
 bool ActorDirectory::erase(ActorId id) {
     std::lock_guard<std::mutex> lock(mutex_);
-    return entries_.erase(id) > 0;
+    bool erased = entries_.erase(id) > 0;
+    for (auto it = names_.begin(); it != names_.end();) {
+        if (it->second.id == id) {
+            it = names_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return erased;
 }
 
 std::size_t ActorDirectory::size() const noexcept {

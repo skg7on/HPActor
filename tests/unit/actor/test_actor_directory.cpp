@@ -79,3 +79,42 @@ TEST(ActorDirectoryTest, ResolveActorByName) {
     ASSERT_TRUE(resolved.has_value());
     EXPECT_EQ(resolved->id(), ActorId{7});
 }
+
+TEST(ActorDirectoryTest, UnregisterNameRemovesMapping) {
+    ActorDirectory directory;
+    ActorAddress address{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{7}, 0};
+    ASSERT_TRUE(directory.register_name("service", address));
+
+    EXPECT_TRUE(directory.unregister_name("service"));
+    EXPECT_FALSE(directory.resolve_name("service").has_value());
+    EXPECT_FALSE(directory.unregister_name("service"));
+}
+
+TEST(ActorDirectoryTest, DuplicateNameKeepsFirstAddress) {
+    ActorDirectory directory;
+    ActorAddress first{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{7}, 0};
+    ActorAddress second{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{8}, 0};
+
+    EXPECT_TRUE(directory.register_name("service", first));
+    EXPECT_FALSE(directory.register_name("service", second));
+    ASSERT_TRUE(directory.resolve_name("service").has_value());
+    EXPECT_EQ(directory.resolve_name("service")->id, first.id);
+}
+
+TEST(ActorDirectoryTest, EraseActorRemovesAllNamesForActor) {
+    ActorDirectory directory;
+    Config config;
+    config.scheduler_threads = 0;
+    ActorSystem system{config};
+    auto instance = std::make_shared<DirectoryTestActor>(nullptr, system);
+    instance->set_address(
+        ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{9}, 0});
+    Actor actor{instance};
+    ASSERT_TRUE(directory.insert({actor, instance, nullptr, nullptr}));
+    ASSERT_TRUE(directory.register_name("primary", actor.address()));
+    ASSERT_TRUE(directory.register_name("alias", actor.address()));
+
+    EXPECT_TRUE(directory.erase(actor.id()));
+    EXPECT_FALSE(directory.resolve_name("primary").has_value());
+    EXPECT_FALSE(directory.resolve_name("alias").has_value());
+}

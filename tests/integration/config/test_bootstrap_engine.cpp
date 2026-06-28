@@ -71,6 +71,10 @@ behavior = "BootstrapTestActor"
 
     auto addr = system.registry().get("my_actor");
     EXPECT_NE(addr.id.value(), 0u);
+
+    auto resolved = system.resolve_actor("my_actor");
+    ASSERT_TRUE(static_cast<bool>(resolved));
+    EXPECT_EQ(resolved.address(), addr);
 }
 
 // ---------------------------------------------------------------------------
