@@ -1098,6 +1098,13 @@ Exit criteria:
 
 ### Phase 3: consolidate `MessagingRuntime`
 
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-28-actor-system-phase3-messaging-runtime-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-28-actor-system-phase3-messaging-runtime-implementation.md`
+
 Scope:
 
 - Move DLQ, delivery pipeline, fast local delivery, backpressure, dedup, and
@@ -1114,6 +1121,13 @@ Exit criteria:
 - Mailbox concurrency, reservation, metadata, and observability tests pass.
 
 ### Phase 4: extract frame and stream protocol handling
+
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-28-actor-system-phase4-frame-stream-routing-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-28-actor-system-phase4-frame-stream-routing-implementation.md`
 
 Scope:
 
