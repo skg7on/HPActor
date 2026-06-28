@@ -195,6 +195,25 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
     enqueue_admitted(item, priority);
 }
 
+void HybridScheduler::notify_ready_fast(ActorId actor, EventBasedActor* actor_ptr,
+                                        uint8_t priority, int64_t deadline_ns) {
+    if (!running_.load(std::memory_order_acquire)) {
+        return;
+    }
+    FAULT_INJECT("hpactor.scheduler.notify_ready.drop") {
+        return;
+    }
+
+    WorkItem item{actor, deadline_ns, 0};
+    item.actor_ptr = actor_ptr;
+
+    if (!try_admit_ready(actor)) {
+        return;
+    }
+
+    enqueue_admitted(item, priority);
+}
+
 void HybridScheduler::notify_ready_edf(ActorId actor, uint8_t priority,
                                        int64_t deadline_ns) {
     if (!running_.load(std::memory_order_acquire)) {
@@ -253,16 +272,22 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     FAULT_INJECT("hpactor.scheduler.execute_actor.dispatch_skip") {
         return;
     }
-    auto actor_ptr = system_.get_actor(item.actor);
-    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
-        return;
+
+    // Fast path: use direct actor_ptr when available (no hash lookup).
+    EventBasedActor* actor = item.actor_ptr;
+    if (!actor) {
+        auto actor_sp = system_.get_actor(item.actor);
+        if (!actor_sp || !actor_sp->is_event_based_actor()) {
+            return;
+        }
+        actor = static_cast<EventBasedActor*>(actor_sp.get());
     }
 
     if (metrics_ring_buffer_) [[unlikely]] {
         metrics::MetricEvent evt{};
         evt.actor_id = item.actor;
         evt.event_type = metrics::MetricEventType::kSchedulerDispatch;
-        evt.value_hi = 0; // worker_id filled by the steal event
+        evt.value_hi = 0;
         metrics_ring_buffer_->try_push(evt);
     }
 
@@ -272,10 +297,6 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         "actor dispatched",
         log::field("worker_id", static_cast<uint64_t>(tl_current_worker_id)));
 
-    auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
-
-    // Set thread-local current actor ID so SlabAllocated::operator new and
-    // mem::current_actor_id() can attribute allocations to the correct actor.
     mem::set_current_actor_id(item.actor);
 
     ActorExecutionContext execution_context{
@@ -288,14 +309,12 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     auto result =
         executor_.run(*actor, item, execution_context, system_.use_coroutines());
     if (result.disposition == ActorRunDisposition::RequeueReady) {
-        // Carry a sequence counter so BehaviorActorRunner::run() can cap
-        // consecutive RequeueReady cycles and force a yield.  Wrap at 128
-        // so the counter resets naturally after a forced yield.
         uint64_t next_seq = item.sequence + 1;
         if (next_seq > 128)
             next_seq = 0;
         WorkItem next{item.actor, result.deadline_ns, next_seq};
         next.edf_scheduled = item.edf_scheduled;
+        next.actor_ptr = item.actor_ptr; // preserve for subsequent activations
         enqueue_admitted(next, result.priority);
     }
 }

@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/actor/actor_fwd.hpp>
 #include <hpactor/adt/id.hpp>
 #include <hpactor/adt/tags.hpp>
 #include <hpactor/types/types.hpp>
@@ -95,6 +96,25 @@ class IActorReadyNotifier {
     virtual void
     notify_ready_edf(ActorId actor, uint8_t priority, int64_t deadline_ns) {
         // Default: fall back to regular notify_ready (EDF-unaware schedulers).
+        notify_ready(actor, priority, deadline_ns);
+    }
+
+    /// \brief Fast-path wakeup with direct actor pointer.
+    ///
+    /// Called by MPSCActorMailbox when actor_ptr is known, allowing the
+    /// scheduler to populate WorkItem::actor_ptr and skip the get_actor()
+    /// hash lookup in execute_actor().
+    ///
+    /// Default implementation ignores the pointer and delegates to
+    /// notify_ready(), preserving backward compatibility for all existing
+    /// scheduler mocks and stub implementations.
+    ///
+    /// \param[in] actor     Actor ID.
+    /// \param[in] actor_ptr Direct pointer to the EventBasedActor.
+    /// \param[in] priority  0 = highest priority.
+    /// \param[in] deadline_ns Deadline in nanoseconds or INT64_MAX.
+    virtual void notify_ready_fast(ActorId actor, EventBasedActor* /*actor_ptr*/,
+                                   uint8_t priority, int64_t deadline_ns) {
         notify_ready(actor, priority, deadline_ns);
     }
 };

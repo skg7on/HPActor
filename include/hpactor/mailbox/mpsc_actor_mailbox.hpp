@@ -153,6 +153,16 @@ template <typename T> class MPSCActorMailbox {
     /// \note Thread safety: the callback is invoked by an arbitrary producer
     ///       thread. The registered function must be safe to call from any
     ///       thread.
+    /// \brief Wire a direct actor pointer for fast-path wakeup (SCHED-01).
+    ///
+    /// When set, enqueue_reserved() calls scheduler_->notify_ready_fast()
+    /// instead of notify_ready(), passing the pointer so the scheduler can
+    /// populate WorkItem::actor_ptr and skip the get_actor() lookup in
+    /// execute_actor().  Safe to call once before the mailbox is in use.
+    void set_actor_ptr(EventBasedActor* ptr) noexcept {
+        actor_ptr_ = ptr;
+    }
+
     void set_continuation_callback(ActorContinuationCallback callback) {
 #ifdef HPACTOR_DEBUG
         assert(!in_active_use_.load(std::memory_order_acquire) &&
@@ -620,8 +630,8 @@ template <typename T> class MPSCActorMailbox {
                     scheduler_->notify_ready_edf(actor_id_, meta.priority,
                                                  meta.deadline_ns);
                 } else {
-                    scheduler_->notify_ready(actor_id_, meta.priority,
-                                             meta.deadline_ns);
+                    scheduler_->notify_ready_fast(
+                        actor_id_, actor_ptr_, meta.priority, meta.deadline_ns);
                 }
             }
         }
@@ -1313,8 +1323,11 @@ template <typename T> class MPSCActorMailbox {
                                                                     ///< handler.
 
     // --- Core queue members ---
-    ActorId actor_id_;                ///< Owning actor identifier.
-    sched::IScheduler* scheduler_;    ///< Scheduler for wakeup notifications.
+    ActorId actor_id_;             ///< Owning actor identifier.
+    sched::IScheduler* scheduler_; ///< Scheduler for wakeup notifications.
+    EventBasedActor* actor_ptr_{nullptr}; ///< Direct actor pointer for fast
+                                          ///< wakeup. Set via set_actor_ptr()
+                                          ///< after spawn.
     MultiLaneQueue<T> lanes_{1};      ///< System + user lane storage.
     OverflowQueue<T> overflow_queue_; ///< Spill-overflow queue.
     MailboxConfig config_;            ///< Active mailbox configuration.
