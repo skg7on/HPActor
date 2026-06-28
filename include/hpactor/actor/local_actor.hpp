@@ -48,6 +48,15 @@ class LocalActor : public AbstractActor {
     virtual void on_activate() {}
     virtual void on_deactivate() {}
 
+    bool bind_context(ActorContext* context) noexcept override {
+        set_context(context);
+        return true;
+    }
+
+    void activate_after_spawn() override {
+        on_activate();
+    }
+
   private:
     ActorContext* ctx_ = nullptr;
 };
