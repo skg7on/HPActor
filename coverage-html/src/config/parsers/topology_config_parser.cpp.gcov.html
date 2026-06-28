@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">84.6&nbsp;%</td>
@@ -258,28 +258,28 @@
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :             :     }</span>
 <span id="L182"><span class="lineNum">     182</span>                 :             : </span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC tlaBgGNC">          93 :     result&lt;void&gt; parse(const TomlTableView&amp; root, TomlFileData&amp; out,</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC tlaBgGNC">          94 :     result&lt;void&gt; parse(const TomlTableView&amp; root, TomlFileData&amp; out,</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :         // Parse [[dispatcher]]</span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">          93 :         root.for_each_table_array(&quot;dispatcher&quot;, [&amp;](TomlTableView disp_tbl) {</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">          94 :         root.for_each_table_array(&quot;dispatcher&quot;, [&amp;](TomlTableView disp_tbl) {</span></span>
 <span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">           2 :             out.dispatchers.emplace_back(parse_dispatcher(disp_tbl));</span></span>
 <span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">           2 :         });</span></span>
 <span id="L189"><span class="lineNum">     189</span>                 :             : </span>
 <span id="L190"><span class="lineNum">     190</span>                 :             :         // Parse [template.*]</span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">          93 :         root.for_each_subtable(&quot;template&quot;, [&amp;](std::string_view tmpl_name,</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">          94 :         root.for_each_subtable(&quot;template&quot;, [&amp;](std::string_view tmpl_name,</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :             :                                                TomlTableView tmpl_tbl) {</span>
 <span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">          12 :             out.templates[std::string{tmpl_name}] = parse_actor(tmpl_tbl);</span></span>
 <span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">           4 :         });</span></span>
 <span id="L195"><span class="lineNum">     195</span>                 :             : </span>
 <span id="L196"><span class="lineNum">     196</span>                 :             :         // Parse [[actor]]</span>
-<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">          93 :         root.for_each_table_array(&quot;actor&quot;, [&amp;](TomlTableView actor_tbl) {</span></span>
+<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">          94 :         root.for_each_table_array(&quot;actor&quot;, [&amp;](TomlTableView actor_tbl) {</span></span>
 <span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">         110 :             TomlRawActor raw;</span></span>
 <span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">         110 :             raw.def = parse_actor(actor_tbl);</span></span>
 <span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">         110 :             raw.inherits = actor_tbl.read_string(&quot;inherits&quot;);</span></span>
 <span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">         110 :             out.actors.emplace_back(std::move(raw));</span></span>
 <span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">         110 :         });</span></span>
 <span id="L203"><span class="lineNum">     203</span>                 :             : </span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">          93 :         return result&lt;void&gt;::make();</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">          94 :         return result&lt;void&gt;::make();</span></span>
 <span id="L205"><span class="lineNum">     205</span>                 :             :     }</span>
 <span id="L206"><span class="lineNum">     206</span>                 :             : };</span>
 <span id="L207"><span class="lineNum">     207</span>                 :             : </span>

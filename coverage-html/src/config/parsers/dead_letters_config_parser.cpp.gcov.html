@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">79.3&nbsp;%</td>
+            <td class="headerCovTableEntryMed">82.8&nbsp;%</td>
             <td class="headerCovTableEntry">29</td>
-            <td class="headerCovTableEntry">23</td>
+            <td class="headerCovTableEntry">24</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
+            <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
             <td class="headerCovTableEntry">6</td>
-            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">5</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -100,12 +100,12 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : namespace {</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : static hpactor::mailbox::DeadLetterOverflowPolicy</span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">           4 : parse_dl_overflow_policy(const std::string&amp; s) {</span></span>
-<span id="L26"><span class="lineNum">      26</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (s == &quot;drop_newest_record&quot;)</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">           5 : parse_dl_overflow_policy(const std::string&amp; s) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :     if (s == &quot;drop_newest_record&quot;)</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return hpactor::mailbox::DeadLetterOverflowPolicy::DropNewestRecord;</span></span>
-<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">           4 :     if (s == &quot;metadata_only&quot;)</span></span>
+<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC tlaBgGNC">           5 :     if (s == &quot;metadata_only&quot;)</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           4 :         return hpactor::mailbox::DeadLetterOverflowPolicy::MetadataOnly;</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return hpactor::mailbox::DeadLetterOverflowPolicy::DropOldestRecord;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :     return hpactor::mailbox::DeadLetterOverflowPolicy::DropOldestRecord;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : class DeadLettersConfigParser final : public ITomlSystemConfigParser {</span>
@@ -113,38 +113,38 @@
 <span id="L35"><span class="lineNum">      35</span>                 :             :     static constexpr std::string_view kName = &quot;system.dead_letters&quot;;</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     static constexpr int kOrder = 95;</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaUNC">           0 :     std::string_view name() const noexcept override {</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     std::string_view name() const noexcept override {</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaUNC">           0 :         return kName;</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     }</span>
 <span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaUNC">           0 :     int order() const noexcept override {</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     }</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC tlaBgGNC">          86 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          85 :         auto dt = system.table(&quot;dead_letters&quot;);</span></span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 81 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          85 :         if (!dt.valid())</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          86 :         auto dt = system.table(&quot;dead_letters&quot;);</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 81 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">          86 :         if (!dt.valid())</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          81 :             return result&lt;void&gt;::make();</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.enabled = dt.read_bool(&quot;enabled&quot;, true);</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.capacity = dt.read_uint32(&quot;capacity&quot;, 4096);</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.byte_capacity = dt.read_uint32(&quot;byte_capacity&quot;, 0);</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.max_payload_sample_bytes =</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           4 :             dt.read_uint32(&quot;max_payload_sample_bytes&quot;, 512);</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.overflow_policy =</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           4 :             parse_dl_overflow_policy(dt.read_string(&quot;overflow_policy&quot;, &quot;drop_&quot;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.enabled = dt.read_bool(&quot;enabled&quot;, true);</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.capacity = dt.read_uint32(&quot;capacity&quot;, 4096);</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.byte_capacity = dt.read_uint32(&quot;byte_capacity&quot;, 0);</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.max_payload_sample_bytes =</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           5 :             dt.read_uint32(&quot;max_payload_sample_bytes&quot;, 512);</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.overflow_policy =</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           5 :             parse_dl_overflow_policy(dt.read_string(&quot;overflow_policy&quot;, &quot;drop_&quot;</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :                                                                        &quot;oldest_&quot;</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :                                                                        &quot;recor&quot;</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :                                                                        &quot;d&quot;));</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.store_payload = dt.read_bool(&quot;store_payload&quot;, true);</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.alert_on_first_failure =</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           4 :             dt.read_bool(&quot;alert_on_first_failure&quot;, false);</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.alert_threshold_per_minute =</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           4 :             dt.read_uint32(&quot;alert_threshold_per_minute&quot;, 100);</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           4 :         out.dead_letters.routing_policy = hpactor::mailbox::parse_routing_policy(</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           8 :             dt.read_string(&quot;routing_policy&quot;, &quot;always&quot;));</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.store_payload = dt.read_bool(&quot;store_payload&quot;, true);</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.alert_on_first_failure =</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           5 :             dt.read_bool(&quot;alert_on_first_failure&quot;, false);</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.alert_threshold_per_minute =</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           5 :             dt.read_uint32(&quot;alert_threshold_per_minute&quot;, 100);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           5 :         out.dead_letters.routing_policy = hpactor::mailbox::parse_routing_policy(</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          10 :             dt.read_string(&quot;routing_policy&quot;, &quot;always&quot;));</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           4 :         return result&lt;void&gt;::make();</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           5 :         return result&lt;void&gt;::make();</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : };</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : </span>

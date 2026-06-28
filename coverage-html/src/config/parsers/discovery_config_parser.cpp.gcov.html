@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
@@ -108,11 +108,11 @@
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          86 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          85 :         auto dt = system.table(&quot;discovery&quot;);</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 70 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          85 :         if (!dt.valid())</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          70 :             return result&lt;void&gt;::make();</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          86 :         auto dt = system.table(&quot;discovery&quot;);</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 71 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          86 :         if (!dt.valid())</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          71 :             return result&lt;void&gt;::make();</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          15 :         out.discovery_backend = dt.read_string(&quot;backend&quot;, &quot;&quot;);</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>

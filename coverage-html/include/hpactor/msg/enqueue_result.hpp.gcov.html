@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -340,10 +340,10 @@
 <span id="L260"><span class="lineNum">     260</span>                 :             :         return accepted();</span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             : </span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">      386218 :     [[nodiscard]] bool accepted() const noexcept {</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      541900 :         return code == EnqueueResultCode::Accepted ||</span></span>
-<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 155682 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 230536 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119356 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 36326 times"> + </span>]:<span class="tlaGNC">      505574 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
-<span id="L266"><span class="lineNum">     266</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119356 times"> + </span>]:<span class="tlaGNC">      505574 :                code == EnqueueResultCode::ReroutedToOverflow;</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">      386230 :     [[nodiscard]] bool accepted() const noexcept {</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      541910 :         return code == EnqueueResultCode::Accepted ||</span></span>
+<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 155680 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 230550 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119356 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 36324 times"> + </span>]:<span class="tlaGNC">      505586 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
+<span id="L266"><span class="lineNum">     266</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119356 times"> + </span>]:<span class="tlaGNC">      505586 :                code == EnqueueResultCode::ReroutedToOverflow;</span></span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :     }</span>
 <span id="L268"><span class="lineNum">     268</span>                 :             : </span>
 <span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">          35 :     [[nodiscard]] bool retryable() const noexcept {</span></span>
@@ -397,14 +397,14 @@
 <span id="L317"><span class="lineNum">     317</span>                 :             :     uint64_t sequence = 0; ///&lt; Monotonically increasing signal sequence number.</span>
 <span id="L318"><span class="lineNum">     318</span>                 :             : };</span>
 <span id="L319"><span class="lineNum">     319</span>                 :             : </span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">      488342 : [[nodiscard]] constexpr bool is_system_message(TypeTag tag) noexcept {</span></span>
-<span id="L321"><span class="lineNum">     321</span>   [<span class="tlaGBC" title="Branch 0 was taken 267270 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 221072 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 312 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 266958 times"> + </span>]:<span class="tlaGNC">      488342 :     return static_cast&lt;uint32_t&gt;(tag) &gt; 0 &amp;&amp;</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">      488342 :            static_cast&lt;uint32_t&gt;(tag) &lt; static_cast&lt;uint32_t&gt;(TypeTag::User);</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">      488353 : [[nodiscard]] constexpr bool is_system_message(TypeTag tag) noexcept {</span></span>
+<span id="L321"><span class="lineNum">     321</span>   [<span class="tlaGBC" title="Branch 0 was taken 267281 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 221072 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 312 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 266969 times"> + </span>]:<span class="tlaGNC">      488353 :     return static_cast&lt;uint32_t&gt;(tag) &gt; 0 &amp;&amp;</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">      488353 :            static_cast&lt;uint32_t&gt;(tag) &lt; static_cast&lt;uint32_t&gt;(TypeTag::User);</span></span>
 <span id="L323"><span class="lineNum">     323</span>                 :             : }</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             : </span>
 <span id="L325"><span class="lineNum">     325</span>                 :             : [[nodiscard]] inline uint64_t</span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      564475 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      564475 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      563151 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      563151 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
 <span id="L328"><span class="lineNum">     328</span>                 :             : }</span>
 <span id="L329"><span class="lineNum">     329</span>                 :             : </span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : /// \brief Human-readable snake_case string for an \c OverflowPolicy.</span>
@@ -444,9 +444,9 @@
 <span id="L362"><span class="lineNum">     362</span>                 :             : /// \note Thread safety: constexpr and lock-free — safe to call from any</span>
 <span id="L363"><span class="lineNum">     363</span>                 :             : ///       thread without synchronization.</span>
 <span id="L364"><span class="lineNum">     364</span>                 :             : [[nodiscard]] constexpr bool</span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC tlaBgGNC">      265461 : is_expired(int64_t deadline_ns, uint64_t now_ns) noexcept {</span></span>
-<span id="L366"><span class="lineNum">     366</span>   [<span class="tlaGBC" title="Branch 0 was taken 265458 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 265438 times"> + </span>]:<span class="tlaGNC">      265481 :     return deadline_ns &gt;= 0 &amp;&amp; deadline_ns != INT64_MAX &amp;&amp;</span></span>
-<span id="L367"><span class="lineNum">     367</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">      265481 :            static_cast&lt;uint64_t&gt;(deadline_ns) &lt; now_ns;</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC tlaBgGNC">      265473 : is_expired(int64_t deadline_ns, uint64_t now_ns) noexcept {</span></span>
+<span id="L366"><span class="lineNum">     366</span>   [<span class="tlaGBC" title="Branch 0 was taken 265470 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 265450 times"> + </span>]:<span class="tlaGNC">      265493 :     return deadline_ns &gt;= 0 &amp;&amp; deadline_ns != INT64_MAX &amp;&amp;</span></span>
+<span id="L367"><span class="lineNum">     367</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">      265493 :            static_cast&lt;uint64_t&gt;(deadline_ns) &lt; now_ns;</span></span>
 <span id="L368"><span class="lineNum">     368</span>                 :             : }</span>
 <span id="L369"><span class="lineNum">     369</span>                 :             : </span>
 <span id="L370"><span class="lineNum">     370</span>                 :             : /// \brief Human-readable snake_case string for a \c MailboxPressureState.</span>

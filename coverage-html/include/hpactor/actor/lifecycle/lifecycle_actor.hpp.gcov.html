@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.0&nbsp;%</td>
@@ -146,8 +146,8 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///         \c transition() call, or \c kStarting if no transition</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     ///         has occurred.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \note Thread safety: lock-free atomic load with acquire ordering.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2498 :     LifecycleState state() const noexcept {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        4996 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2537 :     LifecycleState state() const noexcept {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5074 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Whether the actor accepts user (data-plane) messages in</span>
@@ -339,7 +339,7 @@
 <span id="L261"><span class="lineNum">     261</span>                 :             :     /// subscribe to events, send bootstrap messages).</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :     /// \note Called from the CAS path in \c transition(), under the</span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :     ///       owning scheduler thread.</span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">         265 :     virtual void on_start() {}</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">         299 :     virtual void on_start() {}</span></span>
 <span id="L265"><span class="lineNum">     265</span>                 :             : </span>
 <span id="L266"><span class="lineNum">     266</span>                 :             :     /// \brief Hook invoked when the actor enters \c kDraining.</span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :     ///</span>

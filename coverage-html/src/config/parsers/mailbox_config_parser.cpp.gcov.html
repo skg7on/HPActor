@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">60.0&nbsp;%</td>
@@ -143,11 +143,11 @@
 <span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC tlaBgGNC">          86 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">          85 :         auto mt = system.table(&quot;mailbox&quot;);</span></span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 65 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">          85 :         if (!mt.valid())</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          65 :             return result&lt;void&gt;::make();</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">          86 :         auto mt = system.table(&quot;mailbox&quot;);</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 66 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">          86 :         if (!mt.valid())</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          66 :             return result&lt;void&gt;::make();</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             : </span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">          20 :         out.mailbox.default_capacity = mt.read_uint32(&quot;default_capacity&quot;, 1024);</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          20 :         out.mailbox.default_byte_capacity =</span></span>

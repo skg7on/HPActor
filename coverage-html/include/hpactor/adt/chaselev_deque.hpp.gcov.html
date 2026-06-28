@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">94.9&nbsp;%</td>
@@ -164,14 +164,14 @@
 <span id="L86"><span class="lineNum">      86</span>                 :             :         explicit CircularArray(size_t cap);</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : </span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :         /// \brief Load the element at logical index \p i.</span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC tlaBgGNC">       11624 :         T get(int64_t i) const {</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">       11668 :             return buf[static_cast&lt;size_t&gt;(i) &amp; mask].load(std::memory_order_relaxed);</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC tlaBgGNC">       11376 :         T get(int64_t i) const {</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">       11420 :             return buf[static_cast&lt;size_t&gt;(i) &amp; mask].load(std::memory_order_relaxed);</span></span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :         }</span>
 <span id="L92"><span class="lineNum">      92</span>                 :             : </span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :         /// \brief Store \p v at logical index \p i.</span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">       11642 :         void put(int64_t i, T v) {</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">       11642 :             buf[static_cast&lt;size_t&gt;(i) &amp; mask].store(v, std::memory_order_relaxed);</span></span>
-<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">       11642 :         }</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">       11394 :         void put(int64_t i, T v) {</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">       11394 :             buf[static_cast&lt;size_t&gt;(i) &amp; mask].store(v, std::memory_order_relaxed);</span></span>
+<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">       11394 :         }</span></span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : </span>
 <span id="L98"><span class="lineNum">      98</span>                 :             :         /// \brief Grow the array to double its current capacity.</span>
 <span id="L99"><span class="lineNum">      99</span>                 :             :         ///</span>
@@ -187,22 +187,22 @@
 <span id="L109"><span class="lineNum">     109</span>                 :             : };</span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : template &lt;typename T&gt;</span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        3630 : ChaselevDeque&lt;T&gt;::CircularArray::CircularArray(size_t cap)</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        7260 :     : buf(cap), mask(cap - 1) {</span></span>
-<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 925252 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3630 times"> + </span>]:<span class="tlaGNC">      928882 :     for (auto&amp; slot : buf) {</span></span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">      925252 :         slot.store(T{}, std::memory_order_relaxed);</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        3629 : ChaselevDeque&lt;T&gt;::CircularArray::CircularArray(size_t cap)</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        7258 :     : buf(cap), mask(cap - 1) {</span></span>
+<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 924740 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3629 times"> + </span>]:<span class="tlaGNC">      928369 :     for (auto&amp; slot : buf) {</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">      924740 :         slot.store(T{}, std::memory_order_relaxed);</span></span>
 <span id="L116"><span class="lineNum">     116</span>                 :             :     }</span>
-<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        3630 : }</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        3629 : }</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : </span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : template &lt;typename T&gt;</span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : typename ChaselevDeque&lt;T&gt;::CircularArray*</span>
-<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">           9 : ChaselevDeque&lt;T&gt;::CircularArray::grow(int64_t bottom, int64_t top) const {</span></span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           9 :     size_t new_cap = buf.size() * 2;</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           9 :     auto* new_arr = new CircularArray(new_cap);</span></span>
-<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 396 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">         405 :     for (int64_t i = top; i &lt; bottom; ++i) {</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         396 :         new_arr-&gt;put(i, get(i));</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">           8 : ChaselevDeque&lt;T&gt;::CircularArray::grow(int64_t bottom, int64_t top) const {</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           8 :     size_t new_cap = buf.size() * 2;</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           8 :     auto* new_arr = new CircularArray(new_cap);</span></span>
+<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 140 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">         148 :     for (int64_t i = top; i &lt; bottom; ++i) {</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         140 :         new_arr-&gt;put(i, get(i));</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :             :     }</span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           9 :     return new_arr;</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           8 :     return new_arr;</span></span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : }</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : </span>
 <span id="L130"><span class="lineNum">     130</span>                 :             : template &lt;typename T&gt;</span>
@@ -211,69 +211,69 @@
 <span id="L133"><span class="lineNum">     133</span>                 :             : </span>
 <span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">        3621 : template &lt;typename T&gt; ChaselevDeque&lt;T&gt;::~ChaselevDeque() {</span></span>
 <span id="L135"><span class="lineNum">     135</span>         [<span class="tlaGBC" title="Branch 0 was taken 3621 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        3621 :     delete array_.load(std::memory_order_acquire);</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3621 times"> + </span>]:<span class="tlaGNC">        3630 :     for (auto* arr : garbage_) {</span></span>
-<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           9 :         delete arr;</span></span>
+<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3621 times"> + </span>]:<span class="tlaGNC">        3629 :     for (auto* arr : garbage_) {</span></span>
+<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           8 :         delete arr;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        3621 : }</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             : </span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">       11246 : template &lt;typename T&gt; void ChaselevDeque&lt;T&gt;::push_bottom(T item) {</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">       11246 :     int64_t b = bottom_.load(std::memory_order_relaxed);</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">       11246 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">       11246 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">       11254 : template &lt;typename T&gt; void ChaselevDeque&lt;T&gt;::push_bottom(T item) {</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">       11254 :     int64_t b = bottom_.load(std::memory_order_relaxed);</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">       11254 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">       11254 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
 <span id="L145"><span class="lineNum">     145</span>                 :             : </span>
-<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11237 times"> + </span>]:<span class="tlaGNC">       11246 :     if (b - t &gt; static_cast&lt;int64_t&gt;(arr-&gt;mask)) {</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">           9 :         auto* new_arr = arr-&gt;grow(b, t);</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">           9 :         garbage_.push_back(arr);</span></span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           9 :         array_.store(new_arr, std::memory_order_release);</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           9 :         arr = new_arr;</span></span>
+<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11246 times"> + </span>]:<span class="tlaGNC">       11254 :     if (b - t &gt; static_cast&lt;int64_t&gt;(arr-&gt;mask)) {</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">           8 :         auto* new_arr = arr-&gt;grow(b, t);</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">           8 :         garbage_.push_back(arr);</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           8 :         array_.store(new_arr, std::memory_order_release);</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           8 :         arr = new_arr;</span></span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     }</span>
 <span id="L152"><span class="lineNum">     152</span>                 :             : </span>
-<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">       11246 :     arr-&gt;put(b, std::move(item));</span></span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">       11246 :     bottom_.store(b + 1, std::memory_order_release);</span></span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">       11246 : }</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">       11254 :     arr-&gt;put(b, std::move(item));</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">       11254 :     bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">       11254 : }</span></span>
 <span id="L156"><span class="lineNum">     156</span>                 :             : </span>
-<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">       32339 : template &lt;typename T&gt; bool ChaselevDeque&lt;T&gt;::pop_bottom(T&amp; out) {</span></span>
-<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">       32339 :     int64_t b = bottom_.fetch_sub(1, std::memory_order_acq_rel) - 1;</span></span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">       32339 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">       34509 : template &lt;typename T&gt; bool ChaselevDeque&lt;T&gt;::pop_bottom(T&amp; out) {</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">       34509 :     int64_t b = bottom_.fetch_sub(1, std::memory_order_acq_rel) - 1;</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">       34509 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">       32339 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
-<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaGBC" title="Branch 0 was taken 23271 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9068 times"> + </span>]:<span class="tlaGNC">       32339 :     if (b - t &lt; 0) {</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">       23271 :         bottom_.store(b + 1, std::memory_order_release);</span></span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">       23271 :         return false;</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">       34509 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
+<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaGBC" title="Branch 0 was taken 25435 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9074 times"> + </span>]:<span class="tlaGNC">       34509 :     if (b - t &lt; 0) {</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">       25435 :         bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">       25435 :         return false;</span></span>
 <span id="L165"><span class="lineNum">     165</span>                 :             :     }</span>
 <span id="L166"><span class="lineNum">     166</span>                 :             : </span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">        9068 :     out = arr-&gt;get(b);</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">        9074 :     out = arr-&gt;get(b);</span></span>
 <span id="L168"><span class="lineNum">     168</span>                 :             : </span>
-<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaGBC" title="Branch 0 was taken 3686 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5382 times"> + </span>]:<span class="tlaGNC">        9068 :     if (b == t) {</span></span>
-<span id="L170"><span class="lineNum">     170</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3686 times"> + </span>]:<span class="tlaGNC">        7372 :         if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel,</span></span>
+<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaGBC" title="Branch 0 was taken 3680 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5394 times"> + </span>]:<span class="tlaGNC">        9074 :     if (b == t) {</span></span>
+<span id="L170"><span class="lineNum">     170</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3680 times"> + </span>]:<span class="tlaGNC">        7360 :         if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel,</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :                                           std::memory_order_acquire)) {</span>
 <span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             bottom_.store(b + 1, std::memory_order_release);</span></span>
 <span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :         }</span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC tlaBgGNC">        3686 :         bottom_.store(b + 1, std::memory_order_release);</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">        3686 :         return true;</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC tlaBgGNC">        3680 :         bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">        3680 :         return true;</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :             :     }</span>
 <span id="L178"><span class="lineNum">     178</span>                 :             : </span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">        5382 :     return true;</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">        5394 :     return true;</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :             : }</span>
 <span id="L181"><span class="lineNum">     181</span>                 :             : </span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">        7434 : template &lt;typename T&gt; bool ChaselevDeque&lt;T&gt;::steal_top(T&amp; out) {</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        7434 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">        7434 :     int64_t b = bottom_.load(std::memory_order_acquire);</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">        7479 : template &lt;typename T&gt; bool ChaselevDeque&lt;T&gt;::steal_top(T&amp; out) {</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        7479 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">        7479 :     int64_t b = bottom_.load(std::memory_order_acquire);</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :             : </span>
-<span id="L186"><span class="lineNum">     186</span>         [<span class="tlaGBC" title="Branch 0 was taken 5274 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2160 times"> + </span>]:<span class="tlaGNC">        7434 :     if (b - t &lt;= 0) {</span></span>
-<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">        5274 :         return false;</span></span>
+<span id="L186"><span class="lineNum">     186</span>         [<span class="tlaGBC" title="Branch 0 was taken 5317 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2162 times"> + </span>]:<span class="tlaGNC">        7479 :     if (b - t &lt;= 0) {</span></span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">        5317 :         return false;</span></span>
 <span id="L188"><span class="lineNum">     188</span>                 :             :     }</span>
 <span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">        2160 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        2160 :     out = arr-&gt;get(t);</span></span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">        2162 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        2162 :     out = arr-&gt;get(t);</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :             : </span>
-<span id="L193"><span class="lineNum">     193</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2160 times"> + </span>]:<span class="tlaGNC">        4320 :     if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel,</span></span>
+<span id="L193"><span class="lineNum">     193</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2162 times"> + </span>]:<span class="tlaGNC">        4324 :     if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel,</span></span>
 <span id="L194"><span class="lineNum">     194</span>                 :             :                                       std::memory_order_acquire)) {</span>
 <span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L196"><span class="lineNum">     196</span>                 :             :     }</span>
 <span id="L197"><span class="lineNum">     197</span>                 :             : </span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC tlaBgGNC">        2160 :     return true;</span></span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC tlaBgGNC">        2162 :     return true;</span></span>
 <span id="L199"><span class="lineNum">     199</span>                 :             : }</span>
 <span id="L200"><span class="lineNum">     200</span>                 :             : </span>
 <span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">          35 : template &lt;typename T&gt; size_t ChaselevDeque&lt;T&gt;::size_approx() const {</span></span>

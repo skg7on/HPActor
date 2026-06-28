@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-28 10:21:12</td>
+            <td class="headerValue">2026-06-28 10:56:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -200,9 +200,9 @@
 <span id="L122"><span class="lineNum">     122</span>                 :             : /// \param[in] reason The failure reason to check.</span>
 <span id="L123"><span class="lineNum">     123</span>                 :             : /// \return true if the reason represents a transient condition likely to</span>
 <span id="L124"><span class="lineNum">     124</span>                 :             : ///         resolve without application-level intervention.</span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC tlaBgGNC">         158 : constexpr bool retryable(FailureReason reason) noexcept {</span></span>
-<span id="L126"><span class="lineNum">     126</span>      [<span class="tlaGBC" title="Branch 0 was taken 71 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 87 times"> + </span>]:<span class="tlaGNC">         158 :     switch (reason) {</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          71 :         case FailureReason::NoRoute:</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC tlaBgGNC">         159 : constexpr bool retryable(FailureReason reason) noexcept {</span></span>
+<span id="L126"><span class="lineNum">     126</span>      [<span class="tlaGBC" title="Branch 0 was taken 72 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 87 times"> + </span>]:<span class="tlaGNC">         159 :     switch (reason) {</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          72 :         case FailureReason::NoRoute:</span></span>
 <span id="L128"><span class="lineNum">     128</span>                 :             :         case FailureReason::NodeUnavailable:</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :         case FailureReason::ActorNotReady:</span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :         case FailureReason::CircuitOpen:</span>
@@ -221,7 +221,7 @@
 <span id="L143"><span class="lineNum">     143</span>                 :             :         case FailureReason::PassivationQueueFull:</span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :         case FailureReason::NodeReplaced:</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :         case FailureReason::FencingTokenStale:</span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          71 :             return true;</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          72 :             return true;</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case FailureReason::SchemaVersionMismatch:</span></span>
 <span id="L148"><span class="lineNum">     148</span>                 :             :         case FailureReason::NodeQuarantined:</span>
 <span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
