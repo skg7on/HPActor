@@ -15,6 +15,8 @@ add_executable(test_unit_sched
     test_lost_wakeup_rate_limit.cpp
     test_worker_backoff.cpp
     test_sched_branches.cpp
+    test_actor_ptr_workitem.cpp
+    test_adaptive_batch.cpp
 )
 target_link_libraries(test_unit_sched hpactor hpactor_test_support GTest::gtest_main pthread)
 gtest_discover_tests(test_unit_sched)

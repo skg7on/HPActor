@@ -416,6 +416,8 @@ class EventBasedActor : public LocalActor {
     }
     void set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* mailbox) override {
         mailbox_ = mailbox;
+        if (mailbox_)
+            mailbox_->set_actor_ptr(this);
     }
 
     void set_metrics_ring_buffer(void* buf) noexcept override {

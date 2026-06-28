@@ -20,6 +20,7 @@
 #include <hpactor/sched/a2ws.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/work_queue.hpp>
+#include <hpactor/sched/worker_park.hpp>
 
 #include <atomic>
 #include <condition_variable>
@@ -197,16 +198,75 @@ class WorkPlacementScheduler {
     /// \param[in] actor Actor ID.
     void unregister_dedicated(ActorId actor);
 
-    /// \brief Node in the lock-free shared-input stack.
-    ///
-    /// External threads push to this stack via CAS; the owning worker
-    /// drains the entire stack and pushes items into its own deque
-    /// safely (as the deque owner). This prevents the race between
-    /// non-owner push_bottom and owner pop_bottom on ChaselevDeque.
+    /// \brief Node in the lock-free shared-input stack (fallback when ring
+    /// full).
     struct SharedInputNode {
         WorkItem item;
         uint8_t priority{0};
         std::atomic<SharedInputNode*> next{nullptr};
+    };
+
+    /// \brief Bounded MPSC inject ring — zero-allocation cross-thread
+    /// injection.
+    ///
+    /// Producers claim slots via CAS on \c tail; the owner drains sequentially
+    /// from \c head.  Returns \c false on full; callers fall back to
+    /// \c SharedInputNode.  256 slots fit in 16 KB (L1-resident per worker).
+    struct InjectRing {
+        static constexpr uint32_t kCapacity = 256;
+        static constexpr uint32_t kMask = kCapacity - 1;
+
+        struct Slot {
+            std::atomic<uint64_t> seq{0};
+            WorkItem item{};
+            uint8_t priority{0};
+        };
+
+        Slot slots[kCapacity];
+        alignas(64) std::atomic<uint64_t> tail{0}; ///< Producers increment.
+        alignas(64) uint64_t head{0};              ///< Owner-only consumer.
+
+        InjectRing() noexcept {
+            for (uint32_t i = 0; i < kCapacity; ++i)
+                slots[i].seq.store(i, std::memory_order_relaxed);
+        }
+
+        /// \brief Try to push one item. Returns \c false if the ring is full.
+        bool try_push(const WorkItem& item, uint8_t priority) noexcept {
+            uint64_t pos = tail.load(std::memory_order_relaxed);
+            for (;;) {
+                Slot& slot = slots[pos & kMask];
+                uint64_t seq = slot.seq.load(std::memory_order_acquire);
+                int64_t diff =
+                    static_cast<int64_t>(seq) - static_cast<int64_t>(pos);
+                if (diff == 0) {
+                    if (tail.compare_exchange_weak(pos, pos + 1,
+                                                   std::memory_order_acq_rel,
+                                                   std::memory_order_relaxed)) {
+                        slot.item = item;
+                        slot.priority = priority;
+                        slot.seq.store(pos + 1, std::memory_order_release);
+                        return true;
+                    }
+                } else if (diff < 0) {
+                    return false; // full
+                } else {
+                    pos = tail.load(std::memory_order_relaxed);
+                }
+            }
+        }
+
+        /// \brief Pop one item (owner only). Returns \c false if empty.
+        bool try_pop(WorkItem& out, uint8_t& priority) noexcept {
+            Slot& slot = slots[head & kMask];
+            if (slot.seq.load(std::memory_order_acquire) != head + 1)
+                return false;
+            out = slot.item;
+            priority = slot.priority;
+            slot.seq.store(head + kCapacity, std::memory_order_release);
+            ++head;
+            return true;
+        }
     };
 
     /// \brief Per-worker queue and EDF state.
@@ -214,9 +274,16 @@ class WorkPlacementScheduler {
         std::unique_ptr<ChaselevDeque<WorkItem>[]> queues;
         uint32_t index{0};
         EDFQueue edf_queue;
-        /// Lock-free stack for cross-thread work submission.
-        /// Non-owning threads CAS-push; owner drains and reverses.
+        /// Fast-path zero-allocation inject ring.  Producers try this first;
+        /// fall back to shared_input (SharedInputNode heap) when full.
+        InjectRing inject_ring;
+        /// Lock-free stack for cross-thread work submission (ring-full
+        /// fallback).
         std::atomic<SharedInputNode*> shared_input{nullptr};
+
+        /// Linux-only futex park (replaces CV on the wakeup hot path).
+        /// No-op on macOS/other — existing is_blocking_/sleep_cv_ used.
+        WorkerPark park;
 
         /// Set by owner when entering CV-blocking sleep.  Enqueue threads
         /// read this flag; if true they acquire \c sleep_mutex_ and notify
@@ -232,14 +299,17 @@ class WorkPlacementScheduler {
         /// adequate — upgrade to lock-free if profiling shows contention.
         mutable std::mutex edf_push_mutex_;
 
-        /// Wake a worker blocked on \c sleep_cv_ (idempotent, safe from
-        /// any thread).  If the worker is not blocking this is a no-op.
+        /// Wake a worker (lock-free futex on Linux, CV on other platforms).
         void wake_if_blocking() {
+#ifdef __linux__
+            park.wake();
+#else
             if (is_blocking_.load(std::memory_order_acquire)) {
                 std::lock_guard<std::mutex> lk(sleep_mutex_);
                 is_blocking_.store(false, std::memory_order_release);
                 sleep_cv_.notify_one();
             }
+#endif
         }
     };
 

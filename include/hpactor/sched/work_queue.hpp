@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/actor/actor_fwd.hpp>
 #include <hpactor/adt/chaselev_deque.hpp>
 #include <hpactor/adt/multi_priority_work_queue.hpp>
 #include <hpactor/types/types.hpp>
@@ -27,6 +28,12 @@ struct WorkItem {
     bool edf_scheduled = false; ///< True if this item was originally placed
                                 ///< via the EDF path. Preserved across
                                 ///< requeue cycles.
+    /// Direct actor pointer populated by notify_ready_fast(). When non-null,
+    /// execute_actor() uses it directly, eliminating the get_actor() hash
+    /// lookup on every dispatch. Null means fall back to get_actor().
+    /// Invariant: alive while queued — ActorReadyGate prevents post-termination
+    /// scheduling; shutdown drains all items before destroying actors.
+    EventBasedActor* actor_ptr{nullptr};
 };
 
 using adt::ChaselevDeque;
