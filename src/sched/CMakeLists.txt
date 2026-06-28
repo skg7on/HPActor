@@ -4,6 +4,7 @@
 
 target_sources(hpactor_lib PRIVATE
     a2ws.cpp
+    actor_execution_dependencies.cpp
     actor_execution_engine.cpp
     actor_ready_gate.cpp
     dedicated_thread_pool.cpp
