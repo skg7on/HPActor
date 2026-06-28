@@ -34,6 +34,7 @@
 #endif
 #include <hpactor/actor/stream_config.hpp>
 #include <hpactor/actor/stream_handle.hpp>
+#include <hpactor/actor/stream_registry.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
@@ -956,8 +957,7 @@ class ActorSystem {
     Actor system_actor_;
 
     // Stream registry: stream_id → actor
-    std::unordered_map<uint64_t, ActorId> stream_senders_;
-    std::unordered_map<uint64_t, ActorId> stream_receivers_;
+    StreamRegistry stream_registry_;
     std::atomic<uint64_t> stream_counter_{0};
 
     // Stream frame delivery

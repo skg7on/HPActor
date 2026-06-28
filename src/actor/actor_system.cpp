@@ -1104,16 +1104,15 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
 // ── Stream protocol ─────────────────────────────────────────────────────────
 
 void ActorSystem::register_stream_sender(uint64_t stream_id, ActorId actor_id) {
-    stream_senders_[stream_id] = actor_id;
+    stream_registry_.register_sender(stream_id, actor_id);
 }
 
 void ActorSystem::register_stream_receiver(uint64_t stream_id, ActorId actor_id) {
-    stream_receivers_[stream_id] = actor_id;
+    stream_registry_.register_receiver(stream_id, actor_id);
 }
 
 void ActorSystem::unregister_stream(uint64_t stream_id) {
-    stream_senders_.erase(stream_id);
-    stream_receivers_.erase(stream_id);
+    (void)stream_registry_.take(stream_id);
 }
 
 uint64_t ActorSystem::allocate_stream_id(ActorId sender_id) {
@@ -1144,63 +1143,53 @@ void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
 
 void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
     const auto& data = frame.pb_envelope.stream_data();
-    auto it = stream_receivers_.find(data.stream_id());
-    if (it == stream_receivers_.end())
+    auto receiver = stream_registry_.find_receiver(data.stream_id());
+    if (!receiver.has_value())
         return;
 
     const auto& payload_str = data.payload();
     auto payload = StreamBuffer::from_data(
         reinterpret_cast<const uint8_t*>(payload_str.data()), payload_str.size());
     TypedMessage msg(stream::StreamDataTag, std::move(payload));
-    (void)try_deliver_local_fast(it->second, std::move(msg));
+    (void)try_deliver_local_fast(receiver.value(), std::move(msg));
 }
 
 void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
     const auto& ack = frame.pb_envelope.stream_ack();
-    auto it = stream_senders_.find(ack.stream_id());
-    if (it == stream_senders_.end())
+    auto sender = stream_registry_.find_sender(ack.stream_id());
+    if (!sender.has_value())
         return;
 
     auto ack_buf = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(&ack),
                                            sizeof(ack));
     TypedMessage msg(stream::StreamAckTag, std::move(ack_buf));
-    (void)try_deliver_local_fast(it->second, std::move(msg));
+    (void)try_deliver_local_fast(sender.value(), std::move(msg));
 }
 
 void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
     const auto& close = frame.pb_envelope.stream_close();
-
-    auto sit = stream_senders_.find(close.stream_id());
-    if (sit != stream_senders_.end()) {
+    auto routes = stream_registry_.take(close.stream_id());
+    if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(sit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
     }
-
-    auto rit = stream_receivers_.find(close.stream_id());
-    if (rit != stream_receivers_.end()) {
+    if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(rit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
     }
-
-    unregister_stream(close.stream_id());
 }
 
 void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
     const auto& error = frame.pb_envelope.stream_error();
-
-    auto sit = stream_senders_.find(error.stream_id());
-    if (sit != stream_senders_.end()) {
+    auto routes = stream_registry_.take(error.stream_id());
+    if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(sit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
     }
-
-    auto rit = stream_receivers_.find(error.stream_id());
-    if (rit != stream_receivers_.end()) {
+    if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(rit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
     }
-
-    unregister_stream(error.stream_id());
 }
 
 std::optional<StreamHandle>
