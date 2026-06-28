@@ -39,35 +39,55 @@ bool DeadLetterQueue::try_push(DeadLetterRecord&& record) noexcept {
     FAULT_INJECT("hpactor.mailbox.dlq.push.drop") {
         return false;
     }
+
+    std::lock_guard<std::mutex> lock(mutex_);
     if (!config_.enabled) {
         return false;
     }
 
     trim_payload(record);
-
-    std::lock_guard<std::mutex> lock(mutex_);
     if (records_.size() >= config_.capacity) {
         switch (config_.overflow_policy) {
             case DeadLetterOverflowPolicy::DropOldestRecord:
                 records_.pop_front();
-                total_lost_++;
+                ++total_lost_;
                 break;
             case DeadLetterOverflowPolicy::DropNewestRecord:
-                total_lost_++;
+                ++total_lost_;
                 return false;
             case DeadLetterOverflowPolicy::MetadataOnly:
                 record.payload_sample.clear();
                 if (records_.size() >= config_.capacity) {
                     records_.pop_front();
-                    total_lost_++;
+                    ++total_lost_;
                 }
                 break;
         }
     }
 
     records_.push_back(std::move(record));
-    total_pushed_++;
+    ++total_pushed_;
     return true;
+}
+
+void DeadLetterQueue::reconfigure(DeadLetterConfig config) noexcept {
+    if (config.capacity == 0) {
+        config.capacity = 4096;
+    }
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    config_ = std::move(config);
+    for (auto& record : records_) {
+        if (!config_.store_payload) {
+            record.payload_sample.clear();
+        } else if (record.payload_sample.size() > config_.max_payload_sample_bytes) {
+            record.payload_sample.resize(config_.max_payload_sample_bytes);
+        }
+    }
+    while (records_.size() > config_.capacity) {
+        records_.pop_front();
+        ++total_lost_;
+    }
 }
 
 bool DeadLetterQueue::try_pop(DeadLetterRecord& out) noexcept {

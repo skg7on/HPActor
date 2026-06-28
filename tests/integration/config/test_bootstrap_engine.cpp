@@ -71,6 +71,10 @@ behavior = "BootstrapTestActor"
 
     auto addr = system.registry().get("my_actor");
     EXPECT_NE(addr.id.value(), 0u);
+
+    auto resolved = system.resolve_actor("my_actor");
+    ASSERT_TRUE(static_cast<bool>(resolved));
+    EXPECT_EQ(resolved.address(), addr);
 }
 
 // ---------------------------------------------------------------------------
@@ -249,4 +253,63 @@ inherits = "base"
 
     auto addr = system.registry().get("templated");
     EXPECT_NE(addr.id.value(), 0u);
+}
+
+TEST(BootstrapEngineTest, DeadLetterReconfigurePreservesQueueIdentity) {
+    Config config;
+    config.scheduler_threads = 0;
+    config.dead_letters.capacity = 8;
+    ActorSystem system(config);
+    auto* original = system.dead_letter_queue();
+    ASSERT_NE(original, nullptr);
+
+    const std::string toml = R"(
+[system]
+version = "1.0"
+
+[system.dead_letters]
+enabled = true
+capacity = 2
+max_payload_sample_bytes = 16
+overflow_policy = "drop_oldest"
+store_payload = true
+)";
+    auto result = system.load_topology(write_temp(toml, "dlq_identity"));
+    ASSERT_TRUE(result.has_value());
+
+    EXPECT_EQ(system.dead_letter_queue(), original);
+
+    TypedMessage msg(TypeTag::User, StreamBuffer{1, 2, 3});
+    auto delivery = system.try_deliver_local(ActorId{999999}, std::move(msg));
+    EXPECT_EQ(delivery.code, mailbox::EnqueueResultCode::ActorNotFound);
+    auto snapshot = system.dead_letter_snapshot();
+    EXPECT_EQ(snapshot.capacity, 2u);
+    EXPECT_EQ(snapshot.depth, 1u);
+}
+
+TEST(BootstrapEngineTest, ConfiguredSpawnMatchesTemplateLifecycle) {
+    Config config;
+    config.scheduler_threads = 0;
+    ActorSystem system(config);
+
+    auto direct = system.spawn<BootstrapTestActor>();
+    auto configured_instance =
+        std::make_shared<BootstrapTestActor>(nullptr, system);
+    ActorDef def;
+    def.behavior = "BootstrapTestActor";
+    auto configured = system.spawn_configured(std::move(configured_instance), def);
+
+    ASSERT_TRUE(static_cast<bool>(direct));
+    ASSERT_TRUE(static_cast<bool>(configured));
+    // Both spawn paths produce actors with working mailboxes.
+    EXPECT_NE(system.get_mailbox(direct.id()), nullptr);
+    EXPECT_NE(system.get_mailbox(configured.id()), nullptr);
+    // Lifecycle state parity: both actors are in the same lifecycle state.
+    EXPECT_EQ(direct.get()->as_lifecycle() != nullptr,
+              configured.get()->as_lifecycle() != nullptr);
+    if (direct.get()->as_lifecycle()) {
+        EXPECT_EQ(direct.get()->as_lifecycle()->state(), LifecycleState::kActive);
+        EXPECT_EQ(configured.get()->as_lifecycle()->state(),
+                  LifecycleState::kActive);
+    }
 }

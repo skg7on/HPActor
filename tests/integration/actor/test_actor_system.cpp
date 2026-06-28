@@ -36,3 +36,35 @@ TEST(ActorSystemTest, ResolveActorReturnsRegisteredNamedActor) {
     EXPECT_EQ(resolved.id(), actor.id());
     EXPECT_EQ(resolved.address(), actor.address());
 }
+
+TEST(ActorSystemTest, UnregisterActorRemovesNameFromResolution) {
+    hpactor::Config config;
+    config.scheduler_threads = 0;
+    hpactor::ActorSystem system{config};
+
+    auto actor = system.spawn<hpactor::EventBasedActor>();
+    ASSERT_TRUE(static_cast<bool>(actor));
+    system.register_actor("ephemeral-worker", actor);
+    ASSERT_TRUE(static_cast<bool>(system.resolve_actor("ephemeral-worker")));
+
+    system.unregister_actor("ephemeral-worker");
+
+    EXPECT_FALSE(static_cast<bool>(system.resolve_actor("ephemeral-worker")));
+    EXPECT_EQ(system.registry().get("ephemeral-worker").id, hpactor::ActorId{0});
+}
+
+TEST(ActorSystemTest, DuplicateNameKeepsFirstActor) {
+    hpactor::Config config;
+    config.scheduler_threads = 0;
+    hpactor::ActorSystem system{config};
+
+    auto first = system.spawn<hpactor::EventBasedActor>();
+    auto second = system.spawn<hpactor::EventBasedActor>();
+    system.register_actor("stable-name", first);
+    system.register_actor("stable-name", second);
+
+    auto resolved = system.resolve_actor("stable-name");
+    ASSERT_TRUE(static_cast<bool>(resolved));
+    EXPECT_EQ(resolved.id(), first.id());
+    EXPECT_EQ(system.registry().get("stable-name").id, first.id());
+}

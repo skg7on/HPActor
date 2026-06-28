@@ -156,12 +156,10 @@ TEST(ActorDeepWorkflow, ActorSystemActorCountAndResolve) {
     auto unknown = system.resolve_actor("nonexistent");
     EXPECT_EQ(unknown.get(), nullptr);
 
-    // unregister removes from the registry; resolve_actor may still
-    // find the actor through the directory
+    // unregister removes from the registry and directory
     system.unregister_actor("county");
-    auto still_there = system.resolve_actor("county");
-    EXPECT_NE(still_there.get(), nullptr);
-    EXPECT_EQ(still_there.address(), a1.address());
+    auto removed = system.resolve_actor("county");
+    EXPECT_EQ(removed.get(), nullptr);
 
     // register with a new name works after unregister
     system.register_actor("county_v2", a1);

@@ -122,6 +122,27 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Design spec: `docs/superpowers/specs/2026-05-29-scheduler-decouple-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-05-29-scheduler-decouple-impl.md`.
 
+**ActorSystem Refactor Phase 0: Correctness Stabilization** ✅ Complete (2026-06-28)
+- Consolidated actor names in `ActorDirectory`; `ActorSystem::ActorRegistry` is now a compatibility view backed by the directory.
+- Preserved `DeadLetterQueue` object identity during topology configuration and added synchronized in-place `reconfigure()`.
+- Aligned configured-spawn lifecycle, logger, metrics, and spawn-event behavior with template `spawn<T>()`.
+- Added a synchronized `StreamRegistry` with atomic route removal and concurrent registration stress test.
+- Verified full build and focused actor/config/mailbox/system test suites (105+ targeted tests, full CTest minus pre-existing gossip/NOT_BUILT).
+
+**ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
+- Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
+  `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,
+  `NetworkRuntimeState`, `OperationsRuntimeState`, `ClusterRuntimeState`.
+- Added `adopt_preconstructed_actor()` spawn bridge — template `spawn<T>()`
+  constructs `T` and delegates out-of-line, enabling future field migration.
+- Added architecture fitness tests: public-header compilation check,
+  `assert_file_excludes.cmake` reusable field-exclusion script.
+- `src/runtime/actor_system_impl.hpp` is private to `hpactor_lib`.
+- State groups are defined but fields remain in the facade header for now;
+  field migration to Impl is deferred to Phase 1b to keep reviews focused.
+- Next: move facade fields into named Impl state groups and convert inline
+  accessors to out-of-line.
+
 **EdgeOps Telemetry Platform:** ✅ Complete (2026-05-31)
 
 **Ask Timeout Standardization (ACT-007):** ✅ Complete (2026-06-06)

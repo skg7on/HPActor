@@ -102,6 +102,14 @@ class ActorDirectory {
     /// \retval false Name already exists in the directory.
     bool register_name(std::string name, ActorAddress address);
 
+    /// \brief Remove a name-to-address mapping.
+    ///
+    /// Thread-safe. Returns false when the name is not registered.
+    /// \param[in] name The name to unregister.
+    /// \retval true The name was erased.
+    /// \retval false The name was not registered.
+    bool unregister_name(const std::string& name);
+
     /// \brief Resolve a registered name to an address.
     ///
     /// \param[in] name Previously registered actor name.

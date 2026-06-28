@@ -128,16 +128,13 @@ TEST(TopologyBootstrap, CleanShutdownAfterTopologyLoad) {
     EXPECT_TRUE(system.is_running());
     EXPECT_EQ(system.shutdown_phase(), ShutdownPhase::Running);
 
-    // Transition actors to kActive (spawn_configured leaves them in kStarting)
-    // and set ImmediateStop for fast shutdown.
+    // spawn_configured now transitions actors to kActive; verify and
+    // set ImmediateStop for fast shutdown.
     system.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
-        if (auto* lc = actor.as_lifecycle()) {
-            // kStarting → kActive is the valid path
-            if (lc->state() == LifecycleState::kStarting) {
-                lc->transition(LifecycleState::kActive);
-            }
-            lc->set_drain_config(DrainConfig{DrainPolicy::ImmediateStop,
-                                             std::chrono::milliseconds{500}});
+        if (auto* lifecycle = actor.as_lifecycle()) {
+            EXPECT_EQ(lifecycle->state(), LifecycleState::kActive);
+            lifecycle->set_drain_config(DrainConfig{
+                DrainPolicy::ImmediateStop, std::chrono::milliseconds{500}});
         }
     });
 

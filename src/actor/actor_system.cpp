@@ -14,6 +14,8 @@
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
+
+#include "../runtime/actor_system_impl.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -66,7 +68,8 @@ namespace hpactor {
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
 ActorSystem::ActorSystem(const Config& config)
-    : config_(config), endpoint_(config.endpoint), registry_(endpoint_),
+    : impl_(std::make_unique<Impl>(*this, config)), config_(config),
+      endpoint_(config.endpoint), registry_(actor_directory_),
       start_time_(std::chrono::steady_clock::now()),
       scheduler_(std::make_unique<sched::HybridScheduler>(
           *this, config.scheduler_threads, 4, config.timer_backend,
@@ -494,7 +497,6 @@ void ActorSystem::set_backpressure_signal_wire_sink_for_test(
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
     registry_.put(name, actor.address());
-    actor_directory_.register_name(name, actor.address());
 }
 
 Actor ActorSystem::resolve_actor(const std::string& name) {
@@ -851,6 +853,78 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     return handle;
 }
 
+// ── adopt_preconstructed_actor
+// ────────────────────────────────────────────────
+
+Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
+                                              std::string_view type_name) {
+    ActorId id = actor_directory_.allocate_id();
+    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    actor->set_type_name(std::string{type_name});
+
+    auto* local = static_cast<LocalActor*>(actor.get());
+    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+        id, scheduler_.get(), mailbox_config_for_spawn());
+    auto* mbox = mailbox_ptr.get();
+
+    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
+    local->set_context(actor_ctx.get());
+
+    ActorDirectoryEntry entry;
+    entry.actor = Actor(actor);
+    entry.instance = actor;
+    entry.mailbox = mailbox_ptr;
+    entry.context = actor_ctx;
+    actor_directory_.insert(std::move(entry));
+
+    actor->set_scheduler(scheduler_.get());
+    actor->set_mailbox(mbox);
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
+    if (logger_) [[unlikely]] {
+        mbox->set_logger(logger_);
+        actor->set_logger(logger_);
+    }
+
+    switch (actor->dispatch_policy()) {
+        case sched::DispatchPolicy::Cooperative:
+            scheduler_->notify_ready(id, 0, INT64_MAX);
+            break;
+        case sched::DispatchPolicy::DedicatedThread:
+            scheduler_->register_dedicated_thread(
+                id, actor->dispatch_hints().cpu_affinity);
+            break;
+        case sched::DispatchPolicy::DedicatedPool:
+            scheduler_->register_dedicated_pool(id, actor->dispatch_hints().pool_size);
+            break;
+    }
+
+    local->on_activate();
+
+    if (auto* lc = actor->as_lifecycle()) {
+        lc->transition(LifecycleState::kActive);
+    }
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
+                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
+                     "actor spawned",
+                     log::field_lit("type", actor->type_name().data()));
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent evt{};
+        evt.actor_id = id;
+        evt.event_type = metrics::MetricEventType::kActorSpawned;
+        evt.value_hi = 1;
+        metrics_ring_buffer_->try_push(evt);
+    }
+
+    return Actor(actor);
+}
+
 // ── spawn_configured ────────────────────────────────────────────────────────
 
 Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
@@ -879,6 +953,16 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
 
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mbox);
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
+    if (logger_) [[unlikely]] {
+        mbox->set_logger(logger_);
+        actor->set_logger(logger_);
+    }
 
     auto policy = actor->dispatch_policy();
     auto hints = actor->dispatch_hints();
@@ -917,6 +1001,23 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
 
     local->on_activate();
 
+    if (auto* lifecycle = actor->as_lifecycle()) {
+        lifecycle->transition(LifecycleState::kActive);
+    }
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
+                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
+                     "actor spawned",
+                     log::field_lit("type", actor->type_name().data()));
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent event{};
+        event.actor_id = id;
+        event.event_type = metrics::MetricEventType::kActorSpawned;
+        event.value_hi = 1;
+        metrics_ring_buffer_->try_push(event);
+    }
+
     return Actor(actor);
 }
 
@@ -950,8 +1051,9 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 #undef HPACTOR_MAILBOX_FIELD
 
     config_.dead_letters = model.system.dead_letters;
-    dead_letters_ =
-        std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+    if (dead_letters_) {
+        dead_letters_->reconfigure(config_.dead_letters);
+    }
 
     apply_tracing_config(model.system.tracing);
 
@@ -1077,16 +1179,15 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
 // ── Stream protocol ─────────────────────────────────────────────────────────
 
 void ActorSystem::register_stream_sender(uint64_t stream_id, ActorId actor_id) {
-    stream_senders_[stream_id] = actor_id;
+    stream_registry_.register_sender(stream_id, actor_id);
 }
 
 void ActorSystem::register_stream_receiver(uint64_t stream_id, ActorId actor_id) {
-    stream_receivers_[stream_id] = actor_id;
+    stream_registry_.register_receiver(stream_id, actor_id);
 }
 
 void ActorSystem::unregister_stream(uint64_t stream_id) {
-    stream_senders_.erase(stream_id);
-    stream_receivers_.erase(stream_id);
+    (void)stream_registry_.take(stream_id);
 }
 
 uint64_t ActorSystem::allocate_stream_id(ActorId sender_id) {
@@ -1117,63 +1218,53 @@ void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
 
 void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
     const auto& data = frame.pb_envelope.stream_data();
-    auto it = stream_receivers_.find(data.stream_id());
-    if (it == stream_receivers_.end())
+    auto receiver = stream_registry_.find_receiver(data.stream_id());
+    if (!receiver.has_value())
         return;
 
     const auto& payload_str = data.payload();
     auto payload = StreamBuffer::from_data(
         reinterpret_cast<const uint8_t*>(payload_str.data()), payload_str.size());
     TypedMessage msg(stream::StreamDataTag, std::move(payload));
-    (void)try_deliver_local_fast(it->second, std::move(msg));
+    (void)try_deliver_local_fast(receiver.value(), std::move(msg));
 }
 
 void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
     const auto& ack = frame.pb_envelope.stream_ack();
-    auto it = stream_senders_.find(ack.stream_id());
-    if (it == stream_senders_.end())
+    auto sender = stream_registry_.find_sender(ack.stream_id());
+    if (!sender.has_value())
         return;
 
     auto ack_buf = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(&ack),
                                            sizeof(ack));
     TypedMessage msg(stream::StreamAckTag, std::move(ack_buf));
-    (void)try_deliver_local_fast(it->second, std::move(msg));
+    (void)try_deliver_local_fast(sender.value(), std::move(msg));
 }
 
 void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
     const auto& close = frame.pb_envelope.stream_close();
-
-    auto sit = stream_senders_.find(close.stream_id());
-    if (sit != stream_senders_.end()) {
+    auto routes = stream_registry_.take(close.stream_id());
+    if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(sit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
     }
-
-    auto rit = stream_receivers_.find(close.stream_id());
-    if (rit != stream_receivers_.end()) {
+    if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(rit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
     }
-
-    unregister_stream(close.stream_id());
 }
 
 void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
     const auto& error = frame.pb_envelope.stream_error();
-
-    auto sit = stream_senders_.find(error.stream_id());
-    if (sit != stream_senders_.end()) {
+    auto routes = stream_registry_.take(error.stream_id());
+    if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(sit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
     }
-
-    auto rit = stream_receivers_.find(error.stream_id());
-    if (rit != stream_receivers_.end()) {
+    if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(rit->second, std::move(msg));
+        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
     }
-
-    unregister_stream(error.stream_id());
 }
 
 std::optional<StreamHandle>
