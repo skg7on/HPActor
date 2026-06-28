@@ -46,7 +46,7 @@ inline MixedCaseDimensions mixed_case_dimensions_for_preset(PresetKind preset) {
         case PresetKind::Smoke:
             return {4, 16, 25, 1};
         case PresetKind::Nightly:
-            return {32, 64, 500, 2};
+            return {16, 64, 500, 1};
         case PresetKind::PaperScale:
             return {100, 100, 1000, 4};
         case PresetKind::Stress:
