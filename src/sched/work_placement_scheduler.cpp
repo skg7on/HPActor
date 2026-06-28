@@ -92,8 +92,13 @@ void WorkPlacementScheduler::enqueue_shared(const WorkItem& item,
         return;
     }
 
-    // Existing path: priority-only items go to shared-input stack.
-    (void)priority; // priority is applied when the owner drains into its deque
+    // Fast path: inject ring (no allocation, cache-sequential).
+    if (worker.inject_ring.try_push(item, priority)) {
+        worker.wake_if_blocking();
+        return;
+    }
+
+    // Fallback: shared-input stack (ring full — rare).
     auto* node = new SharedInputNode();
     node->item = item;
     node->priority = priority;
@@ -161,9 +166,17 @@ bool WorkPlacementScheduler::pop_edf(uint32_t worker_id, WorkItem& out) {
 bool WorkPlacementScheduler::pop_local(uint32_t worker_id, WorkItem& out) {
     auto& worker = workers_[worker_id];
 
-    // Drain the shared-input stack (lock-free, pushed by non-owner threads).
-    // Reverse from LIFO stack order to approximate FIFO before pushing into
-    // the owner's deque, where push_bottom is safe.
+    // Drain inject ring (fast path: no allocation, sequential access).
+    {
+        WorkItem ring_item;
+        uint8_t ring_prio;
+        while (worker.inject_ring.try_pop(ring_item, ring_prio)) {
+            if (ring_prio < num_priorities_)
+                worker.queues[ring_prio].push_bottom(ring_item);
+        }
+    }
+
+    // Drain the shared-input stack (fallback for ring-full items).
     SharedInputNode* head =
         worker.shared_input.exchange(nullptr, std::memory_order_acquire);
     if (head) {
@@ -260,8 +273,17 @@ bool WorkPlacementScheduler::try_steal(uint32_t thief_worker_id, WorkItem& out) 
 
 bool WorkPlacementScheduler::pop_any_for_test(WorkItem& out) {
     for (uint32_t w = 0; w < num_workers_; ++w) {
-        // Drain shared input for this worker first.
         auto& worker = workers_[w];
+        // Drain inject ring first (fast path, no allocation).
+        {
+            WorkItem ri;
+            uint8_t rp;
+            while (worker.inject_ring.try_pop(ri, rp)) {
+                if (rp < num_priorities_)
+                    worker.queues[rp].push_bottom(ri);
+            }
+        }
+        // Drain shared input (ring-full fallback).
         SharedInputNode* head =
             worker.shared_input.exchange(nullptr, std::memory_order_acquire);
         if (head) {
@@ -308,8 +330,18 @@ bool WorkPlacementScheduler::pop_one_on_worker_for_test(uint32_t worker_id,
             return true;
         }
     }
-    // Drain shared input so tests see work even when workers are paused.
+    // Drain inject ring first (ring-full fallback items may be in
+    // shared_input).
     auto& worker = workers_[worker_id];
+    {
+        WorkItem ri;
+        uint8_t rp;
+        while (worker.inject_ring.try_pop(ri, rp)) {
+            if (rp < num_priorities_)
+                worker.queues[rp].push_bottom(ri);
+        }
+    }
+    // Drain shared input so tests see work even when workers are paused.
     SharedInputNode* head =
         worker.shared_input.exchange(nullptr, std::memory_order_acquire);
     if (head) {
