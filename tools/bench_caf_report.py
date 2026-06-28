@@ -127,7 +127,9 @@ SCENARIOS = {
 
 PRESETS = ["smoke", "nightly", "paper-scale", "stress"]
 DEFAULT_PRESET = "smoke"
-TIMEOUT_PER_SCENARIO = 120  # seconds
+# Per-scenario timeout — nightly/paper-scale sweep 6–8 message sizes
+# with cooperative batch senders; large presets need more wall time.
+TIMEOUT_PER_SCENARIO = 600  # seconds
 
 
 # ── Helpers ──────────────────────────────────────────────────────

@@ -42,6 +42,8 @@ struct DistributionCounters {
 
 class OneToOneSender : public EventBasedActor {
   public:
+    static constexpr uint32_t kBatchSize = 500;
+
     OneToOneSender(ActorContext* ctx, ActorSystem& sys,
                    DistributionCounters* counters, ActorAddress receiver,
                    uint32_t messages, uint32_t payload_size, uint64_t seed)
@@ -54,7 +56,8 @@ class OneToOneSender : public EventBasedActor {
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() != MailboxLoadTag)
                 return;
-            for (uint32_t i = 0; i < messages_; ++i) {
+            uint32_t end = std::min(sent_so_far_ + kBatchSize, messages_);
+            for (uint32_t i = sent_so_far_; i < end; ++i) {
                 BenchPayloadHeader header;
                 header.sender_id = 0;
                 header.sequence = i;
@@ -64,7 +67,12 @@ class OneToOneSender : public EventBasedActor {
                                                           std::move(payload)));
                 counters_->sent.fetch_add(1, std::memory_order_relaxed);
             }
-            counters_->senders_done.fetch_add(1, std::memory_order_release);
+            sent_so_far_ = end;
+            if (sent_so_far_ < messages_) {
+                context()->send(this->address(), make_bench_msg(MailboxLoadTag));
+            } else {
+                counters_->senders_done.fetch_add(1, std::memory_order_release);
+            }
         }};
     }
 
@@ -72,6 +80,7 @@ class OneToOneSender : public EventBasedActor {
     DistributionCounters* counters_ = nullptr;
     ActorAddress receiver_;
     uint32_t messages_ = 0;
+    uint32_t sent_so_far_ = 0;
     uint32_t payload_size_ = 0;
     uint64_t seed_ = 0;
 };
@@ -104,12 +113,15 @@ struct OneToNDimensions {
 
 class OneToNSender : public EventBasedActor {
   public:
+    static constexpr uint32_t kBatchSize = 500;
+
     OneToNSender(ActorContext* ctx, ActorSystem& sys, DistributionCounters* counters,
                  std::vector<ActorAddress> receivers, uint32_t messages_per,
                  uint32_t payload_size, uint64_t seed)
         : EventBasedActor(ctx, sys), counters_(counters),
           receivers_(std::move(receivers)), messages_per_(messages_per),
           payload_size_(payload_size), seed_(seed) {
+        total_ = static_cast<uint64_t>(messages_per_) * receivers_.size();
         become(make_behavior());
     }
 
@@ -117,11 +129,11 @@ class OneToNSender : public EventBasedActor {
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() != MailboxLoadTag)
                 return;
-            uint64_t total = messages_per_ * receivers_.size();
-            for (uint64_t i = 0; i < total; ++i) {
+            uint64_t end = std::min(sent_so_far_ + kBatchSize, total_);
+            for (uint64_t i = sent_so_far_; i < end; ++i) {
                 BenchPayloadHeader header;
                 header.sender_id = 0;
-                header.sequence = i;
+                header.sequence = static_cast<uint64_t>(i);
                 auto payload =
                     encode_bench_payload(header, payload_size_, seed_ + i);
                 uint32_t idx = static_cast<uint32_t>(i % receivers_.size());
@@ -129,7 +141,12 @@ class OneToNSender : public EventBasedActor {
                                 make_bench_msg(MailboxLoadTag, std::move(payload)));
                 counters_->sent.fetch_add(1, std::memory_order_relaxed);
             }
-            counters_->senders_done.fetch_add(1, std::memory_order_release);
+            sent_so_far_ = end;
+            if (sent_so_far_ < total_) {
+                context()->send(this->address(), make_bench_msg(MailboxLoadTag));
+            } else {
+                counters_->senders_done.fetch_add(1, std::memory_order_release);
+            }
         }};
     }
 
@@ -137,6 +154,8 @@ class OneToNSender : public EventBasedActor {
     DistributionCounters* counters_ = nullptr;
     std::vector<ActorAddress> receivers_;
     uint32_t messages_per_ = 0;
+    uint64_t total_ = 0;
+    uint64_t sent_so_far_ = 0;
     uint32_t payload_size_ = 0;
     uint64_t seed_ = 0;
 };
@@ -169,6 +188,8 @@ struct NToNRandomDimensions {
 
 class NToNRandomSender : public EventBasedActor {
   public:
+    static constexpr uint32_t kBatchSize = 500;
+
     NToNRandomSender(ActorContext* ctx, ActorSystem& sys,
                      DistributionCounters* counters,
                      std::vector<ActorAddress> receivers, uint32_t sender_id,
@@ -183,8 +204,9 @@ class NToNRandomSender : public EventBasedActor {
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() != MailboxLoadTag)
                 return;
-            uint64_t lcg = seed_ + sender_id_;
-            for (uint32_t i = 0; i < messages_; ++i) {
+            uint32_t end = std::min(sent_so_far_ + kBatchSize, messages_);
+            uint64_t lcg = seed_ + sender_id_ + sent_so_far_;
+            for (uint32_t i = sent_so_far_; i < end; ++i) {
                 BenchPayloadHeader header;
                 header.sender_id = sender_id_;
                 header.sequence = i;
@@ -196,7 +218,12 @@ class NToNRandomSender : public EventBasedActor {
                                 make_bench_msg(MailboxLoadTag, std::move(payload)));
                 counters_->sent.fetch_add(1, std::memory_order_relaxed);
             }
-            counters_->senders_done.fetch_add(1, std::memory_order_release);
+            sent_so_far_ = end;
+            if (sent_so_far_ < messages_) {
+                context()->send(this->address(), make_bench_msg(MailboxLoadTag));
+            } else {
+                counters_->senders_done.fetch_add(1, std::memory_order_release);
+            }
         }};
     }
 
@@ -205,6 +232,7 @@ class NToNRandomSender : public EventBasedActor {
     std::vector<ActorAddress> receivers_;
     uint32_t sender_id_ = 0;
     uint32_t messages_ = 0;
+    uint32_t sent_so_far_ = 0;
     uint32_t payload_size_ = 0;
     uint64_t seed_ = 0;
 };

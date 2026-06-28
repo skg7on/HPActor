@@ -19,13 +19,13 @@
 
 namespace bench_caf = hpactor::apps::bench_caf;
 
-TEST(SweepExpansion, NightlyMailboxN1ExpandsToSixSizes) {
+TEST(SweepExpansion, NightlyMailboxN1ExpandsToFiveSizes) {
     bench_caf::CafBenchConfig cfg;
     cfg.scenario = bench_caf::ScenarioKind::MailboxN1;
     cfg.preset = bench_caf::PresetKind::Nightly;
 
     auto sweep = bench_caf::expand_sweep(cfg);
-    EXPECT_EQ(sweep.size(), 6u);
+    EXPECT_EQ(sweep.size(), 5u);
 
     EXPECT_EQ(sweep[0].config.message_size_bytes, 0u);
     EXPECT_EQ(sweep[0].config.message_shape, bench_caf::MessageShape::HeaderOnly);
@@ -33,7 +33,9 @@ TEST(SweepExpansion, NightlyMailboxN1ExpandsToSixSizes) {
     EXPECT_EQ(sweep[1].config.message_size_bytes, 16u);
     EXPECT_EQ(sweep[1].config.message_shape, bench_caf::MessageShape::FixedBytes);
 
-    EXPECT_EQ(sweep[5].config.message_size_bytes, 4096u);
+    // 4KB+ payloads are paper-scale only (nightly volumes would OOM).
+    EXPECT_EQ(sweep[4].config.message_size_bytes, 1024u);
+    EXPECT_EQ(sweep[4].config.message_shape, bench_caf::MessageShape::FixedBytes);
 }
 
 TEST(SweepExpansion, SmokePassthrough) {
