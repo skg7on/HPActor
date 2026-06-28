@@ -1144,6 +1144,13 @@ Exit criteria:
 
 ### Phase 5: extract `NetworkRuntime`
 
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-28-actor-system-phase5-network-runtime-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-28-actor-system-phase5-network-runtime-implementation.md`
+
 Scope:
 
 - Move event loop/thread, transport, discovery, timers, location cache, RPC,
@@ -1159,6 +1166,13 @@ Exit criteria:
 - Networking-disabled construction needs no dummy transport services.
 
 ### Phase 6: immutable startup blueprint and lifecycle coordinator
+
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-28-actor-system-phase6-startup-lifecycle-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-28-actor-system-phase6-startup-lifecycle-implementation.md`
 
 Scope:
 
@@ -1178,6 +1192,13 @@ Exit criteria:
 
 ### Phase 7: observability and cluster boundary cleanup
 
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-28-actor-system-phase7-observability-cluster-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-28-actor-system-phase7-observability-cluster-implementation.md`
+
 Scope:
 
 - Move metrics/log/tracing ownership into `ObservabilityRuntime`.
@@ -1192,6 +1213,13 @@ Exit criteria:
 - Operations surfaces provide equivalent or better visibility.
 
 ### Phase 8: facade and compatibility cleanup
+
+Detailed phase documents:
+
+- Design:
+  `docs/superpowers/specs/2026-06-28-actor-system-phase8-facade-cleanup-design.md`
+- Implementation plan:
+  `docs/superpowers/plans/2026-06-28-actor-system-phase8-facade-cleanup-implementation.md`
 
 Scope:
 
