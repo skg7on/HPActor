@@ -944,6 +944,10 @@ class ActorSystem {
     void set_drain_config(ActorId target, DrainConfig cfg);
 
   private:
+    class Impl;
+    std::unique_ptr<Impl> impl_;
+    // Temporary: existing fields remain until migration tasks move them into
+    // Impl.
     Config config_;
     EndPoint endpoint_;
     Clock clock_;

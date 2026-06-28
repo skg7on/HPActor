@@ -9,6 +9,7 @@ target_include_directories(hpactor_test_support INTERFACE
 # Vendored Google Test
 include(${CMAKE_SOURCE_DIR}/cmake/gtest.cmake)
 
+add_subdirectory(architecture)
 add_subdirectory(unit)
 add_subdirectory(integration)
 add_subdirectory(system)

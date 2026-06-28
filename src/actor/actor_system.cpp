@@ -14,6 +14,8 @@
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
+
+#include "../runtime/actor_system_impl.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -66,7 +68,8 @@ namespace hpactor {
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
 ActorSystem::ActorSystem(const Config& config)
-    : config_(config), endpoint_(config.endpoint), registry_(actor_directory_),
+    : impl_(std::make_unique<Impl>(*this, config)), config_(config),
+      endpoint_(config.endpoint), registry_(actor_directory_),
       start_time_(std::chrono::steady_clock::now()),
       scheduler_(std::make_unique<sched::HybridScheduler>(
           *this, config.scheduler_threads, 4, config.timer_backend,
