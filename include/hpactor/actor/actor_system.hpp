@@ -681,12 +681,8 @@ class ActorSystem {
     /// \brief Direct access to the dead-letter queue.
     ///
     /// Returns nullptr if dead-letter queue is not initialized.
-    mailbox::DeadLetterQueue* dead_letter_queue() noexcept {
-        return dead_letters_.get();
-    }
-    const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept {
-        return dead_letters_.get();
-    }
+    mailbox::DeadLetterQueue* dead_letter_queue() noexcept;
+    const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept;
 
     /// \brief Access the outbound delivery tracker for at-least-once delivery.
     ///
@@ -695,21 +691,15 @@ class ActorSystem {
     ///         always initialized when the \c ActorSystem is constructed.
     /// \note Thread safety: The returned pointer is stable for the lifetime
     ///       of the \c ActorSystem. Callers may cache it.
-    msg::OutboundDeliveryTracker* outbound_tracker() noexcept {
-        return outbound_tracker_.get();
-    }
+    msg::OutboundDeliveryTracker* outbound_tracker() noexcept;
 
     /// \brief Access the reliable messaging OutboundTracker.
     ///
     /// Tracks pending outbound messages with ACK/NACK/retry/expiry support.
     /// \return Pointer to the \c mailbox::OutboundTracker, or \c nullptr
     ///         if not yet initialized.
-    mailbox::OutboundTracker* reliable_tracker() noexcept {
-        return reliable_tracker_.get();
-    }
-    const mailbox::OutboundTracker* reliable_tracker() const noexcept {
-        return reliable_tracker_.get();
-    }
+    mailbox::OutboundTracker* reliable_tracker() noexcept;
+    const mailbox::OutboundTracker* reliable_tracker() const noexcept;
 
     /// \brief Send a reliable ACK/NACK frame back to a message sender.
     ///
@@ -728,12 +718,8 @@ class ActorSystem {
                       uint64_t msg_id, uint8_t status, uint32_t retry_after_ms);
 
     // Receiver dedup cache for at-least-once delivery
-    adt::DedupCache* dedup_cache() {
-        return dedup_cache_.get();
-    }
-    const adt::DedupCache* dedup_cache() const {
-        return dedup_cache_.get();
-    }
+    adt::DedupCache* dedup_cache();
+    const adt::DedupCache* dedup_cache() const;
 
     // Build a MailboxConfig from system-wide defaults in Config::mailbox.
     // ── Mailbox configuration ─────────────────────────────────────────────
@@ -963,16 +949,13 @@ class ActorSystem {
     Clock clock_;
     ActorDirectory actor_directory_;
     ActorRegistry registry_;
-    std::unique_ptr<LocalDeliveryEngine> local_delivery_engine_;
-    std::unique_ptr<mailbox::DeliveryPipeline> delivery_pipeline_;
-    std::unique_ptr<BackpressureCoordinator> backpressure_coordinator_;
+    // local_delivery_engine_, delivery_pipeline_, backpressure_coordinator_
+    // moved to impl_->messaging
     std::unique_ptr<ShutdownCoordinator> shutdown_coordinator_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;
     Actor system_actor_;
 
-    // Stream registry: stream_id → actor
-    StreamRegistry stream_registry_;
-    std::atomic<uint64_t> stream_counter_{0};
+    // Stream registry: stream_id → actor — moved to impl_->messaging
 
     // Stream frame delivery
     void deliver_remote_stream_open(const net::WireFrame& frame);
@@ -1042,8 +1025,7 @@ class ActorSystem {
     std::unique_ptr<log::LogManager> log_manager_;
     log::Logger* logger_ = nullptr;
 
-    // Dead-letter queue
-    std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
+    // Dead-letter queue owned by impl_->messaging.dead_letters
 
     // Outbound delivery tracker for at-least-once delivery
     std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker_;
