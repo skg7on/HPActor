@@ -23,9 +23,27 @@ ActorId ActorDirectory::allocate_id() {
 }
 
 bool ActorDirectory::insert(ActorDirectoryEntry entry) {
+    return publish(std::move(entry)) == PublishStatus::Published;
+}
+
+ActorDirectory::PublishStatus
+ActorDirectory::publish(ActorDirectoryEntry entry,
+                        std::optional<std::string_view> name) {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto id = entry.actor.id();
-    return entries_.emplace(id, std::move(entry)).second;
+    const ActorId id = entry.actor.id();
+    if (entries_.contains(id)) {
+        return PublishStatus::DuplicateActorId;
+    }
+    if (name.has_value() && names_.contains(std::string{*name})) {
+        return PublishStatus::DuplicateName;
+    }
+
+    const ActorAddress address = entry.actor.address();
+    entries_.emplace(id, std::move(entry));
+    if (name.has_value()) {
+        names_.emplace(std::string{*name}, address);
+    }
+    return PublishStatus::Published;
 }
 
 std::optional<ActorDirectoryEntry> ActorDirectory::find(ActorId id) const {

@@ -69,6 +69,25 @@ class ActorDirectory {
     /// \retval false An entry for this actor ID already exists.
     bool insert(ActorDirectoryEntry entry);
 
+    /// \brief Status codes for atomic actor-directory publication.
+    enum class PublishStatus : uint8_t {
+        Published,        ///< Entry and optional name committed atomically.
+        DuplicateActorId, ///< An entry with this actor id already exists.
+        DuplicateName,    ///< The requested name is already registered.
+    };
+
+    /// \brief Atomically publish an entry with an optional registered name.
+    ///
+    /// Under one mutex, checks for duplicate actor id and name, then commits
+    /// both the entry and name mapping or neither.
+    ///
+    /// \param[in] entry Fully constructed entry to register.
+    /// \param[in] name  Optional human-readable name; copied if present.
+    /// \return \c Published when both id and name are committed; otherwise
+    ///         a typed status describing the conflict.
+    PublishStatus publish(ActorDirectoryEntry entry,
+                          std::optional<std::string_view> name = std::nullopt);
+
     /// \brief Find the complete entry for an actor.
     ///
     /// \param[in] id Actor identifier.
