@@ -28,7 +28,7 @@ class BatchCountingActor : public EventBasedActor {
     }
     void
     wait_for(int n,
-             std::chrono::milliseconds timeout = std::chrono::milliseconds{5000}) {
+             std::chrono::milliseconds timeout = std::chrono::milliseconds{2000}) {
         std::unique_lock<std::mutex> lk(mu_);
         cv_.wait_for(lk, timeout, [&] { return count_.load() >= n; });
     }
