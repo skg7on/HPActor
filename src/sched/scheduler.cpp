@@ -69,11 +69,7 @@ void HybridScheduler::start() {
     for (size_t i = 0; i < placement_.worker_count(); ++i) {
         WorkerThread::Config cfg;
         cfg.worker_index = static_cast<uint32_t>(i);
-        cfg.enable_thread_allocator = false; // SlabCache dealloc is not
-                                             // thread-safe: TypedMessage
-                                             // allocated on producer thread,
-                                             // freed on worker thread. Needs
-                                             // per-thread free-list handoff.
+        cfg.enable_thread_allocator = false; // slab caches are not thread-safe
         auto worker = std::make_unique<WorkerThread>(cfg);
         worker->set_owner(this);
         worker->set_work_processor([this](const WorkItem& item) {
@@ -191,7 +187,6 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
     }
 
     WorkItem item{actor, deadline_ns, 0};
-    item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
 
     if (!try_admit_ready(actor)) {
         return;
@@ -211,7 +206,6 @@ void HybridScheduler::notify_ready_fast(ActorId actor, EventBasedActor* actor_pt
 
     WorkItem item{actor, deadline_ns, 0};
     item.actor_ptr = actor_ptr;
-    item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
 
     if (!try_admit_ready(actor)) {
         return;
@@ -232,7 +226,6 @@ void HybridScheduler::notify_ready_edf(ActorId actor, uint8_t priority,
 
     WorkItem item{actor, deadline_ns, 0};
     item.edf_scheduled = true;
-    item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
 
     if (!try_admit_ready(actor)) {
         return;
@@ -254,9 +247,7 @@ void HybridScheduler::yield(ActorId actor, uint8_t priority) {
     if (!try_mark_yield_ready(actor)) {
         return;
     }
-    WorkItem yield_item{actor, INT64_MAX, 0};
-    yield_item.home_worker = static_cast<uint32_t>(actor.value() % num_workers_);
-    enqueue_admitted(yield_item, priority);
+    enqueue_admitted(WorkItem{actor, INT64_MAX, 0}, priority);
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
@@ -315,38 +306,16 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         workers_paused_.load(std::memory_order_relaxed),
     };
 
-    WorkItem cur = item; // mutable copy preserves actor_ptr, home_worker,
-                         // edf_scheduled
     auto result =
-        executor_.run(*actor, cur, execution_context, system_.use_coroutines());
-
-    // Adaptive batch: avoid enqueue_admitted round-trips for consecutive
-    // messages. Skip in paused (test) mode — tests expect one message per
-    // drain_ready() call.
-    constexpr int kBatchLimit = 63;
-    if (!workers_paused_.load(std::memory_order_relaxed)) {
-        for (int n = 0; result.disposition == ActorRunDisposition::RequeueReady &&
-                        n < kBatchLimit;
-             ++n) {
-            cur.sequence = (cur.sequence + 1 <= 128) ? cur.sequence + 1 : 0;
-            cur.deadline_ns = result.deadline_ns;
-            result = executor_.run(*actor, cur, execution_context,
-                                   system_.use_coroutines());
-        }
-    }
-
+        executor_.run(*actor, item, execution_context, system_.use_coroutines());
     if (result.disposition == ActorRunDisposition::RequeueReady) {
-        // Non-paused: batch loop ran all kBatchLimit iterations — reset
-        // sequence so the next batch gets a fresh 64-message budget. Paused
-        // (test) mode: increment normally so the rate-limiter spin prevention
-        // (sequence >= kLostWakeupRequeueBudget) still fires.
-        if (!workers_paused_.load(std::memory_order_relaxed)) {
-            cur.sequence = 0;
-        } else {
-            cur.sequence = (cur.sequence + 1 <= 128) ? cur.sequence + 1 : 0;
-        }
-        cur.deadline_ns = result.deadline_ns;
-        enqueue_admitted(cur, result.priority);
+        uint64_t next_seq = item.sequence + 1;
+        if (next_seq > 128)
+            next_seq = 0;
+        WorkItem next{item.actor, result.deadline_ns, next_seq};
+        next.edf_scheduled = item.edf_scheduled;
+        next.actor_ptr = item.actor_ptr; // preserve for subsequent activations
+        enqueue_admitted(next, result.priority);
     }
 }
 
