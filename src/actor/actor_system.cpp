@@ -879,6 +879,16 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mbox);
 
+    if (metrics_ring_buffer_) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
+    if (logger_) [[unlikely]] {
+        mbox->set_logger(logger_);
+        actor->set_logger(logger_);
+    }
+
     auto policy = actor->dispatch_policy();
     auto hints = actor->dispatch_hints();
     if (policy == sched::DispatchPolicy::Cooperative) {
@@ -915,6 +925,23 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     }
 
     local->on_activate();
+
+    if (auto* lifecycle = actor->as_lifecycle()) {
+        lifecycle->transition(LifecycleState::kActive);
+    }
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
+                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
+                     "actor spawned",
+                     log::field_lit("type", actor->type_name().data()));
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent event{};
+        event.actor_id = id;
+        event.event_type = metrics::MetricEventType::kActorSpawned;
+        event.value_hi = 1;
+        metrics_ring_buffer_->try_push(event);
+    }
 
     return Actor(actor);
 }

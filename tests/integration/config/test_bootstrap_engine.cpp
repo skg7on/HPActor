@@ -286,3 +286,30 @@ store_payload = true
     EXPECT_EQ(snapshot.capacity, 2u);
     EXPECT_EQ(snapshot.depth, 1u);
 }
+
+TEST(BootstrapEngineTest, ConfiguredSpawnMatchesTemplateLifecycle) {
+    Config config;
+    config.scheduler_threads = 0;
+    ActorSystem system(config);
+
+    auto direct = system.spawn<BootstrapTestActor>();
+    auto configured_instance =
+        std::make_shared<BootstrapTestActor>(nullptr, system);
+    ActorDef def;
+    def.behavior = "BootstrapTestActor";
+    auto configured = system.spawn_configured(std::move(configured_instance), def);
+
+    ASSERT_TRUE(static_cast<bool>(direct));
+    ASSERT_TRUE(static_cast<bool>(configured));
+    // Both spawn paths produce actors with working mailboxes.
+    EXPECT_NE(system.get_mailbox(direct.id()), nullptr);
+    EXPECT_NE(system.get_mailbox(configured.id()), nullptr);
+    // Lifecycle state parity: both actors are in the same lifecycle state.
+    EXPECT_EQ(direct.get()->as_lifecycle() != nullptr,
+              configured.get()->as_lifecycle() != nullptr);
+    if (direct.get()->as_lifecycle()) {
+        EXPECT_EQ(direct.get()->as_lifecycle()->state(), LifecycleState::kActive);
+        EXPECT_EQ(configured.get()->as_lifecycle()->state(),
+                  LifecycleState::kActive);
+    }
+}
