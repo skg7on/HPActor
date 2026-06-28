@@ -115,10 +115,21 @@ TEST(TimerPlaneSystem, CancelPreventsDelivery) {
     ActorSystem system(config);
 
     std::atomic<bool> fired{false};
+
+    // Pause timer advancement before scheduling to eliminate a race where
+    // the timer thread's current_time_ is stale (up to 100 ms from its last
+    // advance cycle).  schedule_after() computes the deadline relative to
+    // that cached current_time_, so a 5 ms delay can land in the past and
+    // fire on the very next advance — before cancel_timer() can remove it.
+    // Pausing prevents any advance during the schedule→cancel window.
+    system.scheduler()->pause_workers();
+
     auto handle =
         system.scheduler()->schedule_after([&fired]() { fired.store(true); },
                                            5'000'000LL); // 5ms
     system.scheduler()->cancel_timer(handle);
+
+    system.scheduler()->resume_workers();
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (!fired.load() && std::chrono::steady_clock::now() < deadline) {

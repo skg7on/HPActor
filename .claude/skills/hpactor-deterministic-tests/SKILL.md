@@ -42,6 +42,21 @@ These PRs demonstrate the cost of non-deterministic tests:
   dependence and fake actor IDs fed to real workers. Fix used
   `scheduler_start_paused`, `SchedulerTestDriver`, `pin_actor_to_worker()`,
   `run_actor()`, and `scheduler_threads = 0`.
+- **PR #385 / Issue #386 (timer cancel test)**: CI-only failure (gcc-debug,
+  ubuntu-24.04) in `TimerPlaneSystem.CancelPreventsDelivery`.  The test did
+  `schedule_after(cb, 5ms)` then immediately `cancel_timer()`, expecting the
+  callback never to fire.  However, `TimingWheel::schedule()` computes the
+  deadline as `current_time_ + delay_ns`, where `current_time_` is the wheel's
+  cached last-advance time — NOT the real wall clock.  When no other timers are
+  pending, the timer thread sleeps up to 100 ms and `current_time_` becomes
+  stale.  A 5 ms delay relative to a 100 ms-stale clock lands in the past, so
+  the very first `advance_time()` call fires the timer **before**
+  `cancel_timer()` can remove it.  Fix: wrap the `schedule_after` →
+  `cancel_timer` window in `pause_workers()` / `resume_workers()` so the timer
+  thread cannot advance between the two calls.  The deeper lesson: **any
+  relative-delay timer that is cancelled before expiry must be protected from
+  the stale-clock race.**  `pause_workers()` is the deterministic control;
+  using a larger delay only shrinks the probability without eliminating it.
 
 Each failure shares a root cause: the test depended on an uncontrolled async
 source. The fix always removes that source or replaces it with deterministic
@@ -88,6 +103,15 @@ Use the narrowest deterministic surface for the behavior under test:
 - **Timer API behavior**: assert stable API outcomes such as valid handles, safe
   invalid cancel, idempotent cancel, and mailbox state after cancellation. Use
   `scheduler_threads = 0` so the timer thread never races observation.
+- **Timer cancellation guarantee**: when the test expectation is "callback never
+  fires after cancel," the timer thread must not be allowed to advance between
+  `schedule_after()` and `cancel_timer()`.  `TimingWheel::schedule()` computes
+  the deadline from the **cached** `current_time_` (updated only by
+  `advance()`), which can be up to 100 ms stale when no timers are pending.
+  Even with `scheduler_threads = 0`, the timer thread runs and advances.
+  Wrap the schedule→cancel window in `pause_workers()` / `resume_workers()`.
+  This is the only deterministic control — using a larger delay or a longer
+  timeout only makes the race less probable.
 - **Coroutine awaiter behavior**: use a mock scheduler, construct the awaiter
   directly with a manually-set `CoroutinePromise`, control mailbox contents with
   `inject_for_test()`, and call `await_ready()`/`await_suspend()`/`await_resume()`
@@ -154,6 +178,10 @@ Treat these as design failures until justified:
   could be tested with `inject_for_test()` and `scheduler_threads = 0`.
 - Fault test uses random seeds without recording them or expects faults to fire
   in a non-deterministic order.
+- Timer cancel test calls `schedule_after()` with a short delay and then
+  `cancel_timer()` without pausing the timer thread — the test depends on
+  `cancel_timer()` beating a stale-clock `advance_time()` to the deadline, which
+  is probabilistic on fast machines.
 
 ## Replacement Patterns
 
@@ -210,6 +238,40 @@ ASSERT_NE(mailbox, nullptr);
 TypedMessage out;
 EXPECT_FALSE(mailbox->try_pop(out));
 ```
+
+### Replace Timer Cancel Races With Deterministic Pause
+
+Bad — timer thread can advance with stale `current_time_` before `cancel_timer()`:
+
+```cpp
+auto handle = system.scheduler()->schedule_after(cb, 5'000'000LL); // 5ms
+system.scheduler()->cancel_timer(handle);
+// Race: timer thread may have already fired the callback
+```
+
+Good — pause the timer thread during the schedule→cancel window:
+
+```cpp
+// Prevent timer thread from advancing with a stale current_time_
+// (which can be up to 100ms behind real time).  Without the pause,
+// schedule_after() computes deadline = stale_time + 5ms, which may
+// land in the past — the first advance_time() fires it immediately.
+system.scheduler()->pause_workers();
+auto handle = system.scheduler()->schedule_after(cb, 5'000'000LL); // 5ms
+system.scheduler()->cancel_timer(handle);
+system.scheduler()->resume_workers();
+
+// Now wait long enough to prove cancel prevented delivery.
+```
+
+Wait for a generous timeout after `resume_workers()` to prove the callback
+never fires.  The pause eliminates the race, not just reduces its probability.
+
+Note: `TimingWheel::schedule()` computes `deadline = current_time_ + delay_ns`
+where `current_time_` is the wheel's cached last-advance time, NOT
+`steady_clock::now()`.  The timer thread's max sleep is 100 ms, so the cache
+can be that stale.  This is a framework design invariant — all relative timers
+use the same time base for consistency — and tests must account for it.
 
 Keep one higher-level integration scenario for timer delivery only when the
 runtime path, not a unit API, is the behavior under test. That integration test
@@ -347,11 +409,30 @@ When allowed:
   legal schedules.
 
 **The timer thread is inherently non-deterministic.** You cannot control when the
-OS delivers a timer signal. For timer API tests, use `scheduler_threads = 0` and
-inspect mailbox state. For timer delivery tests, use condition-based polling
-with a 5s+ timeout — and only write one such integration test per timer feature.
-All other timer behavior should be covered by unit tests that never start the
-timer thread.
+OS delivers a timer signal.  Two distinct non-determinism hazards exist:
+
+1. **Wall-clock delivery timing**: you cannot control when the OS schedules the
+   timer thread to run.  For timer delivery tests, use condition-based polling
+   with a 5s+ timeout and only write one such integration test per timer feature.
+
+2. **Stale `current_time_` race**: `TimingWheel::schedule()` computes deadlines
+   relative to the cached `current_time_` (updated only by `advance()`), not
+   `steady_clock::now()`.  When the timer thread has been sleeping with no pending
+   timers, `current_time_` can be up to 100 ms behind real time.  A short-delay
+   timer scheduled relative to this stale cache expires on the very next advance
+   call — which may happen before the test can call `cancel_timer()`.
+
+When the test MUST guarantee that a timer callback does **not** fire after
+cancellation, use `pause_workers()` before `schedule_after()` and
+`resume_workers()` after `cancel_timer()`.  This prevents the timer thread from
+calling `advance_time()` during the critical window.  Do **not** rely on a
+larger delay — `current_time_` can be arbitrarily stale relative to the real
+clock, so no delay is large enough to eliminate the race.
+
+For timer API tests, use `scheduler_threads = 0` and inspect mailbox state.
+For timer delivery tests, use condition-based polling with a 5s+ timeout — and
+only write one such integration test per timer feature.  All other timer
+behavior should be covered by unit tests that never start the timer thread.
 
 ## Review Checklist
 
@@ -384,6 +465,9 @@ Before accepting a test, verify:
 
 ### Special Subsystems
 - [ ] Timer tests separate API semantics from real delivery.
+- [ ] Timer cancel tests that assert "callback never fires" wrap the
+  schedule→cancel window in `pause_workers()` / `resume_workers()`.  Do not
+  rely on a large delay to paper over the stale-`current_time_` race.
 - [ ] Coroutine tests use mock scheduler + direct awaiter construction by default.
 - [ ] Fault tests use fixed schedules with known seeds.
 - [ ] Lock-free or stress tests have a deterministic oracle or dedicated
