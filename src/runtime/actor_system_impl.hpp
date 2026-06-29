@@ -16,6 +16,7 @@
 
 #include "actor_spawner.hpp"
 #include "messaging_network_ports.hpp"
+#include "messaging_runtime.hpp"
 
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/actor_system.hpp>
@@ -116,16 +117,10 @@ struct ActorServiceState final {
     std::unique_ptr<ShutdownCoordinator> shutdown_coordinator;
 };
 
-struct MessagingRuntimeState final {
-    std::unique_ptr<mailbox::DeadLetterQueue> dead_letters;
-    std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker;
-    std::unique_ptr<mailbox::OutboundTracker> reliable_tracker;
-    std::unique_ptr<adt::DedupCache> dedup_cache;
-    std::unique_ptr<LocalDeliveryEngine> local_delivery_engine;
-    std::unique_ptr<mailbox::DeliveryPipeline> delivery_pipeline;
-    std::unique_ptr<BackpressureCoordinator> backpressure;
-    StreamRegistry stream_registry;
-    std::atomic<uint64_t> stream_counter{0};
+/// \brief Stream protocol state (Phase 4 moves this into StreamRuntime).
+struct StreamRuntimeState final {
+    StreamRegistry registry;
+    std::atomic<uint64_t> counter{0};
 };
 
 struct NetworkRuntimeState final {
@@ -184,7 +179,8 @@ class ActorSystem::Impl final {
     CoreRuntimeState core;
     OperationsRuntimeState operations;
     ActorServiceState actors;
-    MessagingRuntimeState messaging;
+    std::unique_ptr<MessagingRuntime> messaging_;
+    StreamRuntimeState streams;
     NetworkRuntimeState network;
     ClusterRuntimeState cluster;
 

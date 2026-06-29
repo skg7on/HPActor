@@ -156,27 +156,6 @@ ActorSystem::ActorSystem(const Config& config)
             impl_->operations.metrics_ring_buffer.get());
     }
 
-    // ── Dead-letter queue ──────────────────────────────────────────────
-    impl_->messaging.dead_letters =
-        std::make_unique<mailbox::DeadLetterQueue>(impl_->core.config.dead_letters);
-
-    // ── Receiver dedup cache ───────────────────────────────────────────
-    impl_->messaging.dedup_cache =
-        std::make_unique<adt::DedupCache>(adt::DedupCache::Config{});
-
-    // ── Extracted runtime components ───────────────────────────────────
-    impl_->messaging.local_delivery_engine =
-        std::make_unique<LocalDeliveryEngine>(impl_->actors.directory);
-    {
-        BackpressureCoordinator::Config bp_cfg;
-        bp_cfg.metrics = impl_->operations.metrics_ring_buffer.get();
-        bp_cfg.wire_port = &impl_->network.messaging_ports.backpressure;
-        bp_cfg.actor_directory = &impl_->actors.directory;
-        bp_cfg.endpoint = impl_->core.endpoint;
-        impl_->messaging.backpressure =
-            std::make_unique<BackpressureCoordinator>(std::move(bp_cfg));
-    }
-
     // ── Bind fixed network-control ports ────────────────────────────────
     // Context points to stable NetworkRuntimeState; transport is still null
     // but will become valid when networking is initialized later.
@@ -191,34 +170,22 @@ ActorSystem::ActorSystem(const Config& config)
         };
     }
 
-    // ── Outbound delivery tracker ─────────────────────────────────────
-    impl_->messaging.outbound_tracker =
-        std::make_unique<msg::OutboundDeliveryTracker>();
-
-    // ── Reliable messaging outbound tracker ───────────────────────────
-    impl_->messaging.reliable_tracker =
-        std::make_unique<mailbox::OutboundTracker>(mailbox::ReliableRetryPolicy{});
-
-    // ── Delivery pipeline ──────────────────────────────────────────────
+    // ── Messaging runtime ───────────────────────────────────────────────
+    // Constructs all seven messaging components in dependency order
+    // (DLQ → Dedup → Trackers → Backpressure → Pipeline → FastEngine).
     // MUST be created before the scheduler starts so that early-boot
-    // actor spawns can deliver messages through it.
-    {
-        mailbox::DeliveryPipeline::Config pipeline_cfg;
-        pipeline_cfg.dlq = impl_->messaging.dead_letters.get();
-        pipeline_cfg.outbound_tracker = impl_->messaging.outbound_tracker.get();
-        pipeline_cfg.metrics = impl_->operations.metrics_ring_buffer.get();
-        pipeline_cfg.dedup_cache = impl_->messaging.dedup_cache.get();
-        pipeline_cfg.endpoint = impl_->core.endpoint;
-        pipeline_cfg.default_message_ttl_ms =
-            impl_->core.config.default_message_ttl_ms;
-
-        pipeline_cfg.actors = &impl_->actors.directory;
-        pipeline_cfg.backpressure = impl_->messaging.backpressure.get();
-        pipeline_cfg.reliable_ack = &impl_->network.messaging_ports.reliable_ack;
-
-        impl_->messaging.delivery_pipeline =
-            std::make_unique<mailbox::DeliveryPipeline>(std::move(pipeline_cfg));
-    }
+    // actor spawns can deliver messages through the pipeline.
+    impl_->messaging_ = std::make_unique<MessagingRuntime>(
+        MessagingRuntime::Dependencies{
+            .actors = impl_->actors.directory,
+            .metrics = impl_->operations.metrics_ring_buffer.get(),
+            .network = impl_->network.messaging_ports,
+            .endpoint = impl_->core.endpoint,
+        },
+        MessagingRuntime::Config{
+            .dead_letters = impl_->core.config.dead_letters,
+            .default_message_ttl = impl_->core.config.default_message_ttl_ms,
+        });
 
     // ── Metrics subsystem ──────────────────────────────────────────────
     if (impl_->operations.metrics_config.enabled) {
@@ -300,21 +267,19 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         // Periodic retry processing for at-least-once delivery.
-        if (impl_->messaging.outbound_tracker && impl_->network.event_loop) {
+        if (impl_->network.event_loop) {
             impl_->network.retry_timer = impl_->network.event_loop->run_every(
                 [this]() {
-                    if (impl_->messaging.outbound_tracker) {
-                        uint64_t now_ns = static_cast<uint64_t>(
-                            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                std::chrono::steady_clock::now().time_since_epoch())
-                                .count());
-                        impl_->messaging.outbound_tracker->process_retries(
-                            now_ns,
-                            [](const msg::OutboundDeliveryTracker::PendingSend&) {
-                                // Resend via transport (implemented in
-                                // follow-up).
-                            });
-                    }
+                    uint64_t now_ns = static_cast<uint64_t>(
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count());
+                    impl_->messaging_->delivery_receipt_tracker().process_retries(
+                        now_ns,
+                        [](const msg::OutboundDeliveryTracker::PendingSend&) {
+                            // Resend via transport (implemented in
+                            // follow-up).
+                        });
                 },
                 100); // poll every 100ms
         }
@@ -530,7 +495,7 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
 // ── Backpressure API (logging wrappers around BackpressureCoordinator) ───────
 
 void ActorSystem::signal_backpressure(const mailbox::BackpressureSignal& signal) {
-    impl_->messaging.backpressure->deliver_to_sender(signal);
+    impl_->messaging_->backpressure().deliver_to_sender(signal);
 }
 
 void ActorSystem::maybe_emit_backpressure_signal(
@@ -559,7 +524,7 @@ void ActorSystem::emit_local_backpressure_signal(
             log::field("retry_after_ms",
                        static_cast<uint64_t>(signal.retry_after.count())));
     }
-    impl_->messaging.backpressure->emit_local_signal(signal, state);
+    impl_->messaging_->backpressure().emit_local_signal(signal, state);
 }
 
 void ActorSystem::emit_remote_backpressure_signal(
@@ -574,7 +539,7 @@ void ActorSystem::emit_remote_backpressure_signal(
             log::field("retry_after_ms",
                        static_cast<uint64_t>(signal.retry_after.count())));
     }
-    impl_->messaging.backpressure->emit_remote_signal(signal, state);
+    impl_->messaging_->backpressure().emit_remote_signal(signal, state);
     if (!impl_->network.transport &&
         !impl_->network.backpressure_signal_wire_sink_for_test) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMailbox, signal.target.id, 0,
@@ -584,12 +549,12 @@ void ActorSystem::emit_remote_backpressure_signal(
 }
 
 bool ActorSystem::handle_remote_backpressure_signal(const net::WireFrame& frame) {
-    return impl_->messaging.backpressure->handle_remote_signal(frame);
+    return impl_->messaging_->backpressure().handle_remote_signal(frame);
 }
 
 void ActorSystem::set_backpressure_signal_wire_sink_for_test(
     BackpressureSignalWireSink sink) {
-    impl_->messaging.backpressure->set_wire_sink_for_test(std::move(sink));
+    impl_->messaging_->backpressure().set_wire_sink_for_test(std::move(sink));
 }
 
 // ── Actor registry ──────────────────────────────────────────────────────────
@@ -662,52 +627,43 @@ receptionist::Receptionist* ActorSystem::receptionist() const {
 // ── Dead-letter queue ───────────────────────────────────────────────────────
 
 bool ActorSystem::dead_letter(mailbox::DeadLetterRecord record) noexcept {
-    if (!impl_->messaging.dead_letters) {
-        return false;
-    }
-    return impl_->messaging.dead_letters->try_push(std::move(record));
+    return impl_->messaging_->dead_letters().try_push(std::move(record));
 }
 
 mailbox::DeadLetterQueueSnapshot ActorSystem::dead_letter_snapshot() const noexcept {
-    if (!impl_->messaging.dead_letters) {
-        return {};
-    }
-    return impl_->messaging.dead_letters->snapshot();
+    return impl_->messaging_->dead_letters().snapshot();
 }
 
 bool ActorSystem::pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept {
-    if (!impl_->messaging.dead_letters) {
-        return false;
-    }
-    return impl_->messaging.dead_letters->try_pop(out);
+    return impl_->messaging_->dead_letters().try_pop(out);
 }
 
 mailbox::DeadLetterQueue* ActorSystem::dead_letter_queue() noexcept {
-    return impl_->messaging.dead_letters.get();
+    return &impl_->messaging_->dead_letters();
 }
 
 const mailbox::DeadLetterQueue* ActorSystem::dead_letter_queue() const noexcept {
-    return impl_->messaging.dead_letters.get();
+    return &impl_->messaging_->dead_letters();
 }
 
 msg::OutboundDeliveryTracker* ActorSystem::outbound_tracker() noexcept {
-    return impl_->messaging.outbound_tracker.get();
+    return &impl_->messaging_->delivery_receipt_tracker();
 }
 
 mailbox::OutboundTracker* ActorSystem::reliable_tracker() noexcept {
-    return impl_->messaging.reliable_tracker.get();
+    return &impl_->messaging_->mailbox_reliable_tracker();
 }
 
 const mailbox::OutboundTracker* ActorSystem::reliable_tracker() const noexcept {
-    return impl_->messaging.reliable_tracker.get();
+    return &impl_->messaging_->mailbox_reliable_tracker();
 }
 
 adt::DedupCache* ActorSystem::dedup_cache() {
-    return impl_->messaging.dedup_cache.get();
+    return &impl_->messaging_->dedup_cache();
 }
 
 const adt::DedupCache* ActorSystem::dedup_cache() const {
-    return impl_->messaging.dedup_cache.get();
+    return &impl_->messaging_->dedup_cache();
 }
 
 net::EventLoop* ActorSystem::event_loop() {
@@ -905,7 +861,7 @@ mailbox::EnqueueResult
 ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                uint8_t priority, int64_t deadline_ns,
                                mailbox::DeliveryOptions options) {
-    return impl_->messaging.delivery_pipeline->try_deliver(
+    return impl_->messaging_->delivery_pipeline().try_deliver(
         target, std::move(msg), priority, deadline_ns, options);
 }
 
@@ -913,7 +869,7 @@ mailbox::DeliveryResult
 ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
                                  uint8_t priority, int64_t deadline_ns,
                                  mailbox::DeliveryOptions options) {
-    return impl_->messaging.delivery_pipeline->deliver_with_result(
+    return impl_->messaging_->delivery_pipeline().deliver_with_result(
         target, std::move(msg), priority, deadline_ns, options);
 }
 
@@ -935,9 +891,7 @@ ActorSystem::try_deliver_local_fast(ActorId target, TypedMessage msg) {
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
-    if (!impl_->messaging.delivery_pipeline)
-        return;
-    (void)impl_->messaging.delivery_pipeline->try_deliver(target, std::move(msg));
+    (void)impl_->messaging_->delivery_pipeline().try_deliver(target, std::move(msg));
 }
 
 void ActorSystem::record_actor_timeout(ActorId target) {
@@ -950,17 +904,15 @@ void ActorSystem::record_actor_timeout(ActorId target) {
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                 uint8_t priority, int64_t deadline_ns) {
-    (void)impl_->messaging.delivery_pipeline->try_deliver(
+    (void)impl_->messaging_->delivery_pipeline().try_deliver(
         target, std::move(msg), priority, deadline_ns, {});
 }
 
 void ActorSystem::deliver_local_edf(ActorId target, TypedMessage msg,
                                     int64_t deadline_ns, uint8_t priority) {
-    if (!impl_->messaging.delivery_pipeline)
-        return;
     mailbox::DeliveryOptions options;
     options.schedule_edf = true;
-    (void)impl_->messaging.delivery_pipeline->try_deliver(
+    (void)impl_->messaging_->delivery_pipeline().try_deliver(
         target, std::move(msg), priority, deadline_ns, options);
 }
 
@@ -991,13 +943,13 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     constexpr uint32_t kControlNack = 1 << 6;
     uint32_t flags = frame.pb_envelope.data_frame().flags();
 
-    if ((flags & kControlAck) && impl_->messaging.outbound_tracker) {
-        impl_->messaging.outbound_tracker->on_ack(
+    if (flags & kControlAck) {
+        impl_->messaging_->delivery_receipt_tracker().on_ack(
             MessageId{frame.pb_envelope.data_frame().message_id()},
             net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint);
         return;
     }
-    if ((flags & kControlNack) && impl_->messaging.outbound_tracker) {
+    if (flags & kControlNack) {
         uint32_t reason_code = frame.pb_envelope.data_frame().type_tag();
         uint32_t retry_after_ms = 0;
         if (frame.pb_envelope.data_frame().payload().size() >= sizeof(uint32_t)) {
@@ -1005,7 +957,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
                         frame.pb_envelope.data_frame().payload().data(),
                         sizeof(uint32_t));
         }
-        impl_->messaging.outbound_tracker->on_nack(
+        impl_->messaging_->delivery_receipt_tracker().on_nack(
             MessageId{frame.pb_envelope.data_frame().message_id()},
             net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint,
             reason_code, retry_after_ms);
@@ -1014,7 +966,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
 
     if (static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()) ==
         TypeTag::BackpressureSignalTag) {
-        (void)impl_->messaging.backpressure->handle_remote_signal(frame);
+        (void)impl_->messaging_->backpressure().handle_remote_signal(frame);
         return;
     }
     StreamBuffer payload(frame.pb_envelope.data_frame().payload().begin(),
@@ -1275,9 +1227,7 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 #undef HPACTOR_MAILBOX_FIELD
 
     impl_->core.config.dead_letters = model.system.dead_letters;
-    if (impl_->messaging.dead_letters) {
-        impl_->messaging.dead_letters->reconfigure(impl_->core.config.dead_letters);
-    }
+    impl_->messaging_->dead_letters().reconfigure(impl_->core.config.dead_letters);
 
     apply_tracing_config(model.system.tracing);
 
@@ -1404,20 +1354,19 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
 // ── Stream protocol ─────────────────────────────────────────────────────────
 
 void ActorSystem::register_stream_sender(uint64_t stream_id, ActorId actor_id) {
-    impl_->messaging.stream_registry.register_sender(stream_id, actor_id);
+    impl_->streams.registry.register_sender(stream_id, actor_id);
 }
 
 void ActorSystem::register_stream_receiver(uint64_t stream_id, ActorId actor_id) {
-    impl_->messaging.stream_registry.register_receiver(stream_id, actor_id);
+    impl_->streams.registry.register_receiver(stream_id, actor_id);
 }
 
 void ActorSystem::unregister_stream(uint64_t stream_id) {
-    (void)impl_->messaging.stream_registry.take(stream_id);
+    (void)impl_->streams.registry.take(stream_id);
 }
 
 uint64_t ActorSystem::allocate_stream_id(ActorId sender_id) {
-    uint64_t seq =
-        impl_->messaging.stream_counter.fetch_add(1, std::memory_order_relaxed);
+    uint64_t seq = impl_->streams.counter.fetch_add(1, std::memory_order_relaxed);
     return (static_cast<uint64_t>(sender_id.value()) << 32) | seq;
 }
 
@@ -1444,8 +1393,7 @@ void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
 
 void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
     const auto& data = frame.pb_envelope.stream_data();
-    auto receiver =
-        impl_->messaging.stream_registry.find_receiver(data.stream_id());
+    auto receiver = impl_->streams.registry.find_receiver(data.stream_id());
     if (!receiver.has_value())
         return;
 
@@ -1458,7 +1406,7 @@ void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
 
 void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
     const auto& ack = frame.pb_envelope.stream_ack();
-    auto sender = impl_->messaging.stream_registry.find_sender(ack.stream_id());
+    auto sender = impl_->streams.registry.find_sender(ack.stream_id());
     if (!sender.has_value())
         return;
 
@@ -1470,7 +1418,7 @@ void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
 
 void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
     const auto& close = frame.pb_envelope.stream_close();
-    auto routes = impl_->messaging.stream_registry.take(close.stream_id());
+    auto routes = impl_->streams.registry.take(close.stream_id());
     if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
         (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
@@ -1483,7 +1431,7 @@ void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
 
 void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
     const auto& error = frame.pb_envelope.stream_error();
-    auto routes = impl_->messaging.stream_registry.take(error.stream_id());
+    auto routes = impl_->streams.registry.take(error.stream_id());
     if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
         (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));

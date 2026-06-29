@@ -28,7 +28,7 @@ ActorExecutionDependencies::from(ActorSystem& system) noexcept {
     auto& impl = *system.impl_;
     return ActorExecutionDependencies{
         .actors = impl.actors.directory,
-        .dead_letters = impl.messaging.dead_letters.get(),
+        .dead_letters = &impl.messaging_->dead_letters(),
         .use_coroutines = impl.core.config.use_coroutines,
     };
 }
