@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/types/types.hpp>
@@ -23,6 +24,7 @@
 namespace hpactor {
 
 class ActorDirectory;
+class BackpressureWirePort;
 
 namespace net {
 class EventLoop;
@@ -43,26 +45,16 @@ class BackpressureCoordinator {
   public:
     using WireSink = std::function<bool(const ActorAddress&, const StreamBuffer&)>;
 
-    /// \brief Injected dependencies.
-    ///
-    /// Pointers may be null — the coordinator safely skips metrics emission
-    /// and wire transport when the corresponding pointer is null.  Pointers
-    /// can be updated after construction via the \c set_*() methods (used
-    /// during \c ActorSystem constructor ordering).
+    /// \brief Injected dependencies — all fixed at construction.
     struct Config {
-        /// \brief Opaque pointer to a
-        ///        \c metrics::MpscRingBuffer<metrics::MetricEvent>.
-        ///
-        /// Stored as \c void* to avoid including the heavyweight metrics
-        /// ring-buffer header (which would create a circular dependency
-        /// through its \c using alias).  The implementation casts back to
-        /// the concrete type.  Set via \c set_metrics_ring_buffer().
-        /// \pre Must point to a valid ring buffer, or be \c nullptr.
-        void* metrics_ring_buffer = nullptr;
+        /// \brief Metrics ring buffer for delivery telemetry.
+        /// \c nullptr means metrics are disabled.
+        metrics::MpscRingBuffer<metrics::MetricEvent>* metrics = nullptr;
 
-        /// \brief Transport for sending backpressure signals to remote
-        ///        producers.  May be \c nullptr when networking is disabled.
-        net::TcpTransport* transport = nullptr;
+        /// \brief Fixed wire port for remote backpressure signals.
+        /// Points to a stable \c BackpressureWirePort in network state.
+        /// \c nullptr when networking is disabled.
+        const BackpressureWirePort* wire_port = nullptr;
 
         /// \brief Actor directory for delivering signals to local senders'
         ///        \c ActorContext handles.  Must not be \c nullptr.
@@ -134,27 +126,6 @@ class BackpressureCoordinator {
     ///                 encoded frame bytes.  Pass an empty function to
     ///                 clear the sink.
     void set_wire_sink_for_test(WireSink sink);
-
-    /// \brief Update the metrics ring buffer pointer after construction.
-    ///
-    /// The pointer is stored opaquely as \c void* to avoid including the
-    /// metrics ring-buffer header.  The implementation casts back to
-    /// \c metrics::MpscRingBuffer<metrics::MetricEvent>* at each use site.
-    /// Callers must pass the concrete pointer type; the cast is safe
-    /// because there is exactly one metrics ring buffer type in the system.
-    ///
-    /// \param[in] metrics Pointer to the metrics ring buffer, or \c nullptr.
-    void set_metrics_ring_buffer(void* metrics) noexcept {
-        config_.metrics_ring_buffer = metrics;
-    }
-
-    /// \brief Update the transport pointer after construction.
-    ///
-    /// \param[in] transport Pointer to the TCP transport, or \c nullptr
-    ///                      when networking is disabled.
-    void set_transport(net::TcpTransport* transport) noexcept {
-        config_.transport = transport;
-    }
 
   private:
     Config config_;

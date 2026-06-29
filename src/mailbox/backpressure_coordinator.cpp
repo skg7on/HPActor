@@ -4,14 +4,11 @@
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
-#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 
-namespace hpactor {
+#include "../runtime/messaging_network_ports.hpp"
 
-namespace {
-using MetricBuf = metrics::MpscRingBuffer<metrics::MetricEvent>;
-} // namespace
+namespace hpactor {
 
 BackpressureCoordinator::BackpressureCoordinator(Config config)
     : config_(std::move(config)) {}
@@ -20,15 +17,14 @@ BackpressureCoordinator::~BackpressureCoordinator() = default;
 
 void BackpressureCoordinator::emit_local_signal(
     const mailbox::BackpressureSignal& signal, mailbox::MailboxPressureState state) {
-    auto* metrics = static_cast<MetricBuf*>(config_.metrics_ring_buffer);
-    if (metrics) {
+    if (config_.metrics) {
         metrics::MetricEvent evt{};
         evt.actor_id = signal.target.id;
         evt.event_type = metrics::MetricEventType::kBackpressureSignal;
         evt.code = static_cast<uint8_t>(signal.reason);
         evt.aux = static_cast<uint8_t>(state);
         evt.value_hi = 1;
-        metrics->try_push(evt);
+        config_.metrics->try_push(evt);
     }
     deliver_to_sender(signal);
 }
@@ -39,15 +35,14 @@ void BackpressureCoordinator::emit_remote_signal(
     if (payload.empty())
         return;
 
-    auto* metrics = static_cast<MetricBuf*>(config_.metrics_ring_buffer);
-    if (metrics) {
+    if (config_.metrics) {
         metrics::MetricEvent evt{};
         evt.actor_id = signal.target.id;
         evt.event_type = metrics::MetricEventType::kBackpressureSignal;
         evt.code = static_cast<uint8_t>(signal.reason);
         evt.aux = static_cast<uint8_t>(state);
         evt.value_hi = 1;
-        metrics->try_push(evt);
+        config_.metrics->try_push(evt);
     }
 
     net::WireFrame frame;
@@ -64,8 +59,8 @@ void BackpressureCoordinator::emit_remote_signal(
     auto encoded = frame.encode();
     if (wire_sink_for_test_) {
         (void)wire_sink_for_test_(signal.sender, encoded);
-    } else if (config_.transport) {
-        (void)config_.transport->try_send(signal.sender, encoded);
+    } else if (config_.wire_port) {
+        (void)(*config_.wire_port)(signal.sender, encoded);
     }
 }
 

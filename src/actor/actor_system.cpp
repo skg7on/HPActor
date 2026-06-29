@@ -147,6 +147,15 @@ ActorSystem::ActorSystem(const Config& config)
     // ── System protobuf types ──────────────────────────────────────────
     impl_->core.proto_registry.register_system_types();
 
+    // ── Metrics ring buffer (create first so messaging components can
+    //    receive stable pointers at construction) ───────────────────────
+    if (impl_->operations.metrics_config.enabled) {
+        impl_->operations.metrics_ring_buffer =
+            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
+        impl_->core.scheduler->set_metrics_ring_buffer(
+            impl_->operations.metrics_ring_buffer.get());
+    }
+
     // ── Dead-letter queue ──────────────────────────────────────────────
     impl_->messaging.dead_letters =
         std::make_unique<mailbox::DeadLetterQueue>(impl_->core.config.dead_letters);
@@ -160,8 +169,8 @@ ActorSystem::ActorSystem(const Config& config)
         std::make_unique<LocalDeliveryEngine>(impl_->actors.directory);
     {
         BackpressureCoordinator::Config bp_cfg;
-        bp_cfg.metrics_ring_buffer = nullptr;
-        bp_cfg.transport = nullptr;
+        bp_cfg.metrics = impl_->operations.metrics_ring_buffer.get();
+        bp_cfg.wire_port = &impl_->network.messaging_ports.backpressure;
         bp_cfg.actor_directory = &impl_->actors.directory;
         bp_cfg.endpoint = impl_->core.endpoint;
         impl_->messaging.backpressure =
@@ -190,14 +199,6 @@ ActorSystem::ActorSystem(const Config& config)
     impl_->messaging.reliable_tracker =
         std::make_unique<mailbox::OutboundTracker>(mailbox::ReliableRetryPolicy{});
 
-    // ── Metrics ring buffer (create before pipeline for stable pointer) ──
-    if (impl_->operations.metrics_config.enabled) {
-        impl_->operations.metrics_ring_buffer =
-            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
-        impl_->core.scheduler->set_metrics_ring_buffer(
-            impl_->operations.metrics_ring_buffer.get());
-    }
-
     // ── Delivery pipeline ──────────────────────────────────────────────
     // MUST be created before the scheduler starts so that early-boot
     // actor spawns can deliver messages through it.
@@ -219,11 +220,8 @@ ActorSystem::ActorSystem(const Config& config)
             std::make_unique<mailbox::DeliveryPipeline>(std::move(pipeline_cfg));
     }
 
-    // ── Metrics subsystem (ring buffer created before pipeline above) ────
+    // ── Metrics subsystem ──────────────────────────────────────────────
     if (impl_->operations.metrics_config.enabled) {
-        impl_->messaging.backpressure->set_metrics_ring_buffer(
-            impl_->operations.metrics_ring_buffer.get());
-
         auto m_actor =
             spawn<metrics::MetricsActor>(impl_->operations.metrics_ring_buffer);
         impl_->operations.metrics_actor =
@@ -323,7 +321,6 @@ ActorSystem::ActorSystem(const Config& config)
 
         impl_->network.transport = std::make_unique<net::TcpTransport>(
             impl_->core.endpoint, config.tls, config.pool, nullptr);
-        impl_->messaging.backpressure->set_transport(impl_->network.transport.get());
 
         if (impl_->operations.metrics_ring_buffer) {
             impl_->network.transport->set_metrics_ring_buffer(
