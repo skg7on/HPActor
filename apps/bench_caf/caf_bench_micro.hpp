@@ -164,7 +164,15 @@ run_dispatch_match_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
         system.scheduler()->drain_ready(kMessages + 1024);
     } else {
         // Multi-threaded: poll until all messages are processed or deadline.
-        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        // Scale the deadline for coverage-instrumented builds (same 4x
+        // factor used by deadline_for_preset in caf_bench_scenarios.hpp).
+#ifdef HPACTOR_COVERAGE_BUILD
+        constexpr int kDispatchDeadlineSec = 120;
+#else
+        constexpr int kDispatchDeadlineSec = 30;
+#endif
+        auto deadline = std::chrono::steady_clock::now() +
+                        std::chrono::seconds(kDispatchDeadlineSec);
         while (count.load(std::memory_order_acquire) < kMessages &&
                std::chrono::steady_clock::now() < deadline) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

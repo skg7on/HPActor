@@ -51,18 +51,29 @@ inline size_t scheduler_threads_for_preset(PresetKind preset) {
 
 // Scale the per-trial deadline with preset so large workloads have
 // enough time to drain their mailboxes.
+//
+// Coverage-instrumented builds can run 3-5x slower (especially for
+// sequential workloads like ring-traffic hops where each delivery
+// touches many instrumented code paths).  Multiply deadlines when
+// HPACTOR_COVERAGE_BUILD is defined so smoke tests remain reliable.
+#ifdef HPACTOR_COVERAGE_BUILD
+constexpr int kCoverageDeadlineMultiplier = 4;
+#else
+constexpr int kCoverageDeadlineMultiplier = 1;
+#endif
 inline std::chrono::seconds deadline_for_preset(PresetKind preset) {
+    constexpr int kMult = kCoverageDeadlineMultiplier;
     switch (preset) {
         case PresetKind::Smoke:
-            return std::chrono::seconds{30};
+            return std::chrono::seconds{30 * kMult};
         case PresetKind::Nightly:
-            return std::chrono::seconds{120};
+            return std::chrono::seconds{120 * kMult};
         case PresetKind::PaperScale:
-            return std::chrono::seconds{300};
+            return std::chrono::seconds{300 * kMult};
         case PresetKind::Stress:
-            return std::chrono::seconds{600};
+            return std::chrono::seconds{600 * kMult};
     }
-    return std::chrono::seconds{30};
+    return std::chrono::seconds{30 * kMult};
 }
 
 inline Config make_bench_actor_config(const CafBenchConfig& cfg) {
