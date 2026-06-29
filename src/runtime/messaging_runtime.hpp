@@ -118,6 +118,17 @@ class MessagingRuntime final {
         outbound_tracker_.process_retries(now_ns, std::forward<ResendFn>(resend));
     }
 
+    // ── Reconfiguration ────────────────────────────────────────────────
+
+    /// \brief Apply live-reloadable configuration changes.
+    ///
+    /// Preserves object identity for all owned components (DLQ, dedup,
+    /// trackers, coordinator, pipeline, engine).  Only fields classified
+    /// as live-reloadable by the current implementation are applied.
+    ///
+    /// \param[in] dead_letters New dead-letter queue configuration.
+    void reconfigure(const mailbox::DeadLetterConfig& dead_letters) noexcept;
+
     // ── Accessors (stable addresses) ──────────────────────────────────
 
     mailbox::DeadLetterQueue& dead_letters() noexcept;

@@ -78,6 +78,10 @@ void MessagingRuntime::on_reliable_nack(MessageId message_id, EndPoint endpoint,
     outbound_tracker_.on_nack(message_id, endpoint, reason_code, retry_after_ms);
 }
 
+void MessagingRuntime::reconfigure(const mailbox::DeadLetterConfig& dead_letters) noexcept {
+    dead_letters_.reconfigure(dead_letters);
+}
+
 mailbox::DeadLetterQueue& MessagingRuntime::dead_letters() noexcept {
     return dead_letters_;
 }

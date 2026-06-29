@@ -1216,7 +1216,7 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 #undef HPACTOR_MAILBOX_FIELD
 
     impl_->core.config.dead_letters = model.system.dead_letters;
-    impl_->messaging_->dead_letters().reconfigure(impl_->core.config.dead_letters);
+    impl_->messaging_->reconfigure(impl_->core.config.dead_letters);
 
     apply_tracing_config(model.system.tracing);
 
