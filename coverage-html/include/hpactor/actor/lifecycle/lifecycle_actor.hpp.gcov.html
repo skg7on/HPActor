@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 11:00:40</td>
+            <td class="headerValue">2026-06-29 12:05:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.0&nbsp;%</td>
@@ -146,8 +146,8 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///         \c transition() call, or \c kStarting if no transition</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     ///         has occurred.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \note Thread safety: lock-free atomic load with acquire ordering.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2523 :     LifecycleState state() const noexcept {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5046 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2525 :     LifecycleState state() const noexcept {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5050 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Whether the actor accepts user (data-plane) messages in</span>
@@ -228,8 +228,8 @@
 <span id="L150"><span class="lineNum">     150</span>                 :             :     /// \brief Current drain configuration.</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     ///</span>
 <span id="L152"><span class="lineNum">     152</span>                 :             :     /// \return A copy of the \c DrainConfig (policy + timeout).</span>
-<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">         164 :     DrainConfig drain_config() const noexcept {</span></span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">         164 :         return drain_config_;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">         165 :     DrainConfig drain_config() const noexcept {</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">         165 :         return drain_config_;</span></span>
 <span id="L155"><span class="lineNum">     155</span>                 :             :     }</span>
 <span id="L156"><span class="lineNum">     156</span>                 :             : </span>
 <span id="L157"><span class="lineNum">     157</span>                 :             :     /// \brief Override the drain configuration.</span>

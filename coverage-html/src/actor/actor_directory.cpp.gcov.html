@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 11:00:40</td>
+            <td class="headerValue">2026-06-29 12:05:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -126,14 +126,14 @@
 <span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">        6653 :     return PublishStatus::Published;</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">        6655 : }</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      433405 : std::optional&lt;ActorDirectoryEntry&gt; ActorDirectory::find(ActorId id) const {</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      433405 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      433405 :     auto it = entries_.find(id);</span></span>
-<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 33 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433372 times"> + </span>]:<span class="tlaGNC">      433405 :     if (it == entries_.end()) {</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      433279 : std::optional&lt;ActorDirectoryEntry&gt; ActorDirectory::find(ActorId id) const {</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      433279 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      433279 :     auto it = entries_.find(id);</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 33 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433246 times"> + </span>]:<span class="tlaGNC">      433279 :     if (it == entries_.end()) {</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          33 :         return std::nullopt;</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     }</span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      433372 :     return it-&gt;second;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      433405 : }</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      433246 :     return it-&gt;second;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      433279 : }</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          11 : std::optional&lt;Actor&gt; ActorDirectory::find_actor(ActorId id) const {</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          11 :     auto entry = find(id);</span></span>
@@ -144,13 +144,13 @@
 <span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">          11 : }</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : std::shared_ptr&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      266228 : ActorDirectory::find_mailbox(ActorId id) const {</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      266228 :     auto entry = find(id);</span></span>
-<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 266211 times"> + </span>]:<span class="tlaGNC">      266228 :     if (!entry.has_value()) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      266206 : ActorDirectory::find_mailbox(ActorId id) const {</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      266206 :     auto entry = find(id);</span></span>
+<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 266189 times"> + </span>]:<span class="tlaGNC">      266206 :     if (!entry.has_value()) {</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">          17 :         return nullptr;</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     }</span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      266211 :     return entry-&gt;mailbox;</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">      266228 : }</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      266189 :     return entry-&gt;mailbox;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">      266206 : }</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          15 : std::shared_ptr&lt;ActorContext&gt; ActorDirectory::find_context(ActorId id) const {</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">          15 :     auto entry = find(id);</span></span>

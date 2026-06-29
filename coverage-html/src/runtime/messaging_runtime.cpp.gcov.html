@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 11:00:40</td>
+            <td class="headerValue">2026-06-29 12:05:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
@@ -160,8 +160,8 @@
 <span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">           1 : adt::DedupCache&amp; MessagingRuntime::dedup_cache() noexcept {</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">           1 :     return dedup_cache_;</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             : }</span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          26 : msg::OutboundDeliveryTracker&amp; MessagingRuntime::delivery_receipt_tracker() noexcept {</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          26 :     return outbound_tracker_;</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          24 : msg::OutboundDeliveryTracker&amp; MessagingRuntime::delivery_receipt_tracker() noexcept {</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          24 :     return outbound_tracker_;</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : }</span>
 <span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaUNC tlaBgUNC">           0 : mailbox::OutboundTracker&amp; MessagingRuntime::mailbox_reliable_tracker() noexcept {</span></span>
 <span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaUNC">           0 :     return reliable_tracker_;</span></span>
@@ -169,8 +169,8 @@
 <span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC tlaBgGNC">           2 : BackpressureCoordinator&amp; MessagingRuntime::backpressure() noexcept {</span></span>
 <span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">           2 :     return backpressure_;</span></span>
 <span id="L93"><span class="lineNum">      93</span>                 :             : }</span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">      132827 : mailbox::DeliveryPipeline&amp; MessagingRuntime::delivery_pipeline() noexcept {</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">      132827 :     return delivery_pipeline_;</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">      132818 : mailbox::DeliveryPipeline&amp; MessagingRuntime::delivery_pipeline() noexcept {</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">      132818 :     return delivery_pipeline_;</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             : }</span>
 <span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaUNC tlaBgUNC">           0 : LocalDeliveryEngine&amp; MessagingRuntime::local_delivery_engine() noexcept {</span></span>
 <span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaUNC">           0 :     return local_delivery_engine_;</span></span>
