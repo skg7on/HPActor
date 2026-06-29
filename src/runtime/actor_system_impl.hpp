@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include "actor_spawner.hpp"
+
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
@@ -180,6 +182,10 @@ class ActorSystem::Impl final {
     MessagingRuntimeState messaging;
     NetworkRuntimeState network;
     ClusterRuntimeState cluster;
+
+    // Spawner — constructed after directory, scheduler, metrics, logger exist.
+    // Uses std::optional for deferred initialization.
+    std::optional<ActorSpawner> spawner;
 };
 
 } // namespace hpactor

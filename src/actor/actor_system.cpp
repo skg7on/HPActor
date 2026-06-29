@@ -15,6 +15,7 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
 
+#include "../runtime/actor_spawner.hpp"
 #include "../runtime/actor_system_impl.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
@@ -76,6 +77,19 @@ ActorSystem::ActorSystem(const Config& config)
         *this, config.scheduler_threads, 4, config.timer_backend,
         config.scheduler_start_paused);
     impl_->actors.type_registry = std::make_unique<ActorTypeRegistry>();
+
+    // ── Spawner ──────────────────────────────────────────────────────────
+    // Must exist before any spawn<>() call.
+    // Metrics and logger pointers are captured by address so later
+    // assignments to the shared_ptr/pointer are visible to the spawner.
+    impl_->spawner.emplace(ActorSpawner::Dependencies{
+        .facade = *this,
+        .endpoint = impl_->core.endpoint,
+        .directory = impl_->actors.directory,
+        .scheduler = *impl_->core.scheduler,
+        .metrics = nullptr, // set after metrics ring buffer is created
+        .logger = nullptr,  // set after logger is created
+    });
     // ── System protobuf types ──────────────────────────────────────────
     impl_->core.proto_registry.register_system_types();
 
@@ -182,6 +196,16 @@ ActorSystem::ActorSystem(const Config& config)
     if (impl_->operations.logger) [[unlikely]] {
         impl_->core.scheduler->set_logger(impl_->operations.logger);
     }
+
+    // Reconstruct spawner with now-valid metrics/logger pointers.
+    impl_->spawner.emplace(ActorSpawner::Dependencies{
+        .facade = *this,
+        .endpoint = impl_->core.endpoint,
+        .directory = impl_->actors.directory,
+        .scheduler = *impl_->core.scheduler,
+        .metrics = impl_->operations.metrics_ring_buffer.get(),
+        .logger = impl_->operations.logger,
+    });
 
     impl_->operations.fault_controller.set_log_manager(
         impl_->operations.log_manager.get());
@@ -300,23 +324,33 @@ ActorSystem::ActorSystem(const Config& config)
 
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
             *this, *impl_->actors.type_registry, impl_->network.transport.get());
-        spawn_receiver->set_address(ActorAddress{
-            impl_->core.endpoint, SystemActorType, SpawnReceiverId, 0});
 
-        auto spawn_mailbox =
-            std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-                SpawnReceiverId, impl_->core.scheduler.get(),
-                mailbox_config_for_spawn());
-        auto spawn_ctx =
-            std::make_shared<ActorContext>(Actor(spawn_receiver), this);
-        spawn_receiver->set_context(spawn_ctx.get());
+        SpawnSpec receiver_spec;
+        receiver_spec.type_name = "SpawnReceiver";
+        receiver_spec.mailbox = mailbox_config_for_spawn();
+        receiver_spec.dispatch_policy = spawn_receiver->dispatch_policy();
+        receiver_spec.dispatch_hints = spawn_receiver->dispatch_hints();
+        receiver_spec.reserved_id = SpawnReceiverId;
+        receiver_spec.actor_type_override = SystemActorType;
+        receiver_spec.origin = SpawnOrigin::System;
 
-        ActorDirectoryEntry spawn_entry;
-        spawn_entry.actor = Actor(spawn_receiver);
-        spawn_entry.instance = spawn_receiver;
-        spawn_entry.mailbox = spawn_mailbox;
-        spawn_entry.context = spawn_ctx;
-        impl_->actors.directory.insert(std::move(spawn_entry));
+        auto result =
+            impl_->spawner->adopt(std::move(spawn_receiver), receiver_spec);
+        if (result.is_error()) {
+            impl_->core.running.store(false, std::memory_order_release);
+            if (impl_->network.event_loop) {
+                impl_->network.event_loop->stop();
+            }
+            if (impl_->network.network_thread.joinable()) {
+                impl_->network.network_thread.join();
+            }
+            if (impl_->network.transport) {
+                impl_->network.transport->stop_listening();
+            }
+            if (impl_->network.discovery) {
+                impl_->network.discovery->stop();
+            }
+        }
     }
 
     {
@@ -1054,72 +1088,22 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
 
 Actor ActorSystem::adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
                                               std::string_view type_name) {
-    ActorId id = impl_->actors.directory.allocate_id();
-    actor->set_address(ActorAddress(impl_->core.endpoint, actor->type(), id, 0));
-    actor->set_type_name(std::string{type_name});
-
-    auto* local = static_cast<LocalActor*>(actor.get());
-    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-        id, impl_->core.scheduler.get(), mailbox_config_for_spawn());
-    auto* mbox = mailbox_ptr.get();
-
-    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
-    local->set_context(actor_ctx.get());
-
-    ActorDirectoryEntry entry;
-    entry.actor = Actor(actor);
-    entry.instance = actor;
-    entry.mailbox = mailbox_ptr;
-    entry.context = actor_ctx;
-    impl_->actors.directory.insert(std::move(entry));
-
-    actor->set_scheduler(impl_->core.scheduler.get());
-    actor->set_mailbox(mbox);
-
-    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
-        mbox->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
-        actor->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
+    if (!impl_->spawner.has_value()) {
+        return Actor{};
     }
 
-    if (impl_->operations.logger) [[unlikely]] {
-        mbox->set_logger(impl_->operations.logger);
-        actor->set_logger(impl_->operations.logger);
+    SpawnSpec spec;
+    spec.type_name = type_name;
+    spec.mailbox = mailbox_config_for_spawn();
+    spec.dispatch_policy = actor->dispatch_policy();
+    spec.dispatch_hints = actor->dispatch_hints();
+    spec.origin = SpawnOrigin::Programmatic;
+
+    auto result = impl_->spawner->adopt(std::move(actor), spec);
+    if (result.is_error()) {
+        return Actor{};
     }
-
-    switch (actor->dispatch_policy()) {
-        case sched::DispatchPolicy::Cooperative:
-            impl_->core.scheduler->notify_ready(id, 0, INT64_MAX);
-            break;
-        case sched::DispatchPolicy::DedicatedThread:
-            impl_->core.scheduler->register_dedicated_thread(
-                id, actor->dispatch_hints().cpu_affinity);
-            break;
-        case sched::DispatchPolicy::DedicatedPool:
-            impl_->core.scheduler->register_dedicated_pool(
-                id, actor->dispatch_hints().pool_size);
-            break;
-    }
-
-    local->on_activate();
-
-    if (auto* lc = actor->as_lifecycle()) {
-        lc->transition(LifecycleState::kActive);
-    }
-
-    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
-                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
-                     "actor spawned",
-                     log::field_lit("type", actor->type_name().data()));
-
-    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
-        metrics::MetricEvent evt{};
-        evt.actor_id = id;
-        evt.event_type = metrics::MetricEventType::kActorSpawned;
-        evt.value_hi = 1;
-        impl_->operations.metrics_ring_buffer->try_push(evt);
-    }
-
-    return Actor(actor);
+    return result.value();
 }
 
 // ── spawn_configured ────────────────────────────────────────────────────────

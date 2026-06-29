@@ -140,6 +140,21 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return nullptr;
     }
 
+    /// \brief RTTI-free context binding capability.
+    ///
+    /// Called by \c ActorSpawner during adoption to bind an execution context
+    /// to this actor. Returns \c false by default; \c LocalActor overrides
+    /// to accept the context through its existing storage.
+    virtual bool bind_context(ActorContext* context) noexcept;
+
+    /// \brief Post-construction activation hook.
+    ///
+    /// Called by \c ActorSpawner after context binding and before dispatch
+    /// registration. \c LocalActor delegates to the existing \c on_activate().
+    /// The default does nothing; successful adoption requires
+    /// \c bind_context() returning \c true first.
+    virtual void activate_after_spawn();
+
     /// \brief RTTI-free downcast to \c IDurableActor.
     ///
     /// Returns \c nullptr for actors that do not implement durable state.

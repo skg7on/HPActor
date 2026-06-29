@@ -56,6 +56,7 @@
 #include <hpactor/process/process_config.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/sched/actor_execution_dependencies.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/timer/timer_stats_snapshot.hpp>
@@ -867,6 +868,8 @@ class ActorSystem {
     /// it with ActorSpawner::adopt() and SpawnSpec.
     Actor adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
                                      std::string_view type_name);
+
+    friend struct sched::ActorExecutionDependencies;
 
     class Impl;
     std::unique_ptr<Impl> impl_;

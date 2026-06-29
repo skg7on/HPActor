@@ -118,4 +118,12 @@ void AbstractActor::set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* /*mailb
     // Default no-op; EventBasedActor overrides this
 }
 
+bool AbstractActor::bind_context(ActorContext* /*context*/) noexcept {
+    return false;
+}
+
+void AbstractActor::activate_after_spawn() {
+    // Default no-op; LocalActor delegates to on_activate()
+}
+
 } // namespace hpactor

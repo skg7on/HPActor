@@ -18,6 +18,7 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
+#include <hpactor/sched/actor_execution_dependencies.hpp>
 #include <hpactor/sched/actor_execution_engine.hpp>
 #include <hpactor/sched/actor_ready_gate.hpp>
 #include <hpactor/sched/edf_queue.hpp>
@@ -268,6 +269,17 @@ class HybridScheduler : public IScheduler {
                              uint32_t num_priorities = 4,
                              TimerBackend timer_backend = TimerBackend::TimingWheel,
                              bool start_paused = false);
+
+    /// \brief Construct with narrow execution dependencies.
+    ///
+    /// Preferred constructor — stores only concrete deps instead of the
+    /// full \c ActorSystem&. The facade-accessor constructor above is a
+    /// source-compatible adapter.
+    explicit HybridScheduler(ActorSystem& system,
+                             ActorExecutionDependencies exec_deps,
+                             uint32_t num_workers, uint32_t num_priorities = 4,
+                             TimerBackend timer_backend = TimerBackend::TimingWheel,
+                             bool start_paused = false);
     ~HybridScheduler() override;
 
     HybridScheduler(const HybridScheduler&) = delete;
@@ -388,6 +400,7 @@ class HybridScheduler : public IScheduler {
     void mark_dispatch_end() noexcept;
 
     ActorSystem& system_;
+    ActorExecutionDependencies exec_deps_;
     ActorReadyGate ready_gate_;
     WorkPlacementScheduler placement_;
     ActorExecutionEngine executor_;

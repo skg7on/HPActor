@@ -118,3 +118,65 @@ TEST(ActorDirectoryTest, EraseActorRemovesAllNamesForActor) {
     EXPECT_FALSE(directory.resolve_name("primary").has_value());
     EXPECT_FALSE(directory.resolve_name("alias").has_value());
 }
+
+TEST(ActorDirectoryTest, PublishCommitsEntryAndNameTogether) {
+    ActorDirectory directory;
+    Config config;
+    config.scheduler_threads = 0;
+    ActorSystem system{config};
+    auto instance = std::make_shared<DirectoryTestActor>(nullptr, system);
+    instance->set_address(
+        ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{41}, 0});
+    Actor actor{instance};
+    ActorDirectoryEntry entry{actor, instance, nullptr, nullptr};
+
+    auto status = directory.publish(std::move(entry), "worker-41");
+
+    EXPECT_EQ(status, ActorDirectory::PublishStatus::Published);
+    ASSERT_TRUE(directory.find(ActorId{41}).has_value());
+    ASSERT_TRUE(directory.resolve_name("worker-41").has_value());
+    EXPECT_EQ(directory.resolve_name("worker-41")->id, ActorId{41});
+}
+
+TEST(ActorDirectoryTest, DuplicateNamePublishesNoOrphanEntry) {
+    ActorDirectory directory;
+    Config config;
+    config.scheduler_threads = 0;
+    ActorSystem system{config};
+
+    auto make_entry = [&](ActorId id) {
+        auto inst = std::make_shared<DirectoryTestActor>(nullptr, system);
+        inst->set_address(
+            ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, id, 0});
+        return ActorDirectoryEntry{Actor{inst}, inst, nullptr, nullptr};
+    };
+
+    ASSERT_EQ(directory.publish(make_entry(ActorId{41}), "worker"),
+              ActorDirectory::PublishStatus::Published);
+
+    EXPECT_EQ(directory.publish(make_entry(ActorId{42}), "worker"),
+              ActorDirectory::PublishStatus::DuplicateName);
+    EXPECT_FALSE(directory.find(ActorId{42}).has_value());
+    EXPECT_EQ(directory.size(), 1U);
+}
+
+TEST(ActorDirectoryTest, DuplicateIdPublishesNoSecondName) {
+    ActorDirectory directory;
+    Config config;
+    config.scheduler_threads = 0;
+    ActorSystem system{config};
+
+    auto make_entry = [&](ActorId id) {
+        auto inst = std::make_shared<DirectoryTestActor>(nullptr, system);
+        inst->set_address(
+            ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, id, 0});
+        return ActorDirectoryEntry{Actor{inst}, inst, nullptr, nullptr};
+    };
+
+    ASSERT_EQ(directory.publish(make_entry(ActorId{41}), "first"),
+              ActorDirectory::PublishStatus::Published);
+
+    EXPECT_EQ(directory.publish(make_entry(ActorId{41}), "second"),
+              ActorDirectory::PublishStatus::DuplicateActorId);
+    EXPECT_FALSE(directory.resolve_name("second").has_value());
+}
