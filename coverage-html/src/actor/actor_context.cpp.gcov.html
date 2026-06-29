@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 07:15:44</td>
+            <td class="headerValue">2026-06-29 11:00:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">54.2&nbsp;%</td>
@@ -137,22 +137,22 @@
 <span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">      126803 : ActorRef ActorContext::resolve(const ActorAddress&amp; target) {</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     // 1. Check cache (hot path)</span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">      126803 :     auto cached = ref_cache_.get(target.id);</span></span>
-<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 126419 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 384 times"> + </span>]:<span class="tlaGNC">      126803 :     if (cached.has_value()) {</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      126419 :         return *cached;</span></span>
+<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 126418 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 385 times"> + </span>]:<span class="tlaGNC">      126803 :     if (cached.has_value()) {</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      126418 :         return *cached;</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     // 2. Resolve system pointer</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     // NOLINTNEXTLINE(readability-avoid-nested-conditional-operator)</span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">         384 :     auto* system = system_ != nullptr</span></span>
-<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 384 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         384 :                        ? system_</span></span>
-<span id="L70"><span class="lineNum">      70</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 384 times"> + </span>]:<span class="tlaGNC">         384 :                        : (owner_ ? &amp;owner_.get()-&gt;system() : nullptr);</span></span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 384 times"> + </span>]:<span class="tlaGNC">         384 :     if (system == nullptr) {</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">         385 :     auto* system = system_ != nullptr</span></span>
+<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 385 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         385 :                        ? system_</span></span>
+<span id="L70"><span class="lineNum">      70</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 385 times"> + </span>]:<span class="tlaGNC">         385 :                        : (owner_ ? &amp;owner_.get()-&gt;system() : nullptr);</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 385 times"> + </span>]:<span class="tlaGNC">         385 :     if (system == nullptr) {</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return ActorRef{};</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     // 3. If target endpoint differs from our own, it's a remote actor.</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     //    Skip local lookup — actor IDs are only unique within a system.</span>
-<span id="L77"><span class="lineNum">      77</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 380 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         384 :     if (!(target.endpoint == system-&gt;endpoint())) {</span></span>
+<span id="L77"><span class="lineNum">      77</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 381 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         385 :     if (!(target.endpoint == system-&gt;endpoint())) {</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">           4 :         ActorProxy proxy(target, system);</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           4 :         ActorRef ref(proxy);</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :         // Only cache if transport was resolved successfully</span>
@@ -164,12 +164,12 @@
 <span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">           4 :     }</span></span>
 <span id="L86"><span class="lineNum">      86</span>                 :             : </span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :     // 4. Local endpoint: check local actors</span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         380 :     auto actor = system-&gt;get_actor(target.id);</span></span>
-<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaGBC" title="Branch 0 was taken 378 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">         380 :     if (actor != nullptr) {</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">         378 :         ActorRef ref{Actor(actor)};</span></span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         378 :         ref_cache_.put(target.id, ref);</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">         378 :         return ref;</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">         378 :     }</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         381 :     auto actor = system-&gt;get_actor(target.id);</span></span>
+<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaGBC" title="Branch 0 was taken 379 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">         381 :     if (actor != nullptr) {</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">         379 :         ActorRef ref{Actor(actor)};</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         379 :         ref_cache_.put(target.id, ref);</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">         379 :         return ref;</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">         379 :     }</span></span>
 <span id="L94"><span class="lineNum">      94</span>                 :             : </span>
 <span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">           2 :     return ActorRef{};</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">      126803 : }</span></span>
@@ -400,28 +400,28 @@
 <span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L318"><span class="lineNum">     318</span>                 :             : </span>
 <span id="L319"><span class="lineNum">     319</span>                 :             : AlarmHandle</span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">         112 : ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {</span></span>
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">         112 :     auto* sched = system_-&gt;scheduler();</span></span>
-<span id="L322"><span class="lineNum">     322</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 112 times"> + </span>]:<span class="tlaGNC">         112 :     if (!sched)</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">         111 : ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {</span></span>
+<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">         111 :     auto* sched = system_-&gt;scheduler();</span></span>
+<span id="L322"><span class="lineNum">     322</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 111 times"> + </span>]:<span class="tlaGNC">         111 :     if (!sched)</span></span>
 <span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return AlarmHandle{};</span></span>
 <span id="L324"><span class="lineNum">     324</span>                 :             : </span>
-<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC tlaBgGNC">         112 :     msg.set_sender_address(owner_.address());</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC tlaBgGNC">         111 :     msg.set_sender_address(owner_.address());</span></span>
 <span id="L326"><span class="lineNum">     326</span>                 :             : </span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         112 :     ActorId self_id = owner_.id();</span></span>
-<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         112 :     ActorSystem* sys = system_;</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         111 :     ActorId self_id = owner_.id();</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         111 :     ActorSystem* sys = system_;</span></span>
 <span id="L329"><span class="lineNum">     329</span>                 :             : </span>
 <span id="L330"><span class="lineNum">     330</span>                 :             :     // Wrap in shared_ptr because TypedMessage is move-only and std::function</span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     // requires a copyable callable.</span>
-<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         112 :     auto msg_ptr = std::make_shared&lt;TypedMessage&gt;(std::move(msg));</span></span>
-<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">          92 :     auto callback = [sys, self_id, msg_ptr]() {</span></span>
-<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">          92 :         sys-&gt;deliver_local(self_id, std::move(*msg_ptr));</span></span>
-<span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC">         112 :     };</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         111 :     auto msg_ptr = std::make_shared&lt;TypedMessage&gt;(std::move(msg));</span></span>
+<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">          91 :     auto callback = [sys, self_id, msg_ptr]() {</span></span>
+<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">          91 :         sys-&gt;deliver_local(self_id, std::move(*msg_ptr));</span></span>
+<span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC">         111 :     };</span></span>
 <span id="L336"><span class="lineNum">     336</span>                 :             : </span>
 <span id="L337"><span class="lineNum">     337</span>                 :             :     int64_t delay_ns =</span>
-<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">         112 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(delay).count();</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">         112 :     auto handle = sched-&gt;schedule_after(std::move(callback), delay_ns);</span></span>
-<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">         112 :     return AlarmHandle{handle.value()};</span></span>
-<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">         112 : }</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">         111 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(delay).count();</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">         111 :     auto handle = sched-&gt;schedule_after(std::move(callback), delay_ns);</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">         111 :     return AlarmHandle{handle.value()};</span></span>
+<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">         111 : }</span></span>
 <span id="L342"><span class="lineNum">     342</span>                 :             : </span>
 <span id="L343"><span class="lineNum">     343</span>                 :             : AlarmHandle</span>
 <span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaUNC tlaBgUNC">           0 : ActorContext::schedule_to(const ActorAddress&amp; target,</span></span>
