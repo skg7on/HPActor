@@ -31,17 +31,17 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">94.6&nbsp;%</td>
-            <td class="headerCovTableEntry">56</td>
+            <td class="headerCovTableEntryMed">88.3&nbsp;%</td>
+            <td class="headerCovTableEntry">60</td>
             <td class="headerCovTableEntry">53</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 04:51:53</td>
+            <td class="headerValue">2026-06-29 07:15:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
+            <td class="headerCovTableEntry">10</td>
             <td class="headerCovTableEntry">8</td>
           </tr>
           <tr>
@@ -99,8 +99,8 @@
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : namespace hpactor {</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">        6692 : AbstractActor::AbstractActor(ActorId id, ActorType type, ActorSystem&amp; sys)</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        6692 :     : id_(id), type_(type), system_(sys) {}</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">        6703 : AbstractActor::AbstractActor(ActorId id, ActorType type, ActorSystem&amp; sys)</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        6703 :     : id_(id), type_(type), system_(sys) {}</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           8 : void AbstractActor::link_to(const ActorAddr&amp; other) {</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           8 :     auto* ctx = actor_context();</span></span>
@@ -196,7 +196,15 @@
 <span id="L118"><span class="lineNum">     118</span>                 :             :     // Default no-op; EventBasedActor overrides this</span>
 <span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : </span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : } // namespace hpactor</span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaUNC tlaBgUNC">           0 : bool AbstractActor::bind_context(ActorContext* /*context*/) noexcept {</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC">           0 :     return false;</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :             : }</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             : </span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaUNC">           0 : void AbstractActor::activate_after_spawn() {</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     // Default no-op; LocalActor delegates to on_activate()</span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : </span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 04:51:53</td>
+            <td class="headerValue">2026-06-29 07:15:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">72.0&nbsp;%</td>
@@ -136,39 +136,39 @@
 <span id="L58"><span class="lineNum">      58</span>                 :             : ///       methods delegate to \c ActorContext which synchronizes internally.</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : class AbstractActor : public std::enable_shared_from_this&lt;AbstractActor&gt; {</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :   public:</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC tlaBgGNC">        6692 :     virtual ~AbstractActor() = default;</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC tlaBgGNC">        6703 :     virtual ~AbstractActor() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \brief Globally-unique actor identifier assigned at spawn.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      167841 :     ActorId id() const {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">      167841 :         return id_;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      167640 :     ActorId id() const {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">      167640 :         return id_;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     /// \brief Pointer to the actor's \c ActorId for consumers that need</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///        an address without copying.</span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">        6763 :     const ActorId* id_ptr() const {</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">        6763 :         return &amp;id_;</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">        6774 :     const ActorId* id_ptr() const {</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">        6774 :         return &amp;id_;</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     }</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :     /// \brief Actor type tag.</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">        6545 :     ActorType type() const {</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        6545 :         return type_;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">        6551 :     ActorType type() const {</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        6551 :         return type_;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     /// \brief Full network-addressable identity.</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      254946 :     ActorAddress address() const {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      254946 :         return address_;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      261614 :     ActorAddress address() const {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      261614 :         return address_;</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :     /// \brief Owning \c ActorSystem reference.</span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      395199 :     ActorSystem&amp; system() {</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      395199 :         return system_;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      395219 :     ActorSystem&amp; system() {</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      395219 :         return system_;</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     }</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     const ActorSystem&amp; system() const {</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :         return system_;</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     }</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : </span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :     /// \brief Set actor address. Called by \c ActorSystem during spawn.</span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">        6644 :     void set_address(ActorAddress addr) {</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">        6644 :         address_ = addr;</span></span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">        6644 :         id_ = addr.id;</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">        6644 :         type_ = addr.type;</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">        6644 :     }</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">        6655 :     void set_address(ActorAddress addr) {</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">        6655 :         address_ = addr;</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">        6655 :         id_ = addr.id;</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">        6655 :         type_ = addr.type;</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">        6655 :     }</span></span>
 <span id="L94"><span class="lineNum">      94</span>                 :             : </span>
 <span id="L95"><span class="lineNum">      95</span>                 :             :     /// \brief Set scheduler back-reference. Called by \c ActorSystem during</span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     /// spawn.</span>
@@ -211,118 +211,133 @@
 <span id="L133"><span class="lineNum">     133</span>                 :             :     /// \brief RTTI-free downcast to the \c LifecycleActor mixin.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// Returns \c nullptr for actors that do not opt into lifecycle management.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      414680 :     virtual LifecycleActor* as_lifecycle() {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      414680 :         return nullptr;</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      414815 :     virtual LifecycleActor* as_lifecycle() {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      414815 :         return nullptr;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">          10 :     virtual const LifecycleActor* as_lifecycle() const {</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          10 :         return nullptr;</span></span>
 <span id="L141"><span class="lineNum">     141</span>                 :             :     }</span>
 <span id="L142"><span class="lineNum">     142</span>                 :             : </span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :     /// \brief RTTI-free downcast to \c IDurableActor.</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     /// \brief RTTI-free context binding capability.</span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :     ///</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     /// Returns \c nullptr for actors that do not implement durable state.</span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     virtual class IDurableActor* as_durable() {</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     }</span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaUNC">           0 :     virtual const class IDurableActor* as_durable() const {</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :             :     }</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
-<span id="L153"><span class="lineNum">     153</span>                 :             :     /// \brief RTTI-free downcast to \c mem::Hibernatable.</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             :     ///</span>
-<span id="L155"><span class="lineNum">     155</span>                 :             :     /// Returns \c nullptr for actors that do not support memory-only</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :     /// hibernation.</span>
-<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaUNC">           0 :     virtual class mem::Hibernatable* as_hibernatable() {</span></span>
-<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :     }</span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaUNC">           0 :     virtual const class mem::Hibernatable* as_hibernatable() const {</span></span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
-<span id="L162"><span class="lineNum">     162</span>                 :             :     }</span>
-<span id="L163"><span class="lineNum">     163</span>                 :             : </span>
-<span id="L164"><span class="lineNum">     164</span>                 :             :     /// \brief Returns \c true for system actors that drain last during node</span>
-<span id="L165"><span class="lineNum">     165</span>                 :             :     ///        shutdown. \c MetricsActor, \c CliActor, and \c SpawnReceiver</span>
-<span id="L166"><span class="lineNum">     166</span>                 :             :     ///        override this.</span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC tlaBgGNC">        5140 :     virtual bool is_system_actor() const {</span></span>
-<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">        5140 :         return false;</span></span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     }</span>
-<span id="L170"><span class="lineNum">     170</span>                 :             : </span>
-<span id="L171"><span class="lineNum">     171</span>                 :             :     /// \brief Dispatch policy telling the scheduler how to execute this actor.</span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     ///</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             :     /// \return \c Cooperative (default, M:N work-stealing pool).</span>
-<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">        6505 :     virtual sched::DispatchPolicy dispatch_policy() const {</span></span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">        6505 :         return sched::DispatchPolicy::Cooperative;</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :             :     }</span>
-<span id="L177"><span class="lineNum">     177</span>                 :             :     /// \brief Dispatch hints (CPU affinity, pool size) for dedicated actors.</span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          52 :     virtual sched::DispatchHints dispatch_hints() const {</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          52 :         return {};</span></span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :     }</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             : </span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :     /// \brief Human-readable type name for metrics and CLI introspection.</span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5850 :     virtual std::string_view type_name() const {</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">        5850 :         return type_name_;</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :             :     }</span>
-<span id="L186"><span class="lineNum">     186</span>                 :             :     /// \brief Set the type name. Called by \c ActorSystem during spawn.</span>
-<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">        6545 :     void set_type_name(std::string name) {</span></span>
-<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">        6545 :         type_name_ = std::move(name);</span></span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">        6545 :     }</span></span>
-<span id="L190"><span class="lineNum">     190</span>                 :             : </span>
-<span id="L191"><span class="lineNum">     191</span>                 :             :     /// \brief Set the metrics ring buffer pointer for out-of-band events.</span>
-<span id="L192"><span class="lineNum">     192</span>                 :             :     ///</span>
-<span id="L193"><span class="lineNum">     193</span>                 :             :     /// Default no-op. Overridden by actors that emit metric events.</span>
-<span id="L194"><span class="lineNum">     194</span>                 :             :     /// \param[in] buf Opaque pointer to an \c MpscRingBuffer&lt;MetricEvent&gt;.</span>
-<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaGNC">           6 :     virtual void set_metrics_ring_buffer(void* /*buf*/) {}</span></span>
-<span id="L196"><span class="lineNum">     196</span>                 :             :     /// \brief Set the logger pointer for structured logging.</span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :     ///</span>
-<span id="L198"><span class="lineNum">     198</span>                 :             :     /// Default no-op. Overridden by actors that log from the hot path.</span>
-<span id="L199"><span class="lineNum">     199</span>                 :             :     /// \param[in] logger Opaque pointer to a \c Logger instance.</span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">           6 :     virtual void set_logger(void* /*logger*/) noexcept {}</span></span>
-<span id="L201"><span class="lineNum">     201</span>                 :             : </span>
-<span id="L202"><span class="lineNum">     202</span>                 :             :     /// \brief Return lightweight inspectable metadata for CLI introspection.</span>
-<span id="L203"><span class="lineNum">     203</span>                 :             :     ///</span>
-<span id="L204"><span class="lineNum">     204</span>                 :             :     /// Called from the actor's own thread via \c InspectStateRequest.</span>
-<span id="L205"><span class="lineNum">     205</span>                 :             :     virtual cli::ActorMeta to_metadata() const;</span>
-<span id="L206"><span class="lineNum">     206</span>                 :             : </span>
-<span id="L207"><span class="lineNum">     207</span>                 :             :     /// \brief Return an opaque serialized state blob.</span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     ///</span>
-<span id="L209"><span class="lineNum">     209</span>                 :             :     /// Default returns empty. Stateful actors override this for hibernation.</span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           1 :     virtual std::vector&lt;uint8_t&gt; serialize_state() const {</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">           1 :         return {};</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :             :     }</span>
-<span id="L213"><span class="lineNum">     213</span>                 :             : </span>
-<span id="L214"><span class="lineNum">     214</span>                 :             :     /// \brief Return a snapshot of the actor's mailbox.</span>
-<span id="L215"><span class="lineNum">     215</span>                 :             :     ///</span>
-<span id="L216"><span class="lineNum">     216</span>                 :             :     /// Default returns empty. Override in mailbox-owning actors for CLI</span>
-<span id="L217"><span class="lineNum">     217</span>                 :             :     /// inspection.</span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     virtual cli::MboxSnapshot mailbox_snapshot() const {</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaUNC">           0 :         return {};</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :             :     }</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     /// Called by \c ActorSpawner during adoption to bind an execution context</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     /// to this actor. Returns \c false by default; \c LocalActor overrides</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     /// to accept the context through its existing storage.</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     virtual bool bind_context(ActorContext* context) noexcept;</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             : </span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     /// \brief Post-construction activation hook.</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     ///</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :     /// Called by \c ActorSpawner after context binding and before dispatch</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     /// registration. \c LocalActor delegates to the existing \c on_activate().</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :     /// The default does nothing; successful adoption requires</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :     /// \c bind_context() returning \c true first.</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     virtual void activate_after_spawn();</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     /// \brief RTTI-free downcast to \c IDurableActor.</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :     ///</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :     /// Returns \c nullptr for actors that do not implement durable state.</span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     virtual class IDurableActor* as_durable() {</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :             :     }</span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaUNC">           0 :     virtual const class IDurableActor* as_durable() const {</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :     }</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             : </span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     /// \brief RTTI-free downcast to \c mem::Hibernatable.</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :     ///</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :     /// Returns \c nullptr for actors that do not support memory-only</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     /// hibernation.</span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaUNC">           0 :     virtual class mem::Hibernatable* as_hibernatable() {</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     }</span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaUNC">           0 :     virtual const class mem::Hibernatable* as_hibernatable() const {</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :     }</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             : </span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     /// \brief Returns \c true for system actors that drain last during node</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     ///        shutdown. \c MetricsActor, \c CliActor, and \c SpawnReceiver</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     ///        override this.</span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC tlaBgGNC">        5140 :     virtual bool is_system_actor() const {</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5140 :         return false;</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     }</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     /// \brief Dispatch policy telling the scheduler how to execute this actor.</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             :     ///</span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :     /// \return \c Cooperative (default, M:N work-stealing pool).</span>
+<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">        6607 :     virtual sched::DispatchPolicy dispatch_policy() const {</span></span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">        6607 :         return sched::DispatchPolicy::Cooperative;</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     }</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             :     /// \brief Dispatch hints (CPU affinity, pool size) for dedicated actors.</span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">        6611 :     virtual sched::DispatchHints dispatch_hints() const {</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">        6611 :         return {};</span></span>
+<span id="L195"><span class="lineNum">     195</span>                 :             :     }</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             : </span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :     /// \brief Human-readable type name for metrics and CLI introspection.</span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">        5949 :     virtual std::string_view type_name() const {</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">        5949 :         return type_name_;</span></span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :     }</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             :     /// \brief Set the type name. Called by \c ActorSystem during spawn.</span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">        6647 :     void set_type_name(std::string name) {</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">        6647 :         type_name_ = std::move(name);</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">        6647 :     }</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :             : </span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :     /// \brief Set the metrics ring buffer pointer for out-of-band events.</span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :     ///</span>
+<span id="L208"><span class="lineNum">     208</span>                 :             :     /// Default no-op. Overridden by actors that emit metric events.</span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     /// \param[in] buf Opaque pointer to an \c MpscRingBuffer&lt;MetricEvent&gt;.</span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           6 :     virtual void set_metrics_ring_buffer(void* /*buf*/) {}</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :             :     /// \brief Set the logger pointer for structured logging.</span>
+<span id="L212"><span class="lineNum">     212</span>                 :             :     ///</span>
+<span id="L213"><span class="lineNum">     213</span>                 :             :     /// Default no-op. Overridden by actors that log from the hot path.</span>
+<span id="L214"><span class="lineNum">     214</span>                 :             :     /// \param[in] logger Opaque pointer to a \c Logger instance.</span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">           6 :     virtual void set_logger(void* /*logger*/) noexcept {}</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :             : </span>
+<span id="L217"><span class="lineNum">     217</span>                 :             :     /// \brief Return lightweight inspectable metadata for CLI introspection.</span>
+<span id="L218"><span class="lineNum">     218</span>                 :             :     ///</span>
+<span id="L219"><span class="lineNum">     219</span>                 :             :     /// Called from the actor's own thread via \c InspectStateRequest.</span>
+<span id="L220"><span class="lineNum">     220</span>                 :             :     virtual cli::ActorMeta to_metadata() const;</span>
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
-<span id="L222"><span class="lineNum">     222</span>                 :             :   protected:</span>
-<span id="L223"><span class="lineNum">     223</span>                 :             :     /// \brief Construct an actor with its identity and owning system.</span>
-<span id="L224"><span class="lineNum">     224</span>                 :             :     ///</span>
-<span id="L225"><span class="lineNum">     225</span>                 :             :     /// Called by subclasses and \c ActorSystem::spawn().</span>
-<span id="L226"><span class="lineNum">     226</span>                 :             :     /// \param[in] id Globally-unique actor identifier.</span>
-<span id="L227"><span class="lineNum">     227</span>                 :             :     /// \param[in] type Actor type tag.</span>
-<span id="L228"><span class="lineNum">     228</span>                 :             :     /// \param[in] sys Owning \c ActorSystem reference.</span>
-<span id="L229"><span class="lineNum">     229</span>                 :             :     AbstractActor(ActorId id, ActorType type, ActorSystem&amp; sys);</span>
-<span id="L230"><span class="lineNum">     230</span>                 :             : </span>
-<span id="L231"><span class="lineNum">     231</span>                 :             :     /// \brief Return the actor's \c ActorContext.</span>
-<span id="L232"><span class="lineNum">     232</span>                 :             :     ///</span>
-<span id="L233"><span class="lineNum">     233</span>                 :             :     /// Overridden by \c LocalActor. Returns \c nullptr for actors without</span>
-<span id="L234"><span class="lineNum">     234</span>                 :             :     /// a context (e.g., the system pseudo-actor).</span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaUNC">           0 :     virtual ActorContext* actor_context() {</span></span>
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
-<span id="L237"><span class="lineNum">     237</span>                 :             :     }</span>
-<span id="L238"><span class="lineNum">     238</span>                 :             : </span>
-<span id="L239"><span class="lineNum">     239</span>                 :             :   private:</span>
-<span id="L240"><span class="lineNum">     240</span>                 :             :     ActorId id_;</span>
-<span id="L241"><span class="lineNum">     241</span>                 :             :     ActorType type_;</span>
-<span id="L242"><span class="lineNum">     242</span>                 :             :     ActorSystem&amp; system_;</span>
-<span id="L243"><span class="lineNum">     243</span>                 :             :     ActorAddress address_;</span>
-<span id="L244"><span class="lineNum">     244</span>                 :             :     std::string type_name_;</span>
-<span id="L245"><span class="lineNum">     245</span>                 :             : };</span>
-<span id="L246"><span class="lineNum">     246</span>                 :             : </span>
-<span id="L247"><span class="lineNum">     247</span>                 :             : } // namespace hpactor</span>
+<span id="L222"><span class="lineNum">     222</span>                 :             :     /// \brief Return an opaque serialized state blob.</span>
+<span id="L223"><span class="lineNum">     223</span>                 :             :     ///</span>
+<span id="L224"><span class="lineNum">     224</span>                 :             :     /// Default returns empty. Stateful actors override this for hibernation.</span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">           1 :     virtual std::vector&lt;uint8_t&gt; serialize_state() const {</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">           1 :         return {};</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :     }</span>
+<span id="L228"><span class="lineNum">     228</span>                 :             : </span>
+<span id="L229"><span class="lineNum">     229</span>                 :             :     /// \brief Return a snapshot of the actor's mailbox.</span>
+<span id="L230"><span class="lineNum">     230</span>                 :             :     ///</span>
+<span id="L231"><span class="lineNum">     231</span>                 :             :     /// Default returns empty. Override in mailbox-owning actors for CLI</span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :     /// inspection.</span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     virtual cli::MboxSnapshot mailbox_snapshot() const {</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaUNC">           0 :         return {};</span></span>
+<span id="L235"><span class="lineNum">     235</span>                 :             :     }</span>
+<span id="L236"><span class="lineNum">     236</span>                 :             : </span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :   protected:</span>
+<span id="L238"><span class="lineNum">     238</span>                 :             :     /// \brief Construct an actor with its identity and owning system.</span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :     ///</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :     /// Called by subclasses and \c ActorSystem::spawn().</span>
+<span id="L241"><span class="lineNum">     241</span>                 :             :     /// \param[in] id Globally-unique actor identifier.</span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     /// \param[in] type Actor type tag.</span>
+<span id="L243"><span class="lineNum">     243</span>                 :             :     /// \param[in] sys Owning \c ActorSystem reference.</span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :     AbstractActor(ActorId id, ActorType type, ActorSystem&amp; sys);</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             : </span>
+<span id="L246"><span class="lineNum">     246</span>                 :             :     /// \brief Return the actor's \c ActorContext.</span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :     ///</span>
+<span id="L248"><span class="lineNum">     248</span>                 :             :     /// Overridden by \c LocalActor. Returns \c nullptr for actors without</span>
+<span id="L249"><span class="lineNum">     249</span>                 :             :     /// a context (e.g., the system pseudo-actor).</span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaUNC">           0 :     virtual ActorContext* actor_context() {</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaUNC">           0 :         return nullptr;</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :             :     }</span>
+<span id="L253"><span class="lineNum">     253</span>                 :             : </span>
+<span id="L254"><span class="lineNum">     254</span>                 :             :   private:</span>
+<span id="L255"><span class="lineNum">     255</span>                 :             :     ActorId id_;</span>
+<span id="L256"><span class="lineNum">     256</span>                 :             :     ActorType type_;</span>
+<span id="L257"><span class="lineNum">     257</span>                 :             :     ActorSystem&amp; system_;</span>
+<span id="L258"><span class="lineNum">     258</span>                 :             :     ActorAddress address_;</span>
+<span id="L259"><span class="lineNum">     259</span>                 :             :     std::string type_name_;</span>
+<span id="L260"><span class="lineNum">     260</span>                 :             : };</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             : </span>
+<span id="L262"><span class="lineNum">     262</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

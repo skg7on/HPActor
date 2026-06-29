@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 04:51:53</td>
+            <td class="headerValue">2026-06-29 07:15:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -335,7 +335,7 @@
 <span id="L257"><span class="lineNum">     257</span>                 :             :     ///</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :     /// \return A platform-stable 64-bit thread identifier (0 if the worker</span>
 <span id="L259"><span class="lineNum">     259</span>                 :             :     ///         thread has not yet captured its TID).</span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">          15 :     uint64_t thread_id() const {</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">          16 :     uint64_t thread_id() const {</span></span>
 <span id="L261"><span class="lineNum">     261</span>                 :             : #ifdef __APPLE__</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :         uint64_t tid = 0;</span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :         // const_cast: native_handle() is logically const but std::thread</span>
@@ -346,7 +346,7 @@
 <span id="L268"><span class="lineNum">     268</span>                 :             :         // glibc pthread_t from native_handle() is a struct pthread* cast to</span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :         // unsigned long, not the kernel TID.  Use the real TID captured by the</span>
 <span id="L270"><span class="lineNum">     270</span>                 :             :         // worker thread at startup via syscall(SYS_gettid).</span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          30 :         return native_tid_.load(std::memory_order_relaxed);</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          32 :         return native_tid_.load(std::memory_order_relaxed);</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :             : #else</span>
 <span id="L273"><span class="lineNum">     273</span>                 :             :         // Fallback for other Unix-like platforms where pthread_t may be the</span>
 <span id="L274"><span class="lineNum">     274</span>                 :             :         // native thread identifier.</span>
@@ -367,9 +367,9 @@
 <span id="L289"><span class="lineNum">     289</span>                 :             :     }</span>
 <span id="L290"><span class="lineNum">     290</span>                 :             : </span>
 <span id="L291"><span class="lineNum">     291</span>                 :             :     /// \brief Increment the donation counter (called each idle iteration).</span>
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">        4625 :     void increment_donations() {</span></span>
-<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">        4625 :         donation_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">        4625 :     }</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">        5384 :     void increment_donations() {</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">        5384 :         donation_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">        5384 :     }</span></span>
 <span id="L295"><span class="lineNum">     295</span>                 :             : </span>
 <span id="L296"><span class="lineNum">     296</span>                 :             :     /// \brief Acquire a coroutine frame from this worker's frame pool.</span>
 <span id="L297"><span class="lineNum">     297</span>                 :             :     ///</span>

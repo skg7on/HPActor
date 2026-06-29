@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 04:51:53</td>
+            <td class="headerValue">2026-06-29 07:15:44</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">88.9&nbsp;%</td>
@@ -94,48 +94,48 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::mem {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      444009 : MemoryTracker&amp; MemoryTracker::instance() {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 903 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 443106 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 872 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 31 times"> + </span>]:<span class="tlaGNC">      444009 :     static MemoryTracker mt;</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      444009 :     return mt;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      453847 : MemoryTracker&amp; MemoryTracker::instance() {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 906 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 452941 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 875 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 31 times"> + </span>]:<span class="tlaGNC">      453847 :     static MemoryTracker mt;</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      453847 :     return mt;</span></span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : }</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         872 : MemoryTracker::MemoryTracker()</span></span>
-<span id="L25"><span class="lineNum">      25</span>         [<span class="tlaGBC" title="Branch 0 was taken 872000000 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 872 times"> + </span>]:<span class="tlaGNC">   872000872 :     : stats_(new ActorMemoryStats[kMaxTrackedActors]),</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         872 :       capacity_(kMaxTrackedActors) {}</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         875 : MemoryTracker::MemoryTracker()</span></span>
+<span id="L25"><span class="lineNum">      25</span>         [<span class="tlaGBC" title="Branch 0 was taken 875000000 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 875 times"> + </span>]:<span class="tlaGNC">   875000875 :     : stats_(new ActorMemoryStats[kMaxTrackedActors]),</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         875 :       capacity_(kMaxTrackedActors) {}</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      448019 : size_t MemoryTracker::index_for(ActorId actor) const noexcept {</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">      448019 :     return static_cast&lt;size_t&gt;(actor.value() % kMaxTrackedActors);</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      457857 : size_t MemoryTracker::index_for(ActorId actor) const noexcept {</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">      457857 :     return static_cast&lt;size_t&gt;(actor.value() % kMaxTrackedActors);</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : }</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">      226544 : bool MemoryTracker::record_alloc(ActorId actor, size_t bytes) noexcept {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">      226544 :     size_t idx = index_for(actor);</span></span>
-<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 226544 times"> + </span>]:<span class="tlaGNC">      226544 :     if (idx &gt;= capacity_) return false;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">      231463 : bool MemoryTracker::record_alloc(ActorId actor, size_t bytes) noexcept {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">      231463 :     size_t idx = index_for(actor);</span></span>
+<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 231463 times"> + </span>]:<span class="tlaGNC">      231463 :     if (idx &gt;= capacity_) return false;</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      226544 :     auto&amp; s = stats_[idx];</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      231463 :     auto&amp; s = stats_[idx];</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">      226544 :     uint64_t prev = __atomic_fetch_add(&amp;s.current_bytes, bytes, __ATOMIC_RELAXED);</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      226544 :     uint64_t curr = prev + bytes;</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">      231463 :     uint64_t prev = __atomic_fetch_add(&amp;s.current_bytes, bytes, __ATOMIC_RELAXED);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      231463 :     uint64_t curr = prev + bytes;</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     // Update peak lazily via CAS</span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">      226544 :     uint64_t peak = __atomic_load_n(&amp;s.peak_bytes, __ATOMIC_RELAXED);</span></span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 150416 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 76153 times"> + </span>]:<span class="tlaGNC">      226569 :     while (curr &gt; peak) {</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 150391 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">      150416 :         if (__atomic_compare_exchange_n(&amp;s.peak_bytes, &amp;peak, curr,</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">      231463 :     uint64_t peak = __atomic_load_n(&amp;s.peak_bytes, __ATOMIC_RELAXED);</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 149747 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 81728 times"> + </span>]:<span class="tlaGNC">      231475 :     while (curr &gt; peak) {</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 149735 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">      149747 :         if (__atomic_compare_exchange_n(&amp;s.peak_bytes, &amp;peak, curr,</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :                 /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {</span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      150391 :             break;</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      149735 :             break;</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :         }</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :     }</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      226544 :     __atomic_fetch_add(&amp;s.alloc_count, 1, __ATOMIC_RELAXED);</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      226544 :     return true;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      231463 :     __atomic_fetch_add(&amp;s.alloc_count, 1, __ATOMIC_RELAXED);</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      231463 :     return true;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : }</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      221461 : void MemoryTracker::record_free(ActorId actor, size_t bytes) noexcept {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      221461 :     size_t idx = index_for(actor);</span></span>
-<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 221461 times"> + </span>]:<span class="tlaGNC">      221461 :     if (idx &gt;= capacity_) return;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      226380 : void MemoryTracker::record_free(ActorId actor, size_t bytes) noexcept {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      226380 :     size_t idx = index_for(actor);</span></span>
+<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 226380 times"> + </span>]:<span class="tlaGNC">      226380 :     if (idx &gt;= capacity_) return;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">      221461 :     auto&amp; s = stats_[idx];</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">      221461 :     __atomic_fetch_sub(&amp;s.current_bytes, bytes, __ATOMIC_RELAXED);</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">      221461 :     __atomic_fetch_add(&amp;s.free_count, 1, __ATOMIC_RELAXED);</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">      226380 :     auto&amp; s = stats_[idx];</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">      226380 :     __atomic_fetch_sub(&amp;s.current_bytes, bytes, __ATOMIC_RELAXED);</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">      226380 :     __atomic_fetch_add(&amp;s.free_count, 1, __ATOMIC_RELAXED);</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : }</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">          14 : void MemoryTracker::snapshot(ActorId actor, ActorMemoryStats&amp; out) const noexcept {</span></span>
