@@ -129,6 +129,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Added a synchronized `StreamRegistry` with atomic route removal and concurrent registration stress test.
 - Verified full build and focused actor/config/mailbox/system test suites (105+ targeted tests, full CTest minus pre-existing gossip/NOT_BUILT).
 
+**ActorSystem Refactor Phase 2: ActorRuntime + Unified Spawning** ✅ Complete (2026-06-28)
+- Atomic directory publication (`ActorDirectory::publish()` with id+name atomicity).
+- RTTI-free context binding (`bind_context()` + `activate_after_spawn()`) on AbstractActor/LocalActor.
+- `SpawnSpec` + `ActorSpawner` with 16-step unified adoption state machine.
+- Template `spawn<T>()` and `SpawnReceiver` routed through spawner.
+- `ActorExecutionDependencies` struct + narrow `HybridScheduler` ctor with `exec_deps_`.
+- `ActorRuntime` class implemented (ownership migration deferred to Phase 2b).
+- Architecture test guards facade pointer-only invariant.
+- 53 focused tests pass (unit + integration + system).
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,
