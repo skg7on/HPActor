@@ -190,6 +190,14 @@ ActorSystem::ActorSystem(const Config& config)
     impl_->messaging.reliable_tracker =
         std::make_unique<mailbox::OutboundTracker>(mailbox::ReliableRetryPolicy{});
 
+    // ── Metrics ring buffer (create before pipeline for stable pointer) ──
+    if (impl_->operations.metrics_config.enabled) {
+        impl_->operations.metrics_ring_buffer =
+            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
+        impl_->core.scheduler->set_metrics_ring_buffer(
+            impl_->operations.metrics_ring_buffer.get());
+    }
+
     // ── Delivery pipeline ──────────────────────────────────────────────
     // MUST be created before the scheduler starts so that early-boot
     // actor spawns can deliver messages through it.
@@ -197,53 +205,22 @@ ActorSystem::ActorSystem(const Config& config)
         mailbox::DeliveryPipeline::Config pipeline_cfg;
         pipeline_cfg.dlq = impl_->messaging.dead_letters.get();
         pipeline_cfg.outbound_tracker = impl_->messaging.outbound_tracker.get();
-        pipeline_cfg.metrics = nullptr;
+        pipeline_cfg.metrics = impl_->operations.metrics_ring_buffer.get();
         pipeline_cfg.dedup_cache = impl_->messaging.dedup_cache.get();
         pipeline_cfg.endpoint = impl_->core.endpoint;
         pipeline_cfg.default_message_ttl_ms =
             impl_->core.config.default_message_ttl_ms;
 
-        pipeline_cfg.get_actor = [this](ActorId id) {
-            auto entry = impl_->actors.directory.find(id);
-            return entry.has_value() ? entry->instance : nullptr;
-        };
-        pipeline_cfg.get_mailbox = [this](ActorId id) {
-            auto mailbox = impl_->actors.directory.find_mailbox(id);
-            return mailbox.get();
-        };
-        pipeline_cfg.emit_local_backpressure =
-            [this](const mailbox::BackpressureSignal& signal,
-                   mailbox::MailboxPressureState state) {
-                emit_local_backpressure_signal(signal, state);
-            };
-        pipeline_cfg.emit_remote_backpressure =
-            [this](const mailbox::BackpressureSignal& signal,
-                   mailbox::MailboxPressureState state) {
-                emit_remote_backpressure_signal(signal, state);
-            };
-
-        // ── Auto-ACK callback: delegate to send_reliable_ack ──
-        pipeline_cfg.emit_ack = [this](const ActorAddress& sender, uint64_t msg_id,
-                                       uint8_t status, uint32_t retry_after_ms) {
-            // The acker is the local endpoint (the pipeline doesn't know
-            // which specific actor).  For ACK/NACK, the endpoint + msg_id
-            // is sufficient identification.
-            ActorAddress acker{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0};
-            send_reliable_ack(sender, acker, msg_id, status, retry_after_ms);
-        };
+        pipeline_cfg.actors = &impl_->actors.directory;
+        pipeline_cfg.backpressure = impl_->messaging.backpressure.get();
+        pipeline_cfg.reliable_ack = &impl_->network.messaging_ports.reliable_ack;
 
         impl_->messaging.delivery_pipeline =
             std::make_unique<mailbox::DeliveryPipeline>(std::move(pipeline_cfg));
     }
 
-    // ── Metrics subsystem ──────────────────────────────────────────────
+    // ── Metrics subsystem (ring buffer created before pipeline above) ────
     if (impl_->operations.metrics_config.enabled) {
-        impl_->operations.metrics_ring_buffer =
-            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
-        impl_->core.scheduler->set_metrics_ring_buffer(
-            impl_->operations.metrics_ring_buffer.get());
-        impl_->messaging.delivery_pipeline->set_metrics(
-            impl_->operations.metrics_ring_buffer.get());
         impl_->messaging.backpressure->set_metrics_ring_buffer(
             impl_->operations.metrics_ring_buffer.get());
 

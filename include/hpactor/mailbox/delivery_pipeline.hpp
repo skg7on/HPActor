@@ -34,6 +34,9 @@ class OutboundDeliveryTracker;
 namespace hpactor {
 
 class AbstractActor;
+class ActorDirectory;
+class BackpressureCoordinator;
+class ReliableAckPort;
 
 namespace mailbox {
 
@@ -86,39 +89,24 @@ class DeliveryPipeline {
         ///        is set. Zero means no default TTL.
         std::chrono::milliseconds default_message_ttl_ms{0};
 
-        /// \brief Lookup an actor instance by ID.
-        std::function<std::shared_ptr<AbstractActor>(ActorId)> get_actor;
+        /// \brief Actor directory for actor/mailbox lookup (replaces
+        ///        \c std::function get_actor/get_mailbox callbacks).
+        ActorDirectory* actors = nullptr;
 
-        /// \brief Lookup a mailbox by actor ID.
-        std::function<MPSCActorMailbox<TypedMessage>*(ActorId)> get_mailbox;
-
-        /// \brief Emit a backpressure signal to a local sender.
-        LocalBackpressureEmitter emit_local_backpressure;
-
-        /// \brief Emit a backpressure signal to a remote sender.
-        RemoteBackpressureEmitter emit_remote_backpressure;
+        /// \brief Backpressure coordinator for local and remote pressure
+        ///        signal emission (replaces \c std::function emitters).
+        BackpressureCoordinator* backpressure = nullptr;
 
         /// \brief Outbound tracker for AtLeastOnce/DurableAtLeastOnce modes.
         /// When non-null and delivery_mode >= AtLeastOnce with an enabled
         /// retry policy, accepted deliveries are also tracked for retry.
         msg::OutboundDeliveryTracker* outbound_tracker = nullptr;
 
-        /// \brief Callback to emit a reliable ACK/NACK frame back to the
-        ///        sender when \c AckRequested is set on the incoming frame.
-        ///
-        /// Called by the pipeline when dedup detects a duplicate (AcKStatus
-        /// Duplicate) or when admission is rejected (AcKStatus Rejected).
-        /// The ACK(Accepted) path is emitted by \c EventBasedActor after
-        /// successful handler dispatch, not by this callback.
-        ///
-        /// \param[in] sender   Original sender to route the ACK back to.
-        /// \param[in] msg_id   Message ID being acknowledged.
-        /// \param[in] status   AcK status code (\c 0=Accepted,
-        ///                     \c 1=Rejected, \c 2=Duplicate).
-        /// \param[in] retry_after_ms Suggested retry delay for NACK.
-        std::function<void(const ActorAddress& sender, uint64_t msg_id,
-                           uint8_t status, uint32_t retry_after_ms)>
-            emit_ack;
+        /// \brief Fixed ACK/NACK emission port pointer (replaces
+        ///        \c std::function emit_ack callback).
+        /// Points to a stable \c ReliableAckPort in network state.
+        /// \c nullptr = network unavailable (safe no-op).
+        const ReliableAckPort* reliable_ack = nullptr;
     };
 
     /// \brief Construct the delivery pipeline with injected dependencies.
@@ -181,16 +169,6 @@ class DeliveryPipeline {
     /// \return A const reference to the pipeline's \c Config.
     const Config& config() const noexcept {
         return config_;
-    }
-
-    /// \brief Update the metrics ring buffer pointer after construction.
-    ///
-    /// Used when the ring buffer is created after the pipeline (e.g.,
-    /// during \c ActorSystem constructor ordering).
-    ///
-    /// \param[in] m Pointer to the metrics ring buffer, or \c nullptr.
-    void set_metrics(metrics::MpscRingBuffer<metrics::MetricEvent>* m) {
-        config_.metrics = m;
     }
 
   private:

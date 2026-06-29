@@ -13,11 +13,15 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
+#include <hpactor/mailbox/backpressure_coordinator.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+
+#include "../runtime/messaging_network_ports.hpp"
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/delivery_mode.hpp>
@@ -167,10 +171,11 @@ std::optional<EnqueueResult>
 DeliveryPipeline::check_circuit_breaker(ActorId target, const TypedMessage& msg,
                                         const DeliveryOptions& options,
                                         uint8_t priority, int64_t deadline_ns) {
-    if (!config_.get_actor) {
+    if (!config_.actors) {
         return std::nullopt;
     }
-    auto actor_ptr = config_.get_actor(target);
+    auto entry = config_.actors->find(target);
+    auto actor_ptr = entry.has_value() ? entry->instance : nullptr;
     if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
         return std::nullopt;
     }
@@ -257,10 +262,11 @@ DeliveryPipeline::check_duplicate(ActorId target, const TypedMessage& msg,
         return std::nullopt;
     }
     // ── Auto-ACK: duplicate detected → emit ACK(Duplicate) ──
-    if (msg.ack_requested() && config_.emit_ack) {
-        config_.emit_ack(msg.sender_address(), msg.message_id(),
-                         static_cast<uint8_t>(2), // AckStatus::Duplicate
-                         0);
+    if (msg.ack_requested() && config_.reliable_ack) {
+        ActorAddress acker{config_.endpoint, ActorType{0}, ActorId{0}, 0};
+        (*config_.reliable_ack)(msg.sender_address(), acker, msg.message_id(),
+                                static_cast<uint8_t>(2), // AckStatus::Duplicate
+                                0);
     }
 
     if (config_.metrics) {
@@ -420,10 +426,12 @@ void DeliveryPipeline::maybe_emit_backpressure(
     signal.retry_after = result.retry_after;
     signal.sequence = sequence.value();
 
-    if (sender_is_remote && config_.emit_remote_backpressure) {
-        config_.emit_remote_backpressure(signal, result.pressure_state);
-    } else if (config_.emit_local_backpressure) {
-        config_.emit_local_backpressure(signal, result.pressure_state);
+    if (config_.backpressure) {
+        if (sender_is_remote) {
+            config_.backpressure->emit_remote_signal(signal, result.pressure_state);
+        } else {
+            config_.backpressure->emit_local_signal(signal, result.pressure_state);
+        }
     }
 }
 
@@ -432,7 +440,8 @@ void DeliveryPipeline::maybe_emit_backpressure(
 EnqueueResult
 DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority,
                               int64_t deadline_ns, DeliveryOptions options) {
-    auto* mailbox = config_.get_mailbox ? config_.get_mailbox(target) : nullptr;
+    auto* mailbox =
+        config_.actors ? config_.actors->find_mailbox(target).get() : nullptr;
     if (mailbox == nullptr) {
         return reject_missing_actor(target, msg, options, priority, deadline_ns);
     }
@@ -485,16 +494,17 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
 
     if (!result.accepted()) {
         // ── Auto-ACK: admission rejected → emit NACK(Rejected) ──
-        if (needs_auto_ack && config_.emit_ack) {
+        if (needs_auto_ack && config_.reliable_ack) {
             uint32_t retry_after = static_cast<uint32_t>(
                 std::chrono::duration_cast<std::chrono::milliseconds>(result.retry_after)
                     .count());
             if (retry_after == 0) {
                 retry_after = 500; // default retry-after for NACK
             }
-            config_.emit_ack(ack_sender, ack_msg_id,
-                             static_cast<uint8_t>(1), // AckStatus::Rejected
-                             retry_after);
+            ActorAddress acker{config_.endpoint, ActorType{0}, ActorId{0}, 0};
+            (*config_.reliable_ack)(ack_sender, acker, ack_msg_id,
+                                    static_cast<uint8_t>(1), // AckStatus::Rejected
+                                    retry_after);
         }
 
         emit_rejection_observability(target, msg_payload, msg_trace,
@@ -516,8 +526,8 @@ DeliveryPipeline::deliver_with_result(ActorId target, TypedMessage msg,
                                       DeliveryOptions options) {
     auto er = try_deliver(target, std::move(msg), priority, deadline_ns, options);
     auto dr = DeliveryResult::from_enqueue(er, ActorAddress{}, {});
-    if (config_.get_mailbox) {
-        if (auto* mbox = config_.get_mailbox(target)) {
+    if (config_.actors) {
+        if (auto mbox = config_.actors->find_mailbox(target)) {
             mbox->record_delivery_result(dr.status);
         }
     }
