@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-29 01:08:19</td>
+            <td class="headerValue">2026-06-29 04:51:53</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -102,30 +102,30 @@
 <span id="L24"><span class="lineNum">      24</span>                 :             :     }</span>
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         785 : }</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        4255 : void DeadLetterQueue::trim_payload(DeadLetterRecord&amp; record) const {</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        4255 :     record.payload_size = static_cast&lt;uint32_t&gt;(record.payload_sample.size());</span></span>
-<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4255 times"> + </span>]:<span class="tlaGNC">        4255 :     if (!config_.store_payload) {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        4258 : void DeadLetterQueue::trim_payload(DeadLetterRecord&amp; record) const {</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        4258 :     record.payload_size = static_cast&lt;uint32_t&gt;(record.payload_sample.size());</span></span>
+<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4258 times"> + </span>]:<span class="tlaGNC">        4258 :     if (!config_.store_payload) {</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         record.payload_sample.clear();</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             :     }</span>
-<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 4254 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        4255 :     if (record.payload_sample.size() &gt; config_.max_payload_sample_bytes) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 4257 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        4258 :     if (record.payload_sample.size() &gt; config_.max_payload_sample_bytes) {</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           1 :         record.payload_sample.resize(config_.max_payload_sample_bytes);</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : }</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">        4257 : bool DeadLetterQueue::try_push(DeadLetterRecord&amp;&amp; record) noexcept {</span></span>
-<span id="L39"><span class="lineNum">      39</span>   [<span class="tlaGBC" title="Branch 0 was taken 4225 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 32 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4225 times"> + </span> :<span class="tlaGNC">        4257 :     FAULT_INJECT(&quot;hpactor.mailbox.dlq.push.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4257 times"> + </span>]
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">        4260 : bool DeadLetterQueue::try_push(DeadLetterRecord&amp;&amp; record) noexcept {</span></span>
+<span id="L39"><span class="lineNum">      39</span>   [<span class="tlaGBC" title="Branch 0 was taken 4228 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 32 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4228 times"> + </span> :<span class="tlaGNC">        4260 :     FAULT_INJECT(&quot;hpactor.mailbox.dlq.push.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4260 times"> + </span>]
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     }</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC tlaBgGNC">        4257 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4255 times"> + </span>]:<span class="tlaGNC">        4257 :     if (!config_.enabled) {</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC tlaBgGNC">        4260 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4258 times"> + </span>]:<span class="tlaGNC">        4260 :     if (!config_.enabled) {</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           2 :         return false;</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     }</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">        4255 :     trim_payload(record);</span></span>
-<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4241 times"> + </span>]:<span class="tlaGNC">        4255 :     if (records_.size() &gt;= config_.capacity) {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">        4258 :     trim_payload(record);</span></span>
+<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4244 times"> + </span>]:<span class="tlaGNC">        4258 :     if (records_.size() &gt;= config_.capacity) {</span></span>
 <span id="L50"><span class="lineNum">      50</span>   [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          14 :         switch (config_.overflow_policy) {</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          13 :             case DeadLetterOverflowPolicy::DropOldestRecord:</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          13 :                 records_.pop_front();</span></span>
@@ -144,10 +144,10 @@
 <span id="L65"><span class="lineNum">      65</span>                 :             :         }</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC tlaBgGNC">        4254 :     records_.push_back(std::move(record));</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">        4254 :     ++total_pushed_;</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">        4254 :     return true;</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        4257 : }</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC tlaBgGNC">        4257 :     records_.push_back(std::move(record));</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">        4257 :     ++total_pushed_;</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">        4257 :     return true;</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        4260 : }</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : </span>
 <span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">          14 : void DeadLetterQueue::reconfigure(DeadLetterConfig config) noexcept {</span></span>
 <span id="L74"><span class="lineNum">      74</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          14 :     if (config.capacity == 0) {</span></span>
