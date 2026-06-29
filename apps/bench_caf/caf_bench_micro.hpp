@@ -123,6 +123,11 @@ run_dispatch_match_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
     system_cfg.enable_receptionist = false;
     system_cfg.cli.enabled = false;
     system_cfg.tracing.enabled = false;
+    // Smoke runs deterministically with paused workers + drain_ready() to
+    // avoid a race between worker-thread startup and the poll loop.  Other
+    // presets use live worker threads for realistic multi-threaded dispatch.
+    const bool use_paused = (cfg.preset == PresetKind::Smoke);
+    system_cfg.scheduler_start_paused = use_paused;
 
     auto start = std::chrono::steady_clock::now();
     ActorSystem system(system_cfg);
@@ -154,10 +159,16 @@ run_dispatch_match_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
                              make_bench_msg(MailboxLoadTag, std::move(payload)));
     }
 
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-    while (count.load(std::memory_order_acquire) < kMessages &&
-           std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    if (use_paused) {
+        // Deterministic: drain all messages on the calling thread.
+        system.scheduler()->drain_ready(kMessages + 1024);
+    } else {
+        // Multi-threaded: poll until all messages are processed or deadline.
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (count.load(std::memory_order_acquire) < kMessages &&
+               std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
 
     auto shutdown = system.shutdown();
