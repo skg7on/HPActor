@@ -855,43 +855,32 @@ ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
     return cfg;
 }
 
-// ── Delivery pipeline (delegates to DeliveryPipeline) ───────────────────────
+// ── Delivery pipeline (delegates to MessagingRuntime) ────────────────────────
 
 mailbox::EnqueueResult
 ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                uint8_t priority, int64_t deadline_ns,
                                mailbox::DeliveryOptions options) {
-    return impl_->messaging_->delivery_pipeline().try_deliver(
-        target, std::move(msg), priority, deadline_ns, options);
+    return impl_->messaging_->try_deliver(target, std::move(msg), priority,
+                                          deadline_ns, options);
 }
 
 mailbox::DeliveryResult
 ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
                                  uint8_t priority, int64_t deadline_ns,
                                  mailbox::DeliveryOptions options) {
-    return impl_->messaging_->delivery_pipeline().deliver_with_result(
-        target, std::move(msg), priority, deadline_ns, options);
+    return impl_->messaging_->deliver_with_result(target, std::move(msg),
+                                                  priority, deadline_ns, options);
 }
 
 mailbox::EnqueueResult
 ActorSystem::try_deliver_local_fast(ActorId target, TypedMessage msg) {
-    auto* mailbox = get_mailbox(target);
-    if (!mailbox) {
-        mailbox::EnqueueResult r;
-        r.code = mailbox::EnqueueResultCode::ActorNotFound;
-        r.target = target;
-        return r;
-    }
-    mailbox::MailboxEnvelopeMeta meta;
-    meta.sender = msg.sender_address();
-    meta.type_tag = msg.type_id();
-    meta.priority = 0;
-    meta.deadline_ns = INT64_MAX;
-    return mailbox->try_push(std::move(msg), meta);
+    return impl_->messaging_->try_deliver_fast(
+        target, std::move(msg), FastDeliveryReason::CompatibilityExplicit);
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
-    (void)impl_->messaging_->delivery_pipeline().try_deliver(target, std::move(msg));
+    (void)impl_->messaging_->try_deliver(target, std::move(msg), 0, INT64_MAX, {});
 }
 
 void ActorSystem::record_actor_timeout(ActorId target) {
@@ -904,16 +893,16 @@ void ActorSystem::record_actor_timeout(ActorId target) {
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                 uint8_t priority, int64_t deadline_ns) {
-    (void)impl_->messaging_->delivery_pipeline().try_deliver(
-        target, std::move(msg), priority, deadline_ns, {});
+    (void)impl_->messaging_->try_deliver(target, std::move(msg), priority,
+                                         deadline_ns, {});
 }
 
 void ActorSystem::deliver_local_edf(ActorId target, TypedMessage msg,
                                     int64_t deadline_ns, uint8_t priority) {
     mailbox::DeliveryOptions options;
     options.schedule_edf = true;
-    (void)impl_->messaging_->delivery_pipeline().try_deliver(
-        target, std::move(msg), priority, deadline_ns, options);
+    (void)impl_->messaging_->try_deliver(target, std::move(msg), priority,
+                                         deadline_ns, options);
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {

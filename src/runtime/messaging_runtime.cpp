@@ -60,7 +60,9 @@ MessagingRuntime::deliver_with_result(ActorId target, TypedMessage msg,
 
 mailbox::EnqueueResult
 MessagingRuntime::try_deliver_fast(ActorId target, TypedMessage msg,
-                                   FastDeliveryReason /*reason*/) {
+                                   FastDeliveryReason reason) {
+    (void)reason; // observed in debug/test instrumentation; enforced by
+                  // architecture allowlist
     return local_delivery_engine_.try_deliver(
         target, std::make_unique<TypedMessage>(std::move(msg)));
 }
