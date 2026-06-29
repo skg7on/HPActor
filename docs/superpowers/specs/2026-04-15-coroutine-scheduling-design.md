@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document refines the high-level M:N coroutine scheduling design from `coroutine-with-thread-two-level-scheduling.md` with concrete implementation details for the HPActor framework. It covers the `CoroutineTask` abstraction, actor state machine integration, awaiter patterns, and integration with the existing `HybridScheduler`, `TimingWheel`, and `CoroutineFramePool`.
+This document refines the high-level M:N coroutine scheduling design from the [Scheduling Architecture Design](../architecture/scheduling/scheduling-architecture-design.md) with concrete implementation details for the HPActor framework. It covers the `CoroutineTask` abstraction, actor state machine integration, awaiter patterns, and integration with the existing `HybridScheduler`, `TimingWheel`, and `CoroutineFramePool`.
 
 ---
 
@@ -518,7 +518,7 @@ hpactor::sched
 
 ## References
 
-- [High-Level Design](../architecture/scheduling/coroutine-with-thread-two-level-scheduling.md)
+- [High-Level Design](../architecture/scheduling/scheduling-architecture-design.md)
 - [Scheduling Architecture](../architecture/scheduling/scheduling-architecture-design.md)
 - [Existing CoroutineFramePool](../../include/hpactor/sched/coroutine_frame_pool.hpp)
 - [Existing HybridScheduler](../../include/hpactor/sched/scheduler.hpp)
