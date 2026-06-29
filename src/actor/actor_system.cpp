@@ -1113,12 +1113,38 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     FAULT_INJECT("hpactor.actor.spawn.fail") {
         return {};
     }
+    ActorId id = impl_->actors.directory.allocate_id();
+    actor->set_address(ActorAddress(impl_->core.endpoint, actor->type(), id, 0));
+    actor->set_type_name(def.behavior);
 
-    if (!impl_->spawner.has_value()) {
-        return {};
+    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+        id, impl_->core.scheduler.get(), mailbox_config_for_actor_def(def));
+    auto* mbox = mailbox_ptr.get();
+
+    auto* local = static_cast<LocalActor*>(actor.get());
+    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
+    local->set_context(actor_ctx.get());
+
+    ActorDirectoryEntry entry;
+    entry.actor = Actor(actor);
+    entry.instance = actor;
+    entry.mailbox = mailbox_ptr;
+    entry.context = actor_ctx;
+    impl_->actors.directory.insert(std::move(entry));
+
+    actor->set_scheduler(impl_->core.scheduler.get());
+    actor->set_mailbox(mbox);
+
+    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
+        actor->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
     }
 
-    // Calculate effective dispatch policy
+    if (impl_->operations.logger) [[unlikely]] {
+        mbox->set_logger(impl_->operations.logger);
+        actor->set_logger(impl_->operations.logger);
+    }
+
     auto policy = actor->dispatch_policy();
     auto hints = actor->dispatch_hints();
     if (policy == sched::DispatchPolicy::Cooperative) {
@@ -1134,21 +1160,46 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
         }
     }
 
-    SpawnSpec spec;
-    spec.type_name = def.behavior;
-    spec.registered_name = def.id;
-    spec.mailbox = mailbox_config_for_actor_def(def);
-    spec.dispatch_policy = policy;
-    spec.dispatch_hints = hints;
-    spec.quarantine =
-        def.quarantine.enabled ? std::optional{def.quarantine} : std::nullopt;
-    spec.origin = SpawnOrigin::Configured;
-
-    auto result = impl_->spawner->adopt(std::move(actor), spec);
-    if (result.is_error()) {
-        return {};
+    switch (policy) {
+        case sched::DispatchPolicy::Cooperative:
+            impl_->core.scheduler->notify_ready(id, 0, INT64_MAX);
+            break;
+        case sched::DispatchPolicy::DedicatedThread:
+            impl_->core.scheduler->register_dedicated_thread(id, hints.cpu_affinity);
+            break;
+        case sched::DispatchPolicy::DedicatedPool:
+            impl_->core.scheduler->register_dedicated_pool(id, hints.pool_size);
+            break;
     }
-    return result.value();
+
+    if (def.quarantine.enabled) {
+        if (auto* eba = actor->is_event_based_actor()
+                            ? static_cast<EventBasedActor*>(actor.get())
+                            : nullptr) {
+            eba->configure_quarantine(def.quarantine);
+        }
+    }
+
+    local->on_activate();
+
+    if (auto* lifecycle = actor->as_lifecycle()) {
+        lifecycle->transition(LifecycleState::kActive);
+    }
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
+                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
+                     "actor spawned",
+                     log::field_lit("type", actor->type_name().data()));
+
+    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
+        metrics::MetricEvent event{};
+        event.actor_id = id;
+        event.event_type = metrics::MetricEventType::kActorSpawned;
+        event.value_hi = 1;
+        impl_->operations.metrics_ring_buffer->try_push(event);
+    }
+
+    return Actor(actor);
 }
 
 // ── load_topology ───────────────────────────────────────────────────────────
