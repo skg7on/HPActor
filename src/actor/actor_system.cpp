@@ -1390,7 +1390,8 @@ void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
     auto payload = StreamBuffer::from_data(
         reinterpret_cast<const uint8_t*>(payload_str.data()), payload_str.size());
     TypedMessage msg(stream::StreamDataTag, std::move(payload));
-    (void)try_deliver_local_fast(receiver.value(), std::move(msg));
+    (void)impl_->messaging_->try_deliver_fast(receiver.value(), std::move(msg),
+                                              FastDeliveryReason::StreamProtocol);
 }
 
 void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
@@ -1402,7 +1403,8 @@ void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
     auto ack_buf = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(&ack),
                                            sizeof(ack));
     TypedMessage msg(stream::StreamAckTag, std::move(ack_buf));
-    (void)try_deliver_local_fast(sender.value(), std::move(msg));
+    (void)impl_->messaging_->try_deliver_fast(sender.value(), std::move(msg),
+                                              FastDeliveryReason::StreamProtocol);
 }
 
 void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
@@ -1410,11 +1412,15 @@ void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
     auto routes = impl_->streams.registry.take(close.stream_id());
     if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.sender.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
     if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.receiver.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
 }
 
@@ -1423,11 +1429,15 @@ void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
     auto routes = impl_->streams.registry.take(error.stream_id());
     if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.sender.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
     if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.receiver.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
 }
 
