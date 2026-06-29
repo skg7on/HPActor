@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/adt/dedup_cache.hpp>
+#include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/enqueue_result.hpp>

@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/frame.hpp>
