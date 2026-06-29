@@ -65,6 +65,60 @@
 
 namespace hpactor {
 
+namespace {
+
+// ── Network port adapter functions ───────────────────────────────────────
+//
+// These are bound to ReliableAckPort and BackpressureWirePort function
+// pointers.  The void* context points to a stable NetworkRuntimeState
+// instance.  Neither function captures ActorSystem or Impl.
+
+void reliable_ack_adapter(void* context, const ActorAddress& target,
+                          const ActorAddress& acker, uint64_t message_id,
+                          uint8_t status, uint32_t retry_after_ms) noexcept {
+    auto* net = static_cast<NetworkRuntimeState*>(context);
+    if (!net || !net->transport)
+        return;
+
+    net::WireFrame frame;
+    bool is_nack = (status == 1); // 1 = AckStatus::Rejected
+    frame.pb_envelope.mutable_data_frame()->set_flags(
+        is_nack ? net::WireFrame::AckResponse : net::WireFrame::AckRequested);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(message_id);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(), acker);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  target);
+
+    if (is_nack) {
+        frame.pb_envelope.mutable_data_frame()->set_type_tag(
+            static_cast<uint32_t>(status));
+        std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
+                                sizeof(uint32_t));
+        frame.pb_envelope.mutable_data_frame()->set_payload(payload_str);
+    }
+
+    auto encoded = frame.encode();
+    (void)net->transport->try_send(target, encoded);
+}
+
+bool backpressure_wire_adapter(void* context, const ActorAddress& target,
+                               const StreamBuffer& encoded) noexcept {
+    auto* net = static_cast<NetworkRuntimeState*>(context);
+    if (!net)
+        return false;
+
+    if (net->backpressure_signal_wire_sink_for_test) {
+        return net->backpressure_signal_wire_sink_for_test(target, encoded);
+    }
+    if (net->transport) {
+        return net->transport->try_send(target, encoded) ==
+               TransportSendResult::Sent;
+    }
+    return false;
+}
+
+} // namespace
+
 // -----------------------------------------------------------------------------
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
@@ -112,6 +166,20 @@ ActorSystem::ActorSystem(const Config& config)
         bp_cfg.endpoint = impl_->core.endpoint;
         impl_->messaging.backpressure =
             std::make_unique<BackpressureCoordinator>(std::move(bp_cfg));
+    }
+
+    // ── Bind fixed network-control ports ────────────────────────────────
+    // Context points to stable NetworkRuntimeState; transport is still null
+    // but will become valid when networking is initialized later.
+    {
+        impl_->network.messaging_ports.reliable_ack = ReliableAckPort{
+            .context = &impl_->network,
+            .emit = reliable_ack_adapter,
+        };
+        impl_->network.messaging_ports.backpressure = BackpressureWirePort{
+            .context = &impl_->network,
+            .send = backpressure_wire_adapter,
+        };
     }
 
     // ── Outbound delivery tracker ─────────────────────────────────────

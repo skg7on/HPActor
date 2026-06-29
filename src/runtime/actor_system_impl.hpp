@@ -15,6 +15,7 @@
 #pragma once
 
 #include "actor_spawner.hpp"
+#include "messaging_network_ports.hpp"
 
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/actor_system.hpp>
@@ -128,6 +129,10 @@ struct MessagingRuntimeState final {
 };
 
 struct NetworkRuntimeState final {
+    /// \brief Fixed network-control output ports used by messaging.
+    /// Constructed before messaging components; transport may be null.
+    MessagingNetworkPorts messaging_ports;
+
     std::unique_ptr<net::TcpTransport> transport;
     ActorSystem::BackpressureSignalWireSink backpressure_signal_wire_sink_for_test;
     std::shared_ptr<net::UdpRegistrar> registrar;
