@@ -32,7 +32,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <memory>
 
 namespace hpactor {
 
@@ -109,6 +108,15 @@ class MessagingRuntime final {
     void on_reliable_ack(MessageId message_id, EndPoint endpoint) noexcept;
     void on_reliable_nack(MessageId message_id, EndPoint endpoint,
                           uint32_t reason_code, uint32_t retry_after_ms) noexcept;
+
+    /// \brief Process pending retries for at-least-once delivery.
+    ///
+    /// Invokes the current tracker's retry logic with a caller-supplied
+    /// resend port.  Transport resend remains a characterized gap.
+    template <typename ResendFn>
+    void process_retries(uint64_t now_ns, ResendFn&& resend) noexcept {
+        outbound_tracker_.process_retries(now_ns, std::forward<ResendFn>(resend));
+    }
 
     // ── Accessors (stable addresses) ──────────────────────────────────
 

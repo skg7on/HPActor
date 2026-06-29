@@ -274,7 +274,7 @@ ActorSystem::ActorSystem(const Config& config)
                         std::chrono::duration_cast<std::chrono::nanoseconds>(
                             std::chrono::steady_clock::now().time_since_epoch())
                             .count());
-                    impl_->messaging_->delivery_receipt_tracker().process_retries(
+                    impl_->messaging_->process_retries(
                         now_ns,
                         [](const msg::OutboundDeliveryTracker::PendingSend&) {
                             // Resend via transport (implemented in
@@ -933,7 +933,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     uint32_t flags = frame.pb_envelope.data_frame().flags();
 
     if (flags & kControlAck) {
-        impl_->messaging_->delivery_receipt_tracker().on_ack(
+        impl_->messaging_->on_reliable_ack(
             MessageId{frame.pb_envelope.data_frame().message_id()},
             net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint);
         return;
@@ -946,7 +946,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
                         frame.pb_envelope.data_frame().payload().data(),
                         sizeof(uint32_t));
         }
-        impl_->messaging_->delivery_receipt_tracker().on_nack(
+        impl_->messaging_->on_reliable_nack(
             MessageId{frame.pb_envelope.data_frame().message_id()},
             net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint,
             reason_code, retry_after_ms);
@@ -1310,34 +1310,10 @@ void ActorSystem::set_drain_config(ActorId target, DrainConfig cfg) {
 void ActorSystem::send_reliable_ack(const ActorAddress& target,
                                     const ActorAddress& acker, uint64_t msg_id,
                                     uint8_t status, uint32_t retry_after_ms) {
-    if (!impl_->network.transport) {
-        return;
-    }
-
-    net::WireFrame frame;
-    // For ACK (Accepted/Duplicate): use AckRequested flag (kControlAck on
-    // receiver side).  For NACK (Rejected): use AckResponse flag (kControlNack
-    // on receiver side).  This matches the convention in deliver_remote().
-    bool is_nack = (status == 1); // 1 = AckStatus::Rejected
-    frame.pb_envelope.mutable_data_frame()->set_flags(
-        is_nack ? net::WireFrame::AckResponse : net::WireFrame::AckRequested);
-    frame.pb_envelope.mutable_data_frame()->set_message_id(msg_id);
-    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(), acker);
-    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
-                  target);
-
-    if (is_nack) {
-        // Encode reason code in type_tag (read as reason_code by receiver)
-        frame.pb_envelope.mutable_data_frame()->set_type_tag(
-            static_cast<uint32_t>(status));
-        // Encode retry_after_ms as 4-byte little-endian in payload
-        std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
-                                sizeof(uint32_t));
-        frame.pb_envelope.mutable_data_frame()->set_payload(payload_str);
-    }
-
-    auto encoded = frame.encode();
-    (void)impl_->network.transport->try_send(target, encoded);
+    // Route through the fixed network-control port — same frame construction
+    // as reliable_ack_adapter, but called from actor-facing code paths.
+    impl_->network.messaging_ports.reliable_ack(target, acker, msg_id, status,
+                                                retry_after_ms);
 }
 
 // ── Stream protocol ─────────────────────────────────────────────────────────
