@@ -35,7 +35,36 @@ thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  uint32_t num_priorities,
                                  TimerBackend timer_backend, bool start_paused)
-    : system_(system), ready_gate_(system),
+    : system_(system), exec_deps_(ActorExecutionDependencies::from(system)),
+      ready_gate_(system), placement_(num_workers, num_priorities),
+      executor_(system, ready_gate_), num_workers_(num_workers),
+      workers_paused_(start_paused) {
+    switch (timer_backend) {
+        case TimerBackend::TimingWheel:
+            timer_backend_.emplace<TimingWheel>(1'000'000, 4);
+            break;
+        case TimerBackend::CalendarQueue: {
+            auto make_storage = [](size_t sz) -> void* {
+                return mem::allocate(mem::RegionType::kInternal, sz,
+                                     hpactor::ActorId{});
+            };
+            auto destroy_storage = [](void* p, size_t) { mem::deallocate(p); };
+            timer_backend_.emplace<CalendarQueue>(CalendarQueueConfig{},
+                                                  make_storage, destroy_storage);
+            break;
+        }
+        case TimerBackend::TimerPlane:
+            timer_backend_.emplace<TimerPlane>(
+                num_workers_ > 0 ? num_workers_ : 1, 1'000'000);
+            break;
+    }
+}
+
+HybridScheduler::HybridScheduler(ActorSystem& system,
+                                 ActorExecutionDependencies exec_deps,
+                                 uint32_t num_workers, uint32_t num_priorities,
+                                 TimerBackend timer_backend, bool start_paused)
+    : system_(system), exec_deps_(exec_deps), ready_gate_(system),
       placement_(num_workers, num_priorities), executor_(system, ready_gate_),
       num_workers_(num_workers), workers_paused_(start_paused) {
     switch (timer_backend) {
