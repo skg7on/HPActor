@@ -228,6 +228,34 @@ CI environments. The following rules prevent flaky tests.
 - Set CMake `TIMEOUT` properties for tests that legitimately need more than
   the global ctest timeout.
 
+### Meaningful Tests Only
+
+**Every test MUST exercise production code.** Tests that only verify language
+primitives, arithmetic, or logic expressed entirely in local variables are
+worse than useless — they create a false sense of coverage without validating
+any actual behavior.
+
+A test is meaningless if:
+- It only declares local variables and asserts relationships between them
+  (e.g., `uint64_t a = 5; uint64_t b = 3; EXPECT_LE(b, a);`).
+- It tests C++ language semantics rather than project code (e.g., "prove
+  that subtraction works" or "prove that `==` compares values").
+- It calls no function, method, or constructor from the `hpactor::` namespace
+  (or the subsystem under test).
+- The entire test body could be deleted without changing what is actually
+  tested about the production code.
+
+A meaningful unit test MUST:
+- Construct, call, or interact with at least one production type or function
+  from the subsystem named in the test file.
+- Verify observable behavior of that production code — state changes, return
+  values, side effects, error paths, or boundary conditions.
+- Fail if the production code's contract changes in an incompatible way.
+
+Before writing a test, ask: "If someone broke the production code this test
+claims to cover, would this test catch it?" If the answer is no, the test
+is meaningless.
+
 ### Scope
 
 Match test scope to risk:
