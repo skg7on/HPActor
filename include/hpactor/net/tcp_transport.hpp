@@ -75,6 +75,13 @@ class TcpTransport : public Transport {
         actor_msg_handler_ = std::move(h);
     }
 
+    /// \brief Install a unified inbound sink into all connection pools.
+    ///
+    /// When active, every inbound frame is routed through the sink instead
+    /// of the legacy RPC/actor handlers. Propagates to existing pools and
+    /// is stored for future pool creation.
+    void set_inbound_frame_sink(InboundFrameSink sink);
+
     /// \brief Update the pool config used for new connection pools.
     ///
     /// Existing pools are not affected — only pools created after this call
@@ -127,6 +134,7 @@ class TcpTransport : public Transport {
     std::unordered_map<EndPoint, std::shared_ptr<ConnectionPool>> pools_;
     std::function<void(const RpcResponseFrame&)> rpc_handler_;
     std::function<void(const net::WireFrame&)> actor_msg_handler_;
+    InboundFrameSink inbound_sink_;
 
     // Map of fd -> Connection for completion routing
     std::unordered_map<int, ConnectionPtr> connections_;

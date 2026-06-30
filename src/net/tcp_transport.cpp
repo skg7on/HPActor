@@ -84,6 +84,10 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
     if (metrics_ring_buffer_) {
         pool->set_metrics_ring_buffer(metrics_ring_buffer_);
     }
+    // Propagate unified inbound sink
+    if (inbound_sink_.active()) {
+        pool->set_inbound_frame_sink(inbound_sink_);
+    }
     return pool;
 }
 
@@ -412,6 +416,13 @@ void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
     rpc_handler_ = std::move(handler);
     for (auto& [ep, pool] : pools_) {
         pool->set_rpc_handler(rpc_handler_);
+    }
+}
+
+void TcpTransport::set_inbound_frame_sink(InboundFrameSink sink) {
+    inbound_sink_ = sink;
+    for (auto& [ep, pool] : pools_) {
+        pool->set_inbound_frame_sink(inbound_sink_);
     }
 }
 
