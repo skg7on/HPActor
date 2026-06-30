@@ -395,11 +395,11 @@ ActorSystem::ActorSystem(const Config& config)
             },
             .stop_remote_runtime =
                 [this]() {
-                    if (impl_->network_) {
-                        impl_->network_->stop(NetworkRuntime::StopMode::Abort);
-                    } else if (impl_->network.event_loop) {
-                        // Legacy fallback.
-                        impl_->network.event_loop->stop();
+                    // Lightweight: just stop the event loop so the network
+                    // thread exits. Full teardown (join, stop listening,
+                    // stop discovery) happens in the destructor.
+                    if (auto* loop = event_loop()) {
+                        loop->stop();
                     }
                 },
             .leave_discovery = []() {},
