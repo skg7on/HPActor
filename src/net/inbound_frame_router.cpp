@@ -3,8 +3,6 @@
 
 #include "inbound_frame_router.hpp"
 
-#include <hpactor/metrics/metrics_event.hpp>
-#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 
@@ -77,12 +75,11 @@ FrameDispatchResult InboundFrameRouter::route(const InboundFrameContext& ictx,
         case WireFrame::PayloadType::Data:
             return route_data_payload(ictx, frame);
         case WireFrame::PayloadType::Ack:
+            return route_dedicated_ack(frame);
         case WireFrame::PayloadType::Nack:
-            return make_result(FrameDispatchCode::HandlerUnavailable,
-                               frame.payload_type());
+            return route_dedicated_nack(frame);
         case WireFrame::PayloadType::Batch:
-            return make_result(FrameDispatchCode::HandlerUnavailable,
-                               frame.payload_type());
+            return route_batch(ictx, frame);
         case WireFrame::PayloadType::StreamOpen:
         case WireFrame::PayloadType::StreamData:
         case WireFrame::PayloadType::StreamAck:
@@ -131,23 +128,142 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                            WireFrame::PayloadType::Data);
     }
 
-    // Ordinary data — deliver through full MessagingRuntime pipeline
+    // ── Reliable control flag disambiguation ──
+    // Order MATTERS: dual-bit legacy ACK before single bits.
+    const bool ack_req = has_flag(flags, WireFrame::AckRequested);
+    const bool ack_resp = has_flag(flags, WireFrame::AckResponse);
+
+    if (ack_req && ack_resp) {
+        // Legacy rolling-compatible ACK: both flags set
+        messaging_.on_reliable_ack(MessageId{data.message_id()},
+                                   net::from_proto(data.sender()).endpoint);
+        return make_result(FrameDispatchCode::ReliableAckHandled,
+                           WireFrame::PayloadType::Data);
+    }
+    if (ack_resp) {
+        // Legacy NACK: only AckResponse set
+        uint32_t reason_code = data.type_tag();
+        uint32_t retry_ms = 0;
+        if (data.payload().size() >= sizeof(uint32_t)) {
+            std::memcpy(&retry_ms, data.payload().data(), sizeof(uint32_t));
+        }
+        messaging_.on_reliable_nack(MessageId{data.message_id()},
+                                    net::from_proto(data.sender()).endpoint,
+                                    reason_code, retry_ms);
+        return make_result(FrameDispatchCode::ReliableNackHandled,
+                           WireFrame::PayloadType::Data);
+    }
+
+    // ── Backpressure detection ─────────────────────────────────────────────
+    if (static_cast<TypeTag>(data.type_tag()) == TypeTag::BackpressureSignalTag) {
+        messaging_.backpressure().handle_remote_signal(frame);
+        return make_result(FrameDispatchCode::BackpressureHandled,
+                           WireFrame::PayloadType::Data);
+    }
+
+    // Ordinary data — AckRequested only (or no control flags).
+    // AckRequested flag preserved as message metadata, not consumed.
     return deliver_ordinary_data(ictx, frame, data);
 }
+
+// ── Private: Dedicated ACK/NACK oneof routing ───────────────────────────────
+
+FrameDispatchResult
+InboundFrameRouter::route_dedicated_ack(const WireFrame& frame) noexcept {
+    const auto& ack = frame.pb_envelope.ack_frame();
+    messaging_.on_reliable_ack(MessageId{ack.message_id()},
+                               net::from_proto(ack.sender()).endpoint);
+    return make_result(FrameDispatchCode::ReliableAckHandled,
+                       WireFrame::PayloadType::Ack);
+}
+
+FrameDispatchResult
+InboundFrameRouter::route_dedicated_nack(const WireFrame& frame) noexcept {
+    const auto& nack = frame.pb_envelope.nack_frame();
+    messaging_.on_reliable_nack(
+        MessageId{nack.message_id()}, net::from_proto(nack.sender()).endpoint,
+        static_cast<uint32_t>(nack.reason()), nack.retry_after_ms());
+    return make_result(FrameDispatchCode::ReliableNackHandled,
+                       WireFrame::PayloadType::Nack);
+}
+
+// ── Private: Batch routing ─────────────────────────────────────────────────
+
+FrameDispatchResult
+InboundFrameRouter::route_batch(const InboundFrameContext& /*ictx*/,
+                                const WireFrame& frame) noexcept {
+    const auto& batch = frame.pb_envelope.batch_frame();
+
+    // Enforce bounds before iteration
+    const int entry_count = batch.entries_size();
+    if (entry_count < 0 ||
+        static_cast<uint32_t>(entry_count) > config_.max_batch_entries) {
+        return make_result(FrameDispatchCode::InvalidFlags,
+                           WireFrame::PayloadType::Batch);
+    }
+
+    uint32_t accepted = 0;
+    uint32_t rejected = 0;
+
+    for (int i = 0; i < entry_count; ++i) {
+        const auto& entry = batch.entries(i);
+
+        // Reconstruct per-entry TypedMessage
+        StreamBuffer payload(entry.payload().begin(), entry.payload().end());
+        auto type_tag = static_cast<TypeTag>(entry.type_tag());
+        TypedMessage msg(type_tag, std::move(payload));
+
+        // Common sender from batch frame
+        msg.set_sender_address(from_proto(batch.sender()));
+        msg.set_message_id(entry.message_id());
+
+        if (entry.has_trace_context()) {
+            auto parsed = trace_context_from_proto(entry.trace_context(),
+                                                   config_.max_tracestate_len);
+            if (parsed.has_value()) {
+                msg.set_trace_context(parsed.value());
+            }
+        }
+
+        ActorId target = from_proto(batch.receiver()).id;
+        mailbox::DeliveryOptions opts{};
+        auto result = messaging_.try_deliver(target, std::move(msg), 0, 0, opts);
+        if (result.accepted()) {
+            ++accepted;
+        } else {
+            ++rejected;
+        }
+    }
+
+    if (rejected == 0 && accepted > 0) {
+        auto r = make_result(FrameDispatchCode::BatchDelivered,
+                             WireFrame::PayloadType::Batch);
+        r.accepted_count = accepted;
+        return r;
+    }
+    if (accepted > 0) {
+        auto r = make_result(FrameDispatchCode::BatchPartiallyDelivered,
+                             WireFrame::PayloadType::Batch);
+        r.accepted_count = accepted;
+        r.rejected_count = rejected;
+        return r;
+    }
+    return make_result(FrameDispatchCode::ActorRejected,
+                       WireFrame::PayloadType::Batch);
+}
+
+// ── Private: Ordinary data delivery ─────────────────────────────────────────
 
 FrameDispatchResult
 InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
                                           const WireFrame& /*frame_outer*/,
                                           const ActorMsgFrame& data) noexcept {
-    // Reconstruct TypedMessage from wire format
     StreamBuffer payload(data.payload().begin(), data.payload().end());
     auto type_tag = static_cast<TypeTag>(data.type_tag());
     TypedMessage msg(type_tag, std::move(payload));
 
-    // Set sender address
     msg.set_sender_address(from_proto(data.sender()));
 
-    // Trace context
     if (data.has_trace_context()) {
         auto parsed = trace_context_from_proto(data.trace_context(),
                                                config_.max_tracestate_len);
@@ -156,18 +272,15 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
         }
     }
 
-    // Preserve reliable metadata
     uint32_t flags = data.flags();
     if (has_flag(flags, WireFrame::AckRequested)) {
         msg.set_ack_requested(true);
     }
     msg.set_message_id(data.message_id());
 
-    // Extract target actor id
     auto receiver_addr = from_proto(data.receiver());
     ActorId target = receiver_addr.id;
 
-    // Full messaging delivery
     mailbox::DeliveryOptions opts{};
     auto result = messaging_.try_deliver(target, std::move(msg), 0, 0, opts);
 

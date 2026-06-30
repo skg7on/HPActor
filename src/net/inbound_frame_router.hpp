@@ -91,6 +91,11 @@ class InboundFrameRouter final {
     FrameDispatchResult route_data_payload(const InboundFrameContext& ictx,
                                            const WireFrame& frame) noexcept;
 
+    FrameDispatchResult route_dedicated_ack(const WireFrame& frame) noexcept;
+    FrameDispatchResult route_dedicated_nack(const WireFrame& frame) noexcept;
+    FrameDispatchResult
+    route_batch(const InboundFrameContext& ictx, const WireFrame& frame) noexcept;
+
     Config config_;
     [[maybe_unused]] MessagingRuntime& messaging_;
     RpcChannel& rpc_;
