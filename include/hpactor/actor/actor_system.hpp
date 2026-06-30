@@ -251,6 +251,21 @@ class ActorSystem {
     /// \param[in] config System configuration.
     explicit ActorSystem(const Config& config);
 
+    /// \brief Preferred API: create a fully validated, ready system.
+    ///
+    /// Validates all config before any runtime side effect (threads,
+    /// listeners, daemonization, actor spawns). Returns the system
+    /// on success, or a typed error on validation/startup failure.
+    static result<std::unique_ptr<ActorSystem>>
+    create(const Config& config) noexcept;
+
+    /// \brief Create with topology bootstrapping.
+    ///
+    /// Parses the TOML topology, validates actor factories, and spawns
+    /// configured actors. All validation happens before startup.
+    static result<std::unique_ptr<ActorSystem>>
+    create(const Config& config, const std::string& topology_path) noexcept;
+
     /// \brief Shut down all subsystems in phase order.
     ~ActorSystem();
 
@@ -877,6 +892,16 @@ class ActorSystem {
                                      std::string_view type_name);
 
     friend struct sched::ActorExecutionDependencies;
+    friend class RuntimeBuilder;
+    friend class RuntimeCoordinator;
+    friend void register_runtime_startup_stages(class RuntimeCoordinator&,
+                                                ActorSystem&, bool) noexcept;
+
+    /// \brief Tag type for blueprint-based construction (no startup).
+    struct FromBlueprint {};
+    /// \brief Construct from a validated blueprint without starting components.
+    /// Only accessible to RuntimeBuilder and RuntimeCoordinator (friends).
+    ActorSystem(FromBlueprint, const class RuntimeBlueprint& bp);
 
     class Impl;
     std::unique_ptr<Impl> impl_;
