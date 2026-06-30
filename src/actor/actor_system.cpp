@@ -504,9 +504,13 @@ ActorSystem::~ActorSystem() {
     if (impl_->network.discovery) {
         impl_->network.discovery->stop();
     }
-    // ObservabilityRuntime destructor handles stop if still started.
-    impl_->observability_.reset();
+    // Stop scheduler BEFORE destroying observability: workers hold raw
+    // pointers to the metrics ring buffer and logger owned by
+    // ObservabilityRuntime. Workers must quiesce before those pointers
+    // become invalid.
     impl_->core.scheduler->stop();
+    // Now safe: no worker threads can access metrics/log resources.
+    impl_->observability_.reset();
 }
 
 void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
