@@ -14,9 +14,25 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/actor/stream_handle.hpp>
+#include <hpactor/actor/stream_types.hpp>
 #include <hpactor/core/actor_id.hpp>
 
 using namespace hpactor;
+
+namespace {
+
+// No-op delivery callback for unit tests that don't exercise the delivery path.
+bool test_deliver(void* /*ctx*/, ActorId /*target*/, TypedMessage /*msg*/) {
+    return true;
+}
+
+// Helper to create a StreamHandle with a no-op callback for move-semantics
+// and close/error flag tests.
+StreamHandle make_test_handle(ActorId sender_id, uint64_t stream_id) {
+    return StreamHandle(sender_id, stream_id, test_deliver, nullptr);
+}
+
+} // namespace
 
 TEST(StreamHandleTest, DefaultConstruction) {
     StreamHandle h;
@@ -25,15 +41,13 @@ TEST(StreamHandleTest, DefaultConstruction) {
 }
 
 TEST(StreamHandleTest, ConstructedHandleIsOpen) {
-    ActorId sender_id{42};
-    StreamHandle h(sender_id, 100);
+    auto h = make_test_handle(ActorId{42}, 100);
     EXPECT_TRUE(h.is_open());
     EXPECT_EQ(h.stream_id(), 100u);
 }
 
 TEST(StreamHandleTest, MoveConstructTransfersOwnership) {
-    ActorId sender_id{42};
-    StreamHandle h1(sender_id, 100);
+    auto h1 = make_test_handle(ActorId{42}, 100);
     StreamHandle h2(std::move(h1));
     EXPECT_TRUE(h2.is_open());
     EXPECT_EQ(h2.stream_id(), 100u);
@@ -41,8 +55,7 @@ TEST(StreamHandleTest, MoveConstructTransfersOwnership) {
 }
 
 TEST(StreamHandleTest, MoveAssignTransfersOwnership) {
-    ActorId sender_id{42};
-    StreamHandle h1(sender_id, 100);
+    auto h1 = make_test_handle(ActorId{42}, 100);
     StreamHandle h2;
     h2 = std::move(h1);
     EXPECT_TRUE(h2.is_open());
@@ -50,24 +63,21 @@ TEST(StreamHandleTest, MoveAssignTransfersOwnership) {
 }
 
 TEST(StreamHandleTest, CloseSetsNotOpen) {
-    ActorId sender_id{42};
-    StreamHandle h(sender_id, 100);
+    auto h = make_test_handle(ActorId{42}, 100);
     bool result = h.close();
     EXPECT_TRUE(result);
     EXPECT_FALSE(h.is_open());
 }
 
 TEST(StreamHandleTest, DoubleCloseReturnsFalse) {
-    ActorId sender_id{42};
-    StreamHandle h(sender_id, 100);
+    auto h = make_test_handle(ActorId{42}, 100);
     h.close();
     bool result = h.close();
     EXPECT_FALSE(result);
 }
 
 TEST(StreamHandleTest, WriteOnClosedReturnsFalse) {
-    ActorId sender_id{42};
-    StreamHandle h(sender_id, 100);
+    auto h = make_test_handle(ActorId{42}, 100);
     h.close();
     StreamBuffer buf;
     bool result = h.write(TypeTag::User, std::move(buf));
@@ -75,8 +85,7 @@ TEST(StreamHandleTest, WriteOnClosedReturnsFalse) {
 }
 
 TEST(StreamHandleTest, ErrorSetsNotOpen) {
-    ActorId sender_id{42};
-    StreamHandle h(sender_id, 100);
+    auto h = make_test_handle(ActorId{42}, 100);
     bool result = h.error(42, "test error");
     EXPECT_TRUE(result);
     EXPECT_FALSE(h.is_open());
@@ -89,11 +98,32 @@ TEST(StreamHandleTest, DefaultConstructedHandleIsNotOpen) {
 }
 
 TEST(StreamHandleTest, MoveAssignFromOpenToDefault) {
-    ActorId sid{42};
-    StreamHandle h1(sid, 100);
+    auto h1 = make_test_handle(ActorId{42}, 100);
     StreamHandle h2;
     h2 = std::move(h1);
     EXPECT_TRUE(h2.is_open());
     EXPECT_EQ(h2.stream_id(), 100u);
     EXPECT_FALSE(h1.is_open());
+}
+
+TEST(StreamHandleTest, WriteOnOpenHandleReturnsTrue) {
+    auto h = make_test_handle(ActorId{42}, 100);
+    StreamBuffer buf;
+    EXPECT_TRUE(h.write(TypeTag::User, std::move(buf)));
+}
+
+TEST(StreamHandleTest, DefaultHandleWriteReturnsFalse) {
+    StreamHandle h;
+    StreamBuffer buf;
+    EXPECT_FALSE(h.write(TypeTag::User, std::move(buf)));
+}
+
+TEST(StreamHandleTest, DefaultHandleCloseReturnsFalse) {
+    StreamHandle h;
+    EXPECT_FALSE(h.close());
+}
+
+TEST(StreamHandleTest, DefaultHandleErrorReturnsFalse) {
+    StreamHandle h;
+    EXPECT_FALSE(h.error(1, "test"));
 }
