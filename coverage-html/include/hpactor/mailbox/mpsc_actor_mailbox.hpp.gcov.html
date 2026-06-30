@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 01:04:23</td>
+            <td class="headerValue">2026-06-30 03:26:54</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -290,8 +290,8 @@
 <span id="L212"><span class="lineNum">     212</span>                 :             :     /// \note Thread safety: the returned reference may be invalidated by a</span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     ///       concurrent \c set_config() call. Read from the actor's own</span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     ///       thread or during a quiescent period.</span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">      132832 :     const MailboxConfig&amp; config() const noexcept {</span></span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">      132832 :         return config_;</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">      132869 :     const MailboxConfig&amp; config() const noexcept {</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">      132869 :         return config_;</span></span>
 <span id="L217"><span class="lineNum">     217</span>                 :             :     }</span>
 <span id="L218"><span class="lineNum">     218</span>                 :             : </span>
 <span id="L219"><span class="lineNum">     219</span>                 :             :     /// \brief Install a rate limiter that gates message consumption on</span>
@@ -399,24 +399,24 @@
 <span id="L321"><span class="lineNum">     321</span>                 :             :     /// \note The caller must not access \p msg after a successful enqueue</span>
 <span id="L322"><span class="lineNum">     322</span>                 :             :     ///       (the mailbox owns it). After a rejection where the overflow</span>
 <span id="L323"><span class="lineNum">     323</span>                 :             :     ///       handler has not consumed it, \p msg remains valid.</span>
-<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">      353995 :     EnqueueResult try_push(T&amp;&amp; msg, MailboxEnvelopeMeta meta = {}) noexcept {</span></span>
+<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">      354032 :     EnqueueResult try_push(T&amp;&amp; msg, MailboxEnvelopeMeta meta = {}) noexcept {</span></span>
 <span id="L325"><span class="lineNum">     325</span>                 :             : #ifdef HPACTOR_DEBUG</span>
 <span id="L326"><span class="lineNum">     326</span>                 :             :         in_active_use_.store(true, std::memory_order_release);</span>
 <span id="L327"><span class="lineNum">     327</span>                 :             : #endif</span>
 <span id="L328"><span class="lineNum">     328</span>                 :             : </span>
-<span id="L329"><span class="lineNum">     329</span>   [<span class="tlaGBC" title="Branch 0 was taken 133115 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 220880 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 133115 times"> + </span> :<span class="tlaGNC">      353995 :         FAULT_INJECT(&quot;hpactor.mailbox.try_push.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 353995 times"> + </span>]
+<span id="L329"><span class="lineNum">     329</span>   [<span class="tlaGBC" title="Branch 0 was taken 133134 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 220898 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 133134 times"> + </span> :<span class="tlaGNC">      354032 :         FAULT_INJECT(&quot;hpactor.mailbox.try_push.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 354032 times"> + </span>]
 <span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             EnqueueResult r;</span></span>
 <span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaUNC">           0 :             r.code = EnqueueResultCode::Rejected;</span></span>
 <span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaUNC">           0 :             r.target = actor_id_;</span></span>
 <span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaUNC">           0 :             return r;</span></span>
 <span id="L334"><span class="lineNum">     334</span>                 :             :         }</span>
 <span id="L335"><span class="lineNum">     335</span>                 :             : </span>
-<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC tlaBgGNC">      353995 :         meta.estimated_bytes = estimate_node_bytes(msg);</span></span>
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC tlaBgGNC">      354032 :         meta.estimated_bytes = estimate_node_bytes(msg);</span></span>
 <span id="L337"><span class="lineNum">     337</span>                 :             : </span>
 <span id="L338"><span class="lineNum">     338</span>                 :             :         // Admission policy gate — evaluate before lane routing.</span>
-<span id="L339"><span class="lineNum">     339</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 353993 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      353995 :         if (admission_policies_ &amp;&amp; !admission_policies_-&gt;empty()) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 353993 times"> + </span>]
+<span id="L339"><span class="lineNum">     339</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 354030 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      354032 :         if (admission_policies_ &amp;&amp; !admission_policies_-&gt;empty()) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 354030 times"> + </span>]
 <span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">           2 :             auto adm_result = evaluate_policy_chain(msg, meta);</span></span>
 <span id="L341"><span class="lineNum">     341</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :             if (adm_result.decision != AdmissionDecision::Accept) {</span></span>
 <span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">           2 :                 admission_rejected_total_.fetch_add(1, std::memory_order_relaxed);</span></span>
@@ -433,13 +433,13 @@
 <span id="L353"><span class="lineNum">     353</span>                 :             :             }</span>
 <span id="L354"><span class="lineNum">     354</span>                 :             :         }</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             : </span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">      353993 :         uint8_t lane = route_lane(meta);</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">      354030 :         uint8_t lane = route_lane(meta);</span></span>
 <span id="L357"><span class="lineNum">     357</span>                 :             : </span>
 <span id="L358"><span class="lineNum">     358</span>                 :             :         // System messages use the dedicated system lane.</span>
-<span id="L359"><span class="lineNum">     359</span>         [<span class="tlaGBC" title="Branch 0 was taken 131 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 353862 times"> + </span>]:<span class="tlaGNC">      353993 :         if (lane == MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel) {</span></span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">         262 :             uint32_t cur = system_lane_reserved_.load(std::memory_order_acquire);</span></span>
+<span id="L359"><span class="lineNum">     359</span>         [<span class="tlaGBC" title="Branch 0 was taken 132 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 353898 times"> + </span>]:<span class="tlaGNC">      354030 :         if (lane == MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel) {</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">         264 :             uint32_t cur = system_lane_reserved_.load(std::memory_order_acquire);</span></span>
 <span id="L361"><span class="lineNum">     361</span>                 :             :             do {</span>
-<span id="L362"><span class="lineNum">     362</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128 times"> + </span>]:<span class="tlaGNC">         131 :                 if (cur &gt;= config_.protected_system_messages) {</span></span>
+<span id="L362"><span class="lineNum">     362</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 129 times"> + </span>]:<span class="tlaGNC">         132 :                 if (cur &gt;= config_.protected_system_messages) {</span></span>
 <span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">           3 :                     update_pressure_state(/*hard_failure=*/true);</span></span>
 <span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">           3 :                     total_rejected_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">           3 :                     EnqueueResult r;</span></span>
@@ -453,79 +453,79 @@
 <span id="L373"><span class="lineNum">     373</span>                 :<span class="tlaGNC">           3 :                     r.pressure_state = pressure_state_.current_state();</span></span>
 <span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">           3 :                     return r;</span></span>
 <span id="L375"><span class="lineNum">     375</span>                 :             :                 }</span>
-<span id="L376"><span class="lineNum">     376</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 128 times"> + </span>]:<span class="tlaGNC">         256 :             } while (!system_lane_reserved_.compare_exchange_weak(</span></span>
+<span id="L376"><span class="lineNum">     376</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 129 times"> + </span>]:<span class="tlaGNC">         258 :             } while (!system_lane_reserved_.compare_exchange_weak(</span></span>
 <span id="L377"><span class="lineNum">     377</span>                 :             :                 cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire));</span>
 <span id="L378"><span class="lineNum">     378</span>                 :             :             void* raw =</span>
-<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">         128 :                 mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);</span></span>
-<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">         128 :             auto* node = new (raw) T(std::move(msg));</span></span>
-<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">         128 :             system_lane_bytes_.fetch_add(meta.estimated_bytes,</span></span>
+<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">         129 :                 mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">         129 :             auto* node = new (raw) T(std::move(msg));</span></span>
+<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">         129 :             system_lane_bytes_.fetch_add(meta.estimated_bytes,</span></span>
 <span id="L382"><span class="lineNum">     382</span>                 :             :                                          std::memory_order_relaxed);</span>
-<span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaGNC">         128 :             enqueue_reserved(node, meta, MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel);</span></span>
-<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         128 :             return make_result(pressure_state_.code_after_accept());</span></span>
+<span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaGNC">         129 :             enqueue_reserved(node, meta, MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel);</span></span>
+<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         129 :             return make_result(pressure_state_.code_after_accept());</span></span>
 <span id="L385"><span class="lineNum">     385</span>                 :             :         }</span>
 <span id="L386"><span class="lineNum">     386</span>                 :             : </span>
 <span id="L387"><span class="lineNum">     387</span>                 :             :         // User messages: reserve capacity, then enqueue to the routed lane.</span>
-<span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaGNC">      353862 :         auto reserve_result = reservation_.try_reserve(</span></span>
+<span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaGNC">      353898 :         auto reserve_result = reservation_.try_reserve(</span></span>
 <span id="L389"><span class="lineNum">     389</span>                 :             :             meta.estimated_bytes, config_.capacity.max_messages,</span>
 <span id="L390"><span class="lineNum">     390</span>                 :             :             config_.capacity.max_bytes);</span>
 <span id="L391"><span class="lineNum">     391</span>                 :             : </span>
-<span id="L392"><span class="lineNum">     392</span>         [<span class="tlaGBC" title="Branch 0 was taken 199583 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 154279 times"> + </span>]:<span class="tlaGNC">      353862 :         if (reserve_result != detail::ReservationResult::Reserved) {</span></span>
-<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">      199583 :             update_pressure_state(/*hard_failure=*/true);</span></span>
+<span id="L392"><span class="lineNum">     392</span>         [<span class="tlaGBC" title="Branch 0 was taken 197599 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 156299 times"> + </span>]:<span class="tlaGNC">      353898 :         if (reserve_result != detail::ReservationResult::Reserved) {</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">      197599 :             update_pressure_state(/*hard_failure=*/true);</span></span>
 <span id="L394"><span class="lineNum">     394</span>                 :             : </span>
-<span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaGNC">      798332 :             detail::OverflowContext&lt;T&gt; ctx{</span></span>
+<span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaGNC">      790396 :             detail::OverflowContext&lt;T&gt; ctx{</span></span>
 <span id="L396"><span class="lineNum">     396</span>                 :             :                 msg,</span>
 <span id="L397"><span class="lineNum">     397</span>                 :             :                 meta,</span>
-<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC">      199583 :                 reservation_,</span></span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">      199583 :                 overflow_queue_,</span></span>
-<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaGNC">      199583 :                 total_rejected_,</span></span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">      199583 :                 total_dropped_,</span></span>
-<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC">      199583 :                 total_dead_letters_,</span></span>
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">      199583 :                 metrics_ring_buffer_,</span></span>
-<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">      199583 :                 config_,</span></span>
+<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC">      197599 :                 reservation_,</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">      197599 :                 overflow_queue_,</span></span>
+<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaGNC">      197599 :                 total_rejected_,</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">      197599 :                 total_dropped_,</span></span>
+<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC">      197599 :                 total_dead_letters_,</span></span>
+<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">      197599 :                 metrics_ring_buffer_,</span></span>
+<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">      197599 :                 config_,</span></span>
 <span id="L405"><span class="lineNum">     405</span>                 :             :                 actor_id_,</span>
-<span id="L406"><span class="lineNum">     406</span>                 :<span class="tlaGNC">      199583 :                 static_cast&lt;uint32_t&gt;(lanes_.total_depth()),</span></span>
-<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">      199583 :                 reservation_.queued_bytes(),</span></span>
-<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaGNC">      279881 :                 [this]() { return drop_one_oldest_global(); },</span></span>
+<span id="L406"><span class="lineNum">     406</span>                 :<span class="tlaGNC">      197599 :                 static_cast&lt;uint32_t&gt;(lanes_.total_depth()),</span></span>
+<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">      197599 :                 reservation_.queued_bytes(),</span></span>
+<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaGNC">      275913 :                 [this]() { return drop_one_oldest_global(); },</span></span>
 <span id="L409"><span class="lineNum">     409</span>                 :             :                 nullptr,                                          // dlq</span>
-<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">      199584 :                 [this]() { return drop_one_lowest_priority(); }}; // drop_lowest_priority_fn</span></span>
+<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">      197600 :                 [this]() { return drop_one_lowest_priority(); }}; // drop_lowest_priority_fn</span></span>
 <span id="L411"><span class="lineNum">     411</span>                 :             : </span>
-<span id="L412"><span class="lineNum">     412</span>                 :<span class="tlaGNC">      199583 :             auto result = overflow_handler_-&gt;handle(ctx, reserve_result);</span></span>
+<span id="L412"><span class="lineNum">     412</span>                 :<span class="tlaGNC">      197599 :             auto result = overflow_handler_-&gt;handle(ctx, reserve_result);</span></span>
 <span id="L413"><span class="lineNum">     413</span>                 :             : </span>
-<span id="L414"><span class="lineNum">     414</span>                 :<span class="tlaGNC">      199583 :             result.pressure_state = pressure_state_.current_state();</span></span>
-<span id="L415"><span class="lineNum">     415</span>                 :<span class="tlaGNC">      199583 :             result.pressure_ratio = pressure_ratio();</span></span>
-<span id="L416"><span class="lineNum">     416</span>         [<span class="tlaGBC" title="Branch 0 was taken 199582 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">      199583 :             if (result.retry_after.count() == 0) {</span></span>
-<span id="L417"><span class="lineNum">     417</span>                 :<span class="tlaGNC">      199582 :                 auto base =</span></span>
-<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">      199582 :                     std::chrono::milliseconds(config_.signal_min_interval_ms);</span></span>
-<span id="L419"><span class="lineNum">     419</span>         [<span class="tlaGBC" title="Branch 0 was taken 127979 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 71603 times"> + </span>]:<span class="tlaGNC">      199582 :                 if (result.pressure_state == MailboxPressureState::HardPressure) {</span></span>
-<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">      127979 :                     result.retry_after = base * 2;</span></span>
-<span id="L421"><span class="lineNum">     421</span>         [<span class="tlaGBC" title="Branch 0 was taken 71603 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       71603 :                 } else if (result.pressure_state == MailboxPressureState::SoftPressure ||</span></span>
-<span id="L422"><span class="lineNum">     422</span>         [<span class="tlaGBC" title="Branch 0 was taken 71601 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">       71603 :                            result.pressure_state == MailboxPressureState::Recovering) {</span></span>
-<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">       71601 :                     result.retry_after = base;</span></span>
+<span id="L414"><span class="lineNum">     414</span>                 :<span class="tlaGNC">      197599 :             result.pressure_state = pressure_state_.current_state();</span></span>
+<span id="L415"><span class="lineNum">     415</span>                 :<span class="tlaGNC">      197599 :             result.pressure_ratio = pressure_ratio();</span></span>
+<span id="L416"><span class="lineNum">     416</span>         [<span class="tlaGBC" title="Branch 0 was taken 197598 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">      197599 :             if (result.retry_after.count() == 0) {</span></span>
+<span id="L417"><span class="lineNum">     417</span>                 :<span class="tlaGNC">      197598 :                 auto base =</span></span>
+<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">      197598 :                     std::chrono::milliseconds(config_.signal_min_interval_ms);</span></span>
+<span id="L419"><span class="lineNum">     419</span>         [<span class="tlaGBC" title="Branch 0 was taken 122222 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 75376 times"> + </span>]:<span class="tlaGNC">      197598 :                 if (result.pressure_state == MailboxPressureState::HardPressure) {</span></span>
+<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">      122222 :                     result.retry_after = base * 2;</span></span>
+<span id="L421"><span class="lineNum">     421</span>         [<span class="tlaGBC" title="Branch 0 was taken 75376 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       75376 :                 } else if (result.pressure_state == MailboxPressureState::SoftPressure ||</span></span>
+<span id="L422"><span class="lineNum">     422</span>         [<span class="tlaGBC" title="Branch 0 was taken 75374 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">       75376 :                            result.pressure_state == MailboxPressureState::Recovering) {</span></span>
+<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">       75374 :                     result.retry_after = base;</span></span>
 <span id="L424"><span class="lineNum">     424</span>                 :             :                 }</span>
 <span id="L425"><span class="lineNum">     425</span>                 :             :             }</span>
 <span id="L426"><span class="lineNum">     426</span>                 :             : </span>
-<span id="L427"><span class="lineNum">     427</span>         [<span class="tlaGBC" title="Branch 0 was taken 74310 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 125273 times"> + </span>]:<span class="tlaGNC">      199583 :             if (result.code == EnqueueResultCode::DroppedExisting) {</span></span>
-<span id="L428"><span class="lineNum">     428</span>                 :<span class="tlaGNC">       74310 :                 reserve_result = reservation_.try_reserve(</span></span>
+<span id="L427"><span class="lineNum">     427</span>         [<span class="tlaGBC" title="Branch 0 was taken 78103 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 119496 times"> + </span>]:<span class="tlaGNC">      197599 :             if (result.code == EnqueueResultCode::DroppedExisting) {</span></span>
+<span id="L428"><span class="lineNum">     428</span>                 :<span class="tlaGNC">       78103 :                 reserve_result = reservation_.try_reserve(</span></span>
 <span id="L429"><span class="lineNum">     429</span>                 :             :                     meta.estimated_bytes, config_.capacity.max_messages,</span>
 <span id="L430"><span class="lineNum">     430</span>                 :             :                     config_.capacity.max_bytes);</span>
-<span id="L431"><span class="lineNum">     431</span>         [<span class="tlaGBC" title="Branch 0 was taken 54733 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 19577 times"> + </span>]:<span class="tlaGNC">       74310 :                 if (reserve_result == detail::ReservationResult::Reserved) {</span></span>
-<span id="L432"><span class="lineNum">     432</span>                 :<span class="tlaGNC">       54733 :                     void* raw = mem::allocate(mem::RegionType::kMessage,</span></span>
+<span id="L431"><span class="lineNum">     431</span>         [<span class="tlaGBC" title="Branch 0 was taken 56542 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21561 times"> + </span>]:<span class="tlaGNC">       78103 :                 if (reserve_result == detail::ReservationResult::Reserved) {</span></span>
+<span id="L432"><span class="lineNum">     432</span>                 :<span class="tlaGNC">       56542 :                     void* raw = mem::allocate(mem::RegionType::kMessage,</span></span>
 <span id="L433"><span class="lineNum">     433</span>                 :             :                                               sizeof(T), actor_id_);</span>
-<span id="L434"><span class="lineNum">     434</span>                 :<span class="tlaGNC">       54733 :                     auto* node = new (raw) T(std::move(msg));</span></span>
-<span id="L435"><span class="lineNum">     435</span>                 :<span class="tlaGNC">       54733 :                     enqueue_reserved(node, meta, lane);</span></span>
-<span id="L436"><span class="lineNum">     436</span>                 :<span class="tlaGNC">       54733 :                     return make_result(pressure_state_.code_after_accept());</span></span>
+<span id="L434"><span class="lineNum">     434</span>                 :<span class="tlaGNC">       56542 :                     auto* node = new (raw) T(std::move(msg));</span></span>
+<span id="L435"><span class="lineNum">     435</span>                 :<span class="tlaGNC">       56542 :                     enqueue_reserved(node, meta, lane);</span></span>
+<span id="L436"><span class="lineNum">     436</span>                 :<span class="tlaGNC">       56542 :                     return make_result(pressure_state_.code_after_accept());</span></span>
 <span id="L437"><span class="lineNum">     437</span>                 :             :                 }</span>
-<span id="L438"><span class="lineNum">     438</span>                 :<span class="tlaGNC">       19577 :                 result.code = EnqueueResultCode::Rejected;</span></span>
-<span id="L439"><span class="lineNum">     439</span>                 :<span class="tlaGNC">       19577 :                 total_rejected_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaGNC">       19577 :                 update_pressure_state(/*hard_failure=*/true);</span></span>
+<span id="L438"><span class="lineNum">     438</span>                 :<span class="tlaGNC">       21561 :                 result.code = EnqueueResultCode::Rejected;</span></span>
+<span id="L439"><span class="lineNum">     439</span>                 :<span class="tlaGNC">       21561 :                 total_rejected_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaGNC">       21561 :                 update_pressure_state(/*hard_failure=*/true);</span></span>
 <span id="L441"><span class="lineNum">     441</span>                 :             :             }</span>
-<span id="L442"><span class="lineNum">     442</span>                 :<span class="tlaGNC">      144850 :             return result;</span></span>
-<span id="L443"><span class="lineNum">     443</span>                 :<span class="tlaGNC">      199583 :         }</span></span>
+<span id="L442"><span class="lineNum">     442</span>                 :<span class="tlaGNC">      141057 :             return result;</span></span>
+<span id="L443"><span class="lineNum">     443</span>                 :<span class="tlaGNC">      197599 :         }</span></span>
 <span id="L444"><span class="lineNum">     444</span>                 :             : </span>
-<span id="L445"><span class="lineNum">     445</span>                 :<span class="tlaGNC">      154279 :         void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);</span></span>
-<span id="L446"><span class="lineNum">     446</span>                 :<span class="tlaGNC">      154279 :         auto* node = new (raw) T(std::move(msg));</span></span>
-<span id="L447"><span class="lineNum">     447</span>                 :<span class="tlaGNC">      154279 :         enqueue_reserved(node, meta, lane);</span></span>
-<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaGNC">      154279 :         return make_result(pressure_state_.code_after_accept());</span></span>
+<span id="L445"><span class="lineNum">     445</span>                 :<span class="tlaGNC">      156299 :         void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);</span></span>
+<span id="L446"><span class="lineNum">     446</span>                 :<span class="tlaGNC">      156299 :         auto* node = new (raw) T(std::move(msg));</span></span>
+<span id="L447"><span class="lineNum">     447</span>                 :<span class="tlaGNC">      156299 :         enqueue_reserved(node, meta, lane);</span></span>
+<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaGNC">      156299 :         return make_result(pressure_state_.code_after_accept());</span></span>
 <span id="L449"><span class="lineNum">     449</span>                 :             :     }</span>
 <span id="L450"><span class="lineNum">     450</span>                 :             : </span>
 <span id="L451"><span class="lineNum">     451</span>                 :             :     /// \brief Batch-enqueue a range of messages with a single reservation</span>
@@ -665,20 +665,20 @@
 <span id="L585"><span class="lineNum">     585</span>                 :             :     ///                            redundant wakeups.</span>
 <span id="L586"><span class="lineNum">     586</span>                 :             :     /// \note Thread safety: lock-free and safe to call from any thread</span>
 <span id="L587"><span class="lineNum">     587</span>                 :             :     ///       (the inner \c MultiLaneQueue::enqueue() is lock-free).</span>
-<span id="L588"><span class="lineNum">     588</span>                 :<span class="tlaGNC">      209157 :     void enqueue_reserved(T* node, const MailboxEnvelopeMeta&amp; meta,</span></span>
+<span id="L588"><span class="lineNum">     588</span>                 :<span class="tlaGNC">      212987 :     void enqueue_reserved(T* node, const MailboxEnvelopeMeta&amp; meta,</span></span>
 <span id="L589"><span class="lineNum">     589</span>                 :             :                           uint8_t lane_idx = 0,</span>
 <span id="L590"><span class="lineNum">     590</span>                 :             :                           bool suppress_wakeup = false) noexcept {</span>
-<span id="L591"><span class="lineNum">     591</span>   [<span class="tlaGBC" title="Branch 0 was taken 133095 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 76062 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 133095 times"> + </span> :<span class="tlaGNC">      209157 :         FAULT_INJECT(&quot;hpactor.mailbox.enqueue_reserved.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 209157 times"> + </span>]
+<span id="L591"><span class="lineNum">     591</span>   [<span class="tlaGBC" title="Branch 0 was taken 133114 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79873 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 133114 times"> + </span> :<span class="tlaGNC">      212987 :         FAULT_INJECT(&quot;hpactor.mailbox.enqueue_reserved.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 212987 times"> + </span>]
 <span id="L592"><span class="lineNum">     592</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return; // drop after capacity committed</span></span>
 <span id="L593"><span class="lineNum">     593</span>                 :             :         }</span>
-<span id="L594"><span class="lineNum">     594</span>                 :<span class="tlaGNC tlaBgGNC">      209157 :         lanes_.enqueue(node, lane_idx);</span></span>
-<span id="L595"><span class="lineNum">     595</span>                 :<span class="tlaGNC">      209157 :         total_enqueued_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L596"><span class="lineNum">     596</span>                 :<span class="tlaGNC">      209157 :         update_max_depth();</span></span>
-<span id="L597"><span class="lineNum">     597</span>                 :<span class="tlaGNC">      209157 :         update_pressure_state();</span></span>
+<span id="L594"><span class="lineNum">     594</span>                 :<span class="tlaGNC tlaBgGNC">      212987 :         lanes_.enqueue(node, lane_idx);</span></span>
+<span id="L595"><span class="lineNum">     595</span>                 :<span class="tlaGNC">      212987 :         total_enqueued_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L596"><span class="lineNum">     596</span>                 :<span class="tlaGNC">      212987 :         update_max_depth();</span></span>
+<span id="L597"><span class="lineNum">     597</span>                 :<span class="tlaGNC">      212987 :         update_pressure_state();</span></span>
 <span id="L598"><span class="lineNum">     598</span>                 :             : </span>
-<span id="L599"><span class="lineNum">     599</span>                 :<span class="tlaGNC">      209157 :         int64_t depth = lanes_.total_depth();</span></span>
-<span id="L600"><span class="lineNum">     600</span>         [<span class="tlaGBC" title="Branch 0 was taken 105808 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 103349 times"> + </span>]:<span class="tlaGNC">      209157 :         if (depth &gt; 1024) [[unlikely]] {</span></span>
+<span id="L599"><span class="lineNum">     599</span>                 :<span class="tlaGNC">      212987 :         int64_t depth = lanes_.total_depth();</span></span>
+<span id="L600"><span class="lineNum">     600</span>         [<span class="tlaGBC" title="Branch 0 was taken 105808 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 107179 times"> + </span>]:<span class="tlaGNC">      212987 :         if (depth &gt; 1024) [[unlikely]] {</span></span>
 <span id="L601"><span class="lineNum">     601</span>         [<span class="tlaGBC" title="Branch 0 was taken 105808 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      105808 :             HPACTOR_LOG_WARNING(</span></span>
 <span id="L602"><span class="lineNum">     602</span>                 :             :                 log::LogCategory::kMailbox, actor_id_,</span>
 <span id="L603"><span class="lineNum">     603</span>                 :             :                 static_cast&lt;uint32_t&gt;(log::LogEventId::kMailboxDepthHigh),</span>
@@ -686,12 +686,12 @@
 <span id="L605"><span class="lineNum">     605</span>                 :             :                 log::field(&quot;depth&quot;, static_cast&lt;uint64_t&gt;(depth)));</span>
 <span id="L606"><span class="lineNum">     606</span>                 :             :         }</span>
 <span id="L607"><span class="lineNum">     607</span>                 :             : </span>
-<span id="L608"><span class="lineNum">     608</span>         [<span class="tlaGBC" title="Branch 0 was taken 133394 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 75763 times"> + </span>]:<span class="tlaGNC">      209157 :         if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">      133394 :             metrics::MetricEvent evt{};</span></span>
-<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">      133394 :             evt.actor_id = actor_id_;</span></span>
-<span id="L611"><span class="lineNum">     611</span>                 :<span class="tlaGNC">      133394 :             evt.event_type = metrics::MetricEventType::kMailboxEnqueue;</span></span>
-<span id="L612"><span class="lineNum">     612</span>                 :<span class="tlaGNC">      133394 :             evt.value_hi = 1;</span></span>
-<span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">      133394 :             metrics_ring_buffer_-&gt;try_push(evt);</span></span>
+<span id="L608"><span class="lineNum">     608</span>         [<span class="tlaGBC" title="Branch 0 was taken 133431 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79556 times"> + </span>]:<span class="tlaGNC">      212987 :         if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">      133431 :             metrics::MetricEvent evt{};</span></span>
+<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">      133431 :             evt.actor_id = actor_id_;</span></span>
+<span id="L611"><span class="lineNum">     611</span>                 :<span class="tlaGNC">      133431 :             evt.event_type = metrics::MetricEventType::kMailboxEnqueue;</span></span>
+<span id="L612"><span class="lineNum">     612</span>                 :<span class="tlaGNC">      133431 :             evt.value_hi = 1;</span></span>
+<span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">      133431 :             metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L614"><span class="lineNum">     614</span>                 :             :         }</span>
 <span id="L615"><span class="lineNum">     615</span>                 :             : </span>
 <span id="L616"><span class="lineNum">     616</span>                 :             :         // Edge-triggered wakeup: always attempt to claim the wakeup right.</span>
@@ -699,20 +699,20 @@
 <span id="L618"><span class="lineNum">     618</span>                 :             :         // the consumer observed emptiness — notify the scheduler.</span>
 <span id="L619"><span class="lineNum">     619</span>                 :             :         // Spurious wakeups are safe: the consumer dequeues, finds nothing,</span>
 <span id="L620"><span class="lineNum">     620</span>                 :             :         // and returns to idle.</span>
-<span id="L621"><span class="lineNum">     621</span>         [<span class="tlaGBC" title="Branch 0 was taken 209143 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">      209157 :         if (!suppress_wakeup) {</span></span>
-<span id="L622"><span class="lineNum">     622</span>                 :<span class="tlaGNC">      209143 :             bool expected = true;</span></span>
-<span id="L623"><span class="lineNum">     623</span>         [<span class="tlaGBC" title="Branch 0 was taken 7349 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 201794 times"> + </span>]:<span class="tlaGNC">      209143 :             if (mailbox_was_empty_.compare_exchange_strong(</span></span>
+<span id="L621"><span class="lineNum">     621</span>         [<span class="tlaGBC" title="Branch 0 was taken 212973 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">      212987 :         if (!suppress_wakeup) {</span></span>
+<span id="L622"><span class="lineNum">     622</span>                 :<span class="tlaGNC">      212973 :             bool expected = true;</span></span>
+<span id="L623"><span class="lineNum">     623</span>         [<span class="tlaGBC" title="Branch 0 was taken 7380 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 205593 times"> + </span>]:<span class="tlaGNC">      212973 :             if (mailbox_was_empty_.compare_exchange_strong(</span></span>
 <span id="L624"><span class="lineNum">     624</span>                 :             :                     expected, false, std::memory_order_acq_rel,</span>
 <span id="L625"><span class="lineNum">     625</span>                 :             :                     std::memory_order_acquire)) {</span>
-<span id="L626"><span class="lineNum">     626</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 7348 times"> + </span>]:<span class="tlaGNC">        7349 :                 if (continuation_callback_) {</span></span>
+<span id="L626"><span class="lineNum">     626</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 7379 times"> + </span>]:<span class="tlaGNC">        7380 :                 if (continuation_callback_) {</span></span>
 <span id="L627"><span class="lineNum">     627</span>                 :<span class="tlaGNC">           1 :                     continuation_callback_();</span></span>
 <span id="L628"><span class="lineNum">     628</span>                 :             :                 }</span>
-<span id="L629"><span class="lineNum">     629</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 7348 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        7349 :                 if (meta.schedule_edf &amp;&amp; meta.deadline_ns != INT64_MAX) {</span></span>
+<span id="L629"><span class="lineNum">     629</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 7379 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        7380 :                 if (meta.schedule_edf &amp;&amp; meta.deadline_ns != INT64_MAX) {</span></span>
 <span id="L630"><span class="lineNum">     630</span>                 :<span class="tlaGNC">           1 :                     scheduler_-&gt;notify_ready_edf(actor_id_, meta.priority,</span></span>
 <span id="L631"><span class="lineNum">     631</span>                 :<span class="tlaGNC">           1 :                                                  meta.deadline_ns);</span></span>
 <span id="L632"><span class="lineNum">     632</span>                 :             :                 } else {</span>
-<span id="L633"><span class="lineNum">     633</span>                 :<span class="tlaGNC">        7348 :                     scheduler_-&gt;notify_ready_fast(</span></span>
-<span id="L634"><span class="lineNum">     634</span>                 :<span class="tlaGNC">        7348 :                         actor_id_, actor_ptr_, meta.priority, meta.deadline_ns);</span></span>
+<span id="L633"><span class="lineNum">     633</span>                 :<span class="tlaGNC">        7379 :                     scheduler_-&gt;notify_ready_fast(</span></span>
+<span id="L634"><span class="lineNum">     634</span>                 :<span class="tlaGNC">        7379 :                         actor_id_, actor_ptr_, meta.priority, meta.deadline_ns);</span></span>
 <span id="L635"><span class="lineNum">     635</span>                 :             :                 }</span>
 <span id="L636"><span class="lineNum">     636</span>                 :             :             }</span>
 <span id="L637"><span class="lineNum">     637</span>                 :             :         }</span>
@@ -740,7 +740,7 @@
 <span id="L659"><span class="lineNum">     659</span>                 :             :     /// \note If the mailbox becomes empty after dequeue,</span>
 <span id="L660"><span class="lineNum">     660</span>                 :             :     ///       \c mailbox_was_empty_ is set to \c true, re-arming the</span>
 <span id="L661"><span class="lineNum">     661</span>                 :             :     ///       edge-triggered wakeup for the next enqueue.</span>
-<span id="L662"><span class="lineNum">     662</span>                 :<span class="tlaGNC">      135718 :     T* dequeue() noexcept {</span></span>
+<span id="L662"><span class="lineNum">     662</span>                 :<span class="tlaGNC">      135746 :     T* dequeue() noexcept {</span></span>
 <span id="L663"><span class="lineNum">     663</span>                 :             : #ifdef HPACTOR_DEBUG</span>
 <span id="L664"><span class="lineNum">     664</span>                 :             :         in_active_use_.store(true, std::memory_order_release);</span>
 <span id="L665"><span class="lineNum">     665</span>                 :             : #endif</span>
@@ -753,13 +753,13 @@
 <span id="L672"><span class="lineNum">     672</span>                 :             :         // serialized: a check before the lock sees non-empty (no wakeup</span>
 <span id="L673"><span class="lineNum">     673</span>                 :             :         // needed — we're about to dequeue), and a check after unlock</span>
 <span id="L674"><span class="lineNum">     674</span>                 :             :         // sees the re-armed flag and fires the CAS correctly.</span>
-<span id="L675"><span class="lineNum">     675</span>                 :<span class="tlaGNC">      135718 :         lock_consumer();</span></span>
-<span id="L676"><span class="lineNum">     676</span>                 :<span class="tlaGNC">      135718 :         mailbox_was_empty_.store(true, std::memory_order_release);</span></span>
-<span id="L677"><span class="lineNum">     677</span>                 :<span class="tlaGNC">      135718 :         T* node = lanes_.dequeue();</span></span>
+<span id="L675"><span class="lineNum">     675</span>                 :<span class="tlaGNC">      135746 :         lock_consumer();</span></span>
+<span id="L676"><span class="lineNum">     676</span>                 :<span class="tlaGNC">      135746 :         mailbox_was_empty_.store(true, std::memory_order_release);</span></span>
+<span id="L677"><span class="lineNum">     677</span>                 :<span class="tlaGNC">      135746 :         T* node = lanes_.dequeue();</span></span>
 <span id="L678"><span class="lineNum">     678</span>                 :             : </span>
 <span id="L679"><span class="lineNum">     679</span>                 :             :         // Rate limiter gate — skip system messages.</span>
-<span id="L680"><span class="lineNum">     680</span>   [<span class="tlaGBC" title="Branch 0 was taken 32 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135686 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 10 times"> + </span> :<span class="tlaGNC">      135718 :         if (rate_limiter_ &amp;&amp; node != nullptr) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 135696 times"> + </span>]
+<span id="L680"><span class="lineNum">     680</span>   [<span class="tlaGBC" title="Branch 0 was taken 30 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135716 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 8 times"> + </span> :<span class="tlaGNC">      135746 :         if (rate_limiter_ &amp;&amp; node != nullptr) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 135724 times"> + </span>]
 <span id="L681"><span class="lineNum">     681</span>                 :<span class="tlaGNC">          22 :             bool is_sys = false;</span></span>
 <span id="L682"><span class="lineNum">     682</span>                 :             :             if constexpr (std::is_same_v&lt;T, TypedMessage&gt;) {</span>
 <span id="L683"><span class="lineNum">     683</span>                 :<span class="tlaGNC">          22 :                 is_sys = is_system_message(node-&gt;type_id());</span></span>
@@ -779,8 +779,8 @@
 <span id="L697"><span class="lineNum">     697</span>                 :             :             }</span>
 <span id="L698"><span class="lineNum">     698</span>                 :             :         }</span>
 <span id="L699"><span class="lineNum">     699</span>                 :             : </span>
-<span id="L700"><span class="lineNum">     700</span>   [<span class="tlaGBC" title="Branch 0 was taken 133498 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2217 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 133498 times"> + </span> :<span class="tlaGNC">      135715 :         FAULT_INJECT(&quot;hpactor.mailbox.dequeue.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 135715 times"> + </span>]
+<span id="L700"><span class="lineNum">     700</span>   [<span class="tlaGBC" title="Branch 0 was taken 133526 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2217 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 133526 times"> + </span> :<span class="tlaGNC">      135743 :         FAULT_INJECT(&quot;hpactor.mailbox.dequeue.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 135743 times"> + </span>]
 <span id="L701"><span class="lineNum">     701</span>                 :             :             // Silently drop: release reservation but return null to caller.</span>
 <span id="L702"><span class="lineNum">     702</span>                 :             :             // System messages bypass reservation — skip release for them.</span>
 <span id="L703"><span class="lineNum">     703</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (node != nullptr) {</span></span>
@@ -800,38 +800,38 @@
 <span id="L717"><span class="lineNum">     717</span>                 :<span class="tlaUNC">           0 :             unlock_consumer();</span></span>
 <span id="L718"><span class="lineNum">     718</span>                 :<span class="tlaUNC">           0 :             return nullptr;</span></span>
 <span id="L719"><span class="lineNum">     719</span>                 :             :         }</span>
-<span id="L720"><span class="lineNum">     720</span>         [<span class="tlaGBC" title="Branch 0 was taken 133899 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1816 times"> + </span>]:<span class="tlaGNC tlaBgGNC">      135715 :         if (node != nullptr) {</span></span>
-<span id="L721"><span class="lineNum">     721</span>                 :<span class="tlaGNC">      133899 :             uint64_t bytes = estimate_node_bytes(*node);</span></span>
-<span id="L722"><span class="lineNum">     722</span>                 :<span class="tlaGNC">      133899 :             bool is_sys = false;</span></span>
+<span id="L720"><span class="lineNum">     720</span>         [<span class="tlaGBC" title="Branch 0 was taken 133936 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1807 times"> + </span>]:<span class="tlaGNC tlaBgGNC">      135743 :         if (node != nullptr) {</span></span>
+<span id="L721"><span class="lineNum">     721</span>                 :<span class="tlaGNC">      133936 :             uint64_t bytes = estimate_node_bytes(*node);</span></span>
+<span id="L722"><span class="lineNum">     722</span>                 :<span class="tlaGNC">      133936 :             bool is_sys = false;</span></span>
 <span id="L723"><span class="lineNum">     723</span>                 :             :             if constexpr (std::is_same_v&lt;T, TypedMessage&gt;) {</span>
-<span id="L724"><span class="lineNum">     724</span>                 :<span class="tlaGNC">      133899 :                 is_sys = is_system_message(node-&gt;type_id());</span></span>
+<span id="L724"><span class="lineNum">     724</span>                 :<span class="tlaGNC">      133936 :                 is_sys = is_system_message(node-&gt;type_id());</span></span>
 <span id="L725"><span class="lineNum">     725</span>                 :             :             }</span>
-<span id="L726"><span class="lineNum">     726</span>         [<span class="tlaGBC" title="Branch 0 was taken 133762 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 137 times"> + </span>]:<span class="tlaGNC">      133899 :             if (!is_sys) {</span></span>
-<span id="L727"><span class="lineNum">     727</span>                 :<span class="tlaGNC">      133762 :                 reservation_.release(bytes);</span></span>
+<span id="L726"><span class="lineNum">     726</span>         [<span class="tlaGBC" title="Branch 0 was taken 133798 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 138 times"> + </span>]:<span class="tlaGNC">      133936 :             if (!is_sys) {</span></span>
+<span id="L727"><span class="lineNum">     727</span>                 :<span class="tlaGNC">      133798 :                 reservation_.release(bytes);</span></span>
 <span id="L728"><span class="lineNum">     728</span>                 :             :             } else {</span>
-<span id="L729"><span class="lineNum">     729</span>                 :<span class="tlaGNC">         137 :                 system_lane_bytes_.fetch_sub(bytes, std::memory_order_relaxed);</span></span>
-<span id="L730"><span class="lineNum">     730</span>                 :<span class="tlaGNC">         137 :                 system_lane_reserved_.fetch_sub(1, std::memory_order_release);</span></span>
+<span id="L729"><span class="lineNum">     729</span>                 :<span class="tlaGNC">         138 :                 system_lane_bytes_.fetch_sub(bytes, std::memory_order_relaxed);</span></span>
+<span id="L730"><span class="lineNum">     730</span>                 :<span class="tlaGNC">         138 :                 system_lane_reserved_.fetch_sub(1, std::memory_order_release);</span></span>
 <span id="L731"><span class="lineNum">     731</span>                 :             :             }</span>
-<span id="L732"><span class="lineNum">     732</span>                 :<span class="tlaGNC">      133899 :             total_dequeued_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L733"><span class="lineNum">     733</span>                 :<span class="tlaGNC">      133899 :             update_pressure_state();</span></span>
-<span id="L734"><span class="lineNum">     734</span>         [<span class="tlaGBC" title="Branch 0 was taken 126569 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7330 times"> + </span>]:<span class="tlaGNC">      133899 :             if (!empty()) {</span></span>
+<span id="L732"><span class="lineNum">     732</span>                 :<span class="tlaGNC">      133936 :             total_dequeued_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L733"><span class="lineNum">     733</span>                 :<span class="tlaGNC">      133936 :             update_pressure_state();</span></span>
+<span id="L734"><span class="lineNum">     734</span>         [<span class="tlaGBC" title="Branch 0 was taken 126576 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7360 times"> + </span>]:<span class="tlaGNC">      133936 :             if (!empty()) {</span></span>
 <span id="L735"><span class="lineNum">     735</span>                 :             :                 // Mailbox still has messages after dequeue — disarm the</span>
 <span id="L736"><span class="lineNum">     736</span>                 :             :                 // flag so the next true empty→non-empty transition is</span>
 <span id="L737"><span class="lineNum">     737</span>                 :             :                 // detected by enqueue_reserved.</span>
-<span id="L738"><span class="lineNum">     738</span>                 :<span class="tlaGNC">      126569 :                 mailbox_was_empty_.store(false, std::memory_order_release);</span></span>
+<span id="L738"><span class="lineNum">     738</span>                 :<span class="tlaGNC">      126576 :                 mailbox_was_empty_.store(false, std::memory_order_release);</span></span>
 <span id="L739"><span class="lineNum">     739</span>                 :             :             }</span>
-<span id="L740"><span class="lineNum">     740</span>                 :<span class="tlaGNC">      133899 :             drain_overflow();</span></span>
+<span id="L740"><span class="lineNum">     740</span>                 :<span class="tlaGNC">      133936 :             drain_overflow();</span></span>
 <span id="L741"><span class="lineNum">     741</span>                 :             :         }</span>
-<span id="L742"><span class="lineNum">     742</span>                 :<span class="tlaGNC">      135715 :         unlock_consumer();</span></span>
+<span id="L742"><span class="lineNum">     742</span>                 :<span class="tlaGNC">      135743 :         unlock_consumer();</span></span>
 <span id="L743"><span class="lineNum">     743</span>                 :             : </span>
 <span id="L744"><span class="lineNum">     744</span>                 :             :         // Double-check after unlock: a producer may have enqueued between</span>
 <span id="L745"><span class="lineNum">     745</span>                 :             :         // our dequeue() and the mailbox_was_empty_ store above. If the</span>
 <span id="L746"><span class="lineNum">     746</span>                 :             :         // producer saw our store, its CAS already triggered notify_ready.</span>
 <span id="L747"><span class="lineNum">     747</span>                 :             :         // If not, the producer's CAS failed because it read false —</span>
 <span id="L748"><span class="lineNum">     748</span>                 :             :         // we must self-requeue.</span>
-<span id="L749"><span class="lineNum">     749</span>         [<span class="tlaGBC" title="Branch 0 was taken 126573 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9142 times"> + </span>]:<span class="tlaGNC">      135715 :         if (!lanes_.empty()) {</span></span>
-<span id="L750"><span class="lineNum">     750</span>                 :<span class="tlaGNC">      126573 :             bool expected = true;</span></span>
-<span id="L751"><span class="lineNum">     751</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 126569 times"> + </span>]:<span class="tlaGNC">      126573 :             if (mailbox_was_empty_.compare_exchange_strong(</span></span>
+<span id="L749"><span class="lineNum">     749</span>         [<span class="tlaGBC" title="Branch 0 was taken 126580 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9163 times"> + </span>]:<span class="tlaGNC">      135743 :         if (!lanes_.empty()) {</span></span>
+<span id="L750"><span class="lineNum">     750</span>                 :<span class="tlaGNC">      126580 :             bool expected = true;</span></span>
+<span id="L751"><span class="lineNum">     751</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 126576 times"> + </span>]:<span class="tlaGNC">      126580 :             if (mailbox_was_empty_.compare_exchange_strong(</span></span>
 <span id="L752"><span class="lineNum">     752</span>                 :             :                     expected, false, std::memory_order_acq_rel,</span>
 <span id="L753"><span class="lineNum">     753</span>                 :             :                     std::memory_order_acquire)) {</span>
 <span id="L754"><span class="lineNum">     754</span>                 :             :                 // We claimed the wakeup — no producer did. Self-notify.</span>
@@ -839,14 +839,14 @@
 <span id="L756"><span class="lineNum">     756</span>                 :             :             }</span>
 <span id="L757"><span class="lineNum">     757</span>                 :             :         }</span>
 <span id="L758"><span class="lineNum">     758</span>                 :             : </span>
-<span id="L759"><span class="lineNum">     759</span>         [<span class="tlaGBC" title="Branch 0 was taken 133519 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2196 times"> + </span>]:<span class="tlaGNC">      135715 :         if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L760"><span class="lineNum">     760</span>                 :<span class="tlaGNC">      133519 :             metrics::MetricEvent evt{};</span></span>
-<span id="L761"><span class="lineNum">     761</span>                 :<span class="tlaGNC">      133519 :             evt.actor_id = actor_id_;</span></span>
-<span id="L762"><span class="lineNum">     762</span>                 :<span class="tlaGNC">      133519 :             evt.event_type = metrics::MetricEventType::kMailboxDequeue;</span></span>
-<span id="L763"><span class="lineNum">     763</span>                 :<span class="tlaGNC">      133519 :             evt.value_hi = 1;</span></span>
-<span id="L764"><span class="lineNum">     764</span>                 :<span class="tlaGNC">      133519 :             metrics_ring_buffer_-&gt;try_push(evt);</span></span>
+<span id="L759"><span class="lineNum">     759</span>         [<span class="tlaGBC" title="Branch 0 was taken 133547 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2196 times"> + </span>]:<span class="tlaGNC">      135743 :         if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L760"><span class="lineNum">     760</span>                 :<span class="tlaGNC">      133547 :             metrics::MetricEvent evt{};</span></span>
+<span id="L761"><span class="lineNum">     761</span>                 :<span class="tlaGNC">      133547 :             evt.actor_id = actor_id_;</span></span>
+<span id="L762"><span class="lineNum">     762</span>                 :<span class="tlaGNC">      133547 :             evt.event_type = metrics::MetricEventType::kMailboxDequeue;</span></span>
+<span id="L763"><span class="lineNum">     763</span>                 :<span class="tlaGNC">      133547 :             evt.value_hi = 1;</span></span>
+<span id="L764"><span class="lineNum">     764</span>                 :<span class="tlaGNC">      133547 :             metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L765"><span class="lineNum">     765</span>                 :             :         }</span>
-<span id="L766"><span class="lineNum">     766</span>                 :<span class="tlaGNC">      135715 :         return node;</span></span>
+<span id="L766"><span class="lineNum">     766</span>                 :<span class="tlaGNC">      135743 :         return node;</span></span>
 <span id="L767"><span class="lineNum">     767</span>                 :             :     }</span>
 <span id="L768"><span class="lineNum">     768</span>                 :             : </span>
 <span id="L769"><span class="lineNum">     769</span>                 :             :     /// \brief Dequeue a message and move it into an output parameter.</span>
@@ -860,11 +860,11 @@
 <span id="L777"><span class="lineNum">     777</span>                 :             :     ///         was empty.</span>
 <span id="L778"><span class="lineNum">     778</span>                 :             :     /// \note Thread safety: inherits the consumer spin-lock from</span>
 <span id="L779"><span class="lineNum">     779</span>                 :             :     ///       \c dequeue(). Single-consumer only.</span>
-<span id="L780"><span class="lineNum">     780</span>                 :<span class="tlaGNC">      134310 :     bool try_pop(T&amp; out) noexcept {</span></span>
-<span id="L781"><span class="lineNum">     781</span>                 :<span class="tlaGNC">      134310 :         T* node = dequeue();</span></span>
-<span id="L782"><span class="lineNum">     782</span>         [<span class="tlaGBC" title="Branch 0 was taken 717 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 133593 times"> + </span>]:<span class="tlaGNC">      134310 :         if (!node)</span></span>
-<span id="L783"><span class="lineNum">     783</span>                 :<span class="tlaGNC">         717 :             return false;</span></span>
-<span id="L784"><span class="lineNum">     784</span>                 :<span class="tlaGNC">      133593 :         out = std::move(*node);</span></span>
+<span id="L780"><span class="lineNum">     780</span>                 :<span class="tlaGNC">      134338 :     bool try_pop(T&amp; out) noexcept {</span></span>
+<span id="L781"><span class="lineNum">     781</span>                 :<span class="tlaGNC">      134338 :         T* node = dequeue();</span></span>
+<span id="L782"><span class="lineNum">     782</span>         [<span class="tlaGBC" title="Branch 0 was taken 708 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 133630 times"> + </span>]:<span class="tlaGNC">      134338 :         if (!node)</span></span>
+<span id="L783"><span class="lineNum">     783</span>                 :<span class="tlaGNC">         708 :             return false;</span></span>
+<span id="L784"><span class="lineNum">     784</span>                 :<span class="tlaGNC">      133630 :         out = std::move(*node);</span></span>
 <span id="L785"><span class="lineNum">     785</span>                 :             :         // Defer freeing `node` by one dequeue: a concurrent producer may hold</span>
 <span id="L786"><span class="lineNum">     786</span>                 :             :         // `prev = node` from head_.exchange() and write prev-&gt;mpsc_next after</span>
 <span id="L787"><span class="lineNum">     787</span>                 :             :         // we return. Freeing immediately causes a use-after-free that leaves</span>
@@ -872,8 +872,8 @@
 <span id="L789"><span class="lineNum">     789</span>                 :             :         // mpsc_mailbox.hpp:66 to never exit. set_pending_free destroys+frees</span>
 <span id="L790"><span class="lineNum">     790</span>                 :             :         // the *previously* staged node (safe — no producer references it) and</span>
 <span id="L791"><span class="lineNum">     791</span>                 :             :         // stages `node` for the next call.</span>
-<span id="L792"><span class="lineNum">     792</span>                 :<span class="tlaGNC">      133593 :         lanes_.set_pending_free(node);</span></span>
-<span id="L793"><span class="lineNum">     793</span>                 :<span class="tlaGNC">      133593 :         return true;</span></span>
+<span id="L792"><span class="lineNum">     792</span>                 :<span class="tlaGNC">      133630 :         lanes_.set_pending_free(node);</span></span>
+<span id="L793"><span class="lineNum">     793</span>                 :<span class="tlaGNC">      133630 :         return true;</span></span>
 <span id="L794"><span class="lineNum">     794</span>                 :             :     }</span>
 <span id="L795"><span class="lineNum">     795</span>                 :             : </span>
 <span id="L796"><span class="lineNum">     796</span>                 :             :     /// \brief Check whether the mailbox is empty.</span>
@@ -881,8 +881,8 @@
 <span id="L798"><span class="lineNum">     798</span>                 :             :     /// \return \c true if all lanes (system + user) are empty.</span>
 <span id="L799"><span class="lineNum">     799</span>                 :             :     /// \note Thread safety: lock-free and safe to call from any thread.</span>
 <span id="L800"><span class="lineNum">     800</span>                 :             :     ///       The result may be stale by the time the caller observes it.</span>
-<span id="L801"><span class="lineNum">     801</span>                 :<span class="tlaGNC">      348456 :     bool empty() const noexcept {</span></span>
-<span id="L802"><span class="lineNum">     802</span>                 :<span class="tlaGNC">      348456 :         return lanes_.empty();</span></span>
+<span id="L801"><span class="lineNum">     801</span>                 :<span class="tlaGNC">      352340 :     bool empty() const noexcept {</span></span>
+<span id="L802"><span class="lineNum">     802</span>                 :<span class="tlaGNC">      352340 :         return lanes_.empty();</span></span>
 <span id="L803"><span class="lineNum">     803</span>                 :             :     }</span>
 <span id="L804"><span class="lineNum">     804</span>                 :             : </span>
 <span id="L805"><span class="lineNum">     805</span>                 :             :     /// \brief Check whether the mailbox was empty at the last consumer</span>
@@ -1144,34 +1144,34 @@
 <span id="L1061"><span class="lineNum">    1061</span>                 :             :     /// \return \c true if a message was dropped, \c false if all user</span>
 <span id="L1062"><span class="lineNum">    1062</span>                 :             :     ///         lanes were empty.</span>
 <span id="L1063"><span class="lineNum">    1063</span>                 :             :     /// \note Thread safety: acquires the consumer spin-lock internally.</span>
-<span id="L1064"><span class="lineNum">    1064</span>                 :<span class="tlaGNC">       80298 :     bool drop_one_oldest_global() noexcept {</span></span>
-<span id="L1065"><span class="lineNum">    1065</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 80298 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">       80298 :         FAULT_INJECT(&quot;hpactor.mailbox.drop_oldest.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 80298 times"> + </span>]
+<span id="L1064"><span class="lineNum">    1064</span>                 :<span class="tlaGNC">       78314 :     bool drop_one_oldest_global() noexcept {</span></span>
+<span id="L1065"><span class="lineNum">    1065</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 78314 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">       78314 :         FAULT_INJECT(&quot;hpactor.mailbox.drop_oldest.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 78314 times"> + </span>]
 <span id="L1066"><span class="lineNum">    1066</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return false;</span></span>
 <span id="L1067"><span class="lineNum">    1067</span>                 :             :         }</span>
-<span id="L1068"><span class="lineNum">    1068</span>                 :<span class="tlaGNC tlaBgGNC">       80298 :         lock_consumer();</span></span>
-<span id="L1069"><span class="lineNum">    1069</span>                 :<span class="tlaGNC">       80298 :         T* node = lanes_.try_drop_oldest_user_lane();</span></span>
-<span id="L1070"><span class="lineNum">    1070</span>         [<span class="tlaGBC" title="Branch 0 was taken 5989 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 74309 times"> + </span>]:<span class="tlaGNC">       80298 :         if (!node) {</span></span>
-<span id="L1071"><span class="lineNum">    1071</span>                 :<span class="tlaGNC">        5989 :             unlock_consumer();</span></span>
-<span id="L1072"><span class="lineNum">    1072</span>                 :<span class="tlaGNC">        5989 :             return false;</span></span>
+<span id="L1068"><span class="lineNum">    1068</span>                 :<span class="tlaGNC tlaBgGNC">       78314 :         lock_consumer();</span></span>
+<span id="L1069"><span class="lineNum">    1069</span>                 :<span class="tlaGNC">       78314 :         T* node = lanes_.try_drop_oldest_user_lane();</span></span>
+<span id="L1070"><span class="lineNum">    1070</span>         [<span class="tlaGBC" title="Branch 0 was taken 212 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 78102 times"> + </span>]:<span class="tlaGNC">       78314 :         if (!node) {</span></span>
+<span id="L1071"><span class="lineNum">    1071</span>                 :<span class="tlaGNC">         212 :             unlock_consumer();</span></span>
+<span id="L1072"><span class="lineNum">    1072</span>                 :<span class="tlaGNC">         212 :             return false;</span></span>
 <span id="L1073"><span class="lineNum">    1073</span>                 :             :         }</span>
-<span id="L1074"><span class="lineNum">    1074</span>                 :<span class="tlaGNC">       74309 :         uint64_t bytes = estimate_node_bytes(*node);</span></span>
-<span id="L1075"><span class="lineNum">    1075</span>                 :<span class="tlaGNC">       74309 :         reservation_.release(bytes);</span></span>
-<span id="L1076"><span class="lineNum">    1076</span>                 :<span class="tlaGNC">       74309 :         total_dropped_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L1077"><span class="lineNum">    1077</span>                 :<span class="tlaGNC">       74309 :         update_pressure_state();</span></span>
-<span id="L1078"><span class="lineNum">    1078</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 74309 times"> + </span>]:<span class="tlaGNC">       74309 :         if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L1074"><span class="lineNum">    1074</span>                 :<span class="tlaGNC">       78102 :         uint64_t bytes = estimate_node_bytes(*node);</span></span>
+<span id="L1075"><span class="lineNum">    1075</span>                 :<span class="tlaGNC">       78102 :         reservation_.release(bytes);</span></span>
+<span id="L1076"><span class="lineNum">    1076</span>                 :<span class="tlaGNC">       78102 :         total_dropped_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L1077"><span class="lineNum">    1077</span>                 :<span class="tlaGNC">       78102 :         update_pressure_state();</span></span>
+<span id="L1078"><span class="lineNum">    1078</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 78102 times"> + </span>]:<span class="tlaGNC">       78102 :         if (metrics_ring_buffer_) [[unlikely]] {</span></span>
 <span id="L1079"><span class="lineNum">    1079</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             metrics::MetricEvent evt{};</span></span>
 <span id="L1080"><span class="lineNum">    1080</span>                 :<span class="tlaUNC">           0 :             evt.actor_id = actor_id_;</span></span>
 <span id="L1081"><span class="lineNum">    1081</span>                 :<span class="tlaUNC">           0 :             evt.event_type = metrics::MetricEventType::kMailboxDropped;</span></span>
 <span id="L1082"><span class="lineNum">    1082</span>                 :<span class="tlaUNC">           0 :             evt.value_hi = 1;</span></span>
 <span id="L1083"><span class="lineNum">    1083</span>                 :<span class="tlaUNC">           0 :             metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L1084"><span class="lineNum">    1084</span>                 :             :         }</span>
-<span id="L1085"><span class="lineNum">    1085</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 74307 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       74309 :         if (empty()) {</span></span>
+<span id="L1085"><span class="lineNum">    1085</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 78100 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       78102 :         if (empty()) {</span></span>
 <span id="L1086"><span class="lineNum">    1086</span>                 :<span class="tlaGNC">           2 :             mailbox_was_empty_.store(true, std::memory_order_release);</span></span>
 <span id="L1087"><span class="lineNum">    1087</span>                 :             :         }</span>
-<span id="L1088"><span class="lineNum">    1088</span>                 :<span class="tlaGNC">       74309 :         lanes_.set_pending_free(node);</span></span>
-<span id="L1089"><span class="lineNum">    1089</span>                 :<span class="tlaGNC">       74309 :         unlock_consumer();</span></span>
-<span id="L1090"><span class="lineNum">    1090</span>                 :<span class="tlaGNC">       74309 :         return true;</span></span>
+<span id="L1088"><span class="lineNum">    1088</span>                 :<span class="tlaGNC">       78102 :         lanes_.set_pending_free(node);</span></span>
+<span id="L1089"><span class="lineNum">    1089</span>                 :<span class="tlaGNC">       78102 :         unlock_consumer();</span></span>
+<span id="L1090"><span class="lineNum">    1090</span>                 :<span class="tlaGNC">       78102 :         return true;</span></span>
 <span id="L1091"><span class="lineNum">    1091</span>                 :             :     }</span>
 <span id="L1092"><span class="lineNum">    1092</span>                 :             : </span>
 <span id="L1093"><span class="lineNum">    1093</span>                 :             :     /// \brief Drop one message from the lowest-priority non-empty user</span>
@@ -1224,12 +1224,12 @@
 <span id="L1139"><span class="lineNum">    1139</span>                 :             :     ///</span>
 <span id="L1140"><span class="lineNum">    1140</span>                 :             :     /// \note Thread safety: called from \c dequeue() under the consumer</span>
 <span id="L1141"><span class="lineNum">    1141</span>                 :             :     ///       spin-lock.</span>
-<span id="L1142"><span class="lineNum">    1142</span>                 :<span class="tlaGNC">      133899 :     void drain_overflow() noexcept {</span></span>
-<span id="L1143"><span class="lineNum">    1143</span>   [<span class="tlaGBC" title="Branch 0 was taken 132805 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1094 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 132805 times"> + </span> :<span class="tlaGNC">      133899 :         FAULT_INJECT(&quot;hpactor.mailbox.drain_overflow.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 133899 times"> + </span>]
+<span id="L1142"><span class="lineNum">    1142</span>                 :<span class="tlaGNC">      133936 :     void drain_overflow() noexcept {</span></span>
+<span id="L1143"><span class="lineNum">    1143</span>   [<span class="tlaGBC" title="Branch 0 was taken 132842 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1094 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 132842 times"> + </span> :<span class="tlaGNC">      133936 :         FAULT_INJECT(&quot;hpactor.mailbox.drain_overflow.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 133936 times"> + </span>]
 <span id="L1144"><span class="lineNum">    1144</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return; // pretend drained</span></span>
 <span id="L1145"><span class="lineNum">    1145</span>                 :             :         }</span>
-<span id="L1146"><span class="lineNum">    1146</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 133878 times"> + </span>]:<span class="tlaGNC tlaBgGNC">      133930 :         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {</span></span>
+<span id="L1146"><span class="lineNum">    1146</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 133915 times"> + </span>]:<span class="tlaGNC tlaBgGNC">      133967 :         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {</span></span>
 <span id="L1147"><span class="lineNum">    1147</span>                 :             :             // Pop first so we know the actual byte size for reservation.</span>
 <span id="L1148"><span class="lineNum">    1148</span>                 :<span class="tlaGNC">          26 :             T overflow_msg;</span></span>
 <span id="L1149"><span class="lineNum">    1149</span>         [<span class="tlaGBC" title="Branch 0 was taken 19 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">          26 :             if (!overflow_queue_.try_pop(overflow_msg))</span></span>
@@ -1265,27 +1265,27 @@
 <span id="L1179"><span class="lineNum">    1179</span>                 :             :     /// \return The larger of the count and byte pressure ratios, in [0, ∞).</span>
 <span id="L1180"><span class="lineNum">    1180</span>                 :             :     /// \note Thread safety: reads atomics with relaxed ordering. Safe to</span>
 <span id="L1181"><span class="lineNum">    1181</span>                 :             :     ///       call from any thread.</span>
-<span id="L1182"><span class="lineNum">    1182</span>                 :<span class="tlaGNC">     1045342 :     double pressure_ratio() const noexcept {</span></span>
-<span id="L1183"><span class="lineNum">    1183</span>                 :<span class="tlaGNC">     1045342 :         const uint32_t cap = config_.capacity.max_messages;</span></span>
+<span id="L1182"><span class="lineNum">    1182</span>                 :<span class="tlaGNC">     1054848 :     double pressure_ratio() const noexcept {</span></span>
+<span id="L1183"><span class="lineNum">    1183</span>                 :<span class="tlaGNC">     1054848 :         const uint32_t cap = config_.capacity.max_messages;</span></span>
 <span id="L1184"><span class="lineNum">    1184</span>                 :             :         // Exclude system lane: max_messages only governs user messages.</span>
-<span id="L1185"><span class="lineNum">    1185</span>                 :<span class="tlaGNC">     1045342 :         int64_t user_depth =</span></span>
-<span id="L1186"><span class="lineNum">    1186</span>                 :<span class="tlaGNC">     1045342 :             lanes_.total_depth() -</span></span>
-<span id="L1187"><span class="lineNum">    1187</span>                 :<span class="tlaGNC">     1045342 :             lanes_.lane_depth(MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel);</span></span>
-<span id="L1188"><span class="lineNum">    1188</span>                 :<span class="tlaGNC">     1045342 :         const uint32_t depth =</span></span>
-<span id="L1189"><span class="lineNum">    1189</span>                 :<span class="tlaGNC">     1045342 :             static_cast&lt;uint32_t&gt;(user_depth &gt; 0 ? user_depth : 0);</span></span>
-<span id="L1190"><span class="lineNum">    1190</span>                 :<span class="tlaGNC">     1045342 :         double count_ratio = 0.0;</span></span>
-<span id="L1191"><span class="lineNum">    1191</span>         [<span class="tlaGBC" title="Branch 0 was taken 1045342 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">     1045342 :         if (cap &gt; 0) {</span></span>
-<span id="L1192"><span class="lineNum">    1192</span>                 :<span class="tlaGNC">     1045342 :             count_ratio = static_cast&lt;double&gt;(depth) / static_cast&lt;double&gt;(cap);</span></span>
+<span id="L1185"><span class="lineNum">    1185</span>                 :<span class="tlaGNC">     1054848 :         int64_t user_depth =</span></span>
+<span id="L1186"><span class="lineNum">    1186</span>                 :<span class="tlaGNC">     1054848 :             lanes_.total_depth() -</span></span>
+<span id="L1187"><span class="lineNum">    1187</span>                 :<span class="tlaGNC">     1054848 :             lanes_.lane_depth(MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel);</span></span>
+<span id="L1188"><span class="lineNum">    1188</span>                 :<span class="tlaGNC">     1054848 :         const uint32_t depth =</span></span>
+<span id="L1189"><span class="lineNum">    1189</span>                 :<span class="tlaGNC">     1054848 :             static_cast&lt;uint32_t&gt;(user_depth &gt; 0 ? user_depth : 0);</span></span>
+<span id="L1190"><span class="lineNum">    1190</span>                 :<span class="tlaGNC">     1054848 :         double count_ratio = 0.0;</span></span>
+<span id="L1191"><span class="lineNum">    1191</span>         [<span class="tlaGBC" title="Branch 0 was taken 1054848 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">     1054848 :         if (cap &gt; 0) {</span></span>
+<span id="L1192"><span class="lineNum">    1192</span>                 :<span class="tlaGNC">     1054848 :             count_ratio = static_cast&lt;double&gt;(depth) / static_cast&lt;double&gt;(cap);</span></span>
 <span id="L1193"><span class="lineNum">    1193</span>                 :             :         }</span>
-<span id="L1194"><span class="lineNum">    1194</span>                 :<span class="tlaGNC">     1045342 :         double byte_ratio = 0.0;</span></span>
-<span id="L1195"><span class="lineNum">    1195</span>                 :<span class="tlaGNC">     1045342 :         const uint64_t byte_cap = config_.capacity.max_bytes;</span></span>
-<span id="L1196"><span class="lineNum">    1196</span>         [<span class="tlaGBC" title="Branch 0 was taken 403507 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 641835 times"> + </span>]:<span class="tlaGNC">     1045342 :         if (byte_cap &gt; 0) {</span></span>
-<span id="L1197"><span class="lineNum">    1197</span>                 :<span class="tlaGNC">      403507 :             byte_ratio = static_cast&lt;double&gt;(</span></span>
-<span id="L1198"><span class="lineNum">    1198</span>                 :<span class="tlaGNC">      403507 :                              reservation_.queued_bytes() +</span></span>
-<span id="L1199"><span class="lineNum">    1199</span>                 :<span class="tlaGNC">      403507 :                              system_lane_bytes_.load(std::memory_order_relaxed)) /</span></span>
-<span id="L1200"><span class="lineNum">    1200</span>                 :<span class="tlaGNC">      403507 :                          static_cast&lt;double&gt;(byte_cap);</span></span>
+<span id="L1194"><span class="lineNum">    1194</span>                 :<span class="tlaGNC">     1054848 :         double byte_ratio = 0.0;</span></span>
+<span id="L1195"><span class="lineNum">    1195</span>                 :<span class="tlaGNC">     1054848 :         const uint64_t byte_cap = config_.capacity.max_bytes;</span></span>
+<span id="L1196"><span class="lineNum">    1196</span>         [<span class="tlaGBC" title="Branch 0 was taken 412902 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 641946 times"> + </span>]:<span class="tlaGNC">     1054848 :         if (byte_cap &gt; 0) {</span></span>
+<span id="L1197"><span class="lineNum">    1197</span>                 :<span class="tlaGNC">      412902 :             byte_ratio = static_cast&lt;double&gt;(</span></span>
+<span id="L1198"><span class="lineNum">    1198</span>                 :<span class="tlaGNC">      412902 :                              reservation_.queued_bytes() +</span></span>
+<span id="L1199"><span class="lineNum">    1199</span>                 :<span class="tlaGNC">      412902 :                              system_lane_bytes_.load(std::memory_order_relaxed)) /</span></span>
+<span id="L1200"><span class="lineNum">    1200</span>                 :<span class="tlaGNC">      412902 :                          static_cast&lt;double&gt;(byte_cap);</span></span>
 <span id="L1201"><span class="lineNum">    1201</span>                 :             :         }</span>
-<span id="L1202"><span class="lineNum">    1202</span>         [<span class="tlaGBC" title="Branch 0 was taken 1037669 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7673 times"> + </span>]:<span class="tlaGNC">     1045342 :         return count_ratio &gt; byte_ratio ? count_ratio : byte_ratio;</span></span>
+<span id="L1202"><span class="lineNum">    1202</span>         [<span class="tlaGBC" title="Branch 0 was taken 1047139 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7709 times"> + </span>]:<span class="tlaGNC">     1054848 :         return count_ratio &gt; byte_ratio ? count_ratio : byte_ratio;</span></span>
 <span id="L1203"><span class="lineNum">    1203</span>                 :             :     }</span>
 <span id="L1204"><span class="lineNum">    1204</span>                 :             : </span>
 <span id="L1205"><span class="lineNum">    1205</span>                 :             :     /// \brief Update the pressure state machine from the current ratio.</span>
@@ -1294,11 +1294,11 @@
 <span id="L1208"><span class="lineNum">    1208</span>                 :             :     ///                         \c HardPressure regardless of ratio.</span>
 <span id="L1209"><span class="lineNum">    1209</span>                 :             :     /// \note Thread safety: the \c PressureStateMachine uses internal</span>
 <span id="L1210"><span class="lineNum">    1210</span>                 :             :     ///       atomics and is safe to call from any thread.</span>
-<span id="L1211"><span class="lineNum">    1211</span>                 :<span class="tlaGNC">      636529 :     void update_pressure_state(bool hard_failure = false) noexcept {</span></span>
-<span id="L1212"><span class="lineNum">    1212</span>                 :<span class="tlaGNC">      636529 :         pressure_state_.update(pressure_ratio(), hard_failure,</span></span>
+<span id="L1211"><span class="lineNum">    1211</span>                 :<span class="tlaGNC">      644189 :     void update_pressure_state(bool hard_failure = false) noexcept {</span></span>
+<span id="L1212"><span class="lineNum">    1212</span>                 :<span class="tlaGNC">      644189 :         pressure_state_.update(pressure_ratio(), hard_failure,</span></span>
 <span id="L1213"><span class="lineNum">    1213</span>                 :             :                                config_.high_watermark, config_.low_watermark,</span>
 <span id="L1214"><span class="lineNum">    1214</span>                 :             :                                config_.critical_watermark);</span>
-<span id="L1215"><span class="lineNum">    1215</span>                 :<span class="tlaGNC">      636529 :     }</span></span>
+<span id="L1215"><span class="lineNum">    1215</span>                 :<span class="tlaGNC">      644189 :     }</span></span>
 <span id="L1216"><span class="lineNum">    1216</span>                 :             : </span>
 <span id="L1217"><span class="lineNum">    1217</span>                 :             :     /// \brief Update the peak-depth counter if the current depth exceeds</span>
 <span id="L1218"><span class="lineNum">    1218</span>                 :             :     ///        the recorded maximum.</span>
@@ -1307,16 +1307,16 @@
 <span id="L1221"><span class="lineNum">    1221</span>                 :             :     ///</span>
 <span id="L1222"><span class="lineNum">    1222</span>                 :             :     /// \note Thread safety: lock-free CAS loop — safe to call from any</span>
 <span id="L1223"><span class="lineNum">    1223</span>                 :             :     ///       thread.</span>
-<span id="L1224"><span class="lineNum">    1224</span>                 :<span class="tlaGNC">      209157 :     void update_max_depth() noexcept {</span></span>
-<span id="L1225"><span class="lineNum">    1225</span>                 :<span class="tlaGNC">      209157 :         uint64_t depth = static_cast&lt;uint64_t&gt;(lanes_.total_depth());</span></span>
-<span id="L1226"><span class="lineNum">    1226</span>                 :<span class="tlaGNC">      209157 :         uint64_t prev = max_depth_.load(std::memory_order_acquire);</span></span>
-<span id="L1227"><span class="lineNum">    1227</span>         [<span class="tlaGBC" title="Branch 0 was taken 131708 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 77584 times"> + </span>]:<span class="tlaGNC">      209292 :         while (depth &gt; prev) {</span></span>
-<span id="L1228"><span class="lineNum">    1228</span>         [<span class="tlaGBC" title="Branch 0 was taken 131573 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135 times"> + </span>]:<span class="tlaGNC">      263416 :             if (max_depth_.compare_exchange_weak(prev, depth, std::memory_order_acq_rel,</span></span>
+<span id="L1224"><span class="lineNum">    1224</span>                 :<span class="tlaGNC">      212987 :     void update_max_depth() noexcept {</span></span>
+<span id="L1225"><span class="lineNum">    1225</span>                 :<span class="tlaGNC">      212987 :         uint64_t depth = static_cast&lt;uint64_t&gt;(lanes_.total_depth());</span></span>
+<span id="L1226"><span class="lineNum">    1226</span>                 :<span class="tlaGNC">      212987 :         uint64_t prev = max_depth_.load(std::memory_order_acquire);</span></span>
+<span id="L1227"><span class="lineNum">    1227</span>         [<span class="tlaGBC" title="Branch 0 was taken 131781 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 81222 times"> + </span>]:<span class="tlaGNC">      213003 :         while (depth &gt; prev) {</span></span>
+<span id="L1228"><span class="lineNum">    1228</span>         [<span class="tlaGBC" title="Branch 0 was taken 131765 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 16 times"> + </span>]:<span class="tlaGNC">      263562 :             if (max_depth_.compare_exchange_weak(prev, depth, std::memory_order_acq_rel,</span></span>
 <span id="L1229"><span class="lineNum">    1229</span>                 :             :                                                  std::memory_order_acquire)) {</span>
-<span id="L1230"><span class="lineNum">    1230</span>                 :<span class="tlaGNC">      131573 :                 break;</span></span>
+<span id="L1230"><span class="lineNum">    1230</span>                 :<span class="tlaGNC">      131765 :                 break;</span></span>
 <span id="L1231"><span class="lineNum">    1231</span>                 :             :             }</span>
 <span id="L1232"><span class="lineNum">    1232</span>                 :             :         }</span>
-<span id="L1233"><span class="lineNum">    1233</span>                 :<span class="tlaGNC">      209157 :     }</span></span>
+<span id="L1233"><span class="lineNum">    1233</span>                 :<span class="tlaGNC">      212987 :     }</span></span>
 <span id="L1234"><span class="lineNum">    1234</span>                 :             : </span>
 <span id="L1235"><span class="lineNum">    1235</span>                 :             :     /// \brief Build an \c EnqueueResult from a result code.</span>
 <span id="L1236"><span class="lineNum">    1236</span>                 :             :     ///</span>
@@ -1328,27 +1328,27 @@
 <span id="L1242"><span class="lineNum">    1242</span>                 :             :     ///                   \c HighWatermark).</span>
 <span id="L1243"><span class="lineNum">    1243</span>                 :             :     /// \return A fully populated \c EnqueueResult.</span>
 <span id="L1244"><span class="lineNum">    1244</span>                 :             :     EnqueueResult</span>
-<span id="L1245"><span class="lineNum">    1245</span>                 :<span class="tlaGNC">      209144 :     make_result(EnqueueResultCode code,</span></span>
+<span id="L1245"><span class="lineNum">    1245</span>                 :<span class="tlaGNC">      212974 :     make_result(EnqueueResultCode code,</span></span>
 <span id="L1246"><span class="lineNum">    1246</span>                 :             :                 BackpressureReason reason = BackpressureReason::HighWatermark) const noexcept {</span>
-<span id="L1247"><span class="lineNum">    1247</span>                 :<span class="tlaGNC">      209144 :         EnqueueResult r;</span></span>
-<span id="L1248"><span class="lineNum">    1248</span>                 :<span class="tlaGNC">      209144 :         r.code = code;</span></span>
-<span id="L1249"><span class="lineNum">    1249</span>                 :<span class="tlaGNC">      209144 :         r.target = actor_id_;</span></span>
-<span id="L1250"><span class="lineNum">    1250</span>                 :<span class="tlaGNC">      209144 :         r.depth = static_cast&lt;uint32_t&gt;(lanes_.total_depth());</span></span>
-<span id="L1251"><span class="lineNum">    1251</span>                 :<span class="tlaGNC">      209144 :         r.capacity = config_.capacity.max_messages;</span></span>
-<span id="L1252"><span class="lineNum">    1252</span>                 :<span class="tlaGNC">      209144 :         r.bytes = reservation_.queued_bytes();</span></span>
-<span id="L1253"><span class="lineNum">    1253</span>                 :<span class="tlaGNC">      209144 :         r.byte_capacity = config_.capacity.max_bytes;</span></span>
-<span id="L1254"><span class="lineNum">    1254</span>                 :<span class="tlaGNC">      209144 :         r.pressure_ratio = pressure_ratio();</span></span>
-<span id="L1255"><span class="lineNum">    1255</span>                 :<span class="tlaGNC">      209144 :         r.pressure_reason = reason;</span></span>
-<span id="L1256"><span class="lineNum">    1256</span>                 :<span class="tlaGNC">      209144 :         r.pressure_state = pressure_state_.current_state();</span></span>
+<span id="L1247"><span class="lineNum">    1247</span>                 :<span class="tlaGNC">      212974 :         EnqueueResult r;</span></span>
+<span id="L1248"><span class="lineNum">    1248</span>                 :<span class="tlaGNC">      212974 :         r.code = code;</span></span>
+<span id="L1249"><span class="lineNum">    1249</span>                 :<span class="tlaGNC">      212974 :         r.target = actor_id_;</span></span>
+<span id="L1250"><span class="lineNum">    1250</span>                 :<span class="tlaGNC">      212974 :         r.depth = static_cast&lt;uint32_t&gt;(lanes_.total_depth());</span></span>
+<span id="L1251"><span class="lineNum">    1251</span>                 :<span class="tlaGNC">      212974 :         r.capacity = config_.capacity.max_messages;</span></span>
+<span id="L1252"><span class="lineNum">    1252</span>                 :<span class="tlaGNC">      212974 :         r.bytes = reservation_.queued_bytes();</span></span>
+<span id="L1253"><span class="lineNum">    1253</span>                 :<span class="tlaGNC">      212974 :         r.byte_capacity = config_.capacity.max_bytes;</span></span>
+<span id="L1254"><span class="lineNum">    1254</span>                 :<span class="tlaGNC">      212974 :         r.pressure_ratio = pressure_ratio();</span></span>
+<span id="L1255"><span class="lineNum">    1255</span>                 :<span class="tlaGNC">      212974 :         r.pressure_reason = reason;</span></span>
+<span id="L1256"><span class="lineNum">    1256</span>                 :<span class="tlaGNC">      212974 :         r.pressure_state = pressure_state_.current_state();</span></span>
 <span id="L1257"><span class="lineNum">    1257</span>                 :             : </span>
-<span id="L1258"><span class="lineNum">    1258</span>                 :<span class="tlaGNC">      209144 :         auto base = std::chrono::milliseconds(config_.signal_min_interval_ms);</span></span>
-<span id="L1259"><span class="lineNum">    1259</span>         [<span class="tlaGBC" title="Branch 0 was taken 44772 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 164372 times"> + </span>]:<span class="tlaGNC">      209144 :         if (r.pressure_state == MailboxPressureState::HardPressure) {</span></span>
-<span id="L1260"><span class="lineNum">    1260</span>                 :<span class="tlaGNC">       44772 :             r.retry_after = base * 2;</span></span>
-<span id="L1261"><span class="lineNum">    1261</span>         [<span class="tlaGBC" title="Branch 0 was taken 146136 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18236 times"> + </span>]:<span class="tlaGNC">      164372 :         } else if (r.pressure_state == MailboxPressureState::SoftPressure ||</span></span>
-<span id="L1262"><span class="lineNum">    1262</span>         [<span class="tlaGBC" title="Branch 0 was taken 29618 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 116518 times"> + </span>]:<span class="tlaGNC">      146136 :                    r.pressure_state == MailboxPressureState::Recovering) {</span></span>
-<span id="L1263"><span class="lineNum">    1263</span>                 :<span class="tlaGNC">       47854 :             r.retry_after = base;</span></span>
+<span id="L1258"><span class="lineNum">    1258</span>                 :<span class="tlaGNC">      212974 :         auto base = std::chrono::milliseconds(config_.signal_min_interval_ms);</span></span>
+<span id="L1259"><span class="lineNum">    1259</span>         [<span class="tlaGBC" title="Branch 0 was taken 42874 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 170100 times"> + </span>]:<span class="tlaGNC">      212974 :         if (r.pressure_state == MailboxPressureState::HardPressure) {</span></span>
+<span id="L1260"><span class="lineNum">    1260</span>                 :<span class="tlaGNC">       42874 :             r.retry_after = base * 2;</span></span>
+<span id="L1261"><span class="lineNum">    1261</span>         [<span class="tlaGBC" title="Branch 0 was taken 151870 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18230 times"> + </span>]:<span class="tlaGNC">      170100 :         } else if (r.pressure_state == MailboxPressureState::SoftPressure ||</span></span>
+<span id="L1262"><span class="lineNum">    1262</span>         [<span class="tlaGBC" title="Branch 0 was taken 35313 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 116557 times"> + </span>]:<span class="tlaGNC">      151870 :                    r.pressure_state == MailboxPressureState::Recovering) {</span></span>
+<span id="L1263"><span class="lineNum">    1263</span>                 :<span class="tlaGNC">       53543 :             r.retry_after = base;</span></span>
 <span id="L1264"><span class="lineNum">    1264</span>                 :             :         }</span>
-<span id="L1265"><span class="lineNum">    1265</span>                 :<span class="tlaGNC">      209144 :         return r;</span></span>
+<span id="L1265"><span class="lineNum">    1265</span>                 :<span class="tlaGNC">      212974 :         return r;</span></span>
 <span id="L1266"><span class="lineNum">    1266</span>                 :             :     }</span>
 <span id="L1267"><span class="lineNum">    1267</span>                 :             : </span>
 <span id="L1268"><span class="lineNum">    1268</span>                 :             :     /// \brief Estimate the byte footprint of a message node.</span>
@@ -1358,9 +1358,9 @@
 <span id="L1272"><span class="lineNum">    1272</span>                 :             :     ///</span>
 <span id="L1273"><span class="lineNum">    1273</span>                 :             :     /// \param[in] node The message to estimate.</span>
 <span id="L1274"><span class="lineNum">    1274</span>                 :             :     /// \return Estimated byte count for reservation accounting.</span>
-<span id="L1275"><span class="lineNum">    1275</span>                 :<span class="tlaGNC">      562319 :     static uint64_t estimate_node_bytes(const T&amp; node) noexcept {</span></span>
+<span id="L1275"><span class="lineNum">    1275</span>                 :<span class="tlaGNC">      566186 :     static uint64_t estimate_node_bytes(const T&amp; node) noexcept {</span></span>
 <span id="L1276"><span class="lineNum">    1276</span>                 :             :         if constexpr (std::is_same_v&lt;T, TypedMessage&gt;) {</span>
-<span id="L1277"><span class="lineNum">    1277</span>                 :<span class="tlaGNC">      562319 :             return estimate_message_bytes(node);</span></span>
+<span id="L1277"><span class="lineNum">    1277</span>                 :<span class="tlaGNC">      566186 :             return estimate_message_bytes(node);</span></span>
 <span id="L1278"><span class="lineNum">    1278</span>                 :             :         } else {</span>
 <span id="L1279"><span class="lineNum">    1279</span>                 :             :             return sizeof(T);</span>
 <span id="L1280"><span class="lineNum">    1280</span>                 :             :         }</span>
@@ -1375,11 +1375,11 @@
 <span id="L1289"><span class="lineNum">    1289</span>                 :             :     ///</span>
 <span id="L1290"><span class="lineNum">    1290</span>                 :             :     /// \param[in] meta Envelope metadata with type_tag and priority.</span>
 <span id="L1291"><span class="lineNum">    1291</span>                 :             :     /// \return Lane index (0..N-1) or \c kSystemLaneSentinel.</span>
-<span id="L1292"><span class="lineNum">    1292</span>                 :<span class="tlaGNC">      353996 :     uint8_t route_lane(const MailboxEnvelopeMeta&amp; meta) const noexcept {</span></span>
-<span id="L1293"><span class="lineNum">    1293</span>         [<span class="tlaGBC" title="Branch 0 was taken 131 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 353865 times"> + </span>]:<span class="tlaGNC">      353996 :         if (is_system_message(meta.type_tag))</span></span>
-<span id="L1294"><span class="lineNum">    1294</span>                 :<span class="tlaGNC">         131 :             return MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel;</span></span>
-<span id="L1295"><span class="lineNum">    1295</span>         [<span class="tlaGBC" title="Branch 0 was taken 353845 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">      353865 :         if (!config_.priority_aware)</span></span>
-<span id="L1296"><span class="lineNum">    1296</span>                 :<span class="tlaGNC">      353845 :             return 0;</span></span>
+<span id="L1292"><span class="lineNum">    1292</span>                 :<span class="tlaGNC">      354033 :     uint8_t route_lane(const MailboxEnvelopeMeta&amp; meta) const noexcept {</span></span>
+<span id="L1293"><span class="lineNum">    1293</span>         [<span class="tlaGBC" title="Branch 0 was taken 132 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 353901 times"> + </span>]:<span class="tlaGNC">      354033 :         if (is_system_message(meta.type_tag))</span></span>
+<span id="L1294"><span class="lineNum">    1294</span>                 :<span class="tlaGNC">         132 :             return MultiLaneQueue&lt;T&gt;::kSystemLaneSentinel;</span></span>
+<span id="L1295"><span class="lineNum">    1295</span>         [<span class="tlaGBC" title="Branch 0 was taken 353881 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">      353901 :         if (!config_.priority_aware)</span></span>
+<span id="L1296"><span class="lineNum">    1296</span>                 :<span class="tlaGNC">      353881 :             return 0;</span></span>
 <span id="L1297"><span class="lineNum">    1297</span>                 :<span class="tlaGNC">          20 :         return std::min&lt;uint8_t&gt;(meta.priority, lanes_.num_user_lanes() - 1);</span></span>
 <span id="L1298"><span class="lineNum">    1298</span>                 :             :     }</span>
 <span id="L1299"><span class="lineNum">    1299</span>                 :             : </span>
@@ -1387,14 +1387,14 @@
 <span id="L1301"><span class="lineNum">    1301</span>                 :             :     ///</span>
 <span id="L1302"><span class="lineNum">    1302</span>                 :             :     /// Spins until the lock is acquired. Only the consumer (actor's</span>
 <span id="L1303"><span class="lineNum">    1303</span>                 :             :     /// scheduler worker) calls this.</span>
-<span id="L1304"><span class="lineNum">    1304</span>                 :<span class="tlaGNC">      216017 :     void lock_consumer() noexcept {</span></span>
-<span id="L1305"><span class="lineNum">    1305</span>         [<span class="tlaGBC" title="Branch 0 was taken 24991367 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 216017 times"> + </span>]:<span class="tlaGNC">    25423401 :         while (consumer_lock_.test_and_set(std::memory_order_acquire)) {</span></span>
+<span id="L1304"><span class="lineNum">    1304</span>                 :<span class="tlaGNC">      214061 :     void lock_consumer() noexcept {</span></span>
+<span id="L1305"><span class="lineNum">    1305</span>         [<span class="tlaGBC" title="Branch 0 was taken 27003401 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 214061 times"> + </span>]:<span class="tlaGNC">    27431523 :         while (consumer_lock_.test_and_set(std::memory_order_acquire)) {</span></span>
 <span id="L1306"><span class="lineNum">    1306</span>                 :             :         }</span>
-<span id="L1307"><span class="lineNum">    1307</span>                 :<span class="tlaGNC">      216017 :     }</span></span>
+<span id="L1307"><span class="lineNum">    1307</span>                 :<span class="tlaGNC">      214061 :     }</span></span>
 <span id="L1308"><span class="lineNum">    1308</span>                 :             :     /// \brief Release the consumer spin-lock.</span>
-<span id="L1309"><span class="lineNum">    1309</span>                 :<span class="tlaGNC">      216017 :     void unlock_consumer() noexcept {</span></span>
-<span id="L1310"><span class="lineNum">    1310</span>                 :<span class="tlaGNC">      216017 :         consumer_lock_.clear(std::memory_order_release);</span></span>
-<span id="L1311"><span class="lineNum">    1311</span>                 :<span class="tlaGNC">      216017 :     }</span></span>
+<span id="L1309"><span class="lineNum">    1309</span>                 :<span class="tlaGNC">      214061 :     void unlock_consumer() noexcept {</span></span>
+<span id="L1310"><span class="lineNum">    1310</span>                 :<span class="tlaGNC">      214061 :         consumer_lock_.clear(std::memory_order_release);</span></span>
+<span id="L1311"><span class="lineNum">    1311</span>                 :<span class="tlaGNC">      214061 :     }</span></span>
 <span id="L1312"><span class="lineNum">    1312</span>                 :             : </span>
 <span id="L1313"><span class="lineNum">    1313</span>                 :             :     // --- Composed components ---</span>
 <span id="L1314"><span class="lineNum">    1314</span>                 :             :     detail::ReservationManager&lt;T&gt; reservation_;   ///&lt; Atomic capacity</span>
