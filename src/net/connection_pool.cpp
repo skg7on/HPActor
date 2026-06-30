@@ -196,6 +196,11 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
     schedule_reconnect();
 }
 
+void ConnectionPool::set_inbound_frame_sink(InboundFrameSink sink) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    inbound_sink_ = sink;
+}
+
 void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
     FAULT_INJECT("hpactor.connection_pool.frame.drop") {
         return;
@@ -208,6 +213,24 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
             frame_data.data()[0] ^= 0xFF;
         }
     }
+
+    // ── Unified sink path (exclusive) ─────────────────────────────────────
+    if (inbound_sink_.active()) {
+        InboundFrameContext ictx{};
+        ictx.peer = remote_endpoint_;
+        ictx.encoded_bytes = static_cast<uint32_t>(frame_data.size());
+
+        auto decoded = try_decode_wireframe(frame_data);
+        if (decoded.ok()) {
+            (void)inbound_sink_.route(inbound_sink_.context, ictx, decoded.frame);
+        } else if (inbound_sink_.decode_failed) {
+            (void)inbound_sink_.decode_failed(inbound_sink_.context, ictx,
+                                              decoded.error);
+        }
+        return;
+    }
+
+    // ── Legacy split-handler path ─────────────────────────────────────────
     WireFrame frame = WireFrame::decode(frame_data);
 
     // Only Data frames carry RPC/spawn responses; Batch/Ack/Nack/Unknown

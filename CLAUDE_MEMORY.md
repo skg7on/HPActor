@@ -180,6 +180,42 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   stream and network lifecycle ownership remain in future phases.
 - Known gap: transport resend on retry is not implemented (characterized, not claimed).
 
+**ActorSystem Refactor Phase 4: Frame & Stream Routing** ✅ Partial (2026-06-30)
+- `FrameDecodeError` (7 values), `FrameDecodeLimits` (16 MiB), `FrameDecodeResult`,
+  and `try_decode_wireframe()` in `include/hpactor/msg/frame.hpp`.
+- `FrameDispatchCode`/`FrameDispatchResult` in `include/hpactor/net/frame_dispatch_result.hpp`.
+- `WireFrameConnection::handle_read()` is now iterative (64 frames/turn max),
+  enforces 16 MiB `max_inbound_frame_bytes` before allocation, and delivers
+  canonical HPAC frame bytes (header + payload) matching the TLS path.
+- `max_inbound_frame_bytes` added to `PoolConfig`; propagated from `TcpTransport`.
+- `InboundFrameSink` (function-pointer + context, no virtual dispatch) in
+  `include/hpactor/net/inbound_frame_sink.hpp`. Installed via
+  `ConnectionPool::set_inbound_frame_sink()` and `TcpTransport::set_inbound_frame_sink()`.
+  Unified sink has exclusive dispatch precedence; legacy handlers are fallback.
+- `InboundFrameRouter` (`src/net/inbound_frame_router.hpp/.cpp`) is the sole
+  classifier of valid HPActor envelopes. Oneof-first classification routes
+  Data → MessagingRuntime/RpcChannel, Ack/Nack → typed reliable handlers,
+  Batch → bounded per-entry full-policy delivery (1024-entry limit, partial
+  aggregation), and all 5 Stream oneofs → StreamRuntime.
+- Reliable flag disambiguation: dual-bit (AckRequested+AckResponse) → legacy ACK;
+  AckResponse-only → legacy NACK; AckRequested-only → ordinary data metadata.
+- `StreamRuntime` (`src/actor/stream_runtime.hpp/.cpp`) owns one peer-qualified
+  (`StreamKey{EndPoint, uint64_t}`) bounded session map (`max_active_streams=4096`).
+  Two-phase open (reserve Opening → spawn → commit Active) with rollback.
+  Protocol handlers use correct wire TypeTags (StreamDataTag/StreamAckTag/
+  StreamCloseTag/StreamWireErrorTag) and protobuf-aware TypedMessage construction.
+- `StreamRuntimeSnapshot` in `include/hpactor/actor/stream_snapshot.hpp` for
+  bounded CLI/admin visibility.
+- Architecture tests enforce: no ActorSystem*/Impl captures in router/runtime;
+  no recursive framing; no RTTI/exceptions in Phase 4 components.
+- `src/` added to `hpactor_lib` PRIVATE include directories.
+- Key non-goal: `ActorSystem::deliver_remote()` and stream facade methods are
+  NOT yet converted to forwards (deferred to Phase 4b/5 integration step).
+  InboundFrameRouter and StreamRuntime are built and tested independently.
+- Verification: 997 tests pass (524 unit + 449 integration + 24 architecture).
+- Design spec: `docs/superpowers/specs/2026-06-28-actor-system-phase4-frame-stream-routing-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-06-28-actor-system-phase4-frame-stream-routing-implementation.md`.
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,

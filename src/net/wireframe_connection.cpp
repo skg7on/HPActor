@@ -137,6 +137,15 @@ void WireFrameConnection::set_send_completion_handler(
     send_completion_handler_ = std::move(handler);
 }
 
+void WireFrameConnection::set_max_inbound_frame_bytes(uint32_t max_bytes) {
+    max_inbound_frame_bytes_ = max_bytes;
+}
+
+void WireFrameConnection::set_frame_error_handler(
+    std::function<void(FrameDecodeError, uint32_t)> handler) {
+    frame_error_handler_ = std::move(handler);
+}
+
 void WireFrameConnection::send(const StreamBuffer& frame_data) {
     if (state_ != ConnectionState::Connected) {
         return;
@@ -167,97 +176,110 @@ void WireFrameConnection::handle_read() {
     FAULT_INJECT("hpactor.wireframe.handle_read.drop") {
         return;
     }
-    // Phase 1 — accumulate header bytes (8 bytes: magic + payload length).
-    // Read header first so we know the exact payload length before allocating
-    // buffer space for it.
-    while (read_buffer_.size() < WireFrame::HeaderSize) {
-        size_t remaining = WireFrame::HeaderSize - read_buffer_.size();
-        uint8_t* area = read_buffer_.reserve_tail(remaining);
-        ssize_t n = ::read(fd_, area, remaining);
-        if (n > 0) {
-            read_buffer_.commit_tail(static_cast<size_t>(n));
-        } else if (n == 0) {
-            // EOF — remote end closed connection.
-            read_buffer_.clear();
-            set_state(ConnectionState::Disconnected);
-            if (error_handler_) {
-                error_handler_(nullptr, error(errors::unknown, "EOF on read"));
-            }
-            return;
-        } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
+
+    // Iterative frame processing — bounded per event-loop turn.
+    // Process at most 64 frames in one call to bound resync work.
+    constexpr size_t kMaxFramesPerTurn = 64;
+    size_t frames_processed = 0;
+
+    while (frames_processed < kMaxFramesPerTurn) {
+        // Phase 1 — accumulate header bytes (8 bytes: magic + payload length).
+        if (read_buffer_.size() < WireFrame::HeaderSize) {
+            size_t remaining = WireFrame::HeaderSize - read_buffer_.size();
+            uint8_t* area = read_buffer_.reserve_tail(remaining);
+            ssize_t n = ::read(fd_, area, remaining);
+            if (n > 0) {
+                read_buffer_.commit_tail(static_cast<size_t>(n));
+                if (read_buffer_.size() < WireFrame::HeaderSize)
+                    return; // Need more data
+            } else if (n == 0) {
+                read_buffer_.clear();
+                set_state(ConnectionState::Disconnected);
+                if (error_handler_) {
+                    error_handler_(nullptr, error(errors::unknown, "EOF on read"));
+                }
                 return;
-            // Hard read error.
-            read_buffer_.clear();
-            set_state(ConnectionState::Error);
-            if (error_handler_) {
-                error_handler_(nullptr, error(errors::unknown, "read error"));
+            } else {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    return;
+                read_buffer_.clear();
+                set_state(ConnectionState::Error);
+                if (error_handler_) {
+                    error_handler_(nullptr, error(errors::unknown, "read error"));
+                }
+                return;
             }
+        }
+
+        // Validate magic "HPAC" — iterative resync (no recursion).
+        if (read_buffer_[0] != 'H' || read_buffer_[1] != 'P' ||
+            read_buffer_[2] != 'A' || read_buffer_[3] != 'C') {
+            read_buffer_.consume(1);
+            if (frame_error_handler_) {
+                frame_error_handler_(FrameDecodeError::InvalidMagic, 1);
+            }
+            continue; // Try next header position
+        }
+
+        // Parse payload length (big-endian uint32_t from bytes 4-7)
+        size_t payload_len = (static_cast<size_t>(read_buffer_[4]) << 24) |
+                             (static_cast<size_t>(read_buffer_[5]) << 16) |
+                             (static_cast<size_t>(read_buffer_[6]) << 8) |
+                             static_cast<size_t>(read_buffer_[7]);
+
+        // Enforce inbound size bound before allocating
+        if (max_inbound_frame_bytes_ > 0 && payload_len > max_inbound_frame_bytes_) {
+            if (frame_error_handler_) {
+                frame_error_handler_(FrameDecodeError::FrameTooLarge,
+                                     static_cast<uint32_t>(payload_len));
+            }
+            read_buffer_.clear();
+            close();
             return;
         }
-    }
 
-    // Validate magic "HPAC"
-    if (read_buffer_[0] != 'H' || read_buffer_[1] != 'P' ||
-        read_buffer_[2] != 'A' || read_buffer_[3] != 'C') {
-        // Invalid magic — skip one byte and retry (re-sync stream)
-        read_buffer_.consume(1);
-        handle_read(); // Recurse to re-enter header-read phase
-        return;
-    }
+        size_t total_frame_size = WireFrame::HeaderSize + payload_len;
 
-    // Parse remaining length (big-endian uint32_t from bytes 4-7)
-    size_t payload_len = (static_cast<size_t>(read_buffer_[4]) << 24) |
-                         (static_cast<size_t>(read_buffer_[5]) << 16) |
-                         (static_cast<size_t>(read_buffer_[6]) << 8) |
-                         static_cast<size_t>(read_buffer_[7]);
-
-    size_t total_frame_size = WireFrame::HeaderSize + payload_len;
-
-    // Phase 2 — accumulate exactly payload_len bytes.
-    // Reserve only the remaining bytes needed, not a fixed chunk.
-    while (read_buffer_.size() < total_frame_size) {
-        size_t remaining = total_frame_size - read_buffer_.size();
-        uint8_t* area = read_buffer_.reserve_tail(remaining);
-        ssize_t n = ::read(fd_, area, remaining);
-        if (n > 0) {
-            read_buffer_.commit_tail(static_cast<size_t>(n));
-        } else if (n == 0) {
-            // EOF mid-frame — remote end closed connection.
-            read_buffer_.clear();
-            set_state(ConnectionState::Disconnected);
-            if (error_handler_) {
-                error_handler_(nullptr, error(errors::unknown, "EOF mid-frame"));
-            }
-            return;
-        } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
+        // Phase 2 — accumulate exactly payload_len bytes.
+        while (read_buffer_.size() < total_frame_size) {
+            size_t remaining = total_frame_size - read_buffer_.size();
+            uint8_t* area = read_buffer_.reserve_tail(remaining);
+            ssize_t n = ::read(fd_, area, remaining);
+            if (n > 0) {
+                read_buffer_.commit_tail(static_cast<size_t>(n));
+            } else if (n == 0) {
+                read_buffer_.clear();
+                set_state(ConnectionState::Disconnected);
+                if (error_handler_) {
+                    error_handler_(nullptr, error(errors::unknown, "EOF mid-frame"));
+                }
                 return;
-            // Hard read error.
-            read_buffer_.clear();
-            set_state(ConnectionState::Error);
-            if (error_handler_) {
-                error_handler_(nullptr, error(errors::unknown, "read error"));
+            } else {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    return;
+                read_buffer_.clear();
+                set_state(ConnectionState::Error);
+                if (error_handler_) {
+                    error_handler_(nullptr, error(errors::unknown, "read error"));
+                }
+                return;
             }
-            return;
         }
-    }
 
-    // Complete frame received — extract payload (strip 8-byte HPAC header).
-    // Header: 4-byte magic "HPAC" + 4-byte big-endian payload length.
-    // The frame handler receives only the payload so it can be parsed
-    // directly as protobuf (e.g., CliCommand / CliResponse).
-    StreamBuffer frame_data(read_buffer_.begin() + WireFrame::HeaderSize,
-                            read_buffer_.begin() + total_frame_size);
-    read_buffer_.consume(total_frame_size);
+        // Complete frame — deliver the canonical HPAC frame bytes
+        // (header + payload) so plain and TLS paths present the same shape.
+        StreamBuffer frame_data(read_buffer_.begin(),
+                                read_buffer_.begin() + total_frame_size);
+        read_buffer_.consume(total_frame_size);
 
-    if (frame_handler_) {
-        frame_handler_(std::move(frame_data));
-    }
+        if (frame_handler_) {
+            frame_handler_(std::move(frame_data));
+        }
 
-    // Process any additional frames already in the buffer.
-    if (read_buffer_.size() >= WireFrame::HeaderSize) {
-        handle_read();
+        ++frames_processed;
+        // Continue loop if more data is buffered.
+        if (read_buffer_.size() < WireFrame::HeaderSize)
+            return;
     }
 }
 

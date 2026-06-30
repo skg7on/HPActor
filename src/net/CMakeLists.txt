@@ -17,6 +17,7 @@ target_sources(hpactor_lib PRIVATE
     http_gateway.cpp
     http_parser.cpp
     hybrid_discovery.cpp
+    inbound_frame_router.cpp
     registrar.cpp
     registrar_client.cpp
     registrar_server.cpp

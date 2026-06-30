@@ -21,6 +21,7 @@
 #include <hpactor/net/endpoint_circuit_breaker.hpp>
 #include <hpactor/net/endpoint_outbound_queue.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/inbound_frame_sink.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
@@ -60,6 +61,9 @@ struct PoolConfig {
     EndpointOutboundLimits outbound_limits{};
     /// \brief Circuit breaker configuration for this pool.
     EndpointCircuitBreakerConfig circuit_breaker_cfg{};
+    /// \brief Maximum inbound frame payload bytes (default 16 MiB).
+    /// Frames declaring a larger payload are rejected before allocation.
+    uint32_t max_inbound_frame_bytes{16U * 1024U * 1024U};
 };
 
 /// \brief Connection pool runtime statistics.
@@ -178,6 +182,17 @@ class ConnectionPool {
         actor_message_handler_ = std::move(handler);
     }
 
+    /// \brief Install a unified inbound frame sink.
+    ///
+    /// When a non-null sink is installed, \c on_frame_received() uses
+    /// strict \c try_decode_wireframe() and routes every valid frame and
+    /// decode failure exclusively through the sink. Legacy per-category
+    /// handlers (RPC, spawn, actor) receive zero calls while the sink
+    /// is active.
+    ///
+    /// \param sink The sink to install — copyable value type.
+    void set_inbound_frame_sink(InboundFrameSink sink);
+
     /// \brief Called by \c TcpTransport when a connection becomes ready.
     ///
     /// \param[in] conn The newly-ready connection.
@@ -263,6 +278,7 @@ class ConnectionPool {
     rpc_response_handler rpc_handler_;
     spawn_response_handler spawn_handler_;
     actor_message_handler actor_message_handler_;
+    InboundFrameSink inbound_sink_;
 
     std::vector<AcceptorInfo> acceptors_;
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_ = nullptr;

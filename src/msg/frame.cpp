@@ -43,48 +43,82 @@ StreamBuffer WireFrame::encode() const {
     return result;
 }
 
-WireFrame WireFrame::decode(const StreamBuffer& data) {
-    if (data.size() < HeaderSize) {
-        return WireFrame{};
+FrameDecodeResult
+try_decode_wireframe(const StreamBuffer& data, FrameDecodeLimits limits) {
+    FrameDecodeResult result{};
+
+    // 1. Validate minimum header size
+    if (data.size() < WireFrame::HeaderSize) {
+        result.error = FrameDecodeError::HeaderTooShort;
+        return result;
     }
 
-    // Validate magic header
+    // 2. Validate magic "HPAC"
     const std::array<uint8_t, 4> expected_magic = {'H', 'P', 'A', 'C'};
     if (std::memcmp(data.data(), expected_magic.data(), 4) != 0) {
-        HPACTOR_LOG_ERROR(
-            log::LogCategory::kNetwork, ActorId{0},
-            static_cast<uint32_t>(log::LogEventId::kNetworkFrameDecodeFailed),
-            "network frame decode failed");
-        return WireFrame{};
+        result.error = FrameDecodeError::InvalidMagic;
+        return result;
     }
 
-    // Read remaining length (network byte order)
+    // 3. Read payload length (network byte order → host)
     uint32_t net_len = 0;
     std::memcpy(&net_len, data.data() + 4, 4);
     uint32_t payload_len = ntohl(net_len);
+    result.declared_payload_bytes = payload_len;
 
-    if (data.size() < HeaderSize + payload_len) {
-        return WireFrame{};
+    // 4. Enforce configured payload-size bound before allocating/copying
+    if (limits.max_payload_bytes > 0 && payload_len > limits.max_payload_bytes) {
+        result.error = FrameDecodeError::FrameTooLarge;
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kNetwork, ActorId{0},
+            static_cast<uint32_t>(log::LogEventId::kNetworkFrameDecodeFailed),
+            "frame too large",
+            log::field("declared_bytes", static_cast<uint64_t>(payload_len)),
+            log::field("max_bytes",
+                       static_cast<uint64_t>(limits.max_payload_bytes)));
+        return result;
     }
 
-    // Parse protobuf payload directly into pb_envelope
+    // 5. Check length matches available data
+    size_t expected_size = WireFrame::HeaderSize + payload_len;
+    if (data.size() < expected_size) {
+        result.error = FrameDecodeError::LengthMismatch;
+        return result;
+    }
+    if (limits.reject_trailing_bytes && data.size() > expected_size) {
+        result.error = FrameDecodeError::TrailingBytes;
+        return result;
+    }
+
+    // 6. Parse protobuf from the bounded payload span
     WireFrame frame;
-    std::string serialized(data.begin() + HeaderSize,
-                           data.begin() + HeaderSize + payload_len);
+    std::string serialized(data.begin() + WireFrame::HeaderSize,
+                           data.begin() + expected_size);
     if (!frame.pb_envelope.ParseFromString(serialized)) {
-        HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
-                          "protobuf parse failure");
-        return WireFrame{};
+        result.error = FrameDecodeError::InvalidProtobuf;
+        HPACTOR_LOG_ERROR(
+            log::LogCategory::kNetwork, ActorId{0},
+            static_cast<uint32_t>(log::LogEventId::kNetworkFrameDecodeFailed),
+            "protobuf parse failure");
+        return result;
     }
+
+    result.frame = std::move(frame);
+    result.error = FrameDecodeError::None;
 
     HPACTOR_LOG_TRACE(
         log::LogCategory::kNetwork, ActorId{0},
         static_cast<uint32_t>(log::LogEventId::kNetworkFrameReceived),
         "network frame received",
         log::field("bytes", static_cast<uint64_t>(data.size())),
-        log::field("payload_type",
-                   static_cast<uint64_t>(static_cast<int>(frame.payload_type()))));
-    return frame;
+        log::field("payload_type", static_cast<uint64_t>(static_cast<int>(
+                                       result.frame.payload_type()))));
+    return result;
+}
+
+WireFrame WireFrame::decode(const StreamBuffer& data) {
+    auto decoded = try_decode_wireframe(data);
+    return decoded.ok() ? std::move(decoded.frame) : WireFrame{};
 }
 
 WireFrame WireFrame::decode(std::span<const uint8_t> data) {

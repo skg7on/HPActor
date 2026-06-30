@@ -84,6 +84,10 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
     if (metrics_ring_buffer_) {
         pool->set_metrics_ring_buffer(metrics_ring_buffer_);
     }
+    // Propagate unified inbound sink
+    if (inbound_sink_.active()) {
+        pool->set_inbound_frame_sink(inbound_sink_);
+    }
     return pool;
 }
 
@@ -164,6 +168,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         plain_conn->set_frame_handler([pool](StreamBuffer data) {
             pool->on_frame_received(std::move(data));
         });
+        plain_conn->set_max_inbound_frame_bytes(pool_config_.max_inbound_frame_bytes);
         conn = plain_conn;
     }
 
@@ -414,6 +419,13 @@ void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
     }
 }
 
+void TcpTransport::set_inbound_frame_sink(InboundFrameSink sink) {
+    inbound_sink_ = sink;
+    for (auto& [ep, pool] : pools_) {
+        pool->set_inbound_frame_sink(inbound_sink_);
+    }
+}
+
 void TcpTransport::set_metrics_ring_buffer(
     metrics::MpscRingBuffer<metrics::MetricEvent>* buf) {
     metrics_ring_buffer_ = buf;
@@ -454,6 +466,7 @@ void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
+        plain_conn->set_max_inbound_frame_bytes(pool_config_.max_inbound_frame_bytes);
         conn = plain_conn;
     }
 
