@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/stream_config.hpp>
@@ -22,6 +23,7 @@
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
+#include <memory>
 #include <vector>
 
 namespace hpactor {
@@ -42,21 +44,27 @@ class StreamSenderActor : public EventBasedActor {
     /// \param config Stream configuration.
     /// \param trace_ctx Stream-level trace context.
     /// \param is_local True if receiver is on the same node (fast path).
+    /// \param state Optional shared state for StreamHandle observability.
     StreamSenderActor(ActorContext* ctx, ActorSystem& system, ActorId receiver_id,
                       ActorAddress receiver_addr, uint64_t stream_id,
-                      StreamConfig config, TraceContext trace_ctx, bool is_local);
+                      StreamConfig config, TraceContext trace_ctx, bool is_local,
+                      std::shared_ptr<StreamSenderState> state = nullptr);
 
     Behavior make_behavior() override;
 
     /// Called by StreamHandle (via message) to enqueue a chunk for send.
     void enqueue_chunk(TypedMessage chunk);
 
-    /// Query methods for StreamHandle
+    /// Query methods for StreamHandle (snapshot reads from shared atomics).
     size_t bytes_in_flight() const {
-        return bytes_in_flight_;
+        return shared_state_
+                   ? shared_state_->bytes_in_flight->load(std::memory_order_acquire)
+                   : 0;
     }
     size_t window_bytes() const {
-        return window_bytes_;
+        return shared_state_
+                   ? shared_state_->window_bytes->load(std::memory_order_acquire)
+                   : 0;
     }
     bool is_stream_open() const {
         return state_ == State::Streaming;
@@ -85,8 +93,8 @@ class StreamSenderActor : public EventBasedActor {
     TraceContext trace_ctx_;
     bool is_local_ = true;
     State state_ = State::Opening;
-    uint32_t window_bytes_ = 0;
-    size_t bytes_in_flight_ = 0;
+    /// Shared atomic state for StreamHandle observability.
+    std::shared_ptr<StreamSenderState> shared_state_;
     uint64_t next_sequence_ = 1;
     uint64_t last_acked_ = 0;
     std::vector<TypedMessage> send_buffer_;

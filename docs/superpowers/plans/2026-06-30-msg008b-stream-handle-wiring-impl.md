@@ -2,7 +2,8 @@
 
 > **Issue:** [#400](https://github.com/skg7on/HPActor/issues/400)
 > **Date:** 2026-06-30
-> **Status:** In Progress
+> **Revised:** 2026-06-30 (added Phase 4: MSG-008c gap fixes)
+> **Status:** Complete (MSG-008c follow-up: [#407](https://github.com/skg7on/HPActor/issues/407))
 > **Depends on:** #21 (original MSG-008), #365 (foundation merge)
 
 **Goal:** Fix critical bugs and wire up the `StreamHandle` → `StreamSenderActor` bridge so streaming sessions work end-to-end for both local and cross-node delivery.
@@ -35,9 +36,14 @@ using DeliverFn = bool (*)(void* ctx, ActorId target, TypedMessage msg);
 
 `ActorSystem::open_stream()` binds `this` as the context and a static dispatch function that calls `try_deliver_local_fast`. This avoids heavy header dependencies while keeping the call path direct.
 
-### 2. bytes_in_flight / window_bytes queries
+### 2. bytes_in_flight / window_bytes queries (✅ resolved in MSG-008c)
 
-These are observability helpers. For this phase, they remain returning 0 with a TODO. The values are available via CLI `/stream show` (future phase). The critical path is write/close/error.
+These observability helpers are now implemented via shared atomics. A `StreamSenderState` struct
+(`include/hpactor/actor/stream_types.hpp`) holds `shared_ptr<atomic<size_t>>` for `bytes_in_flight`
+and `shared_ptr<atomic<uint32_t>>` for `window_bytes`. `StreamSenderActor` updates them with
+`fetch_add`/`store` (release semantics); `StreamHandle` reads them with `load` (acquire semantics).
+Both `StreamHandle` and `StreamSenderActor` hold a copy of the shared pointer, so the state lives
+as long as either exists.
 
 ### 3. Remote delivery in send_pending_chunks
 
@@ -157,6 +163,57 @@ A dedicated `InternalTimeoutTag` in the subsystem range triggers `on_idle_timeou
 | `tests/integration/actor/test_stream_messaging.cpp` | **New:** integration tests |
 | `tests/unit/msg/CMakeLists.txt` | Add test_stream_frames.cpp |
 | `tests/integration/actor/CMakeLists.txt` | Add test_stream_messaging.cpp |
+
+## Phase 4: MSG-008c Gap Fixes (✅ Complete)
+
+> **Issue:** [#407](https://github.com/skg7on/HPActor/issues/407)
+> **Branch:** `fix/msg-008c-stream-api-gaps`
+
+Five remaining gaps were identified and resolved after the Phase 3 integration tests:
+
+### 4.1: Explicit tag dispatch (Gap 5)
+- **File:** `src/actor/stream_sender_actor.cpp`
+- **Change:** Replaced catch-all `else { enqueue_chunk(...) }` with `else if (tag >= TypeTag::User)` guard.
+  Unknown system-range tags are silently dropped instead of being misinterpreted as data chunks.
+
+### 4.2: User TypeTag propagation (Gap 2)
+- **Files:** `protos/hpactor/frame.proto`, `stream_sender_actor.cpp`, `stream_receiver_actor.cpp`
+- **Change:** Added `uint32 user_tag = 4;` to `StreamDataFrame`. Sender sets it from
+  `chunk.type_id()`. Receiver reads it and uses it for delivery, falling back to
+  `StreamChunkTag` when `user_tag == 0` (backward compat).
+
+### 4.3: Shared state for live query methods (Gap 3)
+- **Files:** `stream_types.hpp`, `stream_handle.hpp`, `stream_sender_actor.{hpp,cpp}`, `actor_system.cpp`
+- **Change:** Added `StreamSenderState` struct with `shared_ptr<atomic<size_t>>` and
+  `shared_ptr<atomic<uint32_t>>` for `bytes_in_flight` and `window_bytes`. Both
+  `StreamSenderActor` (writer) and `StreamHandle` (reader) hold a copy of the shared
+  pointer, enabling lock-free snapshot queries. Constructor has `nullptr` default
+  for backward compatibility.
+
+### 4.4: ActorContext::open_stream() delegation (Gap 4)
+- **Files:** `actor_context.hpp`, `actor_context.cpp`
+- **Change:** Added `open_stream(ActorId, StreamConfig)` to `ActorContext`, delegating
+  to `ActorSystem::open_stream()`. Consistent with existing spawn/send/reply delegation
+  pattern.
+
+### 4.5: open_stream(ActorRef) for remote support (Gap 1)
+- **Files:** `actor_system.hpp`, `actor_system.cpp`, `actor_context.hpp`, `actor_context.cpp`
+- **Change:** Added `open_stream(ActorRef, StreamConfig)` overload to both `ActorSystem`
+  and `ActorContext`. For local targets, delegates to the `ActorId` overload. For remote
+  targets, spawns `StreamSenderActor` locally with `is_local_=false` and sends
+  `StreamOpenFrame` via transport. Extracted shared `open_stream_impl()` private helper
+  to eliminate code duplication. The remote code path is now reachable.
+
+### Verification
+```bash
+ninja -C build
+./build/tests/unit/actor/test_unit_actor --gtest_filter="*Stream*"    # 17 tests
+./build/tests/integration/actor/test_integration_actor --gtest_filter="*Stream*"  # 10 tests
+./build/tests/unit/msg/test_unit_msg --gtest_filter="*Stream*"        # 11 tests
+# All 38 tests PASS
+```
+
+---
 
 ## Build Verification Sequence
 

@@ -707,6 +707,13 @@ class ActorSystem {
     std::optional<StreamHandle>
     open_stream(ActorId target, StreamConfig config = {});
 
+    /// Open a streaming session to a target actor reference (local or remote).
+    /// For remote targets, the StreamSenderActor is spawned locally and
+    /// a StreamOpenFrame is sent via transport to the remote node.
+    /// \return StreamHandle on success, std::nullopt if target unreachable.
+    std::optional<StreamHandle>
+    open_stream(ActorRef target, StreamConfig config = {});
+
     // ── Node death ────────────────────────────────────────────────────────
 
     /// \brief Handle a remote node becoming unreachable.
@@ -880,6 +887,15 @@ class ActorSystem {
     void deliver_remote_stream_ack(const net::WireFrame& frame);
     void deliver_remote_stream_close(const net::WireFrame& frame);
     void deliver_remote_stream_error(const net::WireFrame& frame);
+
+    /// Shared implementation for both open_stream overloads.
+    std::optional<StreamHandle>
+    open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
+                     bool is_local_target, StreamConfig config,
+                     TraceContext trace_ctx,
+                     std::shared_ptr<StreamSenderState> shared_state);
+    friend bool
+    deliver_to_stream_sender(void* ctx, ActorId target, TypedMessage msg);
 
     // Actor storage consolidated into actor_directory_ above.
     // Use actor_directory_.find() / find_actor() / find_mailbox() /

@@ -14,10 +14,27 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <memory>
 #include <string>
+
+namespace hpactor {
+
+/// \brief Thread-safe shared state between StreamSenderActor and StreamHandle.
+///
+/// StreamSenderActor updates these atomically as chunks are sent and acks
+/// arrive. StreamHandle reads them for observability (lock-free snapshots).
+struct StreamSenderState {
+    std::shared_ptr<std::atomic<size_t>> bytes_in_flight =
+        std::make_shared<std::atomic<size_t>>(0);
+    std::shared_ptr<std::atomic<uint32_t>> window_bytes =
+        std::make_shared<std::atomic<uint32_t>>(0);
+};
+
+} // namespace hpactor
 
 namespace hpactor::stream {
 

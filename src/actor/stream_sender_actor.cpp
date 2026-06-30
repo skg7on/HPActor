@@ -23,10 +23,13 @@ namespace hpactor {
 StreamSenderActor::StreamSenderActor(ActorContext* ctx, ActorSystem& system,
                                      ActorId receiver_id, ActorAddress receiver_addr,
                                      uint64_t stream_id, StreamConfig config,
-                                     TraceContext trace_ctx, bool is_local)
+                                     TraceContext trace_ctx, bool is_local,
+                                     std::shared_ptr<StreamSenderState> state)
     : EventBasedActor(ctx, system), receiver_id_(receiver_id),
       receiver_addr_(std::move(receiver_addr)), stream_id_(stream_id),
-      config_(std::move(config)), trace_ctx_(trace_ctx), is_local_(is_local) {
+      config_(std::move(config)), trace_ctx_(trace_ctx), is_local_(is_local),
+      shared_state_(state ? std::move(state)
+                          : std::make_shared<StreamSenderState>()) {
     send_buffer_.reserve(config_.max_in_flight_frames);
 }
 
@@ -54,10 +57,13 @@ Behavior StreamSenderActor::make_behavior() {
             handle_internal_error(msg);
         } else if (tag == stream::InternalTimeoutTag) {
             handle_internal_timeout();
-        } else {
+        } else if (static_cast<uint32_t>(tag) >=
+                   static_cast<uint32_t>(TypeTag::User)) {
             // User chunk from StreamHandle — enqueue
             enqueue_chunk(std::move(msg));
         }
+        // else: unknown system-range tag — silently drop.
+        // Guards against future control tags being misinterpreted as data.
     }};
 }
 
@@ -76,12 +82,18 @@ void StreamSenderActor::enqueue_chunk(TypedMessage chunk) {
 void StreamSenderActor::send_pending_chunks() {
     while (!send_buffer_.empty() && state_ != State::Error) {
         // Credit window check: pause if in-flight exceeds advertised window.
-        // window_bytes_ == 0 means the receiver has not yet opened the window.
+        // window == 0 means the receiver has not yet opened the window.
         // Allow one chunk through for anti-deadlock (initial open).
-        if (window_bytes_ > 0 && bytes_in_flight_ >= window_bytes_)
-            break;
-        if (bytes_in_flight_ > 0 && window_bytes_ == 0)
-            break;
+        {
+            auto cur_window =
+                shared_state_->window_bytes->load(std::memory_order_acquire);
+            auto cur_inflight =
+                shared_state_->bytes_in_flight->load(std::memory_order_acquire);
+            if (cur_window > 0 && cur_inflight >= cur_window)
+                break;
+            if (cur_inflight > 0 && cur_window == 0)
+                break;
+        }
         if (state_ != State::Streaming && state_ != State::Opening)
             break;
 
@@ -96,6 +108,7 @@ void StreamSenderActor::send_pending_chunks() {
         data_frame.set_sequence(next_sequence_++);
         data_frame.set_payload(reinterpret_cast<const char*>(chunk.payload().data()),
                                chunk.payload().size());
+        data_frame.set_user_tag(static_cast<uint32_t>(chunk.type_id()));
 
         if (is_local_) {
             // Local fast path: TypedMessage direct to receiver actor's mailbox.
@@ -115,7 +128,8 @@ void StreamSenderActor::send_pending_chunks() {
             }
         }
 
-        bytes_in_flight_ += chunk_size;
+        shared_state_->bytes_in_flight->fetch_add(chunk_size,
+                                                  std::memory_order_release);
     }
 }
 
@@ -123,7 +137,8 @@ void StreamSenderActor::handle_stream_ack(const ::hpactor::net::StreamAckFrame& 
     if (ack.last_sequence() > last_acked_) {
         last_acked_ = ack.last_sequence();
     }
-    window_bytes_ = ack.window_bytes();
+    shared_state_->window_bytes->store(ack.window_bytes(),
+                                       std::memory_order_release);
 
     if (state_ == State::Opening) {
         state_ = State::Streaming;
