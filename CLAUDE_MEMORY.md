@@ -262,6 +262,44 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   `RuntimeCoordinator` calls `network_->start()`/`network_->stop()` in proper
   startup/shutdown order with immutable `RuntimeBlueprint`.
 
+**ActorSystem Refactor Phase 6: Runtime Blueprint and Lifecycle** ✅ Complete (2026-06-30)
+- `RuntimeBlueprint` — immutable validated startup config with FNV-1a fingerprint.
+- `RuntimeBlueprintBuilder` — Config→blueprint with validation, no side effects.
+- `BlueprintNetworkConfig`, `ActorRuntimeConfig`, `MessagingRuntimeConfig`,
+  `StreamRuntimeConfig`, `ConfiguredActorSpec` — component config value types.
+- `ReloadClass` (Live/RestartRequired/Immutable), `ConfigPathId`,
+  `ConfigFieldDescriptor`, `ConfigFieldRegistry`, `ReloadReport` —
+  in `include/hpactor/config/reload_report.hpp`.
+- `RuntimeBuilder` — composition root; constructs stopped `ActorSystem`
+  from blueprint without starting threads/listeners/actors.
+- `RuntimeCoordinator` — non-owning lifecycle state machine (Built→Starting→
+  Running→Draining→Stopping→Stopped, with Failed rollback).
+- `RuntimeLifecycleStage`, `LifecycleAction`, `RuntimeLifecycleSnapshot` —
+  stage descriptors with start/rollback/destroy actions.
+- `register_runtime_startup_stages()` — wires real component stages (scheduler,
+  fault controller) into coordinator.
+- `ActorSystem::create(config)` and `create(config, topology)` — preferred
+  result-returning factory. Legacy constructor preserved.
+- `RuntimeCoordinator::shutdown()` — unified drain/stop path, idempotent.
+- `RuntimeBlueprintBuilder::diff()` — fingerprint-based reload classification.
+- Architecture enforcement: 10 Phase 6 CTest checks (no RTTI/exceptions in
+  lifecycle files, no std::function in coordinator).
+- New files: `src/runtime/runtime_blueprint.hpp/.cpp`,
+  `src/runtime/runtime_blueprint_builder.hpp/.cpp`,
+  `src/runtime/runtime_builder.hpp/.cpp`,
+  `src/runtime/runtime_coordinator.hpp/.cpp`,
+  `src/runtime/runtime_startup.hpp/.cpp`,
+  `include/hpactor/config/reload_report.hpp`.
+- Test files: `test_runtime_lifecycle_boundaries.cpp` (13),
+  `test_runtime_blueprint.cpp` (13), `test_reload_classification.cpp` (12),
+  `test_runtime_builder.cpp` (6), `test_runtime_coordinator.cpp` (15),
+  `test_coordinated_startup.cpp` (7), `test_unified_shutdown.cpp` (9),
+  `test_actor_system_factory.cpp` (5).
+- Verification: 94 runtime unit tests pass, 10/10 architecture checks pass.
+- Known gaps: full blueprint constructor fix (ordering with
+  ActorExecutionDependencies), network-enabled blueprint path (needs full
+  transport config), topology actor deployment transaction (separately reported).
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,
