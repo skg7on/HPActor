@@ -5,4 +5,5 @@ target_sources(hpactor_lib PRIVATE
     network_runtime.cpp
     runtime_blueprint_builder.cpp
     runtime_builder.cpp
+    runtime_coordinator.cpp
 )
