@@ -20,7 +20,7 @@ make_result(FrameDispatchCode code, WireFrame::PayloadType pt) noexcept {
     return r;
 }
 
-constexpr bool is_rpc_response(const ActorMsgFrame& data) noexcept {
+inline bool is_rpc_response(const ActorMsgFrame& data) noexcept {
     return (data.flags() & WireFrame::RpcResponse) != 0;
 }
 
