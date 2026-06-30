@@ -32,8 +32,8 @@ using WireFrameConnectionPtr = std::shared_ptr<WireFrameConnection>;
 /// Reads from the socket accumulate into an internal buffer. When a
 /// complete \c WireFrame is available (8-byte header: magic \c "HPAC" +
 /// 4-byte big-endian payload length, followed by exactly \c length
-/// payload bytes), the payload is delivered as a \c StreamBuffer to
-/// the \c frame_handler callback.
+/// payload bytes), the canonical HPAC frame bytes (header + payload)
+/// are delivered as a \c StreamBuffer to the \c frame_handler callback.
 ///
 /// Wire format expected on the wire:
 /// \code
@@ -123,6 +123,21 @@ class WireFrameConnection
     /// \param[in] handler Invoked when an async send completes.
     void set_send_completion_handler(std::function<void(int result)> handler);
 
+    /// \brief Set the maximum inbound frame payload bytes.
+    ///
+    /// Frames declaring a larger payload are rejected before allocation.
+    /// \param[in] max_bytes Maximum payload in bytes (0 = unlimited).
+    void set_max_inbound_frame_bytes(uint32_t max_bytes);
+
+    /// \brief Set the framing-error callback.
+    ///
+    /// Invoked when inbound framing fails (oversize, bad magic, etc.).
+    /// Receives the error reason and observed byte count; does not retain
+    /// the input bytes.
+    /// \param[in] handler Error callback (FrameDecodeError, observed bytes).
+    void
+    set_frame_error_handler(std::function<void(FrameDecodeError, uint32_t)> handler);
+
     /// \brief Send raw frame data.
     ///
     /// \param[in] frame_data Pre-framed data to send.
@@ -159,6 +174,8 @@ class WireFrameConnection
     frame_handler frame_handler_;
     std::function<void(ConnectionPtr, const error&)> error_handler_;
     std::function<void(int result)> send_completion_handler_;
+    std::function<void(FrameDecodeError, uint32_t)> frame_error_handler_;
+    uint32_t max_inbound_frame_bytes_{16U * 1024U * 1024U};
 };
 
 } // namespace net

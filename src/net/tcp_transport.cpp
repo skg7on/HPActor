@@ -164,6 +164,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         plain_conn->set_frame_handler([pool](StreamBuffer data) {
             pool->on_frame_received(std::move(data));
         });
+        plain_conn->set_max_inbound_frame_bytes(pool_config_.max_inbound_frame_bytes);
         conn = plain_conn;
     }
 
@@ -454,6 +455,7 @@ void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
+        plain_conn->set_max_inbound_frame_bytes(pool_config_.max_inbound_frame_bytes);
         conn = plain_conn;
     }
 

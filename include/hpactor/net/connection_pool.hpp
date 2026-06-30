@@ -60,6 +60,9 @@ struct PoolConfig {
     EndpointOutboundLimits outbound_limits{};
     /// \brief Circuit breaker configuration for this pool.
     EndpointCircuitBreakerConfig circuit_breaker_cfg{};
+    /// \brief Maximum inbound frame payload bytes (default 16 MiB).
+    /// Frames declaring a larger payload are rejected before allocation.
+    uint32_t max_inbound_frame_bytes{16U * 1024U * 1024U};
 };
 
 /// \brief Connection pool runtime statistics.
