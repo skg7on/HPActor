@@ -294,6 +294,11 @@ ActorSystem::ActorSystem(const Config& config)
 
     impl_->core.scheduler->start();
 
+    // Start observability background threads AFTER the scheduler so the
+    // timer thread is already running.  Starting them before the
+    // scheduler can delay timer processing under coverage builds.
+    impl_->observability_->start_background_threads();
+
     impl_->observability_->apply_tracing_config(impl_->core.config.tracing);
 
     if (config.enable_network) {

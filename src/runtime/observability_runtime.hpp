@@ -108,6 +108,12 @@ class ObservabilityRuntime final {
         return tracing_config_;
     }
 
+    /// \brief Start background drain/export threads for log and trace
+    /// managers. Must be called AFTER the scheduler has started so the
+    /// timer thread is already running before background threads compete
+    /// for CPU.
+    void start_background_threads() noexcept;
+
     /// \brief Apply a new tracing configuration (reload).
     void apply_tracing_config(const tracing::TraceConfig& config) noexcept;
 

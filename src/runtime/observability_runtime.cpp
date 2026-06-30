@@ -85,7 +85,11 @@ result<void> ObservabilityRuntime::start() noexcept {
     // ── Logging ──────────────────────────────────────────────────────────
     if (logging_config_.enabled) {
         log_manager_ = std::make_unique<log::LogManager>(logging_config_);
-        log_manager_->start();
+        // Defer background drain thread start: the logger is ready
+        // immediately (ring buffer + formatter are created), but the
+        // drain thread competes with the scheduler's timer thread for
+        // CPU under coverage builds.  Start it later via
+        // start_background_threads().
         logger_ = &log_manager_->logger();
 
         // Wire the log port.
@@ -104,7 +108,7 @@ result<void> ObservabilityRuntime::start() noexcept {
     if (tracing_config_.enabled) {
         trace_manager_ =
             std::make_unique<tracing::TraceManager>(tracing_config_, nullptr);
-        trace_manager_->start();
+        // Background exporter thread start deferred — see logging comment.
 
         // Wire the trace port.
         trace_port_.record_span =
@@ -161,6 +165,17 @@ result<void> ObservabilityRuntime::stop() noexcept {
     fault_controller_.remove();
 
     return result<void>::make();
+}
+
+// ── Background threads ──────────────────────────────────────────────────────
+
+void ObservabilityRuntime::start_background_threads() noexcept {
+    if (log_manager_) {
+        log_manager_->start();
+    }
+    if (trace_manager_) {
+        trace_manager_->start();
+    }
 }
 
 // ── Tracing reload ─────────────────────────────────────────────────────────
