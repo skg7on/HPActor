@@ -60,7 +60,9 @@ MessagingRuntime::deliver_with_result(ActorId target, TypedMessage msg,
 
 mailbox::EnqueueResult
 MessagingRuntime::try_deliver_fast(ActorId target, TypedMessage msg,
-                                   FastDeliveryReason /*reason*/) {
+                                   FastDeliveryReason reason) {
+    (void)reason; // observed in debug/test instrumentation; enforced by
+                  // architecture allowlist
     return local_delivery_engine_.try_deliver(
         target, std::make_unique<TypedMessage>(std::move(msg)));
 }
@@ -74,6 +76,10 @@ void MessagingRuntime::on_reliable_nack(MessageId message_id, EndPoint endpoint,
                                         uint32_t reason_code,
                                         uint32_t retry_after_ms) noexcept {
     outbound_tracker_.on_nack(message_id, endpoint, reason_code, retry_after_ms);
+}
+
+void MessagingRuntime::reconfigure(const mailbox::DeadLetterConfig& dead_letters) noexcept {
+    dead_letters_.reconfigure(dead_letters);
 }
 
 mailbox::DeadLetterQueue& MessagingRuntime::dead_letters() noexcept {

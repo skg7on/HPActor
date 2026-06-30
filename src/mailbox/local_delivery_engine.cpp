@@ -14,7 +14,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
-#include <hpactor/mailbox/multi_lane_queue.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
 namespace hpactor {
@@ -29,9 +29,16 @@ LocalDeliveryEngine::try_deliver(ActorId target, std::unique_ptr<TypedMessage> m
         return mailbox::EnqueueResult{
             .code = mailbox::EnqueueResultCode::ActorNotFound, .target = target};
     }
-    mailbox->enqueue(msg.release());
-    return mailbox::EnqueueResult{.code = mailbox::EnqueueResultCode::Accepted,
-                                  .target = target};
+    mailbox::MailboxEnvelopeMeta meta;
+    meta.sender = msg->sender_address();
+    meta.type_tag = msg->type_id();
+    meta.priority = 0;
+    meta.deadline_ns = INT64_MAX;
+    auto* mbox =
+        static_cast<mailbox::MPSCActorMailbox<TypedMessage>*>(mailbox.get());
+    auto result = mbox->try_push(std::move(*msg), meta);
+    result.target = target;
+    return result;
 }
 
 } // namespace hpactor

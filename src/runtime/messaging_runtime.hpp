@@ -32,7 +32,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <memory>
 
 namespace hpactor {
 
@@ -109,6 +108,26 @@ class MessagingRuntime final {
     void on_reliable_ack(MessageId message_id, EndPoint endpoint) noexcept;
     void on_reliable_nack(MessageId message_id, EndPoint endpoint,
                           uint32_t reason_code, uint32_t retry_after_ms) noexcept;
+
+    /// \brief Process pending retries for at-least-once delivery.
+    ///
+    /// Invokes the current tracker's retry logic with a caller-supplied
+    /// resend port.  Transport resend remains a characterized gap.
+    template <typename ResendFn>
+    void process_retries(uint64_t now_ns, ResendFn&& resend) noexcept {
+        outbound_tracker_.process_retries(now_ns, std::forward<ResendFn>(resend));
+    }
+
+    // ── Reconfiguration ────────────────────────────────────────────────
+
+    /// \brief Apply live-reloadable configuration changes.
+    ///
+    /// Preserves object identity for all owned components (DLQ, dedup,
+    /// trackers, coordinator, pipeline, engine).  Only fields classified
+    /// as live-reloadable by the current implementation are applied.
+    ///
+    /// \param[in] dead_letters New dead-letter queue configuration.
+    void reconfigure(const mailbox::DeadLetterConfig& dead_letters) noexcept;
 
     // ── Accessors (stable addresses) ──────────────────────────────────
 

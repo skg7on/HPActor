@@ -274,7 +274,7 @@ ActorSystem::ActorSystem(const Config& config)
                         std::chrono::duration_cast<std::chrono::nanoseconds>(
                             std::chrono::steady_clock::now().time_since_epoch())
                             .count());
-                    impl_->messaging_->delivery_receipt_tracker().process_retries(
+                    impl_->messaging_->process_retries(
                         now_ns,
                         [](const msg::OutboundDeliveryTracker::PendingSend&) {
                             // Resend via transport (implemented in
@@ -855,43 +855,32 @@ ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
     return cfg;
 }
 
-// ── Delivery pipeline (delegates to DeliveryPipeline) ───────────────────────
+// ── Delivery pipeline (delegates to MessagingRuntime) ────────────────────────
 
 mailbox::EnqueueResult
 ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                uint8_t priority, int64_t deadline_ns,
                                mailbox::DeliveryOptions options) {
-    return impl_->messaging_->delivery_pipeline().try_deliver(
-        target, std::move(msg), priority, deadline_ns, options);
+    return impl_->messaging_->try_deliver(target, std::move(msg), priority,
+                                          deadline_ns, options);
 }
 
 mailbox::DeliveryResult
 ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
                                  uint8_t priority, int64_t deadline_ns,
                                  mailbox::DeliveryOptions options) {
-    return impl_->messaging_->delivery_pipeline().deliver_with_result(
-        target, std::move(msg), priority, deadline_ns, options);
+    return impl_->messaging_->deliver_with_result(target, std::move(msg),
+                                                  priority, deadline_ns, options);
 }
 
 mailbox::EnqueueResult
 ActorSystem::try_deliver_local_fast(ActorId target, TypedMessage msg) {
-    auto* mailbox = get_mailbox(target);
-    if (!mailbox) {
-        mailbox::EnqueueResult r;
-        r.code = mailbox::EnqueueResultCode::ActorNotFound;
-        r.target = target;
-        return r;
-    }
-    mailbox::MailboxEnvelopeMeta meta;
-    meta.sender = msg.sender_address();
-    meta.type_tag = msg.type_id();
-    meta.priority = 0;
-    meta.deadline_ns = INT64_MAX;
-    return mailbox->try_push(std::move(msg), meta);
+    return impl_->messaging_->try_deliver_fast(
+        target, std::move(msg), FastDeliveryReason::CompatibilityExplicit);
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
-    (void)impl_->messaging_->delivery_pipeline().try_deliver(target, std::move(msg));
+    (void)impl_->messaging_->try_deliver(target, std::move(msg), 0, INT64_MAX, {});
 }
 
 void ActorSystem::record_actor_timeout(ActorId target) {
@@ -904,16 +893,16 @@ void ActorSystem::record_actor_timeout(ActorId target) {
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                 uint8_t priority, int64_t deadline_ns) {
-    (void)impl_->messaging_->delivery_pipeline().try_deliver(
-        target, std::move(msg), priority, deadline_ns, {});
+    (void)impl_->messaging_->try_deliver(target, std::move(msg), priority,
+                                         deadline_ns, {});
 }
 
 void ActorSystem::deliver_local_edf(ActorId target, TypedMessage msg,
                                     int64_t deadline_ns, uint8_t priority) {
     mailbox::DeliveryOptions options;
     options.schedule_edf = true;
-    (void)impl_->messaging_->delivery_pipeline().try_deliver(
-        target, std::move(msg), priority, deadline_ns, options);
+    (void)impl_->messaging_->try_deliver(target, std::move(msg), priority,
+                                         deadline_ns, options);
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
@@ -944,7 +933,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     uint32_t flags = frame.pb_envelope.data_frame().flags();
 
     if (flags & kControlAck) {
-        impl_->messaging_->delivery_receipt_tracker().on_ack(
+        impl_->messaging_->on_reliable_ack(
             MessageId{frame.pb_envelope.data_frame().message_id()},
             net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint);
         return;
@@ -957,7 +946,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
                         frame.pb_envelope.data_frame().payload().data(),
                         sizeof(uint32_t));
         }
-        impl_->messaging_->delivery_receipt_tracker().on_nack(
+        impl_->messaging_->on_reliable_nack(
             MessageId{frame.pb_envelope.data_frame().message_id()},
             net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint,
             reason_code, retry_after_ms);
@@ -1227,7 +1216,7 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 #undef HPACTOR_MAILBOX_FIELD
 
     impl_->core.config.dead_letters = model.system.dead_letters;
-    impl_->messaging_->dead_letters().reconfigure(impl_->core.config.dead_letters);
+    impl_->messaging_->reconfigure(impl_->core.config.dead_letters);
 
     apply_tracing_config(model.system.tracing);
 
@@ -1321,34 +1310,10 @@ void ActorSystem::set_drain_config(ActorId target, DrainConfig cfg) {
 void ActorSystem::send_reliable_ack(const ActorAddress& target,
                                     const ActorAddress& acker, uint64_t msg_id,
                                     uint8_t status, uint32_t retry_after_ms) {
-    if (!impl_->network.transport) {
-        return;
-    }
-
-    net::WireFrame frame;
-    // For ACK (Accepted/Duplicate): use AckRequested flag (kControlAck on
-    // receiver side).  For NACK (Rejected): use AckResponse flag (kControlNack
-    // on receiver side).  This matches the convention in deliver_remote().
-    bool is_nack = (status == 1); // 1 = AckStatus::Rejected
-    frame.pb_envelope.mutable_data_frame()->set_flags(
-        is_nack ? net::WireFrame::AckResponse : net::WireFrame::AckRequested);
-    frame.pb_envelope.mutable_data_frame()->set_message_id(msg_id);
-    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(), acker);
-    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
-                  target);
-
-    if (is_nack) {
-        // Encode reason code in type_tag (read as reason_code by receiver)
-        frame.pb_envelope.mutable_data_frame()->set_type_tag(
-            static_cast<uint32_t>(status));
-        // Encode retry_after_ms as 4-byte little-endian in payload
-        std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
-                                sizeof(uint32_t));
-        frame.pb_envelope.mutable_data_frame()->set_payload(payload_str);
-    }
-
-    auto encoded = frame.encode();
-    (void)impl_->network.transport->try_send(target, encoded);
+    // Route through the fixed network-control port — same frame construction
+    // as reliable_ack_adapter, but called from actor-facing code paths.
+    impl_->network.messaging_ports.reliable_ack(target, acker, msg_id, status,
+                                                retry_after_ms);
 }
 
 // ── Stream protocol ─────────────────────────────────────────────────────────
@@ -1401,7 +1366,8 @@ void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
     auto payload = StreamBuffer::from_data(
         reinterpret_cast<const uint8_t*>(payload_str.data()), payload_str.size());
     TypedMessage msg(stream::StreamDataTag, std::move(payload));
-    (void)try_deliver_local_fast(receiver.value(), std::move(msg));
+    (void)impl_->messaging_->try_deliver_fast(receiver.value(), std::move(msg),
+                                              FastDeliveryReason::StreamProtocol);
 }
 
 void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
@@ -1413,7 +1379,8 @@ void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
     auto ack_buf = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(&ack),
                                            sizeof(ack));
     TypedMessage msg(stream::StreamAckTag, std::move(ack_buf));
-    (void)try_deliver_local_fast(sender.value(), std::move(msg));
+    (void)impl_->messaging_->try_deliver_fast(sender.value(), std::move(msg),
+                                              FastDeliveryReason::StreamProtocol);
 }
 
 void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
@@ -1421,11 +1388,15 @@ void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
     auto routes = impl_->streams.registry.take(close.stream_id());
     if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.sender.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
     if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.receiver.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
 }
 
@@ -1434,11 +1405,15 @@ void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
     auto routes = impl_->streams.registry.take(error.stream_id());
     if (routes.sender.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.sender.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.sender.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
     if (routes.receiver.has_value()) {
         TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
-        (void)try_deliver_local_fast(routes.receiver.value(), std::move(msg));
+        (void)impl_->messaging_->try_deliver_fast(
+            routes.receiver.value(), std::move(msg),
+            FastDeliveryReason::StreamProtocol);
     }
 }
 
