@@ -68,7 +68,7 @@ void HealthHttpServer::on_daemon_start() {
                 body = "OK";
             }
 
-            net::HttpStatusCode http_code;
+            net::HttpStatusCode http_code = net::HttpStatusCode::OK;
             switch (status) {
                 case HealthStatus::Healthy:
                 case HealthStatus::Degraded:

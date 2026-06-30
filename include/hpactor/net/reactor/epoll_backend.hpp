@@ -127,13 +127,15 @@ class EpollBackend : public IReactorBackend {
 
     // Pending I/O operation tracked per fd
     struct PendingOp {
-        ActorId actor;
-        uint32_t op_type;
+        ActorId actor{};
+        uint32_t op_type = 0;
         std::vector<uint8_t> data; // concatenated buffers for send
         int buf_count = 0;
-        iovec saved_bufs[16];  // original buffers for recv
-        sockaddr_storage addr; // for connect/recvfrom/sendto
+        iovec saved_bufs[16]{};  // original buffers for recv
+        sockaddr_storage addr{}; // for connect/recvfrom/sendto
         socklen_t addrlen = sizeof(addr);
+
+        PendingOp() = default;
     };
 
     // Encode fd+actor+op_type into user_data

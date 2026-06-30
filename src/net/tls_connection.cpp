@@ -662,7 +662,9 @@ void TlsConnection::send_raw(const StreamBuffer& data) {
     // the fd to keep the handshake synchronous and avoid the is_sending_
     // flag blocking subsequent sends during the same process_buffer cycle.
     if (!loop_) {
-        ::write(fd_, data.data(), data.size());
+        if (::write(fd_, data.data(), data.size()) < 0) {
+            // Non-event-loop path (e.g., test mode) — nothing to do on write failure.
+        }
         return;
     }
 
