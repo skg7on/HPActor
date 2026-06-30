@@ -9,6 +9,8 @@ target_include_directories(hpactor_lib
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_BINARY_DIR}
         ${CMAKE_SOURCE_DIR}/third_party/llhttp
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
 )
 
 # ---- vendored C sources (llhttp) -------------------------------------------
