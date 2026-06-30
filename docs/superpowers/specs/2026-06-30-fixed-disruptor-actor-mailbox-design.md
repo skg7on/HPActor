@@ -487,7 +487,7 @@ non-template preflight and outcome reporting:
 ```cpp
 struct FixedDeliveryPort {
     void* context;
-    DeliveryPreflightResult (*preflight)(void*, ActorId,
+    DeliveryPreflightResult (*preflight)(void*, const ActorAddress&,
                                          const FixedEnvelopeMeta&) noexcept;
     void (*record_accepted)(void*, ActorId,
                             const FixedDeliveryObservation&) noexcept;
@@ -555,8 +555,10 @@ The implementation adds precise failure reasons where existing values cannot
 represent:
 
 - fixed mailbox remote delivery unsupported;
-- unsupported dynamic user message; and
-- fixed ring full.
+- unsupported dynamic user message.
+
+A full fixed ring uses the existing `FailureReason::MailboxFull`; adding a
+backend-specific duplicate would fragment the canonical failure vocabulary.
 
 Failure-reason additions must preserve numeric compatibility and receive new
 CLI mapping tests.
