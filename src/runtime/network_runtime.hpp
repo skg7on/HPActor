@@ -48,6 +48,9 @@ namespace hpactor {
 
 class ActorDirectory;
 class MessagingRuntime;
+namespace sched {
+class IScheduler;
+}
 
 /// \brief Effective network configuration, consumed by NetworkRuntime.
 ///
@@ -135,6 +138,7 @@ class NetworkRuntime final {
     struct Dependencies {
         ActorDirectory* actors{nullptr};
         MessagingRuntime* messaging{nullptr};
+        sched::IScheduler* scheduler{nullptr};
         InboundFrameSinkPort inbound_sink{};
         NodeEventSink node_events{};
         OutboundRetryPort retry_port{};

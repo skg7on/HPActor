@@ -15,17 +15,70 @@
 #include "network_runtime.hpp"
 
 #include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/net/static_discovery.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <cassert>
+#include <chrono>
 
 namespace hpactor {
 
-// Error codes are defined in network_runtime.hpp.
-// Reserved for future Task 2–6: network_invalid_config (10501),
-// network_discovery_start_failed (10502), network_listen_failed (10503),
-// network_loop_thread_failed (10504), network_remote_spawn_failed (10505),
-// network_runtime_stopping (10506).
+// ── Adapter functions ────────────────────────────────────────────────────────
+//
+// These are bound to the ReliableAckPort and BackpressureWirePort function
+// pointers. The void* context points to the owning NetworkRuntime.
+// Neither function captures ActorSystem or Impl.
+
+namespace {
+
+[[maybe_unused]] void
+reliable_ack_adapter(void* context, const ActorAddress& target,
+                     const ActorAddress& acker, uint64_t message_id,
+                     uint8_t status, uint32_t retry_after_ms) noexcept {
+    auto* runtime = static_cast<NetworkRuntime*>(context);
+    if (!runtime)
+        return;
+
+    auto* transport = runtime->transport();
+    if (!transport)
+        return;
+
+    net::WireFrame frame;
+    bool is_nack = (status == 1); // 1 = AckStatus::Rejected
+    frame.pb_envelope.mutable_data_frame()->set_flags(
+        is_nack ? net::WireFrame::AckResponse : net::WireFrame::AckRequested);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(message_id);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(), acker);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  target);
+
+    if (is_nack) {
+        frame.pb_envelope.mutable_data_frame()->set_type_tag(
+            static_cast<uint32_t>(status));
+        std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
+                                sizeof(uint32_t));
+        frame.pb_envelope.mutable_data_frame()->set_payload(payload_str);
+    }
+
+    auto encoded = frame.encode();
+    (void)transport->try_send(target, encoded);
+}
+
+[[maybe_unused]] bool
+backpressure_wire_adapter(void* context, const ActorAddress& target,
+                          const StreamBuffer& encoded) noexcept {
+    auto* runtime = static_cast<NetworkRuntime*>(context);
+    if (!runtime)
+        return false;
+
+    auto* transport = runtime->transport();
+    if (transport) {
+        return transport->try_send(target, encoded) == TransportSendResult::Sent;
+    }
+    return false;
+}
+
+} // namespace
 
 // ── NetworkRuntime::Impl ─────────────────────────────────────────────────────
 
@@ -39,7 +92,6 @@ struct NetworkRuntime::Impl {
     std::atomic<bool> ingress_open_{false};
 
     // Owned resources
-    std::unique_ptr<net::EventLoop> event_loop;
     std::unique_ptr<net::TcpTransport> transport;
     std::shared_ptr<net::UdpRegistrar> registrar;
     std::shared_ptr<net::IServiceDiscovery> discovery;
@@ -60,38 +112,30 @@ struct NetworkRuntime::Impl {
     Impl(NetworkRuntimeConfig c, Dependencies d)
         : config(std::move(c)), deps(std::move(d)) {}
 
-    /// \brief Atomically close ingress so no new callback can begin.
     void close_ingress() {
         ingress_open_.store(false, std::memory_order_release);
     }
 
-    /// \brief Check whether ingress is still open (acquire barrier).
     [[nodiscard]] bool ingress_open() const noexcept {
         return ingress_open_.load(std::memory_order_acquire);
     }
 
-    /// \brief Increment rejected callback counter.
     void reject_callback() {
         callback_rejections.fetch_add(1, std::memory_order_relaxed);
     }
 
-    /// \brief Build the snapshot from current state.
-    /// \note Some counters are approximate — they read atomic fields
-    ///       without locking individual subsystem mutexes.
     [[nodiscard]] net::NetworkSnapshot snapshot() const noexcept {
         net::NetworkSnapshot s;
         s.state = static_cast<uint8_t>(state_.load(std::memory_order_acquire));
         s.enabled = config.enabled;
-        // Transport state — use existence as a proxy for "listening"
-        // until finer-grained counters are exposed.
         s.listening = transport != nullptr;
-        s.active_connections = 0; // TODO: wire when transport exposes counters
-        s.idle_connections = 0;   // TODO: wire when transport exposes counters
+        s.active_connections = 0;
+        s.idle_connections = 0;
         s.discovery_status = discovery ? 1U : 0U;
-        s.member_count = 0;  // TODO: wire when discovery exposes counters
-        s.pending_rpc = 0;   // TODO: wire when RPC exposes counters
-        s.pending_http = 0;  // TODO: wire when HTTP exposes counters
-        s.cache_entries = 0; // TODO: wire when cache exposes counters
+        s.member_count = 0;
+        s.pending_rpc = 0;
+        s.pending_http = 0;
+        s.cache_entries = 0;
         s.callback_rejections = callback_rejections.load(std::memory_order_relaxed);
         s.loop_thread_running = network_thread.joinable() ? 1 : 0;
         s.last_stage = last_stage.load(std::memory_order_relaxed);
@@ -106,8 +150,6 @@ NetworkRuntime::NetworkRuntime(NetworkRuntimeConfig config, Dependencies deps) n
     : impl_(std::make_unique<Impl>(std::move(config), std::move(deps))) {}
 
 NetworkRuntime::~NetworkRuntime() {
-    // Defensive stop: if owner never called stop(), abort now.
-    // This is a safety net, not the primary teardown path.
     State s = state();
     if (s != State::Stopped) {
         (void)stop(StopMode::Abort);
@@ -129,7 +171,6 @@ result<void> NetworkRuntime::start() noexcept {
 
     State current = impl_->state_.load(std::memory_order_relaxed);
     if (current == State::Running) {
-        // Idempotent: already running.
         return result<void>::make();
     }
     if (current == State::Stopped) {
@@ -137,46 +178,139 @@ result<void> NetworkRuntime::start() noexcept {
             error(errors::network_already_stopped, "NetworkAlreadyStopped"));
     }
     if (current == State::Starting) {
-        // Concurrent start — another thread is starting. Wait?
         return result<void>::make(
             error(errors::network_already_running, "NetworkAlreadyRunning"));
     }
 
     impl_->state_.store(State::Starting, std::memory_order_release);
 
-    // ── Stage 1: Construct transport and obtain its loop ─────────────────
+    // ── Stage 1: Construct transport and obtain its authoritative loop ─────
     impl_->last_stage.store(1, std::memory_order_relaxed);
-    // TODO: Move transport construction here (Task 2)
+    impl_->transport = std::make_unique<net::TcpTransport>(
+        impl_->config.endpoint, impl_->config.tls, impl_->config.pool, nullptr);
 
-    // ── Stage 2: Construct location cache, RPC, HTTP, discovery ──────────
+    // ── Stage 2: Construct location cache, discovery, RPC, HTTP ────────────
     impl_->last_stage.store(2, std::memory_order_relaxed);
-    // TODO: Move secondary construction here (Task 3)
 
-    // ── Stage 3: Install callbacks ───────────────────────────────────────
+    // Discovery: use injected backend, or auto-select from config.
+    if (impl_->config.service_discovery) {
+        impl_->discovery = impl_->config.service_discovery;
+    } else if (impl_->config.registrar.udp_port > 0) {
+        auto reg = std::make_shared<net::UdpRegistrar>(impl_->config.registrar,
+                                                       impl_->config.endpoint,
+                                                       &impl_->transport->loop());
+        impl_->discovery = reg;
+        impl_->registrar = reg;
+    } else {
+        impl_->discovery =
+            std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    }
+
+    impl_->location_cache = std::make_shared<net::ActorLocationCache>();
+
+    impl_->rpc_channel =
+        std::make_unique<RpcChannel>(impl_->transport.get(), impl_->deps.scheduler,
+                                     impl_->config.ask_max_retries);
+
+    if (impl_->config.enable_http_client) {
+        impl_->http_client =
+            std::make_unique<net::HttpClient>(&impl_->transport->loop());
+    }
+
+    // ── Stage 3: Install callbacks ────────────────────────────────────────
     impl_->last_stage.store(3, std::memory_order_relaxed);
-    // TODO: Install frame, RPC, spawn, node event callbacks (Task 2-6)
 
-    // ── Stage 4: Install remote-spawn receiver ───────────────────────────
+    // Install the inbound frame sink (Phase 4 contract) before listening.
+    if (impl_->deps.inbound_sink.sink) {
+        impl_->transport->set_actor_message_handler(
+            [sink = impl_->deps.inbound_sink](const net::WireFrame& frame) {
+                sink.sink(sink.context, frame);
+            });
+    }
+
+    // Install RPC handler.
+    if (impl_->rpc_channel) {
+        impl_->transport->set_rpc_handler(
+            [rpc = impl_->rpc_channel.get()](const hpactor::RpcResponseFrame& response) {
+                rpc->on_response(response);
+            });
+    }
+
+    // Install node event callback through the port.
+    if (impl_->deps.node_events.member_changed) {
+        impl_->discovery->on_member_change(
+            [port = impl_->deps.node_events](const net::Member& m, bool joined) {
+                port.member_changed(port.context, m, joined);
+            });
+    }
+
+    // ── Stage 4: Install remote-spawn receiver ────────────────────────────
     impl_->last_stage.store(4, std::memory_order_relaxed);
-    // TODO: Install spawn receiver through RemoteSpawnPort (Task 6)
+    if (impl_->deps.spawn_port.install_receiver && impl_->config.tcp_port > 0) {
+        auto spawn_result = impl_->deps.spawn_port.install_receiver(
+            impl_->deps.spawn_port.context, *impl_->transport);
+        if (spawn_result.is_error()) {
+            // Rollback: stop discovery, reset transport.
+            if (impl_->discovery)
+                impl_->discovery->stop();
+            impl_->transport.reset();
+            impl_->state_.store(State::Failed, std::memory_order_release);
+            return result<void>::make(spawn_result.error());
+        }
+    }
 
-    // ── Stage 5: Register maintenance timers ─────────────────────────────
+    // ── Stage 5: Register maintenance timers ──────────────────────────────
     impl_->last_stage.store(5, std::memory_order_relaxed);
-    // TODO: Register cache purge and retry timers (Task 4)
 
-    // ── Stage 6: Start discovery ─────────────────────────────────────────
+    // Cache purge timer.
+    impl_->cache_purge_timer = impl_->transport->loop().run_every(
+        [this]() {
+            if (!impl_->ingress_open())
+                return;
+            if (impl_->location_cache)
+                impl_->location_cache->purge_expired();
+        },
+        static_cast<int>(impl_->config.cache_purge_ms));
+
+    // Reliable-retry poll timer.
+    if (impl_->deps.retry_port.process_due) {
+        impl_->retry_timer = impl_->transport->loop().run_every(
+            [this]() {
+                if (!impl_->ingress_open()) {
+                    impl_->reject_callback();
+                    return;
+                }
+                uint64_t now_ns = static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count());
+                impl_->deps.retry_port.process_due(impl_->deps.retry_port.context,
+                                                   now_ns);
+            },
+            static_cast<int>(impl_->config.retry_poll_ms));
+    }
+
+    // ── Stage 6: Start discovery ──────────────────────────────────────────
     impl_->last_stage.store(6, std::memory_order_relaxed);
-    // TODO: Start discovery (Task 3)
+    impl_->discovery->start();
 
-    // ── Stage 7: Start listening ─────────────────────────────────────────
+    // ── Stage 7: Start listening ──────────────────────────────────────────
     impl_->last_stage.store(7, std::memory_order_relaxed);
-    // TODO: Start listening (Task 2)
+    if (impl_->config.tcp_port > 0) {
+        impl_->transport->listen(impl_->config.tcp_port);
+    }
 
-    // ── Stage 8: Launch loop thread ──────────────────────────────────────
+    // ── Stage 8: Launch loop thread ───────────────────────────────────────
     impl_->last_stage.store(8, std::memory_order_relaxed);
-    // TODO: Launch thread with progress barrier (Task 2)
+    impl_->network_thread = std::thread([this]() {
+        auto& loop = impl_->transport->loop();
+        while (impl_->state_.load(std::memory_order_acquire) != State::Stopping &&
+               loop.wait(100) >= 0) {
+            loop.process_completions();
+        }
+    });
 
-    // ── Stage 9: Publish Running ─────────────────────────────────────────
+    // ── Stage 9: Publish Running ──────────────────────────────────────────
     impl_->last_stage.store(9, std::memory_order_relaxed);
     impl_->ingress_open_.store(true, std::memory_order_release);
     impl_->state_.store(State::Running, std::memory_order_release);
@@ -186,12 +320,12 @@ result<void> NetworkRuntime::start() noexcept {
 }
 
 result<void> NetworkRuntime::stop(StopMode mode) noexcept {
-    (void)mode; // Future: differentiate Drain vs Abort behavior.
+    (void)mode;
+
     std::lock_guard<std::mutex> lock(impl_->lifecycle_mutex);
 
     State current = impl_->state_.load(std::memory_order_relaxed);
 
-    // Already stopped — idempotent.
     if (current == State::Stopped) {
         return result<void>::make();
     }
@@ -199,27 +333,30 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
     // Detect self-stop from the network thread.
     if (current == State::Running && impl_->network_thread.joinable() &&
         impl_->network_thread.get_id() == std::this_thread::get_id()) {
-        // Close ingress but defer thread join to owner.
         impl_->close_ingress();
         impl_->state_.store(State::Stopping, std::memory_order_release);
         return result<void>::make(
             error(errors::network_stop_deferred, "StopDeferred"));
     }
 
-    // Transition to Stopping.
     impl_->state_.store(State::Stopping, std::memory_order_release);
     impl_->close_ingress();
 
     // ── Teardown in reverse startup order ────────────────────────────────
 
-    // Stop event loop (signals the thread to exit).
-    if (impl_->event_loop) {
-        impl_->event_loop->stop();
+    // Stop the event loop to signal the thread to exit.
+    if (impl_->transport) {
+        impl_->transport->loop().stop();
     }
 
     // Join the network thread.
     if (impl_->network_thread.joinable()) {
         impl_->network_thread.join();
+    }
+
+    // Remove spawn receiver protocol registration.
+    if (impl_->deps.spawn_port.remove_receiver) {
+        impl_->deps.spawn_port.remove_receiver(impl_->deps.spawn_port.context);
     }
 
     // Stop listening.
@@ -232,8 +369,11 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
         impl_->discovery->stop();
     }
 
-    // Clear handlers (safe now — thread is joined).
-    // TODO: Clear transport/RPC/HTTP handlers after resource moves (Task 2-5)
+    // Clear transport handlers (safe after thread join).
+    if (impl_->transport) {
+        impl_->transport->set_actor_message_handler(nullptr);
+        impl_->transport->set_rpc_handler(nullptr);
+    }
 
     // Reset owned resources.
     impl_->rpc_channel.reset();
@@ -242,7 +382,6 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
     impl_->registrar.reset();
     impl_->discovery.reset();
     impl_->transport.reset();
-    impl_->event_loop.reset();
 
     impl_->state_.store(State::Stopped, std::memory_order_release);
 
@@ -252,9 +391,9 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
 // ── Compatibility Accessors ──────────────────────────────────────────────────
 
 net::EventLoop* NetworkRuntime::event_loop() noexcept {
-    if (!impl_->config.enabled)
+    if (!impl_->config.enabled || !impl_->transport)
         return nullptr;
-    return impl_->event_loop.get();
+    return &impl_->transport->loop();
 }
 
 net::TcpTransport* NetworkRuntime::transport() noexcept {
