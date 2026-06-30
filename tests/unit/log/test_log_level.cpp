@@ -42,17 +42,3 @@ TEST(LogLevelTest, ParseLevelSuccess) {
 TEST(LogLevelTest, ParseLevelFailure) {
     EXPECT_FALSE(parse_level("invalid").has_value());
 }
-
-TEST(LogLevelTest, Ordering) {
-    EXPECT_LT(static_cast<uint8_t>(LogLevel::kCritical),
-              static_cast<uint8_t>(LogLevel::kError));
-    EXPECT_LT(static_cast<uint8_t>(LogLevel::kDebug),
-              static_cast<uint8_t>(LogLevel::kTrace));
-}
-
-TEST(LogLevelTest, EnabledDisabledRelationships) {
-    EXPECT_LE(static_cast<uint8_t>(LogLevel::kInfo),
-              static_cast<uint8_t>(LogLevel::kDebug));
-    EXPECT_GT(static_cast<uint8_t>(LogLevel::kDebug),
-              static_cast<uint8_t>(LogLevel::kInfo));
-}

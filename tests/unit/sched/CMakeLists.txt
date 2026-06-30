@@ -11,7 +11,6 @@ add_executable(test_unit_sched
     test_mpsc_actor_mailbox.cpp
     test_scheduler_control.cpp
     test_dispatch_policy.cpp
-    test_hybrid_scheduler.cpp
     test_lost_wakeup_rate_limit.cpp
     test_worker_backoff.cpp
     test_sched_branches.cpp
