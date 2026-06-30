@@ -57,9 +57,9 @@ exception control flow.
 
 **Create:**
 
-- `src/runtime/network_runtime.hpp`
+- `include/hpactor/runtime/network_runtime.hpp`
 - `src/runtime/network_runtime.cpp`
-- `src/runtime/network_runtime_ports.hpp`
+- `include/hpactor/runtime/network_runtime_ports.hpp`
 - `include/hpactor/net/network_snapshot.hpp`
 - `tests/unit/runtime/test_network_runtime.cpp`
 - `tests/integration/net/test_network_runtime_lifecycle.cpp`

@@ -232,7 +232,7 @@ without becoming the global coordinator.
 
 ### 5.1 Component boundary
 
-Private component header:
+Public component header (`include/hpactor/runtime/network_runtime.hpp`):
 
 ```cpp
 class NetworkRuntime final {
@@ -268,9 +268,9 @@ public:
 };
 ```
 
-The component header stays under `src/runtime/`. Public compatibility methods
-forward through `ActorSystem::Impl`; applications do not construct or depend
-on `NetworkRuntime`.
+The component header lives under `include/hpactor/runtime/`. Public compatibility
+methods forward through `ActorSystem::Impl`; applications do not construct or
+depend on `NetworkRuntime` directly.
 
 ### 5.2 Effective configuration
 
