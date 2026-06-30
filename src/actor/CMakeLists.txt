@@ -20,6 +20,7 @@ target_sources(hpactor_lib PRIVATE
     spawn.cpp
     spawn_receiver.cpp
     stream_registry.cpp
+    stream_runtime.cpp
     durable/file_state_store.cpp
     durable/in_memory_state_store.cpp
     durable/passivation_manager.cpp
