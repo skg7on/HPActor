@@ -1,6 +1,7 @@
 add_executable(test_unit_runtime
     test_network_runtime_lifecycle.cpp
     test_runtime_lifecycle_boundaries.cpp
+    test_runtime_blueprint.cpp
 )
 
 target_include_directories(test_unit_runtime PRIVATE
