@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:26:54</td>
+            <td class="headerValue">2026-06-30 03:49:15</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,15 +94,15 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        2049 : void StreamRegistry::register_sender(uint64_t stream_id, ActorId actor_id) {</span></span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">        2049 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">        2049 :     senders_[stream_id] = actor_id;</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">        2049 : }</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        2059 : void StreamRegistry::register_sender(uint64_t stream_id, ActorId actor_id) {</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">        2059 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">        2059 :     senders_[stream_id] = actor_id;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">        2059 : }</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        2049 : void StreamRegistry::register_receiver(uint64_t stream_id, ActorId actor_id) {</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        2049 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        2049 :     receivers_[stream_id] = actor_id;</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        2049 : }</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        2059 : void StreamRegistry::register_receiver(uint64_t stream_id, ActorId actor_id) {</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        2059 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        2059 :     receivers_[stream_id] = actor_id;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        2059 : }</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           1 : std::optional&lt;ActorId&gt; StreamRegistry::find_sender(uint64_t stream_id) const {</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>

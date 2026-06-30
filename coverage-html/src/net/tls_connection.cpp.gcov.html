@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:26:54</td>
+            <td class="headerValue">2026-06-30 03:49:15</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">92.5&nbsp;%</td>
@@ -743,65 +743,67 @@
 <span id="L662"><span class="lineNum">     662</span>                 :             :     // the fd to keep the handshake synchronous and avoid the is_sending_</span>
 <span id="L663"><span class="lineNum">     663</span>                 :             :     // flag blocking subsequent sends during the same process_buffer cycle.</span>
 <span id="L664"><span class="lineNum">     664</span>         [<span class="tlaGBC" title="Branch 0 was taken 123 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         130 :     if (!loop_) {</span></span>
-<span id="L665"><span class="lineNum">     665</span>                 :<span class="tlaGNC">         123 :         ::write(fd_, data.data(), data.size());</span></span>
-<span id="L666"><span class="lineNum">     666</span>                 :<span class="tlaGNC">         123 :         return;</span></span>
-<span id="L667"><span class="lineNum">     667</span>                 :             :     }</span>
-<span id="L668"><span class="lineNum">     668</span>                 :             : </span>
-<span id="L669"><span class="lineNum">     669</span>                 :             :     // Append data to write buffer</span>
-<span id="L670"><span class="lineNum">     670</span>                 :<span class="tlaGNC">           7 :     write_buffer_.append(data.data(), data.size());</span></span>
-<span id="L671"><span class="lineNum">     671</span>                 :             : </span>
-<span id="L672"><span class="lineNum">     672</span>                 :             :     // If already sending, wait for completion</span>
-<span id="L673"><span class="lineNum">     673</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           7 :     if (is_sending_)</span></span>
-<span id="L674"><span class="lineNum">     674</span>                 :<span class="tlaGNC">           3 :         return;</span></span>
-<span id="L675"><span class="lineNum">     675</span>                 :             : </span>
-<span id="L676"><span class="lineNum">     676</span>                 :<span class="tlaGNC">           4 :     flush_write_buffer();</span></span>
-<span id="L677"><span class="lineNum">     677</span>                 :             : }</span>
-<span id="L678"><span class="lineNum">     678</span>                 :             : </span>
-<span id="L679"><span class="lineNum">     679</span>                 :<span class="tlaGNC">           4 : void TlsConnection::flush_write_buffer() {</span></span>
-<span id="L680"><span class="lineNum">     680</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           4 :     if (fd_ &lt; 0 || loop_ == nullptr || write_buffer_.empty()) {</span></span>
+<span id="L665"><span class="lineNum">     665</span>                 :<span class="tlaGNC">         123 :         if (::write(fd_, data.data(), data.size()) &lt; 0) {</span></span>
+<span id="L666"><span class="lineNum">     666</span>                 :             :             // Non-event-loop path (e.g., test mode) — nothing to do on write failure.</span>
+<span id="L667"><span class="lineNum">     667</span>                 :             :         }</span>
+<span id="L668"><span class="lineNum">     668</span>                 :<span class="tlaGNC">         123 :         return;</span></span>
+<span id="L669"><span class="lineNum">     669</span>                 :             :     }</span>
+<span id="L670"><span class="lineNum">     670</span>                 :             : </span>
+<span id="L671"><span class="lineNum">     671</span>                 :             :     // Append data to write buffer</span>
+<span id="L672"><span class="lineNum">     672</span>                 :<span class="tlaGNC">           7 :     write_buffer_.append(data.data(), data.size());</span></span>
+<span id="L673"><span class="lineNum">     673</span>                 :             : </span>
+<span id="L674"><span class="lineNum">     674</span>                 :             :     // If already sending, wait for completion</span>
+<span id="L675"><span class="lineNum">     675</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           7 :     if (is_sending_)</span></span>
+<span id="L676"><span class="lineNum">     676</span>                 :<span class="tlaGNC">           3 :         return;</span></span>
+<span id="L677"><span class="lineNum">     677</span>                 :             : </span>
+<span id="L678"><span class="lineNum">     678</span>                 :<span class="tlaGNC">           4 :     flush_write_buffer();</span></span>
+<span id="L679"><span class="lineNum">     679</span>                 :             : }</span>
+<span id="L680"><span class="lineNum">     680</span>                 :             : </span>
+<span id="L681"><span class="lineNum">     681</span>                 :<span class="tlaGNC">           4 : void TlsConnection::flush_write_buffer() {</span></span>
+<span id="L682"><span class="lineNum">     682</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           4 :     if (fd_ &lt; 0 || loop_ == nullptr || write_buffer_.empty()) {</span></span>
 <span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaGBC" title="Branch 7 was taken 4 times"> + </span>]
-<span id="L681"><span class="lineNum">     681</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L682"><span class="lineNum">     682</span>                 :             :     }</span>
-<span id="L683"><span class="lineNum">     683</span>                 :             : </span>
-<span id="L684"><span class="lineNum">     684</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     is_sending_ = true;</span></span>
+<span id="L683"><span class="lineNum">     683</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L684"><span class="lineNum">     684</span>                 :             :     }</span>
 <span id="L685"><span class="lineNum">     685</span>                 :             : </span>
-<span id="L686"><span class="lineNum">     686</span>                 :             :     struct iovec iov;</span>
-<span id="L687"><span class="lineNum">     687</span>                 :<span class="tlaGNC">           4 :     iov.iov_base = write_buffer_.data();</span></span>
-<span id="L688"><span class="lineNum">     688</span>                 :<span class="tlaGNC">           4 :     iov.iov_len = write_buffer_.size();</span></span>
-<span id="L689"><span class="lineNum">     689</span>                 :             : </span>
-<span id="L690"><span class="lineNum">     690</span>                 :             :     // Use async_send - completion will be delivered via loop's completion</span>
-<span id="L691"><span class="lineNum">     691</span>                 :             :     // callback</span>
-<span id="L692"><span class="lineNum">     692</span>                 :<span class="tlaGNC">           4 :     loop_-&gt;backend()-&gt;async_send(fd_, &amp;iov, 1, ActorId(0),</span></span>
-<span id="L693"><span class="lineNum">     693</span>                 :             :                                  static_cast&lt;uint32_t&gt;(OpType::Send));</span>
-<span id="L694"><span class="lineNum">     694</span>                 :             : }</span>
-<span id="L695"><span class="lineNum">     695</span>                 :             : </span>
-<span id="L696"><span class="lineNum">     696</span>                 :<span class="tlaGNC">           8 : void TlsConnection::handle_send_completion(int result) {</span></span>
-<span id="L697"><span class="lineNum">     697</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :     if (send_completion_handler_) {</span></span>
-<span id="L698"><span class="lineNum">     698</span>                 :<span class="tlaGNC">           4 :         send_completion_handler_(result);</span></span>
-<span id="L699"><span class="lineNum">     699</span>                 :             :     }</span>
-<span id="L700"><span class="lineNum">     700</span>                 :<span class="tlaGNC">           8 :     is_sending_ = false;</span></span>
-<span id="L701"><span class="lineNum">     701</span>                 :             : </span>
-<span id="L702"><span class="lineNum">     702</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           8 :     if (result &lt; 0) {</span></span>
-<span id="L703"><span class="lineNum">     703</span>                 :             :         // Send error - close connection</span>
-<span id="L704"><span class="lineNum">     704</span>                 :<span class="tlaGNC">           3 :         set_handshake_state(TlsHandshakeState::Error);</span></span>
-<span id="L705"><span class="lineNum">     705</span>                 :<span class="tlaGNC">           3 :         return;</span></span>
-<span id="L706"><span class="lineNum">     706</span>                 :             :     }</span>
-<span id="L707"><span class="lineNum">     707</span>                 :             : </span>
-<span id="L708"><span class="lineNum">     708</span>                 :             :     // Remove sent StreamBuffer from write buffer</span>
-<span id="L709"><span class="lineNum">     709</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :     if (static_cast&lt;size_t&gt;(result) &gt;= write_buffer_.size()) {</span></span>
-<span id="L710"><span class="lineNum">     710</span>                 :<span class="tlaGNC">           5 :         write_buffer_.clear();</span></span>
-<span id="L711"><span class="lineNum">     711</span>                 :             :     } else {</span>
-<span id="L712"><span class="lineNum">     712</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         write_buffer_.consume(static_cast&lt;size_t&gt;(result));</span></span>
-<span id="L713"><span class="lineNum">     713</span>                 :             :     }</span>
-<span id="L714"><span class="lineNum">     714</span>                 :             : </span>
-<span id="L715"><span class="lineNum">     715</span>                 :             :     // If more data to send, continue flushing</span>
-<span id="L716"><span class="lineNum">     716</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           5 :     if (!write_buffer_.empty()) {</span></span>
-<span id="L717"><span class="lineNum">     717</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         flush_write_buffer();</span></span>
-<span id="L718"><span class="lineNum">     718</span>                 :             :     }</span>
-<span id="L719"><span class="lineNum">     719</span>                 :             : }</span>
-<span id="L720"><span class="lineNum">     720</span>                 :             : </span>
-<span id="L721"><span class="lineNum">     721</span>                 :             : } // namespace net</span>
-<span id="L722"><span class="lineNum">     722</span>                 :             : } // namespace hpactor</span>
+<span id="L686"><span class="lineNum">     686</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     is_sending_ = true;</span></span>
+<span id="L687"><span class="lineNum">     687</span>                 :             : </span>
+<span id="L688"><span class="lineNum">     688</span>                 :             :     struct iovec iov;</span>
+<span id="L689"><span class="lineNum">     689</span>                 :<span class="tlaGNC">           4 :     iov.iov_base = write_buffer_.data();</span></span>
+<span id="L690"><span class="lineNum">     690</span>                 :<span class="tlaGNC">           4 :     iov.iov_len = write_buffer_.size();</span></span>
+<span id="L691"><span class="lineNum">     691</span>                 :             : </span>
+<span id="L692"><span class="lineNum">     692</span>                 :             :     // Use async_send - completion will be delivered via loop's completion</span>
+<span id="L693"><span class="lineNum">     693</span>                 :             :     // callback</span>
+<span id="L694"><span class="lineNum">     694</span>                 :<span class="tlaGNC">           4 :     loop_-&gt;backend()-&gt;async_send(fd_, &amp;iov, 1, ActorId(0),</span></span>
+<span id="L695"><span class="lineNum">     695</span>                 :             :                                  static_cast&lt;uint32_t&gt;(OpType::Send));</span>
+<span id="L696"><span class="lineNum">     696</span>                 :             : }</span>
+<span id="L697"><span class="lineNum">     697</span>                 :             : </span>
+<span id="L698"><span class="lineNum">     698</span>                 :<span class="tlaGNC">           8 : void TlsConnection::handle_send_completion(int result) {</span></span>
+<span id="L699"><span class="lineNum">     699</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :     if (send_completion_handler_) {</span></span>
+<span id="L700"><span class="lineNum">     700</span>                 :<span class="tlaGNC">           4 :         send_completion_handler_(result);</span></span>
+<span id="L701"><span class="lineNum">     701</span>                 :             :     }</span>
+<span id="L702"><span class="lineNum">     702</span>                 :<span class="tlaGNC">           8 :     is_sending_ = false;</span></span>
+<span id="L703"><span class="lineNum">     703</span>                 :             : </span>
+<span id="L704"><span class="lineNum">     704</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           8 :     if (result &lt; 0) {</span></span>
+<span id="L705"><span class="lineNum">     705</span>                 :             :         // Send error - close connection</span>
+<span id="L706"><span class="lineNum">     706</span>                 :<span class="tlaGNC">           3 :         set_handshake_state(TlsHandshakeState::Error);</span></span>
+<span id="L707"><span class="lineNum">     707</span>                 :<span class="tlaGNC">           3 :         return;</span></span>
+<span id="L708"><span class="lineNum">     708</span>                 :             :     }</span>
+<span id="L709"><span class="lineNum">     709</span>                 :             : </span>
+<span id="L710"><span class="lineNum">     710</span>                 :             :     // Remove sent StreamBuffer from write buffer</span>
+<span id="L711"><span class="lineNum">     711</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :     if (static_cast&lt;size_t&gt;(result) &gt;= write_buffer_.size()) {</span></span>
+<span id="L712"><span class="lineNum">     712</span>                 :<span class="tlaGNC">           5 :         write_buffer_.clear();</span></span>
+<span id="L713"><span class="lineNum">     713</span>                 :             :     } else {</span>
+<span id="L714"><span class="lineNum">     714</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         write_buffer_.consume(static_cast&lt;size_t&gt;(result));</span></span>
+<span id="L715"><span class="lineNum">     715</span>                 :             :     }</span>
+<span id="L716"><span class="lineNum">     716</span>                 :             : </span>
+<span id="L717"><span class="lineNum">     717</span>                 :             :     // If more data to send, continue flushing</span>
+<span id="L718"><span class="lineNum">     718</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           5 :     if (!write_buffer_.empty()) {</span></span>
+<span id="L719"><span class="lineNum">     719</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         flush_write_buffer();</span></span>
+<span id="L720"><span class="lineNum">     720</span>                 :             :     }</span>
+<span id="L721"><span class="lineNum">     721</span>                 :             : }</span>
+<span id="L722"><span class="lineNum">     722</span>                 :             : </span>
+<span id="L723"><span class="lineNum">     723</span>                 :             : } // namespace net</span>
+<span id="L724"><span class="lineNum">     724</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

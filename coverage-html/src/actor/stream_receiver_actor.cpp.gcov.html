@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">6.5&nbsp;%</td>
             <td class="headerCovTableEntry">77</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">5</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:26:54</td>
+            <td class="headerValue">2026-06-30 03:49:15</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">12.5&nbsp;%</td>
             <td class="headerCovTableEntry">8</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -97,16 +97,16 @@
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : namespace hpactor {</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaUNC tlaBgUNC">           0 : StreamReceiverActor::StreamReceiverActor(ActorContext* ctx, ActorSystem&amp; system,</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">          10 : StreamReceiverActor::StreamReceiverActor(ActorContext* ctx, ActorSystem&amp; system,</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             :                                          ActorId target_actor_id, uint64_t stream_id,</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             :                                          ActorAddress sender_addr,</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :                                          uint32_t initial_window_bytes,</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :                                          TraceContext trace_ctx)</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 :     : EventBasedActor(ctx, system), target_actor_id_(target_actor_id),</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC">           0 :       stream_id_(stream_id), sender_addr_(std::move(sender_addr)),</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC">           0 :       initial_window_bytes_(initial_window_bytes), trace_ctx_(trace_ctx) {}</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          10 :                                          TraceContext trace_ctx)</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          10 :     : EventBasedActor(ctx, system), target_actor_id_(target_actor_id),</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          20 :       stream_id_(stream_id), sender_addr_(std::move(sender_addr)),</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          10 :       initial_window_bytes_(initial_window_bytes), trace_ctx_(trace_ctx) {}</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC">           0 : Behavior StreamReceiverActor::make_behavior() {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC tlaBgUNC">           0 : Behavior StreamReceiverActor::make_behavior() {</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC">           0 :     return Behavior{[this](TypedMessage&amp; msg) {</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaUNC">           0 :         auto tag = msg.type_id();</span></span>
 <span id="L34"><span class="lineNum">      34</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (tag == stream::StreamDataTag) {</span></span>

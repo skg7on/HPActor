@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:26:54</td>
+            <td class="headerValue">2026-06-30 03:49:15</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -310,21 +310,21 @@
 <span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">         454 :         }</span></span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
 <span id="L234"><span class="lineNum">     234</span>                 :             :         /// \brief Try to push one item. Returns \c false if the ring is full.</span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">       11178 :         bool try_push(const WorkItem&amp; item, uint8_t priority) noexcept {</span></span>
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">       22356 :             uint64_t pos = tail.load(std::memory_order_relaxed);</span></span>
+<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">       11151 :         bool try_push(const WorkItem&amp; item, uint8_t priority) noexcept {</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">       22302 :             uint64_t pos = tail.load(std::memory_order_relaxed);</span></span>
 <span id="L237"><span class="lineNum">     237</span>                 :             :             for (;;) {</span>
-<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">       11178 :                 Slot&amp; slot = slots[pos &amp; kMask];</span></span>
-<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">       11178 :                 uint64_t seq = slot.seq.load(std::memory_order_acquire);</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">       11178 :                 int64_t diff =</span></span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">       11178 :                     static_cast&lt;int64_t&gt;(seq) - static_cast&lt;int64_t&gt;(pos);</span></span>
-<span id="L242"><span class="lineNum">     242</span>         [<span class="tlaGBC" title="Branch 0 was taken 11178 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       11178 :                 if (diff == 0) {</span></span>
-<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaGBC" title="Branch 0 was taken 11178 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       22356 :                     if (tail.compare_exchange_weak(pos, pos + 1,</span></span>
+<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">       11151 :                 Slot&amp; slot = slots[pos &amp; kMask];</span></span>
+<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">       11151 :                 uint64_t seq = slot.seq.load(std::memory_order_acquire);</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">       11151 :                 int64_t diff =</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">       11151 :                     static_cast&lt;int64_t&gt;(seq) - static_cast&lt;int64_t&gt;(pos);</span></span>
+<span id="L242"><span class="lineNum">     242</span>         [<span class="tlaGBC" title="Branch 0 was taken 11151 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       11151 :                 if (diff == 0) {</span></span>
+<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaGBC" title="Branch 0 was taken 11151 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       22302 :                     if (tail.compare_exchange_weak(pos, pos + 1,</span></span>
 <span id="L244"><span class="lineNum">     244</span>                 :             :                                                    std::memory_order_acq_rel,</span>
 <span id="L245"><span class="lineNum">     245</span>                 :             :                                                    std::memory_order_relaxed)) {</span>
-<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC">       11178 :                         slot.item = item;</span></span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">       11178 :                         slot.priority = priority;</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">       11178 :                         slot.seq.store(pos + 1, std::memory_order_release);</span></span>
-<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">       11178 :                         return true;</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC">       11151 :                         slot.item = item;</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">       11151 :                         slot.priority = priority;</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">       11151 :                         slot.seq.store(pos + 1, std::memory_order_release);</span></span>
+<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">       11151 :                         return true;</span></span>
 <span id="L250"><span class="lineNum">     250</span>                 :             :                     }</span>
 <span id="L251"><span class="lineNum">     251</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 } else if (diff &lt; 0) {</span></span>
 <span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaUNC">           0 :                     return false; // full</span></span>
@@ -335,15 +335,15 @@
 <span id="L257"><span class="lineNum">     257</span>                 :             :         }</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             : </span>
 <span id="L259"><span class="lineNum">     259</span>                 :             :         /// \brief Pop one item (owner only). Returns \c false if empty.</span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC tlaBgGNC">       30934 :         bool try_pop(WorkItem&amp; out, uint8_t&amp; priority) noexcept {</span></span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">       30934 :             Slot&amp; slot = slots[head &amp; kMask];</span></span>
-<span id="L262"><span class="lineNum">     262</span>         [<span class="tlaGBC" title="Branch 0 was taken 19758 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11176 times"> + </span>]:<span class="tlaGNC">       61868 :             if (slot.seq.load(std::memory_order_acquire) != head + 1)</span></span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">       19758 :                 return false;</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">       11176 :             out = slot.item;</span></span>
-<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">       11176 :             priority = slot.priority;</span></span>
-<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">       11176 :             slot.seq.store(head + kCapacity, std::memory_order_release);</span></span>
-<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">       11176 :             ++head;</span></span>
-<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC">       11176 :             return true;</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC tlaBgGNC">       30204 :         bool try_pop(WorkItem&amp; out, uint8_t&amp; priority) noexcept {</span></span>
+<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">       30204 :             Slot&amp; slot = slots[head &amp; kMask];</span></span>
+<span id="L262"><span class="lineNum">     262</span>         [<span class="tlaGBC" title="Branch 0 was taken 19055 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11149 times"> + </span>]:<span class="tlaGNC">       60408 :             if (slot.seq.load(std::memory_order_acquire) != head + 1)</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">       19055 :                 return false;</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">       11149 :             out = slot.item;</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">       11149 :             priority = slot.priority;</span></span>
+<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">       11149 :             slot.seq.store(head + kCapacity, std::memory_order_release);</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">       11149 :             ++head;</span></span>
+<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC">       11149 :             return true;</span></span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :         }</span>
 <span id="L270"><span class="lineNum">     270</span>                 :             :     };</span>
 <span id="L271"><span class="lineNum">     271</span>                 :             : </span>
@@ -378,9 +378,9 @@
 <span id="L300"><span class="lineNum">     300</span>                 :             :         mutable std::mutex edf_push_mutex_;</span>
 <span id="L301"><span class="lineNum">     301</span>                 :             : </span>
 <span id="L302"><span class="lineNum">     302</span>                 :             :         /// Wake a worker (lock-free futex on Linux, CV on other platforms).</span>
-<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">       12003 :         void wake_if_blocking() {</span></span>
+<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">       11976 :         void wake_if_blocking() {</span></span>
 <span id="L304"><span class="lineNum">     304</span>                 :             : #ifdef __linux__</span>
-<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">       12003 :             park.wake();</span></span>
+<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">       11976 :             park.wake();</span></span>
 <span id="L306"><span class="lineNum">     306</span>                 :             : #else</span>
 <span id="L307"><span class="lineNum">     307</span>                 :             :             if (is_blocking_.load(std::memory_order_acquire)) {</span>
 <span id="L308"><span class="lineNum">     308</span>                 :             :                 std::lock_guard&lt;std::mutex&gt; lk(sleep_mutex_);</span>
@@ -388,12 +388,12 @@
 <span id="L310"><span class="lineNum">     310</span>                 :             :                 sleep_cv_.notify_one();</span>
 <span id="L311"><span class="lineNum">     311</span>                 :             :             }</span>
 <span id="L312"><span class="lineNum">     312</span>                 :             : #endif</span>
-<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">       12003 :         }</span></span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">       11976 :         }</span></span>
 <span id="L314"><span class="lineNum">     314</span>                 :             :     };</span>
 <span id="L315"><span class="lineNum">     315</span>                 :             : </span>
 <span id="L316"><span class="lineNum">     316</span>                 :             :     /// \return Number of worker threads.</span>
-<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">        1953 :     uint32_t worker_count() const noexcept {</span></span>
-<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">        1953 :         return num_workers_;</span></span>
+<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">        1973 :     uint32_t worker_count() const noexcept {</span></span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">        1973 :         return num_workers_;</span></span>
 <span id="L319"><span class="lineNum">     319</span>                 :             :     }</span>
 <span id="L320"><span class="lineNum">     320</span>                 :             : </span>
 <span id="L321"><span class="lineNum">     321</span>                 :             :     /// \return Reference to the A2WS victim selector (for \c WorkerThread</span>
@@ -404,8 +404,8 @@
 <span id="L326"><span class="lineNum">     326</span>                 :             : </span>
 <span id="L327"><span class="lineNum">     327</span>                 :             :     /// \return Reference to the worker state vector (for \c WorkerThread</span>
 <span id="L328"><span class="lineNum">     328</span>                 :             :     ///         use).</span>
-<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">        2624 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
-<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">        2624 :         return workers_;</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">        2691 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">        2691 :         return workers_;</span></span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     }</span>
 <span id="L332"><span class="lineNum">     332</span>                 :             : </span>
 <span id="L333"><span class="lineNum">     333</span>                 :             :   private:</span>

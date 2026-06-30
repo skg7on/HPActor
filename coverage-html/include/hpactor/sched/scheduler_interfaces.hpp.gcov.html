@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:26:54</td>
+            <td class="headerValue">2026-06-30 03:49:15</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">69.2&nbsp;%</td>
@@ -148,7 +148,7 @@
 <span id="L70"><span class="lineNum">      70</span>                 :             : /// \note Thread safety: safe from any thread.</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : class IActorReadyNotifier {</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :   public:</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         855 :     virtual ~IActorReadyNotifier() = default;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         865 :     virtual ~IActorReadyNotifier() = default;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Notify that an actor has work and should be scheduled.</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     ///</span>
@@ -206,7 +206,7 @@
 <span id="L128"><span class="lineNum">     128</span>                 :             : ///       block.</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : class ITimerService {</span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :   public:</span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">         855 :     virtual ~ITimerService() = default;</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">         865 :     virtual ~ITimerService() = default;</span></span>
 <span id="L132"><span class="lineNum">     132</span>                 :             : </span>
 <span id="L133"><span class="lineNum">     133</span>                 :             :     /// \brief Schedule a one-shot timer.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
@@ -230,7 +230,7 @@
 <span id="L152"><span class="lineNum">     152</span>                 :             : ///       execution context (the worker thread running the actor).</span>
 <span id="L153"><span class="lineNum">     153</span>                 :             : class IActorYieldScheduler {</span>
 <span id="L154"><span class="lineNum">     154</span>                 :             :   public:</span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">         855 :     virtual ~IActorYieldScheduler() = default;</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">         865 :     virtual ~IActorYieldScheduler() = default;</span></span>
 <span id="L156"><span class="lineNum">     156</span>                 :             : </span>
 <span id="L157"><span class="lineNum">     157</span>                 :             :     /// \brief Voluntarily yield the current actor, re-enqueuing it at the</span>
 <span id="L158"><span class="lineNum">     158</span>                 :             :     ///        given priority.</span>

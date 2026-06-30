@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:26:54</td>
+            <td class="headerValue">2026-06-30 03:49:15</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -97,27 +97,27 @@
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : namespace hpactor {</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">         771 : LocalDeliveryEngine::LocalDeliveryEngine(ActorDirectory&amp; directory)</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         771 :     : directory_(directory) {}</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">         781 : LocalDeliveryEngine::LocalDeliveryEngine(ActorDirectory&amp; directory)</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         781 :     : directory_(directory) {}</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : mailbox::EnqueueResult</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          14 : LocalDeliveryEngine::try_deliver(ActorId target, std::unique_ptr&lt;TypedMessage&gt; msg) {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          14 :     auto mailbox = directory_.find_mailbox(target);</span></span>
-<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 13 times"> + </span>]:<span class="tlaGNC">          14 :     if (!mailbox) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          36 : LocalDeliveryEngine::try_deliver(ActorId target, std::unique_ptr&lt;TypedMessage&gt; msg) {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          36 :     auto mailbox = directory_.find_mailbox(target);</span></span>
+<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 35 times"> + </span>]:<span class="tlaGNC">          36 :     if (!mailbox) {</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :         return mailbox::EnqueueResult{</span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :             .code = mailbox::EnqueueResultCode::ActorNotFound, .target = target};</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          13 :     mailbox::MailboxEnvelopeMeta meta;</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          13 :     meta.sender = msg-&gt;sender_address();</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          13 :     meta.type_tag = msg-&gt;type_id();</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          13 :     meta.priority = 0;</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          13 :     meta.deadline_ns = INT64_MAX;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          35 :     mailbox::MailboxEnvelopeMeta meta;</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          35 :     meta.sender = msg-&gt;sender_address();</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          35 :     meta.type_tag = msg-&gt;type_id();</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          35 :     meta.priority = 0;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          35 :     meta.deadline_ns = INT64_MAX;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     auto* mbox =</span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">          13 :         static_cast&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;*&gt;(mailbox.get());</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          13 :     auto result = mbox-&gt;try_push(std::move(*msg), meta);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">          13 :     result.target = target;</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          13 :     return result;</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">          14 : }</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">          35 :         static_cast&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;*&gt;(mailbox.get());</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          35 :     auto result = mbox-&gt;try_push(std::move(*msg), meta);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">          35 :     result.target = target;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          35 :     return result;</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">          36 : }</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : } // namespace hpactor</span>
         </pre>
