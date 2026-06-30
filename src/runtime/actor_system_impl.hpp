@@ -182,6 +182,11 @@ class ActorSystem::Impl final {
     // State groups in destruction order (last declared = first destroyed).
     // network_ is stopped explicitly before group destruction.
     CoreRuntimeState core;
+    /// \brief Phase 7: sole observability resource owner (metrics, logging,
+    ///        tracing, fault injection). Created before any producer.
+    std::unique_ptr<ObservabilityRuntime> observability_;
+    /// \brief Deprecated: retained temporarily for migration compatibility.
+    /// New code must use observability_-> instead.
     OperationsRuntimeState operations;
     ActorServiceState actors;
     std::unique_ptr<MessagingRuntime> messaging_;
