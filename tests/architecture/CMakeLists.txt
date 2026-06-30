@@ -133,3 +133,64 @@ foreach(_file2 IN LISTS _phase4_sources)
             -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
     )
 endforeach()
+
+# ── Phase 5: NetworkRuntime architecture fitness ─────────────────────────────
+
+# Check 1: No ActorSystem*/&/Impl captures in network runtime production code.
+set(_phase5_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
+set(_phase5_sources
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.cpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime_callbacks.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/net/network_snapshot.hpp)
+foreach(_file IN LISTS _phase5_sources)
+    add_test(
+        NAME Phase5.NoFacadeCapture.${_file}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_phase5_no_facade}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+    )
+endforeach()
+
+# Check 2: No RTTI/exceptions in network runtime files.
+set(_phase5_no_rtti "dynamic_cast" "typeid" "throw " "try {" "catch (")
+foreach(_file2 IN LISTS _phase5_sources)
+    add_test(
+        NAME Phase5.NoRtti.${_file2}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file2}
+            "-DFORBIDDEN=${_phase5_no_rtti}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+    )
+endforeach()
+
+# Check 3: No late dependency setters in NetworkRuntime.
+# Dependencies are fixed at construction.
+add_test(
+    NAME Phase5.NoLateSettersInNetworkRuntime
+    COMMAND ${CMAKE_COMMAND}
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime.hpp
+        "-DFORBIDDEN=set_actor_system;set_scheduler;set_transport;set_discovery;set_metrics("
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+)
+
+# Check 4: No second EventLoop creation in NetworkRuntime.
+# The TcpTransport owns the sole authoritative loop.
+add_test(
+    NAME Phase5.NoSecondEventLoop
+    COMMAND ${CMAKE_COMMAND}
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.cpp
+        "-DFORBIDDEN=make_unique<net::EventLoop>;new net::EventLoop;std::make_unique<net::EventLoop>"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+)
+
+# Check 5: No std::function callbacks that capture the facade in network files.
+# All callbacks use fixed function-pointer ports.
+add_test(
+    NAME Phase5.NoFacadeCallbacks
+    COMMAND ${CMAKE_COMMAND}
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.cpp
+        "-DFORBIDDEN=std::function"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+)

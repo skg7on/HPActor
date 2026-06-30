@@ -230,107 +230,100 @@ ActorSystem::ActorSystem(const Config& config)
     apply_tracing_config(impl_->core.config.tracing);
 
     if (config.enable_network) {
-        impl_->network.event_loop = std::make_unique<net::EventLoop>();
-        impl_->network.event_loop->set_actor_system(this);
+        // ── Build NetworkRuntimeConfig from facade Config ────────────────
+        NetworkRuntimeConfig net_config;
+        net_config.enabled = true;
+        net_config.endpoint = impl_->core.endpoint;
+        net_config.tcp_port = config.tcp_port;
+        net_config.tls = config.tls;
+        net_config.pool = config.pool;
+        net_config.service_discovery = config.service_discovery;
+        net_config.registrar = config.registrar;
+        net_config.enable_http_client = config.enable_http_client;
+        net_config.enable_http_gateway = config.enable_http_gateway;
+        net_config.http_bind_host = config.http_bind_host;
+        net_config.http_port = config.http_port;
+        net_config.ask_max_retries = config.default_ask_max_retries;
 
-        if (config.service_discovery) {
-            impl_->network.discovery = config.service_discovery;
-        } else if (config.registrar.udp_port > 0) {
-            auto reg = std::make_shared<net::UdpRegistrar>(
-                config.registrar, impl_->core.endpoint,
-                impl_->network.event_loop.get());
-            impl_->network.discovery = reg;
-            impl_->network.registrar = reg;
-        } else {
-            impl_->network.discovery =
-                std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
-        }
+        // ── Build fixed dependencies ─────────────────────────────────────
+        NetworkRuntime::Dependencies net_deps;
+        net_deps.actors = &impl_->actors.directory;
+        net_deps.messaging = impl_->messaging_.get();
+        net_deps.scheduler = impl_->core.scheduler.get();
 
-        impl_->network.discovery->start();
-
-        impl_->network.discovery->on_member_change(
-            [this](const net::Member& m, bool joined) {
-                if (!joined) {
-                    on_node_dead(m.identity.endpoint);
-                }
-            });
-
-        impl_->network.location_cache =
-            std::make_shared<net::ActorLocationCache>();
-        if (impl_->network.event_loop) {
-            impl_->network.cache_purge_timer = impl_->network.event_loop->run_every(
-                [this]() {
-                    if (impl_->network.location_cache)
-                        impl_->network.location_cache->purge_expired();
+        // Inbound frame sink — route remote frames into deliver_remote.
+        net_deps.inbound_sink = InboundFrameSinkPort{
+            .context = this,
+            .sink =
+                [](void* ctx, const net::WireFrame& frame) noexcept {
+                    static_cast<ActorSystem*>(ctx)->deliver_remote(frame);
                 },
-                60000);
-        }
+        };
 
-        // Periodic retry processing for at-least-once delivery.
-        if (impl_->network.event_loop) {
-            impl_->network.retry_timer = impl_->network.event_loop->run_every(
-                [this]() {
-                    uint64_t now_ns = static_cast<uint64_t>(
-                        std::chrono::duration_cast<std::chrono::nanoseconds>(
-                            std::chrono::steady_clock::now().time_since_epoch())
-                            .count());
-                    impl_->messaging_->process_retries(
+        // Node event sink — route member changes to on_node_dead.
+        net_deps.node_events = NodeEventSink{
+            .context = this,
+            .member_changed =
+                [](void* ctx, const net::Member& m, bool joined) noexcept {
+                    if (!joined) {
+                        static_cast<ActorSystem*>(ctx)->on_node_dead(
+                            m.identity.endpoint);
+                    }
+                },
+        };
+
+        // Retry port — route to MessagingRuntime::process_retries.
+        net_deps.retry_port = OutboundRetryPort{
+            .context = impl_->messaging_.get(),
+            .process_due =
+                [](void* ctx, uint64_t now_ns) noexcept {
+                    static_cast<MessagingRuntime*>(ctx)->process_retries(
                         now_ns,
                         [](const msg::OutboundDeliveryTracker::PendingSend&) {
-                            // Resend via transport (implemented in
-                            // follow-up).
+                            // Resend via transport (follow-up).
                         });
                 },
-                100); // poll every 100ms
-        }
+        };
 
-        impl_->network.transport = std::make_unique<net::TcpTransport>(
-            impl_->core.endpoint, config.tls, config.pool, nullptr);
+        // Spawn port — canonical actor adoption through spawner.
+        // Phase 6 moves SpawnReceiver into ActorRuntime fully.
+        net_deps.spawn_port = RemoteSpawnPort{
+            .context = this,
+            .install_receiver = nullptr, // wired in Phase 6
+            .remove_receiver = nullptr,  // wired in Phase 6
+        };
 
+        // Create and start the network runtime.
+        impl_->network_ = std::make_unique<NetworkRuntime>(net_config, net_deps);
+
+        // Transfer metrics ring buffer pointer to transport.
         if (impl_->operations.metrics_ring_buffer) {
-            impl_->network.transport->set_metrics_ring_buffer(
-                impl_->operations.metrics_ring_buffer.get());
+            if (auto* t = impl_->network_->transport()) {
+                t->set_metrics_ring_buffer(
+                    impl_->operations.metrics_ring_buffer.get());
+            }
         }
 
-        impl_->network.rpc_channel = std::make_unique<RpcChannel>(
-            impl_->network.transport.get(), impl_->core.scheduler.get(),
-            impl_->core.config.default_ask_max_retries);
+        // Start networking.
+        auto start_result = impl_->network_->start();
+        if (start_result.is_error()) {
+            impl_->core.running.store(false, std::memory_order_release);
+            // start() already rolled back on failure.
+        }
 
+        // ── Actor services that depend on network being started ──────────
         impl_->actors.ask =
             std::make_unique<AskManager>(impl_->core.scheduler.get(), this);
-
-        if (impl_->core.config.enable_http_client) {
-            impl_->actors.http_client =
-                std::make_unique<net::HttpClient>(impl_->network.event_loop.get());
-        }
 
         if (impl_->core.config.enable_http_gateway) {
             impl_->actors.http_gateway_actor = spawn<net::HTTPGatewayActor>(
                 impl_->core.config.http_bind_host, impl_->core.config.http_port);
         }
 
-        if (config.tcp_port > 0) {
-            impl_->network.transport->set_rpc_handler(
-                [this](const hpactor::RpcResponseFrame& response) {
-                    impl_->network.rpc_channel->on_response(response);
-                });
-            impl_->network.transport->set_actor_message_handler(
-                [this](const net::WireFrame& frame) {
-                    this->deliver_remote(frame);
-                });
-            impl_->network.transport->listen(config.tcp_port);
-        }
-
-        impl_->network.network_thread = std::thread([this]() {
-            while (impl_->network.event_loop->wait(100) >= 0) {
-                impl_->network.event_loop->process_completions();
-                if (!is_running())
-                    break;
-            }
-        });
-
+        // ── Manual SpawnReceiver setup (TODO: move to ActorRuntime in
+        //    Phase 6, using RemoteSpawnPort properly) ──────────────────────
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
-            *this, *impl_->actors.type_registry, impl_->network.transport.get());
+            *this, *impl_->actors.type_registry, impl_->network_->transport());
 
         SpawnSpec receiver_spec;
         receiver_spec.type_name = "SpawnReceiver";
@@ -341,22 +334,11 @@ ActorSystem::ActorSystem(const Config& config)
         receiver_spec.actor_type_override = SystemActorType;
         receiver_spec.origin = SpawnOrigin::System;
 
-        auto result =
+        auto spawn_result =
             impl_->spawner->adopt(std::move(spawn_receiver), receiver_spec);
-        if (result.is_error()) {
+        if (spawn_result.is_error()) {
             impl_->core.running.store(false, std::memory_order_release);
-            if (impl_->network.event_loop) {
-                impl_->network.event_loop->stop();
-            }
-            if (impl_->network.network_thread.joinable()) {
-                impl_->network.network_thread.join();
-            }
-            if (impl_->network.transport) {
-                impl_->network.transport->stop_listening();
-            }
-            if (impl_->network.discovery) {
-                impl_->network.discovery->stop();
-            }
+            impl_->network_->stop(NetworkRuntime::StopMode::Abort);
         }
     }
 
@@ -413,8 +395,11 @@ ActorSystem::ActorSystem(const Config& config)
             },
             .stop_remote_runtime =
                 [this]() {
-                    if (impl_->network.event_loop) {
-                        impl_->network.event_loop->stop();
+                    // Lightweight: just stop the event loop so the network
+                    // thread exits. Full teardown (join, stop listening,
+                    // stop discovery) happens in the destructor.
+                    if (auto* loop = event_loop()) {
+                        loop->stop();
                     }
                 },
             .leave_discovery = []() {},
@@ -431,19 +416,23 @@ ActorSystem::ActorSystem(const Config& config)
 
 ActorSystem::~ActorSystem() {
     impl_->core.running.store(false);
-    if (impl_->core.config.enable_network) {
-        if (impl_->network.event_loop) {
-            impl_->network.event_loop->stop();
-        }
-        if (impl_->network.network_thread.joinable()) {
-            impl_->network.network_thread.join();
-        }
-        if (impl_->network.transport) {
-            impl_->network.transport->stop_listening();
-        }
-        if (impl_->network.discovery) {
-            impl_->network.discovery->stop();
-        }
+    // Phase 5: NetworkRuntime handles its own teardown.
+    if (impl_->network_) {
+        impl_->network_->stop(NetworkRuntime::StopMode::Abort);
+    }
+    // Legacy fallback: if NetworkRuntime was never created but legacy
+    // network fields were populated, clean them up.
+    if (impl_->network.event_loop) {
+        impl_->network.event_loop->stop();
+    }
+    if (impl_->network.network_thread.joinable()) {
+        impl_->network.network_thread.join();
+    }
+    if (impl_->network.transport) {
+        impl_->network.transport->stop_listening();
+    }
+    if (impl_->network.discovery) {
+        impl_->network.discovery->stop();
     }
     if (impl_->operations.log_manager) {
         impl_->operations.log_manager->stop();
@@ -667,19 +656,27 @@ const adt::DedupCache* ActorSystem::dedup_cache() const {
 }
 
 net::EventLoop* ActorSystem::event_loop() {
-    return impl_->network.event_loop.get();
+    if (impl_->network_)
+        return impl_->network_->event_loop();
+    return impl_->network.event_loop.get(); // legacy fallback
 }
 
 net::Transport* ActorSystem::transport() {
-    return impl_->network.transport.get();
+    if (impl_->network_)
+        return impl_->network_->transport();
+    return impl_->network.transport.get(); // legacy fallback
 }
 
 net::UdpRegistrar* ActorSystem::registrar() {
-    return impl_->network.registrar.get();
+    if (impl_->network_)
+        return impl_->network_->registrar();
+    return impl_->network.registrar.get(); // legacy fallback
 }
 
 RpcChannel& ActorSystem::rpc_channel() {
-    return *impl_->network.rpc_channel;
+    if (impl_->network_)
+        return *impl_->network_->rpc_channel();
+    return *impl_->network.rpc_channel; // legacy fallback
 }
 
 tracing::TraceManager* ActorSystem::trace_manager() noexcept {
@@ -792,7 +789,9 @@ const PassivationManager* ActorSystem::passivation_manager() const {
 }
 
 net::HttpClient& ActorSystem::http_client() {
-    return *impl_->actors.http_client;
+    if (impl_->network_)
+        return *impl_->network_->http_client();
+    return *impl_->actors.http_client; // legacy fallback
 }
 
 ActorTypeRegistry& ActorSystem::actor_type_registry() {
@@ -991,7 +990,9 @@ net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
     if (!impl_->core.config.enable_network) {
         return nullptr;
     }
-    return impl_->network.transport.get();
+    if (impl_->network_)
+        return impl_->network_->transport();
+    return impl_->network.transport.get(); // legacy fallback
 }
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,

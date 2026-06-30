@@ -180,7 +180,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   stream and network lifecycle ownership remain in future phases.
 - Known gap: transport resend on retry is not implemented (characterized, not claimed).
 
-**ActorSystem Refactor Phase 4: Frame & Stream Routing** ✅ Partial (2026-06-30)
+**ActorSystem Refactor Phase 4: Frame & Stream Routing** ✅ Complete (2026-06-30)
 - `FrameDecodeError` (7 values), `FrameDecodeLimits` (16 MiB), `FrameDecodeResult`,
   and `try_decode_wireframe()` in `include/hpactor/msg/frame.hpp`.
 - `FrameDispatchCode`/`FrameDispatchResult` in `include/hpactor/net/frame_dispatch_result.hpp`.
@@ -215,6 +215,52 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Verification: 997 tests pass (524 unit + 449 integration + 24 architecture).
 - Design spec: `docs/superpowers/specs/2026-06-28-actor-system-phase4-frame-stream-routing-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-06-28-actor-system-phase4-frame-stream-routing-implementation.md`.
+
+**ActorSystem Refactor Phase 5: NetworkRuntime Extraction** ✅ Substantially Complete (2026-06-30)
+- `NetworkRuntime` in `include/hpactor/runtime/network_runtime.hpp` + `src/runtime/network_runtime.cpp` is the sole owner of
+  all network resources: `TcpTransport` (and its authoritative `EventLoop`), network
+  thread, `IServiceDiscovery`/`UdpRegistrar`, `ActorLocationCache`, cache/retry
+  maintenance timers, `RpcChannel`, `HttpClient`, and remote-spawn protocol integration.
+- `NetworkRuntimeConfig` is an effective value object with no TOML parser or
+  `ActorSystem::Config` back-reference. `NetworkRuntime::Dependencies` uses fixed
+  function-pointer ports — no `std::function`, no facade-capturing lambdas.
+- One authoritative event loop: `TcpTransport::loop()` replaces the old separate
+  `network_loop_`. Discovery, HTTP client, cache purge, and retry timers all bind
+  to this single loop. One network thread drives it.
+- Construction is side-effect-free; `start()` uses 9-stage startup with reverse
+  rollback on failure. `stop()` is idempotent and callback-quiescent.
+- Self-stop from network thread returns `StopDeferred` (error code 10507);
+  the Phase 6 coordinator completes the final join from a non-network thread.
+- Port types: `NodeEventSink`, `OutboundRetryPort`, `RemoteSpawnPort`,
+  `InboundFrameSinkPort`, `NetworkTelemetryPort` — all fixed-size, non-owning,
+  function-pointer + context void*.
+- Adapter functions (`reliable_ack_adapter`, `backpressure_wire_adapter`) use
+  `NetworkRuntime*` as context, not `NetworkRuntimeState*` or `ActorSystem*`.
+- Facade accessors (`event_loop()`, `transport()`, `registrar()`, `rpc_channel()`,
+  `http_client()`, `get_transport_for()`) forward through `NetworkRuntime` with
+  legacy fallbacks for the old `NetworkRuntimeState` fields (Phase 8 cleanup).
+- `NetworkSnapshot` public type in `include/hpactor/net/network_snapshot.hpp` for
+  bounded CLI/admin observability.
+- 11 architecture checks enforce: no `ActorSystem*`/`Impl*` captures in network
+  runtime files; no late dependency setters; no second `EventLoop` creation;
+  no `std::function` in network runtime; no RTTI/exceptions.
+- New files: `include/hpactor/runtime/network_runtime.hpp`, `src/runtime/network_runtime.cpp`,
+  `include/hpactor/runtime/network_runtime_callbacks.hpp`, `include/hpactor/net/network_snapshot.hpp`.
+- Test files: `tests/unit/runtime/test_network_runtime_lifecycle.cpp` (14 tests).
+  All 1,788 focused tests pass (14 runtime + 199 unit/net + 195 integration/net
+  + 17 rpc + 20 spawn + 302 unit/mailbox + 275 unit/actor + 237 integration/actor
+  + 44 unit/msg + 83 integration/config + 154 unit/sched + 64 unit/core +
+  27 unit/config + 44 unit/fault + 47 unit/ref + 24 integration/sched +
+  17 integration/ref + 25 integration/tracing). 42 architecture tests pass.
+- Known gaps: SpawnReceiver still manually constructed in ActorSystem constructor
+  (Phase 6 full integration); legacy `NetworkRuntimeState` fields retained as
+  fallbacks (Phase 8 removal); transport resend on retry not implemented;
+  ASan/TSan blocked by pre-existing macOS ARM platform issue.
+- Design spec: `docs/superpowers/specs/2026-06-28-actor-system-phase5-network-runtime-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-06-28-actor-system-phase5-network-runtime-implementation.md`.
+- Explicit Phase 6 handoff: `NetworkRuntime` is the network owner; Phase 6
+  `RuntimeCoordinator` calls `network_->start()`/`network_->stop()` in proper
+  startup/shutdown order with immutable `RuntimeBlueprint`.
 
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
