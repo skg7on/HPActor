@@ -4,6 +4,7 @@ add_executable(test_unit_msg
     test_ack_nack_frames.cpp
     test_outbound_delivery_tracker.cpp
     test_proto_registry.cpp
+    test_stream_frames.cpp
 )
 
 target_link_libraries(test_unit_msg PRIVATE

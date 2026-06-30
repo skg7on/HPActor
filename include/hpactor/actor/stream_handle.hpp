@@ -15,6 +15,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
+#include <hpactor/actor/stream_types.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/core/actor_id.hpp>
 #include <hpactor/msg/type_tag.hpp>
@@ -27,7 +29,7 @@ namespace hpactor {
 
 /// \brief Move-only handle for a streaming session.
 ///
-/// Returned by \c ActorContext::open_stream(). The user's actor writes chunks,
+/// Returned by \c ActorSystem::open_stream(). The user's actor writes chunks,
 /// closes the stream, or signals an error through this handle. All protocol
 /// state (credit window, sequencing, send buffer) lives in the internal
 /// \c StreamSenderActor.
@@ -38,18 +40,35 @@ namespace hpactor {
 ///       backpressure to its own producer.
 class StreamHandle {
   public:
+    /// \brief Delivery callback: sends a TypedMessage to a target actor.
+    /// \param ctx Opaque context pointer (typically ActorSystem*).
+    /// \param target Destination actor ID.
+    /// \param msg The message to deliver (moved).
+    /// \return true if delivery succeeded, false if the target is gone.
+    using DeliverFn = bool (*)(void* ctx, ActorId target, TypedMessage msg);
+
     StreamHandle() = default;
-    StreamHandle(ActorId sender_actor_id, uint64_t stream_id)
+
+    /// \brief Construct a streaming session handle.
+    /// \param sender_actor_id ID of the internal StreamSenderActor.
+    /// \param stream_id Unique stream identifier.
+    /// \param deliver_fn Callback for delivering messages to the sender actor.
+    /// \param deliver_ctx Opaque context for the delivery callback.
+    StreamHandle(ActorId sender_actor_id, uint64_t stream_id,
+                 DeliverFn deliver_fn, void* deliver_ctx)
         : sender_actor_id_(sender_actor_id), stream_id_(stream_id),
-          closed_(false) {}
+          deliver_fn_(deliver_fn), deliver_ctx_(deliver_ctx), closed_(false) {}
 
     ~StreamHandle() = default;
 
     // Move-only
     StreamHandle(StreamHandle&& other) noexcept
         : sender_actor_id_(other.sender_actor_id_),
-          stream_id_(other.stream_id_), closed_(other.closed_) {
+          stream_id_(other.stream_id_), deliver_fn_(other.deliver_fn_),
+          deliver_ctx_(other.deliver_ctx_), closed_(other.closed_) {
         other.stream_id_ = 0;
+        other.deliver_fn_ = nullptr;
+        other.deliver_ctx_ = nullptr;
         other.closed_ = true;
     }
 
@@ -57,8 +76,12 @@ class StreamHandle {
         if (this != &other) {
             sender_actor_id_ = other.sender_actor_id_;
             stream_id_ = other.stream_id_;
+            deliver_fn_ = other.deliver_fn_;
+            deliver_ctx_ = other.deliver_ctx_;
             closed_ = other.closed_;
             other.stream_id_ = 0;
+            other.deliver_fn_ = nullptr;
+            other.deliver_ctx_ = nullptr;
             other.closed_ = true;
         }
         return *this;
@@ -70,46 +93,63 @@ class StreamHandle {
     /// Write a chunk to the stream.
     /// \return \c false if stream is closed, send buffer is full, or sender
     ///         actor is gone. \c true if the chunk was queued for send.
-    bool write(TypedMessage /*chunk*/) {
-        if (closed_)
+    bool write(TypedMessage chunk) {
+        if (closed_ || !deliver_fn_)
             return false;
-        // Forward to StreamSenderActor in Phase 3
-        return true;
+        return deliver_fn_(deliver_ctx_, sender_actor_id_, std::move(chunk));
     }
 
     /// Write raw bytes as a stream chunk.
     /// The chunk is delivered to the receiver with the original \p tag.
-    bool write(TypeTag /*tag*/, StreamBuffer /*payload*/) {
-        if (closed_)
+    bool write(TypeTag tag, StreamBuffer payload) {
+        if (closed_ || !deliver_fn_)
             return false;
-        return true;
+        TypedMessage msg(tag, std::move(payload));
+        return deliver_fn_(deliver_ctx_, sender_actor_id_, std::move(msg));
     }
 
     /// Gracefully close the stream. Sends StreamCloseFrame(COMPLETE).
     /// \return \c false if already closed.
     bool close() {
-        if (closed_)
+        if (closed_ || !deliver_fn_)
             return false;
         closed_ = true;
+        TypedMessage cmd(stream::InternalCloseTag, StreamBuffer{});
+        deliver_fn_(deliver_ctx_, sender_actor_id_, std::move(cmd));
         return true;
     }
 
     /// Abort the stream with an error code.
     /// \return \c false if already closed.
-    bool error(uint32_t /*code*/, std::string_view /*description*/ = "") {
-        if (closed_)
+    bool error(uint32_t code, std::string_view description = "") {
+        if (closed_ || !deliver_fn_)
             return false;
         closed_ = true;
+        // Encode error code (4 bytes LE) + description
+        StreamBuffer payload(sizeof(uint32_t) + description.size());
+        uint32_t le_code = code;
+        std::memcpy(payload.data(), &le_code, sizeof(uint32_t));
+        if (!description.empty()) {
+            std::memcpy(payload.data() + sizeof(uint32_t), description.data(),
+                        description.size());
+        }
+        TypedMessage cmd(stream::InternalErrorTag, std::move(payload));
+        deliver_fn_(deliver_ctx_, sender_actor_id_, std::move(cmd));
         return true;
     }
 
     /// Number of bytes written but not yet acknowledged by the receiver.
+    /// \note Returns a snapshot; the value advances asynchronously as acks
+    ///       arrive.
     size_t bytes_in_flight() const {
+        // TODO(msg-008c): query StreamSenderActor for live value.
         return 0;
     }
 
     /// Current advertised receiver window in bytes.
+    /// \note Returns a snapshot; the value advances asynchronously.
     size_t window_bytes() const {
+        // TODO(msg-008c): query StreamSenderActor for live value.
         return 0;
     }
 
@@ -126,6 +166,8 @@ class StreamHandle {
   private:
     ActorId sender_actor_id_{};
     uint64_t stream_id_ = 0;
+    DeliverFn deliver_fn_ = nullptr;
+    void* deliver_ctx_ = nullptr;
     bool closed_ = false;
 };
 

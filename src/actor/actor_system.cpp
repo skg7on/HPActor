@@ -1376,9 +1376,8 @@ void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
     if (!sender.has_value())
         return;
 
-    auto ack_buf = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(&ack),
-                                           sizeof(ack));
-    TypedMessage msg(stream::StreamAckTag, std::move(ack_buf));
+    // Serialize to wire format so msg.as<StreamAckFrame>() can parse correctly.
+    TypedMessage msg(stream::StreamAckTag, ack);
     (void)impl_->messaging_->try_deliver_fast(sender.value(), std::move(msg),
                                               FastDeliveryReason::StreamProtocol);
 }
@@ -1417,6 +1416,16 @@ void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
     }
 }
 
+// Static delivery callback for StreamHandle → StreamSenderActor communication.
+// Bound to an ActorSystem* context in open_stream().
+namespace {
+bool deliver_to_stream_sender(void* ctx, ActorId target, TypedMessage msg) {
+    auto* sys = static_cast<ActorSystem*>(ctx);
+    // try_deliver_local_fast returns EnqueueResult; accepted() means success.
+    return sys->try_deliver_local_fast(target, std::move(msg)).accepted();
+}
+} // namespace
+
 std::optional<StreamHandle>
 ActorSystem::open_stream(ActorId target, StreamConfig config) {
     auto actor = get_actor(target);
@@ -1424,29 +1433,44 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
         return std::nullopt;
 
     uint64_t stream_id = allocate_stream_id(target);
-    TraceContext trace_ctx; // Default: no trace context
 
     // Resolve target address
     ActorAddress target_addr = actor->address();
     bool is_local_target = target_addr.endpoint == impl_->core.endpoint;
 
-    // Spawn StreamSenderActor
-    auto sender = spawn<StreamSenderActor>(target, stream_id, config, trace_ctx);
+    // Default trace context — ActorContext::open_stream() will capture
+    // the calling actor's current trace scope (future phase).
+    TraceContext trace_ctx;
+
+    // Spawn StreamSenderActor with local/remote awareness.
+    auto sender = spawn<StreamSenderActor>(target, target_addr, stream_id,
+                                           config, trace_ctx, is_local_target);
     if (!sender)
         return std::nullopt;
     register_stream_sender(stream_id, sender.id());
 
+    // Create StreamHandle with the delivery callback bound to this ActorSystem.
+    StreamHandle handle(sender.id(), stream_id, deliver_to_stream_sender, this);
+
     if (is_local_target) {
-        // Local target: spawn StreamReceiverActor directly
-        auto receiver = spawn<StreamReceiverActor>(
-            target, stream_id,
-            ActorAddress{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0},
-            config.initial_window_bytes, trace_ctx);
+        // Local target: spawn StreamReceiverActor directly.
+        ActorAddress sender_addr{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0};
+        auto receiver =
+            spawn<StreamReceiverActor>(target, stream_id, sender_addr,
+                                       config.initial_window_bytes, trace_ctx);
         if (receiver) {
             register_stream_receiver(stream_id, receiver.id());
         }
+
+        // Deliver StreamOpenedTag to the target actor so it knows
+        // a stream session has been established.
+        // TODO(msg-008c): serialize full StreamOpenedPayload
+        // (stream_id, sender, initial_window_bytes).
+        TypedMessage open_msg(stream::StreamOpenedTag, StreamBuffer{});
+        (void)impl_->messaging_->try_deliver_fast(
+            target, std::move(open_msg), FastDeliveryReason::StreamProtocol);
     } else {
-        // Remote target: send StreamOpenFrame via transport
+        // Remote target: send StreamOpenFrame via transport.
         auto* tp = transport();
         if (tp) {
             net::StreamOpenFrame open;
@@ -1464,7 +1488,7 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
         }
     }
 
-    return StreamHandle(sender.id(), stream_id);
+    return handle;
 }
 
 } // namespace hpactor

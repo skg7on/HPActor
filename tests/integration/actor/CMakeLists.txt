@@ -34,6 +34,7 @@ add_executable(test_integration_actor
     test_passivation_reactivation.cpp
     test_durable_state_workflow.cpp
     test_batch_messaging.cpp
+    test_stream_messaging.cpp
     test_actor_integration_final.cpp
     test_timer_wakeup.cpp
     test_timer_plane_actor.cpp
