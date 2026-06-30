@@ -20,6 +20,7 @@
 #include <hpactor/actor/stream_types.hpp>
 #include <hpactor/core/actor_id.hpp>
 #include <hpactor/msg/frame.hpp>
+#include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 #include <vector>
 
@@ -32,9 +33,18 @@ namespace hpactor {
 /// the stream wire protocol.
 class StreamSenderActor : public EventBasedActor {
   public:
-    StreamSenderActor(ActorContext* ctx, ActorSystem& system,
-                      ActorId receiver_id, uint64_t stream_id,
-                      StreamConfig config, TraceContext trace_ctx);
+    /// \brief Construct a stream sender.
+    /// \param ctx Actor context from the spawning system.
+    /// \param system The actor system.
+    /// \param receiver_id Target receiver actor ID.
+    /// \param receiver_addr Address of the receiver (for remote delivery).
+    /// \param stream_id Unique stream identifier.
+    /// \param config Stream configuration.
+    /// \param trace_ctx Stream-level trace context.
+    /// \param is_local True if receiver is on the same node (fast path).
+    StreamSenderActor(ActorContext* ctx, ActorSystem& system, ActorId receiver_id,
+                      ActorAddress receiver_addr, uint64_t stream_id,
+                      StreamConfig config, TraceContext trace_ctx, bool is_local);
 
     Behavior make_behavior() override;
 
@@ -58,13 +68,22 @@ class StreamSenderActor : public EventBasedActor {
     void handle_stream_ack(const ::hpactor::net::StreamAckFrame& ack);
     void handle_stream_close(const ::hpactor::net::StreamCloseFrame& close);
     void handle_stream_error(const ::hpactor::net::StreamErrorFrame& error);
+    void handle_internal_close();
+    void handle_internal_error(TypedMessage& msg);
+    void handle_internal_timeout();
     void send_pending_chunks();
+    void send_close_to_receiver();
+    void send_error_to_receiver(uint32_t error_code, std::string_view description);
+    void schedule_idle_timer();
+    void reset_idle_timer();
     void on_idle_timeout();
 
     ActorId receiver_id_;
+    ActorAddress receiver_addr_;
     uint64_t stream_id_;
     StreamConfig config_;
     TraceContext trace_ctx_;
+    bool is_local_ = true;
     State state_ = State::Opening;
     uint32_t window_bytes_ = 0;
     size_t bytes_in_flight_ = 0;
@@ -72,6 +91,7 @@ class StreamSenderActor : public EventBasedActor {
     uint64_t last_acked_ = 0;
     std::vector<TypedMessage> send_buffer_;
     size_t send_buffer_bytes_ = 0;
+    AlarmHandle idle_timer_handle_;
 };
 
 } // namespace hpactor

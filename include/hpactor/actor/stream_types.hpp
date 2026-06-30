@@ -80,4 +80,19 @@ inline constexpr TypeTag StreamCloseTag = make_subsystem_tag(0x86);
 ///       which delivers a \c StreamErrorPayload to the target actor.
 inline constexpr TypeTag StreamWireErrorTag = make_subsystem_tag(0x87);
 
+// ── Internal control tags (StreamHandle → StreamSenderActor) ────────────
+
+/// \brief Internal: StreamHandle requests graceful stream close.
+/// Payload: empty. StreamSenderActor sends StreamCloseFrame to the receiver.
+inline constexpr TypeTag InternalCloseTag = make_subsystem_tag(0x88);
+
+/// \brief Internal: StreamHandle requests stream abort with error.
+/// Payload: 4-byte LE error_code + optional description string.
+/// StreamSenderActor sends StreamErrorFrame to the receiver.
+inline constexpr TypeTag InternalErrorTag = make_subsystem_tag(0x89);
+
+/// \brief Internal: idle timeout fired.
+/// Payload: empty. StreamSenderActor sends StreamErrorFrame to the receiver.
+inline constexpr TypeTag InternalTimeoutTag = make_subsystem_tag(0x8A);
+
 } // namespace hpactor::stream
