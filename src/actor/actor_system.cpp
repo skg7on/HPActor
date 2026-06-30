@@ -482,6 +482,10 @@ ActorSystem::ActorSystem(const Config& config)
 
 ActorSystem::~ActorSystem() {
     impl_->core.running.store(false);
+    // Phase 7: Stop cluster before network (cluster depends on discovery).
+    if (impl_->cluster_) {
+        impl_->cluster_->stop(ClusterStopRequest{});
+    }
     // Phase 5: NetworkRuntime handles its own teardown.
     if (impl_->network_) {
         impl_->network_->stop(NetworkRuntime::StopMode::Abort);
@@ -764,18 +768,27 @@ bool ActorSystem::cluster_enabled() const {
 }
 
 cluster::ClusterFailureModel* ActorSystem::cluster_failure_model() {
-    return static_cast<cluster::ClusterFailureModel*>(
-        impl_->cluster.failure_model.get());
+    if (impl_->cluster_) {
+        return static_cast<cluster::ClusterFailureModel*>(
+            impl_->cluster_->legacy_views().failure_model);
+    }
+    return nullptr;
 }
 
 cluster::singleton::SingletonManagerActor* ActorSystem::singleton_manager() {
-    return static_cast<cluster::singleton::SingletonManagerActor*>(
-        impl_->cluster.singleton_manager.get());
+    if (impl_->cluster_) {
+        return static_cast<cluster::singleton::SingletonManagerActor*>(
+            impl_->cluster_->legacy_views().singleton_manager);
+    }
+    return nullptr;
 }
 
 cluster::RouteInvalidation* ActorSystem::route_invalidation() {
-    return static_cast<cluster::RouteInvalidation*>(
-        impl_->cluster.route_invalidation.get());
+    if (impl_->cluster_) {
+        return static_cast<cluster::RouteInvalidation*>(
+            impl_->cluster_->legacy_views().route_invalidation);
+    }
+    return nullptr;
 }
 
 Clock& ActorSystem::clock() {
