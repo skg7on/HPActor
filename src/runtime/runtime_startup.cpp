@@ -15,6 +15,7 @@
 #include "runtime_startup.hpp"
 
 #include "actor_system_impl.hpp"
+#include "observability_runtime.hpp"
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
@@ -29,7 +30,33 @@ namespace {
 // context. The start action initializes/activates the component. The rollback
 // action reverses the start if possible.
 
-// ── Stage 1: Scheduler ──────────────────────────────────────────────────────
+// ── Stage 1: Telemetry (observability) ──────────────────────────────────────
+
+struct TelemetryStageCtx {
+    ObservabilityRuntime* observability;
+};
+
+bool start_telemetry(void* ctx) noexcept {
+    auto* c = static_cast<TelemetryStageCtx*>(ctx);
+    if (!c || !c->observability)
+        return false;
+    auto result = c->observability->start();
+    return result.ok();
+}
+
+bool rollback_telemetry(void* ctx) noexcept {
+    auto* c = static_cast<TelemetryStageCtx*>(ctx);
+    if (!c || !c->observability)
+        return false;
+    auto result = c->observability->stop();
+    return result.ok();
+}
+
+void destroy_telemetry_ctx(void* ctx) noexcept {
+    delete static_cast<TelemetryStageCtx*>(ctx);
+}
+
+// ── Stage 2: Scheduler ──────────────────────────────────────────────────────
 
 struct SchedulerStageCtx {
     sched::IScheduler* scheduler;
@@ -55,7 +82,7 @@ void destroy_scheduler_ctx(void* ctx) noexcept {
     delete static_cast<SchedulerStageCtx*>(ctx);
 }
 
-// ── Stage 2: Fault controller ───────────────────────────────────────────────
+// ── Stage 3: Fault controller ───────────────────────────────────────────────
 
 struct FaultCtx {
     fault::FaultController* controller;
@@ -87,7 +114,18 @@ void register_runtime_startup_stages(RuntimeCoordinator& coord, ActorSystem& sys
                                      bool /*enable_net*/) noexcept {
     auto& impl = *system.impl_;
 
-    // ── Stage 1: Scheduler ──────────────────────────────────────────────────
+    // ── Stage 1: Telemetry (observability) ──────────────────────────────────
+    if (impl.observability_) {
+        auto* ctx = new TelemetryStageCtx{impl.observability_.get()};
+        coord.add_stage(RuntimeLifecycleStage{
+            .name = "telemetry",
+            .start = {.context = ctx, .action = start_telemetry},
+            .rollback = {.context = ctx, .action = rollback_telemetry},
+            .destroy_context = destroy_telemetry_ctx,
+        });
+    }
+
+    // ── Stage 2: Scheduler ──────────────────────────────────────────────────
     {
         auto* ctx = new SchedulerStageCtx{impl.core.scheduler.get()};
         coord.add_stage(RuntimeLifecycleStage{
@@ -98,9 +136,9 @@ void register_runtime_startup_stages(RuntimeCoordinator& coord, ActorSystem& sys
         });
     }
 
-    // ── Stage 2: Fault controller ───────────────────────────────────────────
-    {
-        auto* ctx = new FaultCtx{&impl.operations.fault_controller};
+    // ── Stage 3: Fault controller ───────────────────────────────────────────
+    if (impl.observability_) {
+        auto* ctx = new FaultCtx{&impl.observability_->fault_controller()};
         coord.add_stage(RuntimeLifecycleStage{
             .name = "fault",
             .start = {.context = ctx, .action = start_fault},
