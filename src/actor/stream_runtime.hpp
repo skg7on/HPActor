@@ -106,7 +106,7 @@ class StreamRuntime final {
   private:
     Config config_;
     StreamActorLifecyclePort actor_port_;
-    [[maybe_unused]] MessagingRuntime& messaging_;
+    MessagingRuntime& messaging_;
 
     mutable std::mutex mutex_;
     std::unordered_map<StreamKey, StreamSession> sessions_;

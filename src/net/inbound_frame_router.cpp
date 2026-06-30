@@ -31,8 +31,8 @@ constexpr bool has_flag(uint32_t flags, uint32_t bit) noexcept {
 } // namespace
 
 InboundFrameRouter::InboundFrameRouter(Dependencies dependencies, Config config) noexcept
-    : config_(config), messaging_(dependencies.messaging),
-      rpc_(dependencies.rpc), metrics_(dependencies.metrics) {}
+    : config_(config), messaging_(dependencies.messaging), rpc_(dependencies.rpc),
+      streams_(dependencies.streams), metrics_(dependencies.metrics) {}
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -80,13 +80,49 @@ FrameDispatchResult InboundFrameRouter::route(const InboundFrameContext& ictx,
             return route_dedicated_nack(frame);
         case WireFrame::PayloadType::Batch:
             return route_batch(ictx, frame);
-        case WireFrame::PayloadType::StreamOpen:
-        case WireFrame::PayloadType::StreamData:
-        case WireFrame::PayloadType::StreamAck:
-        case WireFrame::PayloadType::StreamClose:
-        case WireFrame::PayloadType::StreamError:
-            return make_result(FrameDispatchCode::HandlerUnavailable,
-                               frame.payload_type());
+        case WireFrame::PayloadType::StreamOpen: {
+            auto sd = streams_.on_open(ictx, frame.pb_envelope.stream_open());
+            auto r = make_result(FrameDispatchCode::StreamHandled,
+                                 WireFrame::PayloadType::StreamOpen);
+            r.detail_code = static_cast<uint32_t>(sd.code);
+            r.accepted_count = sd.accepted_count;
+            r.rejected_count = sd.rejected_count;
+            return r;
+        }
+        case WireFrame::PayloadType::StreamData: {
+            auto sd = streams_.on_data(ictx, frame.pb_envelope.stream_data());
+            auto r = make_result(FrameDispatchCode::StreamHandled,
+                                 WireFrame::PayloadType::StreamData);
+            r.detail_code = static_cast<uint32_t>(sd.code);
+            r.accepted_count = sd.accepted_count;
+            r.rejected_count = sd.rejected_count;
+            return r;
+        }
+        case WireFrame::PayloadType::StreamAck: {
+            auto sd = streams_.on_ack(ictx, frame.pb_envelope.stream_ack());
+            auto r = make_result(FrameDispatchCode::StreamHandled,
+                                 WireFrame::PayloadType::StreamAck);
+            r.detail_code = static_cast<uint32_t>(sd.code);
+            return r;
+        }
+        case WireFrame::PayloadType::StreamClose: {
+            auto sd = streams_.on_close(ictx, frame.pb_envelope.stream_close());
+            auto r = make_result(FrameDispatchCode::StreamHandled,
+                                 WireFrame::PayloadType::StreamClose);
+            r.detail_code = static_cast<uint32_t>(sd.code);
+            r.accepted_count = sd.accepted_count;
+            r.rejected_count = sd.rejected_count;
+            return r;
+        }
+        case WireFrame::PayloadType::StreamError: {
+            auto sd = streams_.on_error(ictx, frame.pb_envelope.stream_error());
+            auto r = make_result(FrameDispatchCode::StreamHandled,
+                                 WireFrame::PayloadType::StreamError);
+            r.detail_code = static_cast<uint32_t>(sd.code);
+            r.accepted_count = sd.accepted_count;
+            r.rejected_count = sd.rejected_count;
+            return r;
+        }
         case WireFrame::PayloadType::Unknown:
         default:
             return make_result(FrameDispatchCode::UnsupportedPayload,

@@ -13,6 +13,7 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
 
+#include "actor/stream_runtime.hpp"
 #include "runtime/messaging_runtime.hpp"
 
 namespace hpactor {
@@ -42,8 +43,8 @@ class InboundFrameRouter final {
     struct Dependencies {
         MessagingRuntime& messaging;
         RpcChannel& rpc;
+        StreamRuntime& streams;
         metrics::MpscRingBuffer<metrics::MetricEvent>* metrics{nullptr};
-        // StreamRuntime& streams; — added in Task 9
     };
 
     InboundFrameRouter(Dependencies dependencies, Config config) noexcept;
@@ -97,8 +98,9 @@ class InboundFrameRouter final {
     route_batch(const InboundFrameContext& ictx, const WireFrame& frame) noexcept;
 
     Config config_;
-    [[maybe_unused]] MessagingRuntime& messaging_;
+    MessagingRuntime& messaging_;
     RpcChannel& rpc_;
+    StreamRuntime& streams_;
     [[maybe_unused]] metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_;
     std::atomic<bool> accepting_{true};
 };
