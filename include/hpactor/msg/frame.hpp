@@ -158,6 +158,65 @@ struct WireFrame {
     static constexpr uint32_t AckResponse = 1 << 6;
 };
 
+// ── Strict decode types ──────────────────────────────────────────────────────
+
+/// \brief Specific reason a \c WireFrame decode failed.
+///
+/// Production paths use \c try_decode() and match on the error code.
+/// The legacy \c decode() returns an empty frame on any failure.
+enum class FrameDecodeError : uint8_t {
+    None = 0,        ///< No error; the frame is valid.
+    HeaderTooShort,  ///< Fewer than 8 bytes; cannot parse magic or length.
+    InvalidMagic,    ///< First 4 bytes are not \c "HPAC".
+    FrameTooLarge,   ///< Declared payload exceeds \c max_payload_bytes.
+    LengthMismatch,  ///< Buffer shorter than declared payload length.
+    TrailingBytes,   ///< Extra bytes after the declared frame (when reject
+                     ///< enabled).
+    InvalidProtobuf, ///< Payload did not parse as a valid \c WireEnvelope.
+};
+
+/// \brief Bounds that control \c try_decode() validation.
+///
+/// Defaults match the existing outbound byte bound (16 MiB) so a
+/// receiver that picks the defaults does not silently drop valid frames.
+struct FrameDecodeLimits {
+    /// Maximum allowed protobuf payload bytes. 0 means check is disabled.
+    uint32_t max_payload_bytes{16U * 1024U * 1024U};
+    /// When true, exactly \c HeaderSize + payload_len bytes are required.
+    bool reject_trailing_bytes{true};
+};
+
+/// \brief Result of a strict wire-frame decode.
+///
+/// Owns the decoded \c WireFrame when \c ok() is true.  Callers can
+/// distinguish every framing and protobuf failure without inspecting
+/// the returned frame's oneof discriminator.
+struct FrameDecodeResult {
+    WireFrame frame; ///< Valid only when \c ok().
+    FrameDecodeError error{FrameDecodeError::None};
+    uint32_t declared_payload_bytes{0}; ///< Value from the wire length field.
+
+    /// \brief True when decoding succeeded with no validation errors.
+    [[nodiscard]] bool ok() const noexcept {
+        return error == FrameDecodeError::None;
+    }
+};
+
+// ── WireFrame strict decode (declared after FrameDecodeResult exists) ────
+
+/// \brief Strict frame decode with typed error result.
+///
+/// Validates magic, size bounds, and protobuf integrity before
+/// constructing a \c WireFrame.  Returns a \c FrameDecodeResult
+/// that owns the decoded frame on success or carries a specific
+/// \c FrameDecodeError on failure.
+///
+/// \param data  The encoded bytes (header + protobuf payload).
+/// \param limits  Validation bounds; defaults to 16 MiB, trailing reject.
+/// \return A result whose \c ok() is true only on clean decode.
+FrameDecodeResult
+try_decode_wireframe(const StreamBuffer& data, FrameDecodeLimits limits = {});
+
 // ── Address conversion helpers ─────────────────────────────────────────────
 
 /// \brief Convert C++ \c ActorAddress to protobuf.
