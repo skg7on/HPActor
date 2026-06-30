@@ -16,6 +16,15 @@
 
 namespace hpactor {
 
+RuntimeCoordinator::~RuntimeCoordinator() {
+    // Free heap-allocated stage contexts.
+    for (auto& stage : stages_) {
+        if (stage.destroy_context) {
+            stage.destroy_context(stage.start.context);
+        }
+    }
+}
+
 void RuntimeCoordinator::add_stage(RuntimeLifecycleStage stage) {
     stages_.push_back(stage);
 }

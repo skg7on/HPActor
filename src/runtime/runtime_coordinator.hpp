@@ -54,6 +54,9 @@ struct RuntimeLifecycleStage {
     const char* name{nullptr};
     LifecycleAction start;
     LifecycleAction rollback;
+    /// \brief Optional cleanup action called after coordinator stop/destroy.
+    /// Used to free heap-allocated stage context.
+    void (*destroy_context)(void* context) noexcept {nullptr};
 };
 
 // ── Lifecycle snapshot ──────────────────────────────────────────────────────
@@ -79,6 +82,7 @@ struct RuntimeLifecycleSnapshot {
 class RuntimeCoordinator final {
   public:
     RuntimeCoordinator() = default;
+    ~RuntimeCoordinator();
 
     /// \brief Add a startup stage in dependency order.
     void add_stage(RuntimeLifecycleStage stage);

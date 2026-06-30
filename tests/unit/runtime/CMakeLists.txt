@@ -5,6 +5,7 @@ add_executable(test_unit_runtime
     test_reload_classification.cpp
     test_runtime_builder.cpp
     test_runtime_coordinator.cpp
+    test_coordinated_startup.cpp
 )
 
 target_include_directories(test_unit_runtime PRIVATE

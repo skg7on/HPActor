@@ -6,4 +6,5 @@ target_sources(hpactor_lib PRIVATE
     runtime_blueprint_builder.cpp
     runtime_builder.cpp
     runtime_coordinator.cpp
+    runtime_startup.cpp
 )

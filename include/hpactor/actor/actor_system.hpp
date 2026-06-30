@@ -872,6 +872,8 @@ class ActorSystem {
     friend struct sched::ActorExecutionDependencies;
     friend class RuntimeBuilder;
     friend class RuntimeCoordinator;
+    friend void register_runtime_startup_stages(class RuntimeCoordinator&,
+                                                ActorSystem&, bool) noexcept;
 
     /// \brief Tag type for blueprint-based construction (no startup).
     struct FromBlueprint {};
