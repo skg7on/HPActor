@@ -139,6 +139,47 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Architecture test guards facade pointer-only invariant.
 - 53 focused tests pass (unit + integration + system).
 
+**ActorSystem Refactor Phase 3: MessagingRuntime Ownership** ✅ Complete (2026-06-30)
+- `MessagingRuntime` class in `src/runtime/messaging_runtime.hpp/.cpp` is the sole
+  owner of all seven messaging components: `DeadLetterQueue`, `DedupCache`,
+  `msg::OutboundDeliveryTracker`, `mailbox::OutboundTracker`,
+  `BackpressureCoordinator`, `DeliveryPipeline`, and `LocalDeliveryEngine`.
+- All dependencies are fixed at construction — no late setters, no
+  facade-capturing `std::function` callbacks on hot paths.
+- Network control output uses narrow function-pointer/context ports
+  (`ReliableAckPort`, `BackpressureWirePort`) bound to stable
+  `NetworkRuntimeState` in `src/runtime/messaging_network_ports.hpp`.
+- `DeliveryPipeline` receives concrete `ActorDirectory&`, DLQ, dedup, tracker,
+  backpressure, metrics, and ACK port references at construction.
+- `BackpressureCoordinator` has fixed directory, metrics, endpoint, and remote
+  output dependencies; no production set_metrics_ring_buffer/set_transport.
+- Facade delivery methods (`try_deliver_local`, `deliver_with_result`,
+  `deliver_local`, `deliver_local_edf`, `try_deliver_local_fast`) route through
+  `MessagingRuntime::try_deliver/deliver_with_result/try_deliver_fast`.
+- Fast delivery classified by `FastDeliveryReason` enum:
+  `StreamProtocol` (stream handlers), `CompatibilityExplicit` (public facade).
+  `LocalDeliveryEngine` updated to use proper `try_push()` semantics.
+- Reliable ACK/NACK in `deliver_remote()` routes through
+  `MessagingRuntime::on_reliable_ack/on_reliable_nack`. Retry timer uses
+  `MessagingRuntime::process_retries()`. `send_reliable_ack()` forwards to
+  the fixed `ReliableAckPort`.
+- `MessagingRuntime::reconfigure()` wraps DLQ reconfiguration preserving
+  object identity. `load_topology()` routes through it.
+- Remote ordinary delivery converges through `deliver_local()` →
+  `MessagingRuntime::try_deliver()` — same full `DeliveryPipeline` as local.
+- 15 architecture fitness checks enforce: no `ActorSystem*`/`Impl*` in messaging
+  production code; no late-setter methods; no RTTI/exceptions in runtime files.
+- Verification: 793 focused tests pass (unit/mailbox 302, unit/msg 44,
+  integration/mailbox 18, integration/actor 237, integration/msg 27,
+  integration/config 83, integration/sched 24, integration/tracing 25,
+  integration/ref 17, architecture 16). ASan/TSan blocked by pre-existing
+  macOS ARM platform issue (documented in CLAUDE.md).
+- Design spec: `docs/superpowers/specs/2026-06-28-actor-system-phase3-messaging-runtime-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-06-28-actor-system-phase3-messaging-runtime-implementation.md`.
+- Explicit Phase 4/5 handoff: frame routing stays in `ActorSystem::deliver_remote()`;
+  stream and network lifecycle ownership remain in future phases.
+- Known gap: transport resend on retry is not implemented (characterized, not claimed).
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,
