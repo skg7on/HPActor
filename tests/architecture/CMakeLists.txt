@@ -139,9 +139,9 @@ endforeach()
 # Check 1: No ActorSystem*/&/Impl captures in network runtime production code.
 set(_phase5_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_phase5_sources
-    ${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.cpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/network_runtime_ports.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime_ports.hpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/net/network_snapshot.hpp)
 foreach(_file IN LISTS _phase5_sources)
     add_test(
@@ -170,7 +170,7 @@ endforeach()
 add_test(
     NAME Phase5.NoLateSettersInNetworkRuntime
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime.hpp
         "-DFORBIDDEN=set_actor_system;set_scheduler;set_transport;set_discovery;set_metrics("
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )

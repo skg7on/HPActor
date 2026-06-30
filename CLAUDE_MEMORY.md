@@ -217,7 +217,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Implementation plan: `docs/superpowers/plans/2026-06-28-actor-system-phase4-frame-stream-routing-implementation.md`.
 
 **ActorSystem Refactor Phase 5: NetworkRuntime Extraction** ✅ Substantially Complete (2026-06-30)
-- `NetworkRuntime` in `src/runtime/network_runtime.hpp/.cpp` is the sole owner of
+- `NetworkRuntime` in `include/hpactor/runtime/network_runtime.hpp` + `src/runtime/network_runtime.cpp` is the sole owner of
   all network resources: `TcpTransport` (and its authoritative `EventLoop`), network
   thread, `IServiceDiscovery`/`UdpRegistrar`, `ActorLocationCache`, cache/retry
   maintenance timers, `RpcChannel`, `HttpClient`, and remote-spawn protocol integration.
@@ -244,8 +244,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - 11 architecture checks enforce: no `ActorSystem*`/`Impl*` captures in network
   runtime files; no late dependency setters; no second `EventLoop` creation;
   no `std::function` in network runtime; no RTTI/exceptions.
-- New files: `src/runtime/network_runtime.hpp`, `src/runtime/network_runtime.cpp`,
-  `src/runtime/network_runtime_ports.hpp`, `include/hpactor/net/network_snapshot.hpp`.
+- New files: `include/hpactor/runtime/network_runtime.hpp`, `src/runtime/network_runtime.cpp`,
+  `include/hpactor/runtime/network_runtime_ports.hpp`, `include/hpactor/net/network_snapshot.hpp`.
 - Test files: `tests/unit/runtime/test_network_runtime_lifecycle.cpp` (14 tests).
   All 1,788 focused tests pass (14 runtime + 199 unit/net + 195 integration/net
   + 17 rpc + 20 spawn + 302 unit/mailbox + 275 unit/actor + 237 integration/actor

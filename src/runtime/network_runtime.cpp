@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "network_runtime.hpp"
+#include <hpactor/runtime/network_runtime.hpp>
 
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/net/static_discovery.hpp>
