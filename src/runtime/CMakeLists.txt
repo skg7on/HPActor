@@ -4,4 +4,5 @@ target_sources(hpactor_lib PRIVATE
     messaging_runtime.cpp
     network_runtime.cpp
     runtime_blueprint_builder.cpp
+    runtime_builder.cpp
 )

@@ -49,7 +49,7 @@ struct StreamRuntimeConfig final {
 
 /// \brief Validated network-runtime configuration (present when networking
 ///        is enabled).
-struct NetworkRuntimeConfig final {
+struct BlueprintNetworkConfig final {
     bool enabled{false};
     uint16_t tcp_port{0};
     bool http_client_enabled{false};
@@ -91,7 +91,7 @@ class RuntimeBlueprint final {
     const StreamRuntimeConfig& streams() const noexcept {
         return streams_;
     }
-    const std::optional<NetworkRuntimeConfig>& network() const noexcept {
+    const std::optional<BlueprintNetworkConfig>& network() const noexcept {
         return network_;
     }
 
@@ -115,7 +115,7 @@ class RuntimeBlueprint final {
     ActorRuntimeConfig actor_;
     MessagingRuntimeConfig messaging_;
     StreamRuntimeConfig streams_;
-    std::optional<NetworkRuntimeConfig> network_;
+    std::optional<BlueprintNetworkConfig> network_;
     std::vector<ConfiguredActorSpec> actors_;
     uint64_t fingerprint_{0};
 };

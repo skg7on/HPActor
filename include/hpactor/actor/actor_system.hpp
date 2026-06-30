@@ -870,6 +870,14 @@ class ActorSystem {
                                      std::string_view type_name);
 
     friend struct sched::ActorExecutionDependencies;
+    friend class RuntimeBuilder;
+    friend class RuntimeCoordinator;
+
+    /// \brief Tag type for blueprint-based construction (no startup).
+    struct FromBlueprint {};
+    /// \brief Construct from a validated blueprint without starting components.
+    /// Only accessible to RuntimeBuilder and RuntimeCoordinator (friends).
+    ActorSystem(FromBlueprint, const class RuntimeBlueprint& bp);
 
     class Impl;
     std::unique_ptr<Impl> impl_;

@@ -63,7 +63,7 @@ RuntimeBlueprintBuilder::from_config(const Config& config) noexcept {
     bp.messaging_.default_message_ttl_ms = config.default_message_ttl_ms;
 
     if (config.enable_network) {
-        NetworkRuntimeConfig net;
+        BlueprintNetworkConfig net;
         net.enabled = true;
         net.tcp_port = config.tcp_port;
         net.http_client_enabled = config.enable_http_client;

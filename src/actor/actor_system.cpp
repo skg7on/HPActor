@@ -17,6 +17,7 @@
 
 #include "../runtime/actor_spawner.hpp"
 #include "../runtime/actor_system_impl.hpp"
+#include "../runtime/runtime_blueprint.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -122,6 +123,17 @@ bool backpressure_wire_adapter(void* context, const ActorAddress& target,
 // -----------------------------------------------------------------------------
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
+
+// ── Blueprint-based construction (no startup) ───────────────────────────────
+// Only accessible to RuntimeBuilder and RuntimeCoordinator (friends).
+ActorSystem::ActorSystem(FromBlueprint, const RuntimeBlueprint& bp)
+    : impl_(std::make_unique<Impl>(*this, bp)) {
+    // The Impl blueprint constructor builds all components but does NOT start
+    // threads, listeners, timers, or spawn actors.  The RuntimeCoordinator
+    // owns startup ordering (Task 5).
+}
+
+// ── Config-based construction (full startup, legacy path) ───────────────────
 ActorSystem::ActorSystem(const Config& config)
     : impl_(std::make_unique<Impl>(*this, config)) {
     impl_->core.config = config;

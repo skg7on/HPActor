@@ -168,6 +168,9 @@ struct ClusterRuntimeState final {
 class ActorSystem::Impl final {
   public:
     Impl(ActorSystem& f, const Config& config);
+    /// \brief Construct from a RuntimeBlueprint — construction only, no
+    /// startup.
+    Impl(ActorSystem& f, const class RuntimeBlueprint& bp);
     ~Impl();
 
     Impl(const Impl&) = delete;
