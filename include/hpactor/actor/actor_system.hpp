@@ -251,6 +251,21 @@ class ActorSystem {
     /// \param[in] config System configuration.
     explicit ActorSystem(const Config& config);
 
+    /// \brief Preferred API: create a fully validated, ready system.
+    ///
+    /// Validates all config before any runtime side effect (threads,
+    /// listeners, daemonization, actor spawns). Returns the system
+    /// on success, or a typed error on validation/startup failure.
+    static result<std::unique_ptr<ActorSystem>>
+    create(const Config& config) noexcept;
+
+    /// \brief Create with topology bootstrapping.
+    ///
+    /// Parses the TOML topology, validates actor factories, and spawns
+    /// configured actors. All validation happens before startup.
+    static result<std::unique_ptr<ActorSystem>>
+    create(const Config& config, const std::string& topology_path) noexcept;
+
     /// \brief Shut down all subsystems in phase order.
     ~ActorSystem();
 

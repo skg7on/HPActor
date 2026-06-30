@@ -101,4 +101,26 @@ RuntimeBlueprintBuilder::from_config(const Config& config) noexcept {
     return result<RuntimeBlueprint>::make(std::move(bp));
 }
 
+ReloadReport
+RuntimeBlueprintBuilder::diff(const RuntimeBlueprint& current,
+                              const RuntimeBlueprint& candidate) noexcept {
+    ReloadReport report;
+
+    if (current.fingerprint() == candidate.fingerprint()) {
+        report.fully_applied = true;
+        report.summary = "no changes detected";
+        return report;
+    }
+
+    // Fingerprints differ — classify the change.
+    // In the full implementation, individual field descriptors from
+    // ConfigFieldRegistry would be checked. For now, we classify
+    // at the blueprint level: if only Live fields changed, we accept.
+    //
+    // Default: all changes require restart (conservative).
+    report.restart_required_fields = 1;
+    report.summary = "fingerprint mismatch — restart required";
+    return report;
+}
+
 } // namespace hpactor

@@ -120,4 +120,32 @@ result<void> RuntimeCoordinator::stop() noexcept {
     return result<void>::make();
 }
 
+result<void> RuntimeCoordinator::shutdown() noexcept {
+    auto current = state_.load(std::memory_order_acquire);
+
+    // Already stopped — idempotent.
+    if (current == RuntimeLifecycleState::Stopped) {
+        return result<void>::make();
+    }
+
+    // Built or Failed — go directly to Stopped.
+    if (current == RuntimeLifecycleState::Built ||
+        current == RuntimeLifecycleState::Failed) {
+        return stop();
+    }
+
+    // Running → full drain sequence.
+    if (current == RuntimeLifecycleState::Running) {
+        // Readiness must go false before drain begins.
+        ready_.store(false, std::memory_order_release);
+        transition_to(RuntimeLifecycleState::Draining);
+        transition_to(RuntimeLifecycleState::Stopping);
+        transition_to(RuntimeLifecycleState::Stopped);
+        return result<void>::make();
+    }
+
+    // Any other state — just stop.
+    return stop();
+}
+
 } // namespace hpactor

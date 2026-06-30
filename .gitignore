@@ -21,3 +21,5 @@ Testing/
 .vscode/
 .idea/
 .superpowers
+build_asan/
+build_dbg/

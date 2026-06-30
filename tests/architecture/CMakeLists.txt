@@ -194,3 +194,36 @@ add_test(
         "-DFORBIDDEN=std::function"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
+
+# ── Phase 6: Runtime lifecycle architecture fitness ──────────────────────────
+
+# Check 1: No RTTI/exceptions in runtime lifecycle files.
+set(_phase6_no_rtti "dynamic_cast" "typeid" "throw " "try {" "catch (")
+set(_phase6_sources
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_blueprint.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_blueprint_builder.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_blueprint_builder.cpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_builder.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_builder.cpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_coordinator.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_coordinator.cpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_startup.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_startup.cpp)
+foreach(_file IN LISTS _phase6_sources)
+    add_test(
+        NAME Phase6.NoRtti.${_file}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_phase6_no_rtti}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+    )
+endforeach()
+
+# Check 2: No std::function callbacks in coordinator (fixed ports only).
+add_test(
+    NAME Phase6.NoStdFunctionInCoordinator
+    COMMAND ${CMAKE_COMMAND}
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/runtime_coordinator.hpp
+        "-DFORBIDDEN=std::function"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+)

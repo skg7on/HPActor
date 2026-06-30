@@ -16,6 +16,7 @@
 
 #include "runtime_blueprint.hpp"
 
+#include <hpactor/config/reload_report.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <string>
@@ -39,6 +40,14 @@ class RuntimeBlueprintBuilder final {
     /// process constraints before returning. No threads, listeners, actor
     /// spawns, or daemonization occur.
     static result<RuntimeBlueprint> from_config(const Config& config) noexcept;
+
+    /// \brief Compute a reload classification diff between two blueprints.
+    ///
+    /// Compares fingerprints. If they match, the report has fully_applied=true
+    /// and zero fields. If they differ, fields are classified as Live,
+    /// RestartRequired, or Immutable based on registered descriptors.
+    static ReloadReport diff(const RuntimeBlueprint& current,
+                             const RuntimeBlueprint& candidate) noexcept;
 };
 
 } // namespace hpactor

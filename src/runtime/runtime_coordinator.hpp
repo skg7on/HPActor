@@ -93,6 +93,11 @@ class RuntimeCoordinator final {
     /// \brief Stop all components, draining if running.
     result<void> stop() noexcept;
 
+    /// \brief Shut down with full drain sequence.
+    /// Same as stop() but transitions through Draining state first when
+    /// Running.
+    result<void> shutdown() noexcept;
+
     /// \brief Current lifecycle state.
     RuntimeLifecycleState state() const noexcept;
 

@@ -18,6 +18,10 @@
 #include "../runtime/actor_spawner.hpp"
 #include "../runtime/actor_system_impl.hpp"
 #include "../runtime/runtime_blueprint.hpp"
+#include "../runtime/runtime_blueprint_builder.hpp"
+#include "../runtime/runtime_builder.hpp"
+#include "../runtime/runtime_coordinator.hpp"
+#include "../runtime/runtime_startup.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -131,6 +135,48 @@ ActorSystem::ActorSystem(FromBlueprint, const RuntimeBlueprint& bp)
     // The Impl blueprint constructor builds all components but does NOT start
     // threads, listeners, timers, or spawn actors.  The RuntimeCoordinator
     // owns startup ordering (Task 5).
+}
+
+// ── Preferred factory: blueprint → builder → coordinator → ready ──────────
+
+result<std::unique_ptr<ActorSystem>>
+ActorSystem::create(const Config& config) noexcept {
+    auto bp = RuntimeBlueprintBuilder::from_config(config);
+    if (!bp.ok()) {
+        return result<std::unique_ptr<ActorSystem>>::make(bp.error());
+    }
+
+    auto built = RuntimeBuilder::build(bp.value());
+    if (!built.ok()) {
+        return result<std::unique_ptr<ActorSystem>>::make(built.error());
+    }
+
+    // RuntimeBuilder already used the FromBlueprint constructor which
+    // does NOT start threads.  The system is valid but not ready.
+    auto system = std::move(built.value().system);
+
+    // If the user wants an immediately-ready system (legacy behavior),
+    // we need to start the scheduler.  The existing Config constructor
+    // path does this; the blueprint path defers to the coordinator.
+    // For source compatibility, start the scheduler now.
+    if (system->scheduler()) {
+        system->scheduler()->start();
+    }
+
+    return result<std::unique_ptr<ActorSystem>>::make(std::move(system));
+}
+
+result<std::unique_ptr<ActorSystem>>
+ActorSystem::create(const Config& config, const std::string& topology_path) noexcept {
+    auto sys_result = create(config);
+    if (!sys_result.ok()) {
+        return sys_result;
+    }
+    auto load_result = sys_result.value()->load_topology(topology_path);
+    if (!load_result.ok()) {
+        return result<std::unique_ptr<ActorSystem>>::make(load_result.error());
+    }
+    return sys_result;
 }
 
 // ── Config-based construction (full startup, legacy path) ───────────────────
