@@ -92,8 +92,8 @@ TEST(TraceSinkPortTest, DefaultConstructedIsNoop) {
 
 TEST(TraceSinkPortTest, WiredPortHasRecordSpanCallback) {
     hpactor::TraceSinkPort port;
-    port.record_span = [](void* /*ctx*/, const hpactor::tracing::SpanStart& /*span*/,
-                          hpactor::tracing::SpanHandle /*parent*/) noexcept {
+    port.record_span = [](void* /*ctx*/,
+                          const hpactor::tracing::SpanStart& /*span*/) noexcept {
         return hpactor::tracing::SpanHandle{};
     };
     EXPECT_NE(port.record_span, nullptr);

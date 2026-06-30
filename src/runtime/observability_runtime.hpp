@@ -16,7 +16,14 @@
 
 #include "runtime_blueprint.hpp"
 
+#include <hpactor/fault/fault_controller.hpp>
+#include <hpactor/log/log_config.hpp>
+#include <hpactor/log/logger.hpp>
+#include <hpactor/metrics/metrics_config.hpp>
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/runtime/observability_ports.hpp>
+#include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -24,93 +31,83 @@
 
 namespace hpactor {
 
+namespace log {
+class LogManager;
+} // namespace log
+
+namespace tracing {
+class TraceManager;
+} // namespace tracing
+
 /// \brief Immutable snapshot of observability runtime state.
-///
-/// Copied values only — no locks held after construction. Carries
-/// per-component enabled flags and bounded counter values.
 struct ObservabilitySnapshot final {
     bool metrics_enabled{false};
     bool logging_enabled{false};
     bool tracing_enabled{false};
     bool fault_injection_enabled{false};
-
-    /// \brief Metrics drop counter (events discarded because ring buffer
-    /// was full or metrics were disabled).
     uint64_t metrics_drops{0};
-
-    /// \brief Log drop counter.
     uint64_t log_drops{0};
-
-    /// \brief Trace drop counter.
     uint64_t trace_drops{0};
-
-    /// \brief Lifecycle epoch of the observability runtime when snapshot was
-    /// taken.
     uint64_t epoch{0};
 };
 
 /// \brief Cohesive owner of metrics, logging, tracing, and fault injection
 /// infrastructure.
-///
-/// All telemetry producers receive stable ports that never change identity
-/// across enable/disable/reload transitions. Ports close only after all
-/// producers have quiesced.
-///
-/// \note Actor objects used for metrics aggregation (MetricsActor) remain
-/// owned by ActorRuntime. ObservabilityRuntime owns only the storage,
-/// exporters, and port infrastructure.
 class ObservabilityRuntime final {
   public:
-    /// \brief Create an ObservabilityRuntime from validated config.
-    ///
-    /// Construction is side-effect-free: no threads, ring buffers, actors,
-    /// or exporters are created until \c start() is called.
     static std::unique_ptr<ObservabilityRuntime>
     create(const ObservabilityRuntimeConfig& config) noexcept;
 
-    /// \brief Destroy the runtime.
-    ///
-    /// If the runtime has been started but not stopped, stop() is called
-    /// before destruction.
     ~ObservabilityRuntime();
 
-    // ── Lifecycle ──────────────────────────────────────────────────────────
-
-    /// \brief Start all enabled telemetry subsystems.
-    ///
-    /// Creates ring buffers, exporters, and manager objects. Idempotent
-    /// when already started.
+    // ── Lifecycle ────────────────────────────────────────────────────────
     result<void> start() noexcept;
-
-    /// \brief Stop all telemetry subsystems.
-    ///
-    /// Closes ports, drains exporters, and destroys manager objects.
-    /// Idempotent when already stopped.
     result<void> stop() noexcept;
 
-    // ── Stable ports ───────────────────────────────────────────────────────
-
-    /// \brief Metrics sink port (stable identity, never null).
+    // ── Stable ports ─────────────────────────────────────────────────────
     const MetricsSinkPort& metrics_sink() const noexcept {
         return metrics_port_;
     }
-
-    /// \brief Log sink port (stable identity, never null).
     const LogSinkPort& log_sink() const noexcept {
         return log_port_;
     }
-
-    /// \brief Trace sink port (stable identity, never null).
     const TraceSinkPort& trace_sink() const noexcept {
         return trace_port_;
     }
 
-    // ── Observability ──────────────────────────────────────────────────────
+    // ── Resource accessors (for wiring producers) ─────────────────────────
+    metrics::MpscRingBuffer<metrics::MetricEvent>*
+    metrics_ring_buffer() const noexcept {
+        return metrics_ring_buffer_.get();
+    }
+    log::Logger* logger() const noexcept {
+        return logger_;
+    }
+    log::LogManager* log_manager() const noexcept {
+        return log_manager_.get();
+    }
+    tracing::TraceManager* trace_manager() const noexcept {
+        return trace_manager_.get();
+    }
+    fault::FaultController& fault_controller() noexcept {
+        return fault_controller_;
+    }
 
-    /// \brief Capture a bounded read-only snapshot of observability state.
-    ///
-    /// The snapshot carries per-component enabled flags, drop counters, and
-    /// a lifecycle epoch. No locks are held after the snapshot is returned.
+    // ── Configuration ────────────────────────────────────────────────────
+    const metrics::MetricsConfig& metrics_config() const noexcept {
+        return metrics_config_;
+    }
+    const log::LogConfig& logging_config() const noexcept {
+        return logging_config_;
+    }
+    const tracing::TraceConfig& tracing_config() const noexcept {
+        return tracing_config_;
+    }
+
+    /// \brief Apply a new tracing configuration (reload).
+    void apply_tracing_config(const tracing::TraceConfig& config) noexcept;
+
+    // ── Observability ────────────────────────────────────────────────────
     ObservabilitySnapshot snapshot() const noexcept;
 
   private:
@@ -118,16 +115,25 @@ class ObservabilityRuntime final {
 
     ObservabilityRuntimeConfig config_;
 
+    // Per-subsystem config values (populated from config_ at construction,
+    // updated by apply_tracing_config / reconfigure).
+    metrics::MetricsConfig metrics_config_;
+    log::LogConfig logging_config_;
+    tracing::TraceConfig tracing_config_;
+
+    // Owned infrastructure — created in start(), destroyed in stop().
+    std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer_;
+    std::unique_ptr<log::LogManager> log_manager_;
+    log::Logger* logger_{nullptr}; // points into log_manager_
+    std::unique_ptr<tracing::TraceManager> trace_manager_;
+    fault::FaultController fault_controller_;
+
     // Stable ports — identity never changes.
     MetricsSinkPort metrics_port_;
     LogSinkPort log_port_;
     TraceSinkPort trace_port_;
 
-    // Lifecycle state.
     std::atomic<bool> started_{false};
-
-    // Drop counters (atomic, incremented when ports are called while disabled
-    // or when ring buffers are full).
     std::atomic<uint64_t> metrics_drops_{0};
     std::atomic<uint64_t> log_drops_{0};
     std::atomic<uint64_t> trace_drops_{0};

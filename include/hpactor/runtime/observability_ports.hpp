@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/tracing/span.hpp> // for SpanStart, SpanHandle, SpanStatus
+
 #include <cstdint>
 
 namespace hpactor {
@@ -21,11 +23,6 @@ namespace hpactor {
 namespace log {
 struct LogEvent;
 } // namespace log
-
-namespace tracing {
-struct SpanStart;
-struct SpanHandle;
-} // namespace tracing
 
 /// \brief Fixed-size non-owning sink for metrics events.
 ///
@@ -72,19 +69,21 @@ struct TraceSinkPort {
 
     /// \brief Record a new span. Called from any thread.
     /// \param ctx The context pointer.
-    /// \param span The span start record.
-    /// \param parent The parent span handle (null if root span).
-    /// \return A span handle for the newly created span, or null if tracing
-    ///         is disabled or the ring buffer is full.
-    tracing::SpanHandle (*record_span)(void* ctx, const tracing::SpanStart& span,
-                                       tracing::SpanHandle parent) noexcept {nullptr};
+    /// \param span The span start record (includes parent trace context
+    ///        in \c span.parent).
+    /// \return A span handle for the newly created span, or a default/null
+    ///         handle if tracing is disabled or the ring buffer is full.
+    tracing::SpanHandle (*record_span)(void* ctx,
+                                       const tracing::SpanStart& span) noexcept {
+        nullptr};
 
     /// \brief Finish a span. Called from any thread.
     /// \param ctx The context pointer.
-    /// \param handle The span handle to finish.
+    /// \param handle The span handle to finish (in/out — cleared on
+    ///        completion).
     /// \param status The span status code.
-    void (*finish_span)(void* ctx, tracing::SpanHandle handle,
-                        uint32_t status) noexcept {nullptr};
+    void (*finish_span)(void* ctx, tracing::SpanHandle& handle,
+                        tracing::SpanStatus status) noexcept {nullptr};
 };
 
 } // namespace hpactor
