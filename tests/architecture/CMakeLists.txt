@@ -227,3 +227,67 @@ add_test(
         "-DFORBIDDEN=std::function"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
+
+# ── Phase 7: Observability & Cluster architecture fitness ───────────────────
+
+# Check 1: No RTTI/exceptions in observability and cluster runtime files.
+set(_phase7_no_rtti "dynamic_cast" "typeid" "throw " "try {" "catch (")
+set(_phase7_sources
+    ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.cpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/observability_ports.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/cluster_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.hpp
+    ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.cpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/observability/observability_snapshot.hpp)
+foreach(_file IN LISTS _phase7_sources)
+    add_test(
+        NAME Phase7.NoRtti.${_file}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_phase7_no_rtti}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+    )
+endforeach()
+
+# Check 2: No ActorSystem*/& captures in observability and cluster runtime.
+set(_phase7_no_facade "ActorSystem*" "ActorSystem&")
+set(_phase7_no_facade_sources
+    ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.cpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/cluster_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.hpp
+    ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.cpp)
+foreach(_file IN LISTS _phase7_no_facade_sources)
+    add_test(
+        NAME Phase7.NoFacadeCapture.${_file}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_phase7_no_facade}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+    )
+endforeach()
+
+# Check 3: No type-erased cluster ownership in runtime/actor files.
+set(_phase7_no_void_cluster "unique_ptr<void" "cluster_cleanup_fn")
+set(_phase7_cluster_sources
+    ${CMAKE_SOURCE_DIR}/src/runtime/actor_system_impl.hpp
+    ${CMAKE_SOURCE_DIR}/src/actor/actor_system.cpp)
+foreach(_file IN LISTS _phase7_cluster_sources)
+    add_test(
+        NAME Phase7.NoVoidCluster.${_file}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_phase7_no_void_cluster}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+    )
+endforeach()
+
+# Check 4: No std::function in observability runtime.
+add_test(
+    NAME Phase7.NoStdFunctionInObservability
+    COMMAND ${CMAKE_COMMAND}
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.hpp
+        "-DFORBIDDEN=std::function"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
+)
