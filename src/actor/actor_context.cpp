@@ -17,6 +17,7 @@
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/receptionist/receptionist.hpp>
+#include <hpactor/actor/stream_handle.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -560,6 +561,22 @@ void ActorContext::handle_backpressure(const mailbox::BackpressureSignal& signal
     if (backpressure_handler_) {
         backpressure_handler_(signal);
     }
+}
+
+std::optional<StreamHandle>
+ActorContext::open_stream(ActorId target, StreamConfig config) {
+    if (!system_) {
+        return std::nullopt;
+    }
+    return system_->open_stream(target, config);
+}
+
+std::optional<StreamHandle>
+ActorContext::open_stream(ActorRef target, StreamConfig config) {
+    if (!system_) {
+        return std::nullopt;
+    }
+    return system_->open_stream(target, config);
 }
 
 void ActorContext::stop(ActorId target) {

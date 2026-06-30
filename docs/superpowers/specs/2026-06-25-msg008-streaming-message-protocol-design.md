@@ -2,6 +2,7 @@
 
 **Issue:** [#21](https://github.com/skg7on/HPActor/issues/21)  
 **Date:** 2026-06-25  
+**Revised:** 2026-06-30 (MSG-008c: user_tag propagation, remote open_stream, live query methods, ActorContext delegation, explicit tag dispatch)  
 **Status:** Approved  
 **Subsystem:** Messaging  
 **Priority:** P2  
@@ -101,7 +102,8 @@ still flow through mailboxes (preserving backpressure) but skip the wire.
 | `StreamHandle` | User-facing API: `write()`, `close()`, `error()`. Forwards operations to `StreamSenderActor` via typed messages. Tracks `is_open()` state locally. |
 | `StreamSenderActor` | Wire protocol send side: sequences chunks, tracks `bytes_in_flight`, honors `window_bytes`, manages send buffer with bounded capacity, runs idle timeout timer, spawns `StreamReceiverActor` on remote side via spawn request |
 | `StreamReceiverActor` | Wire protocol receive side: reassembles chunks, advertises credit window (integrated with target mailbox pressure), delivers chunks as `TypedMessage`s to target actor, sends `StreamAckFrame` on chunk delivery and pressure change |
-| `ActorSystem` | Route `StreamOpenFrame` to spawn `StreamReceiverActor` on target node; dispatch stream wire frames to correct stream actor |
+| `StreamSenderState` | Thread-safe shared state (`shared_ptr<atomic<size_t>>`, `shared_ptr<atomic<uint32_t>>`) between `StreamSenderActor` (writer) and `StreamHandle` (reader). Enables lock-free snapshot queries of `bytes_in_flight` and `window_bytes`. |
+| `ActorSystem` | Route `StreamOpenFrame` to spawn `StreamReceiverActor` on target node; dispatch stream wire frames to correct stream actor; provide `open_stream(ActorId)` and `open_stream(ActorRef)` overloads. |
 
 ## 4. Wire Protocol
 
@@ -122,6 +124,7 @@ message StreamDataFrame {
   uint64 stream_id = 1;
   uint64 sequence = 2;                  // monotonic chunk sequence, starts at 1
   bytes payload = 3;                    // the chunk data
+  uint32 user_tag = 4;                  // original TypeTag from StreamHandle::write()
 }
 
 message StreamAckFrame {
@@ -275,9 +278,13 @@ public:
     bool error(uint32_t code, std::string_view description = "");
 
     /// Number of bytes written but not yet acknowledged by the receiver.
+    /// \note Returns a lock-free snapshot via shared atomics; the value
+    ///       advances asynchronously as acks arrive.
     size_t bytes_in_flight() const;
 
     /// Current advertised receiver window in bytes.
+    /// \note Returns a lock-free snapshot via shared atomics; the value
+    ///       advances asynchronously.
     size_t window_bytes() const;
 
     /// True if the stream is open (not yet closed or errored).
@@ -320,7 +327,7 @@ struct StreamConfig {
 ### 5.3 ActorContext Extension
 
 ```cpp
-/// \brief Open a streaming session to a target actor.
+/// \brief Open a streaming session to a target actor (local only).
 ///
 /// Spawns an internal \c StreamSenderActor that manages the stream protocol
 /// (credit window, sequencing, idle timeout). On the receiver side, a
@@ -330,9 +337,16 @@ struct StreamConfig {
 /// \param[in] target Destination actor ID.
 /// \param[in] config Stream configuration.
 /// \return \c StreamHandle for writing chunks, or \c std::nullopt if the
-///         stream could not be opened (target unreachable, config invalid,
-///         receiver actor not found).
+///         stream could not be opened.
 std::optional<StreamHandle> open_stream(ActorId target,
+                                        StreamConfig config = {});
+
+/// \brief Open a streaming session to a target actor reference (local or remote).
+///
+/// Location-transparent overload. For remote targets, spawns StreamSenderActor
+/// locally and sends StreamOpenFrame via transport. The remote node spawns
+/// StreamReceiverActor on receipt.
+std::optional<StreamHandle> open_stream(ActorRef target,
                                         StreamConfig config = {});
 ```
 

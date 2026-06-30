@@ -1354,6 +1354,12 @@ void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
 
     if (receiver) {
         register_stream_receiver(open.stream_id(), receiver.id());
+
+        // Deliver StreamOpenedTag so the target actor knows a stream session
+        // has been established (mirrors the local path in open_stream_impl).
+        TypedMessage open_msg(stream::StreamOpenedTag, StreamBuffer{});
+        (void)impl_->messaging_->try_deliver_fast(
+            receiver_id, std::move(open_msg), FastDeliveryReason::StreamProtocol);
     }
 }
 
@@ -1433,31 +1439,62 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
     if (!actor)
         return std::nullopt;
 
-    uint64_t stream_id = allocate_stream_id(target);
-
-    // Resolve target address
     ActorAddress target_addr = actor->address();
     bool is_local_target = target_addr.endpoint == impl_->core.endpoint;
-
-    // Default trace context — ActorContext::open_stream() will capture
-    // the calling actor's current trace scope (future phase).
     TraceContext trace_ctx;
+    auto shared_state = std::make_shared<StreamSenderState>();
+
+    return open_stream_impl(target, target_addr, is_local_target, config,
+                            trace_ctx, shared_state);
+}
+
+std::optional<StreamHandle>
+ActorSystem::open_stream(ActorRef target, StreamConfig config) {
+    if (target.is_local()) {
+        auto* actor = target.get_actor();
+        if (!actor || !actor->get())
+            return std::nullopt;
+        return open_stream(actor->get()->id(), config);
+    }
+
+    // Remote target via ActorProxy.
+    auto* proxy = target.get_proxy();
+    if (!proxy)
+        return std::nullopt;
+
+    ActorAddress target_addr = proxy->address();
+    TraceContext trace_ctx;
+    auto shared_state = std::make_shared<StreamSenderState>();
+
+    return open_stream_impl(target_addr.id, target_addr,
+                            /*is_local_target=*/false, config, trace_ctx,
+                            shared_state);
+}
+
+std::optional<StreamHandle>
+ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
+                              bool is_local_target, StreamConfig config,
+                              TraceContext trace_ctx,
+                              std::shared_ptr<StreamSenderState> shared_state) {
+    uint64_t stream_id = allocate_stream_id(receiver_id);
 
     // Spawn StreamSenderActor with local/remote awareness.
-    auto sender = spawn<StreamSenderActor>(target, target_addr, stream_id,
-                                           config, trace_ctx, is_local_target);
+    auto sender =
+        spawn<StreamSenderActor>(receiver_id, receiver_addr, stream_id, config,
+                                 trace_ctx, is_local_target, shared_state);
     if (!sender)
         return std::nullopt;
     register_stream_sender(stream_id, sender.id());
 
     // Create StreamHandle with the delivery callback bound to this ActorSystem.
-    StreamHandle handle(sender.id(), stream_id, deliver_to_stream_sender, this);
+    StreamHandle handle(sender.id(), stream_id, deliver_to_stream_sender, this,
+                        shared_state);
 
     if (is_local_target) {
         // Local target: spawn StreamReceiverActor directly.
         ActorAddress sender_addr{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0};
         auto receiver =
-            spawn<StreamReceiverActor>(target, stream_id, sender_addr,
+            spawn<StreamReceiverActor>(receiver_id, stream_id, sender_addr,
                                        config.initial_window_bytes, trace_ctx);
         if (receiver) {
             register_stream_receiver(stream_id, receiver.id());
@@ -1465,11 +1502,9 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
 
         // Deliver StreamOpenedTag to the target actor so it knows
         // a stream session has been established.
-        // TODO(msg-008c): serialize full StreamOpenedPayload
-        // (stream_id, sender, initial_window_bytes).
         TypedMessage open_msg(stream::StreamOpenedTag, StreamBuffer{});
         (void)impl_->messaging_->try_deliver_fast(
-            target, std::move(open_msg), FastDeliveryReason::StreamProtocol);
+            receiver_id, std::move(open_msg), FastDeliveryReason::StreamProtocol);
     } else {
         // Remote target: send StreamOpenFrame via transport.
         auto* tp = transport();
@@ -1479,13 +1514,13 @@ ActorSystem::open_stream(ActorId target, StreamConfig config) {
             net::to_proto(open.mutable_sender(),
                           ActorAddress{impl_->core.endpoint, ActorType{0},
                                        ActorId{0}, 0});
-            net::to_proto(open.mutable_receiver(), target_addr);
+            net::to_proto(open.mutable_receiver(), receiver_addr);
             open.set_initial_window_bytes(config.initial_window_bytes);
             if (trace_ctx.valid()) {
                 net::to_proto(open.mutable_trace_context(), trace_ctx);
             }
             auto wire_frame = net::WireFrame::from_stream_open(std::move(open));
-            (void)tp->try_send(target_addr, wire_frame.encode());
+            (void)tp->try_send(receiver_addr, wire_frame.encode());
         }
     }
 

@@ -17,6 +17,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_ref_cache.hpp>
 #include <hpactor/actor/receptionist/service_key.hpp>
+#include <hpactor/actor/stream_config.hpp>
 #include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/proto_type_registry.hpp>
@@ -44,6 +45,8 @@ class Message;
 } // namespace google
 
 namespace hpactor {
+
+class StreamHandle;
 
 /// \brief Execution context provided to every actor.
 ///
@@ -87,6 +90,27 @@ class ActorContext {
     /// \param[in] args Constructor arguments.
     /// \return An \c Actor handle to the spawned child.
     template <typename T, typename... Args> T spawn(Args&&... args);
+
+    // ── Streaming ─────────────────────────────────────────────────────────
+
+    /// \brief Open a streaming session to a target actor.
+    ///
+    /// Delegates to \c ActorSystem::open_stream(). See that method for
+    /// full documentation.
+    /// \param[in] target Destination actor ID.
+    /// \param[in] config Stream configuration (window size, buffer limits,
+    /// etc.).
+    /// \return \c StreamHandle on success, \c std::nullopt if target
+    /// unreachable.
+    std::optional<StreamHandle>
+    open_stream(ActorId target, StreamConfig config = {});
+
+    /// \brief Open a streaming session to a target actor reference.
+    ///
+    /// Supports both local and remote targets transparently via ActorRef.
+    /// Delegates to \c ActorSystem::open_stream(ActorRef, ...).
+    std::optional<StreamHandle>
+    open_stream(ActorRef target, StreamConfig config = {});
 
     // ── Message sending ───────────────────────────────────────────────────
 

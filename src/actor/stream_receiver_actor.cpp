@@ -67,7 +67,14 @@ void StreamReceiverActor::handle_stream_data(const ::hpactor::net::StreamDataFra
     // Deliver chunk to target actor.
     const auto& payload = data.payload();
     StreamBuffer chunk_data(payload.begin(), payload.end());
-    TypedMessage chunk(stream::StreamChunkTag, std::move(chunk_data));
+
+    // Use the original user tag if set (MSG-008c tag propagation),
+    // fall back to StreamChunkTag for backward compatibility.
+    TypeTag delivery_tag = data.user_tag() != 0
+                               ? static_cast<TypeTag>(data.user_tag())
+                               : stream::StreamChunkTag;
+
+    TypedMessage chunk(delivery_tag, std::move(chunk_data));
     chunk.set_sender_address(sender_addr_);
     if (trace_ctx_.valid()) {
         chunk.set_trace_context(trace_ctx_);

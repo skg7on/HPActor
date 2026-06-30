@@ -54,18 +54,22 @@ class StreamHandle {
     /// \param stream_id Unique stream identifier.
     /// \param deliver_fn Callback for delivering messages to the sender actor.
     /// \param deliver_ctx Opaque context for the delivery callback.
+    /// \param state Optional shared state for observability
+    ///        (bytes_in_flight, window_bytes). May be nullptr.
     StreamHandle(ActorId sender_actor_id, uint64_t stream_id,
-                 DeliverFn deliver_fn, void* deliver_ctx)
+                 DeliverFn deliver_fn, void* deliver_ctx,
+                 std::shared_ptr<StreamSenderState> state = nullptr)
         : sender_actor_id_(sender_actor_id), stream_id_(stream_id),
-          deliver_fn_(deliver_fn), deliver_ctx_(deliver_ctx), closed_(false) {}
+          deliver_fn_(deliver_fn), deliver_ctx_(deliver_ctx),
+          state_(std::move(state)), closed_(false) {}
 
     ~StreamHandle() = default;
 
     // Move-only
     StreamHandle(StreamHandle&& other) noexcept
-        : sender_actor_id_(other.sender_actor_id_),
-          stream_id_(other.stream_id_), deliver_fn_(other.deliver_fn_),
-          deliver_ctx_(other.deliver_ctx_), closed_(other.closed_) {
+        : sender_actor_id_(other.sender_actor_id_), stream_id_(other.stream_id_),
+          deliver_fn_(other.deliver_fn_), deliver_ctx_(other.deliver_ctx_),
+          state_(std::move(other.state_)), closed_(other.closed_) {
         other.stream_id_ = 0;
         other.deliver_fn_ = nullptr;
         other.deliver_ctx_ = nullptr;
@@ -78,6 +82,7 @@ class StreamHandle {
             stream_id_ = other.stream_id_;
             deliver_fn_ = other.deliver_fn_;
             deliver_ctx_ = other.deliver_ctx_;
+            state_ = std::move(other.state_);
             closed_ = other.closed_;
             other.stream_id_ = 0;
             other.deliver_fn_ = nullptr;
@@ -142,15 +147,14 @@ class StreamHandle {
     /// \note Returns a snapshot; the value advances asynchronously as acks
     ///       arrive.
     size_t bytes_in_flight() const {
-        // TODO(msg-008c): query StreamSenderActor for live value.
-        return 0;
+        return state_ ? state_->bytes_in_flight->load(std::memory_order_acquire)
+                      : 0;
     }
 
     /// Current advertised receiver window in bytes.
     /// \note Returns a snapshot; the value advances asynchronously.
     size_t window_bytes() const {
-        // TODO(msg-008c): query StreamSenderActor for live value.
-        return 0;
+        return state_ ? state_->window_bytes->load(std::memory_order_acquire) : 0;
     }
 
     /// True if the stream is open (not yet closed or errored).
@@ -168,6 +172,7 @@ class StreamHandle {
     uint64_t stream_id_ = 0;
     DeliverFn deliver_fn_ = nullptr;
     void* deliver_ctx_ = nullptr;
+    std::shared_ptr<StreamSenderState> state_;
     bool closed_ = false;
 };
 
