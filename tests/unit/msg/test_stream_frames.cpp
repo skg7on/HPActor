@@ -38,7 +38,7 @@ TEST(StreamFrameTest, StreamDataFrameRoundtrip) {
     net::StreamDataFrame data;
     data.set_stream_id(42);
     data.set_sequence(7);
-    data.set_payload("hello", 5);
+    data.set_payload("hello", 5u);
 
     auto frame = net::WireFrame::from_stream_data(std::move(data));
     EXPECT_EQ(frame.payload_type(), net::WireFrame::PayloadType::StreamData);
