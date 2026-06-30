@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 07:22:09</td>
+            <td class="headerValue">2026-06-30 11:22:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -109,14 +109,14 @@
 <span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :     return std::holds_alternative&lt;Ipv4Endpoint&gt;(ep) ? AF_INET : AF_INET6;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : }</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        2098 : std::string to_string(const EndPoint&amp; ep) {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        2142 : std::string to_string(const EndPoint&amp; ep) {</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     char buf[64];</span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 2097 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        2098 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 2141 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        2142 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :         // addr is in network byte order, pass directly to inet_ntoa</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :         struct in_addr addr;</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">        2097 :         addr.s_addr = ipv4-&gt;addr;</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">        2097 :         snprintf(buf, sizeof(buf), &quot;%s:%u&quot;, inet_ntoa(addr), ipv4-&gt;port());</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        4194 :         return std::string(buf);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">        2141 :         addr.s_addr = ipv4-&gt;addr;</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">        2141 :         snprintf(buf, sizeof(buf), &quot;%s:%u&quot;, inet_ntoa(addr), ipv4-&gt;port());</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        4282 :         return std::string(buf);</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
 <span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (auto* ipv6 = std::get_if&lt;Ipv6Endpoint&gt;(&amp;ep)) {</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :         struct in6_addr addr;</span>
@@ -129,26 +129,26 @@
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return &quot;&lt;invalid&gt;&quot;;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : }</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">         602 : EndPoint parse_endpoint(std::string_view node_id) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">         603 : EndPoint parse_endpoint(std::string_view node_id) {</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     // Empty node_id means local node - return loopback endpoint</span>
-<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 596 times"> + </span>]:<span class="tlaGNC">         602 :     if (node_id.empty()) {</span></span>
+<span id="L56"><span class="lineNum">      56</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 597 times"> + </span>]:<span class="tlaGNC">         603 :     if (node_id.empty()) {</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           6 :         return LocalEndpoint;</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     }</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     // Parse &quot;host:port&quot; format</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         596 :     auto colon_pos = node_id.find(':');</span></span>
-<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 596 times"> + </span>]:<span class="tlaGNC">         596 :     if (colon_pos == std::string_view::npos) {</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         597 :     auto colon_pos = node_id.find(':');</span></span>
+<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 597 times"> + </span>]:<span class="tlaGNC">         597 :     if (colon_pos == std::string_view::npos) {</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return Ipv4Endpoint{0, 0}; // Unspecified on failure</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     }</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">         596 :     std::string_view host = node_id.substr(0, colon_pos);</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">         596 :     std::string_view port_str = node_id.substr(colon_pos + 1);</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">         597 :     std::string_view host = node_id.substr(0, colon_pos);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">         597 :     std::string_view port_str = node_id.substr(colon_pos + 1);</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     // Parse port manually (no exceptions)</span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         596 :     uint32_t port = 0;</span></span>
-<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaGBC" title="Branch 0 was taken 2127 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 596 times"> + </span>]:<span class="tlaGNC">        2723 :     for (char c : port_str) {</span></span>
-<span id="L71"><span class="lineNum">      71</span>   [<span class="tlaGBC" title="Branch 0 was taken 2127 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2127 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        2127 :         if (c &gt;= '0' &amp;&amp; c &lt;= '9') {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        2127 :             port = port * 10 + static_cast&lt;uint32_t&gt;(c - '0');</span></span>
-<span id="L73"><span class="lineNum">      73</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2127 times"> + </span>]:<span class="tlaGNC">        2127 :             if (port &gt; 65535) {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         597 :     uint32_t port = 0;</span></span>
+<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaGBC" title="Branch 0 was taken 2131 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 597 times"> + </span>]:<span class="tlaGNC">        2728 :     for (char c : port_str) {</span></span>
+<span id="L71"><span class="lineNum">      71</span>   [<span class="tlaGBC" title="Branch 0 was taken 2131 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2131 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        2131 :         if (c &gt;= '0' &amp;&amp; c &lt;= '9') {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        2131 :             port = port * 10 + static_cast&lt;uint32_t&gt;(c - '0');</span></span>
+<span id="L73"><span class="lineNum">      73</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2131 times"> + </span>]:<span class="tlaGNC">        2131 :             if (port &gt; 65535) {</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 return Ipv4Endpoint{0, 0};</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :             }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :         } else {</span>
@@ -158,9 +158,9 @@
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     // Try numeric IPv4 address first</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     struct in_addr addr;</span>
-<span id="L83"><span class="lineNum">      83</span>         [<span class="tlaGBC" title="Branch 0 was taken 503 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 93 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        1192 :     if (inet_pton(AF_INET, std::string(host).c_str(), &amp;addr) == 1) {</span></span>
+<span id="L83"><span class="lineNum">      83</span>         [<span class="tlaGBC" title="Branch 0 was taken 504 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 93 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        1194 :     if (inet_pton(AF_INET, std::string(host).c_str(), &amp;addr) == 1) {</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :         // inet_pton returns network byte order in s_addr</span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         503 :         return Ipv4Endpoint{addr.s_addr, htons(static_cast&lt;uint16_t&gt;(port))};</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         504 :         return Ipv4Endpoint{addr.s_addr, htons(static_cast&lt;uint16_t&gt;(port))};</span></span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     }</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : </span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :     // Try numeric IPv6 address</span>

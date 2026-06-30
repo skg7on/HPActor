@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 07:22:09</td>
+            <td class="headerValue">2026-06-30 11:22:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -95,45 +95,45 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : </span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : namespace hpactor {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">        6602 : ActorId ActorDirectory::allocate_id() {</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">        6602 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">        6602 :     return ActorId{next_actor_id_++};</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">        6602 : }</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">        6682 : ActorId ActorDirectory::allocate_id() {</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">        6682 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">        6682 :     return ActorId{next_actor_id_++};</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">        6682 : }</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          51 : bool ActorDirectory::insert(ActorDirectoryEntry entry) {</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          51 :     return publish(std::move(entry)) == PublishStatus::Published;</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : }</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : ActorDirectory::PublishStatus</span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">        6704 : ActorDirectory::publish(ActorDirectoryEntry entry,</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">        6784 : ActorDirectory::publish(ActorDirectoryEntry entry,</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :                         std::optional&lt;std::string_view&gt; name) {</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">        6704 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        6704 :     const ActorId id = entry.actor.id();</span></span>
-<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 6703 times"> + </span>]:<span class="tlaGNC">        6704 :     if (entries_.contains(id)) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">        6784 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        6784 :     const ActorId id = entry.actor.id();</span></span>
+<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 6783 times"> + </span>]:<span class="tlaGNC">        6784 :     if (entries_.contains(id)) {</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           1 :         return PublishStatus::DuplicateActorId;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     }</span>
-<span id="L37"><span class="lineNum">      37</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6699 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC">        6711 :     if (name.has_value() &amp;&amp; names_.contains(std::string{*name})) {</span></span>
-<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6699 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 6699 times"> + </span><span class="tlaGBC" title="Branch 8 was taken 1 time"> + </span> 
-<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 9 was taken 6702 times"> + </span>]
+<span id="L37"><span class="lineNum">      37</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6779 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC">        6791 :     if (name.has_value() &amp;&amp; names_.contains(std::string{*name})) {</span></span>
+<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6779 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 6779 times"> + </span><span class="tlaGBC" title="Branch 8 was taken 1 time"> + </span> 
+<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 9 was taken 6782 times"> + </span>]
 <span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           1 :         return PublishStatus::DuplicateName;</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     }</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        6702 :     const ActorAddress address = entry.actor.address();</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">        6702 :     entries_.emplace(id, std::move(entry));</span></span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6699 times"> + </span>]:<span class="tlaGNC">        6702 :     if (name.has_value()) {</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        6782 :     const ActorAddress address = entry.actor.address();</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">        6782 :     entries_.emplace(id, std::move(entry));</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6779 times"> + </span>]:<span class="tlaGNC">        6782 :     if (name.has_value()) {</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           9 :         names_.emplace(std::string{*name}, address);</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :     }</span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">        6702 :     return PublishStatus::Published;</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">        6704 : }</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">        6782 :     return PublishStatus::Published;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">        6784 : }</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      433446 : std::optional&lt;ActorDirectoryEntry&gt; ActorDirectory::find(ActorId id) const {</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      433446 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      433446 :     auto it = entries_.find(id);</span></span>
-<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 34 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433412 times"> + </span>]:<span class="tlaGNC">      433446 :     if (it == entries_.end()) {</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      433636 : std::optional&lt;ActorDirectoryEntry&gt; ActorDirectory::find(ActorId id) const {</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      433636 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      433636 :     auto it = entries_.find(id);</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 34 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433602 times"> + </span>]:<span class="tlaGNC">      433636 :     if (it == entries_.end()) {</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          34 :         return std::nullopt;</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     }</span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      433412 :     return it-&gt;second;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      433446 : }</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      433602 :     return it-&gt;second;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      433636 : }</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          11 : std::optional&lt;Actor&gt; ActorDirectory::find_actor(ActorId id) const {</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          11 :     auto entry = find(id);</span></span>
@@ -144,13 +144,13 @@
 <span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">          11 : }</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : std::shared_ptr&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      266265 : ActorDirectory::find_mailbox(ActorId id) const {</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      266265 :     auto entry = find(id);</span></span>
-<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 266248 times"> + </span>]:<span class="tlaGNC">      266265 :     if (!entry.has_value()) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      266246 : ActorDirectory::find_mailbox(ActorId id) const {</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      266246 :     auto entry = find(id);</span></span>
+<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 266229 times"> + </span>]:<span class="tlaGNC">      266246 :     if (!entry.has_value()) {</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">          17 :         return nullptr;</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     }</span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      266248 :     return entry-&gt;mailbox;</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">      266265 : }</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      266229 :     return entry-&gt;mailbox;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">      266246 : }</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          15 : std::shared_ptr&lt;ActorContext&gt; ActorDirectory::find_context(ActorId id) const {</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">          15 :     auto entry = find(id);</span></span>
@@ -189,15 +189,15 @@
 <span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          11 :     return find_actor(addr-&gt;id);</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : }</span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : </span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">         385 : std::vector&lt;ActorDirectoryEntry&gt; ActorDirectory::snapshot() const {</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">         385 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">         385 :     std::vector&lt;ActorDirectoryEntry&gt; result;</span></span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">         385 :     result.reserve(entries_.size());</span></span>
-<span id="L116"><span class="lineNum">     116</span>         [<span class="tlaGBC" title="Branch 0 was taken 5643 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 385 times"> + </span>]:<span class="tlaGNC">        6028 :     for (const auto&amp; [id, entry] : entries_) {</span></span>
-<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        5643 :         result.push_back(entry);</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">         395 : std::vector&lt;ActorDirectoryEntry&gt; ActorDirectory::snapshot() const {</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">         395 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">         395 :     std::vector&lt;ActorDirectoryEntry&gt; result;</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">         395 :     result.reserve(entries_.size());</span></span>
+<span id="L116"><span class="lineNum">     116</span>         [<span class="tlaGBC" title="Branch 0 was taken 5663 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 395 times"> + </span>]:<span class="tlaGNC">        6058 :     for (const auto&amp; [id, entry] : entries_) {</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        5663 :         result.push_back(entry);</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :     }</span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">         385 :     return result;</span></span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         385 : }</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">         395 :     return result;</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         395 : }</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : </span>
 <span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           1 : bool ActorDirectory::erase(ActorId id) {</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>

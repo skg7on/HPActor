@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 07:22:09</td>
+            <td class="headerValue">2026-06-30 11:22:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">-</td>
@@ -103,11 +103,11 @@
 <span id="L25"><span class="lineNum">      25</span>                 :             : /// force-stop deadline is reached.</span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : struct ShutdownOptions {</span>
 <span id="L27"><span class="lineNum">      27</span>                 :             :     /// \brief Maximum time for ingress draining.</span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC tlaBgGNC">         114 :     std::chrono::milliseconds ingress_timeout{5'000};</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC tlaBgGNC">         124 :     std::chrono::milliseconds ingress_timeout{5'000};</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :     /// \brief Maximum time for actor message draining.</span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         114 :     std::chrono::milliseconds actor_drain_timeout{30'000};</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         124 :     std::chrono::milliseconds actor_drain_timeout{30'000};</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     /// \brief Maximum time for cluster leave handshake.</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         114 :     std::chrono::milliseconds cluster_leave_timeout{10'000};</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         124 :     std::chrono::milliseconds cluster_leave_timeout{10'000};</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :     /// \brief Force shutdown after all phase timeouts expire.</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     bool force_after_timeout{true};</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : };</span>
