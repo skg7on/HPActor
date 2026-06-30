@@ -146,7 +146,9 @@ TEST_F(RegistrarFramingTest, MessageHandlerCalledOnValidFrame) {
 
     StreamBuffer payload{'h', 'e', 'l', 'l', 'o'};
     auto frame = build_frame(TcpMessageType::Heartbeat, payload);
-    write(client_fd_, frame.data(), frame.size());
+    if (write(client_fd_, frame.data(), frame.size()) < 0) {
+        FAIL() << "write failed: " << std::strerror(errno);
+    }
 
     EXPECT_TRUE(drive_until(loop, server_fd_,
                             [&] { return received_type.has_value(); }));
@@ -184,7 +186,9 @@ TEST_F(RegistrarFramingTest, SelfSyncOnBadMagic) {
     StreamBuffer payload{'o', 'k'};
     auto frame = build_frame(TcpMessageType::Register, payload);
     combined.insert(combined.end(), frame.begin(), frame.end());
-    write(client_fd_, combined.data(), combined.size());
+    if (write(client_fd_, combined.data(), combined.size()) < 0) {
+        FAIL() << "write failed: " << std::strerror(errno);
+    }
 
     EXPECT_TRUE(
         drive_until(loop, server_fd_, [&] { return msg_count.load() == 1; }));
@@ -241,7 +245,9 @@ TEST_F(RegistrarFramingTest, MultipleMessagesHandledInOrder) {
         auto frame = build_frame(t, payload);
         combined.insert(combined.end(), frame.begin(), frame.end());
     }
-    write(client_fd_, combined.data(), combined.size());
+    if (write(client_fd_, combined.data(), combined.size()) < 0) {
+        FAIL() << "write failed: " << std::strerror(errno);
+    }
 
     EXPECT_TRUE(drive_until(loop, server_fd_,
                             [&] { return received_types.size() >= 3; }));

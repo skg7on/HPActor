@@ -118,7 +118,11 @@ void CliProtoServerActor::on_daemon_start() {
                 if (gr)
                     gid = gr->gr_gid;
             }
-            ::chown(config_.uds_listen_path.c_str(), uid, gid);
+            if (::chown(config_.uds_listen_path.c_str(), uid, gid) != 0) {
+                std::fprintf(stderr,
+                             "CliProtoServerActor: chown failed on %s: %s\n",
+                             config_.uds_listen_path.c_str(), std::strerror(errno));
+            }
         }
     }
 

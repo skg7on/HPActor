@@ -237,7 +237,9 @@ TEST_F(TlsConnectionTest, PrematureMessageInWrongState) {
     cert_message.push_back(static_cast<uint8_t>(len & 0xFF));
     cert_message.insert(cert_message.end(), payload.begin(), payload.end());
 
-    ::write(client_fd, cert_message.data(), cert_message.size());
+    if (::write(client_fd, cert_message.data(), cert_message.size()) < 0) {
+        FAIL() << "write failed: " << std::strerror(errno);
+    }
     server->handle_read();
 
     EXPECT_EQ(server->state(), ConnectionState::Error);
@@ -437,7 +439,9 @@ TEST_F(TlsConnectionTest, MessageParsePartialData) {
         hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     StreamBuffer client_hello = build_raw_client_hello(ctx.public_key());
-    ::write(client_fd, client_hello.data(), client_hello.size());
+    if (::write(client_fd, client_hello.data(), client_hello.size()) < 0) {
+        FAIL() << "write failed: " << std::strerror(errno);
+    }
 
     server->handle_read();
     (void)server->state();

@@ -73,7 +73,9 @@ TEST_F(HttpConnectionTest, ServerModeParseIncomingRequest) {
 
     const char* req = "POST /test HTTP/1.1\r\nHost: local\r\nContent-Length: "
                       "5\r\n\r\nhello";
-    write(client_fd, req, strlen(req));
+    if (write(client_fd, req, strlen(req)) < 0) {
+        FAIL() << "write to client_fd failed: " << std::strerror(errno);
+    }
 
     for (int i = 0; i < 20 && !complete; i++) {
         loop.wait(50);
@@ -99,7 +101,9 @@ TEST_F(HttpConnectionTest, SendResponseBuildsValidHttpWireBytes) {
                                        &loop, HTTPConnectionMode::Server);
 
     const char* req = "GET / HTTP/1.1\r\nHost: x\r\n\r\n";
-    write(client_fd, req, strlen(req));
+    if (write(client_fd, req, strlen(req)) < 0) {
+        FAIL() << "write to client_fd failed: " << std::strerror(errno);
+    }
 
     bool req_done = false;
     conn->set_request_handler([&](HTTPConnection* c, HttpRequest&&) {
@@ -146,7 +150,9 @@ TEST_F(HttpConnectionTest, ClientModeParseIncomingResponse) {
     });
 
     const char* resp = "HTTP/1.1 201 Created\r\nContent-Length: 3\r\n\r\nyes";
-    write(server_fd, resp, strlen(resp));
+    if (write(server_fd, resp, strlen(resp)) < 0) {
+        FAIL() << "write to server_fd failed: " << std::strerror(errno);
+    }
 
     for (int i = 0; i < 20 && !resp_done; i++) {
         loop.wait(50);

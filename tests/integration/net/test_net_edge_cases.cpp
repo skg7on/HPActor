@@ -262,7 +262,9 @@ TEST(NetEdgeCases, HttpConnectionErrorRecovery) {
 
     // Send malformed data first
     const char* bad = "GARBAGE\r\n\r\n";
-    write(client_fd, bad, strlen(bad));
+    if (write(client_fd, bad, strlen(bad)) < 0) {
+        FAIL() << "write to client_fd failed: " << std::strerror(errno);
+    }
 
     // Give it time to process
     for (int i = 0; i < 20 && !got_error; i++) {
@@ -272,7 +274,9 @@ TEST(NetEdgeCases, HttpConnectionErrorRecovery) {
 
     // Now send a valid request
     const char* good = "GET /recover HTTP/1.1\r\nHost: test\r\n\r\n";
-    write(client_fd, good, strlen(good));
+    if (write(client_fd, good, strlen(good)) < 0) {
+        FAIL() << "write to client_fd failed: " << std::strerror(errno);
+    }
 
     for (int i = 0; i < 20 && !got_valid; i++) {
         loop.wait(50);

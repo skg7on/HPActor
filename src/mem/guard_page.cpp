@@ -108,7 +108,9 @@ void corruption_sigaction(int sig, siginfo_t* info, void* ctx) {
             char buf[256];
             int len = snprintf(buf, sizeof(buf), msg, fault_addr, seg_info.base,
                                seg_info.size);
-            write(g_guard_page_fd, buf, static_cast<size_t>(len));
+            if (write(g_guard_page_fd, buf, static_cast<size_t>(len)) < 0) {
+                // Signal context — nothing to do on failure.
+            }
         }
         _exit(EXIT_FAILURE);
     }

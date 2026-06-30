@@ -69,13 +69,15 @@ class ReactorDispatcher {
 
     // Pending I/O operation tracked per fd
     struct PendingIO {
-        ActorId actor;
-        OpType type;
+        ActorId actor{};
+        OpType type{};
         int buf_count = 0;
-        iovec saved_bufs[16];       // buffers for recv operations
+        iovec saved_bufs[16]{};       // buffers for recv operations
         std::vector<uint8_t> data;  // concatenated data for send operations
         sockaddr_storage addr = {}; // target address for sendto/recvfrom
         socklen_t addrlen = 0;
+
+        PendingIO() = default;
     };
 
     // Register pending I/O operations.
