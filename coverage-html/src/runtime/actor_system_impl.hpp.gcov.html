@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:49:15</td>
+            <td class="headerValue">2026-06-30 07:22:09</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
@@ -95,179 +95,185 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : #include &quot;actor_spawner.hpp&quot;</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : #include &quot;messaging_network_ports.hpp&quot;</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : #include &quot;messaging_runtime.hpp&quot;</span>
-<span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/actor/actor_directory.hpp&gt;</span>
-<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/actor/actor_system.hpp&gt;</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;hpactor/actor/actor_type_registry.hpp&gt;</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;hpactor/actor/ask_manager.hpp&gt;</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;hpactor/actor/lifecycle/passivation_manager.hpp&gt;</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : #include &lt;hpactor/actor/lifecycle/shutdown_coordinator.hpp&gt;</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : #include &lt;hpactor/actor/stream_registry.hpp&gt;</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             : #include &lt;hpactor/adt/dedup_cache.hpp&gt;</span>
-<span id="L29"><span class="lineNum">      29</span>                 :             : #include &lt;hpactor/cli/config/cli_config.hpp&gt;</span>
-<span id="L30"><span class="lineNum">      30</span>                 :             : #include &lt;hpactor/fault/fault_controller.hpp&gt;</span>
-<span id="L31"><span class="lineNum">      31</span>                 :             : #include &lt;hpactor/log/log_config.hpp&gt;</span>
-<span id="L32"><span class="lineNum">      32</span>                 :             : #include &lt;hpactor/log/log_manager.hpp&gt;</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : #include &lt;hpactor/log/logger.hpp&gt;</span>
-<span id="L34"><span class="lineNum">      34</span>                 :             : #include &lt;hpactor/mailbox/backpressure_coordinator.hpp&gt;</span>
-<span id="L35"><span class="lineNum">      35</span>                 :             : #include &lt;hpactor/mailbox/delivery_pipeline.hpp&gt;</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : #include &lt;hpactor/mailbox/local_delivery_engine.hpp&gt;</span>
-<span id="L37"><span class="lineNum">      37</span>                 :             : #include &lt;hpactor/mailbox/mpsc_actor_mailbox.hpp&gt;</span>
-<span id="L38"><span class="lineNum">      38</span>                 :             : #include &lt;hpactor/mailbox/outbound_tracker.hpp&gt;</span>
-<span id="L39"><span class="lineNum">      39</span>                 :             : #include &lt;hpactor/mailbox/reliable_retry_policy.hpp&gt;</span>
-<span id="L40"><span class="lineNum">      40</span>                 :             : #include &lt;hpactor/metrics/metrics_actor.hpp&gt;</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             : #include &lt;hpactor/metrics/metrics_config.hpp&gt;</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             : #include &lt;hpactor/metrics/metrics_event.hpp&gt;</span>
-<span id="L43"><span class="lineNum">      43</span>                 :             : #include &lt;hpactor/metrics/metrics_ring_buffer.hpp&gt;</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : #include &lt;hpactor/msg/dead_letter_record.hpp&gt;</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : #include &lt;hpactor/msg/outbound_delivery_tracker.hpp&gt;</span>
-<span id="L46"><span class="lineNum">      46</span>                 :             : #include &lt;hpactor/msg/proto_type_registry.hpp&gt;</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             : #include &lt;hpactor/net/actor_location_cache.hpp&gt;</span>
-<span id="L48"><span class="lineNum">      48</span>                 :             : #include &lt;hpactor/net/event_loop.hpp&gt;</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             : #include &lt;hpactor/net/gossip_membership.hpp&gt;</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : #include &lt;hpactor/net/http_client.hpp&gt;</span>
-<span id="L51"><span class="lineNum">      51</span>                 :             : #include &lt;hpactor/net/registrar.hpp&gt;</span>
-<span id="L52"><span class="lineNum">      52</span>                 :             : #include &lt;hpactor/net/service_discovery.hpp&gt;</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             : #include &lt;hpactor/net/tcp_transport.hpp&gt;</span>
-<span id="L54"><span class="lineNum">      54</span>                 :             : #include &lt;hpactor/process/process_manager.hpp&gt;</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             : #include &lt;hpactor/rpc/rpc_channel.hpp&gt;</span>
-<span id="L56"><span class="lineNum">      56</span>                 :             : #include &lt;hpactor/sched/scheduler.hpp&gt;</span>
-<span id="L57"><span class="lineNum">      57</span>                 :             : #include &lt;hpactor/tracing/trace_config.hpp&gt;</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             : #include &lt;hpactor/tracing/trace_manager.hpp&gt;</span>
-<span id="L59"><span class="lineNum">      59</span>                 :             : </span>
-<span id="L60"><span class="lineNum">      60</span>                 :             : #include &lt;atomic&gt;</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             : #include &lt;chrono&gt;</span>
-<span id="L62"><span class="lineNum">      62</span>                 :             : #include &lt;memory&gt;</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             : #include &lt;string&gt;</span>
-<span id="L64"><span class="lineNum">      64</span>                 :             : #include &lt;thread&gt;</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             : #include &lt;unordered_map&gt;</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             : #include &lt;vector&gt;</span>
-<span id="L67"><span class="lineNum">      67</span>                 :             : </span>
-<span id="L68"><span class="lineNum">      68</span>                 :             : namespace hpactor {</span>
-<span id="L69"><span class="lineNum">      69</span>                 :             : </span>
-<span id="L70"><span class="lineNum">      70</span>                 :             : class ActorTypeRegistry;</span>
-<span id="L71"><span class="lineNum">      71</span>                 :             : class BackpressureCoordinator;</span>
-<span id="L72"><span class="lineNum">      72</span>                 :             : class LocalDeliveryEngine;</span>
-<span id="L73"><span class="lineNum">      73</span>                 :             : class ShutdownCoordinator;</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             : namespace cli {</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             : class CliActor;</span>
-<span id="L76"><span class="lineNum">      76</span>                 :             : }</span>
-<span id="L77"><span class="lineNum">      77</span>                 :             : namespace metrics {</span>
-<span id="L78"><span class="lineNum">      78</span>                 :             : class MetricsActor;</span>
-<span id="L79"><span class="lineNum">      79</span>                 :             : }</span>
-<span id="L80"><span class="lineNum">      80</span>                 :             : namespace receptionist {</span>
-<span id="L81"><span class="lineNum">      81</span>                 :             : class Receptionist;</span>
-<span id="L82"><span class="lineNum">      82</span>                 :             : }</span>
-<span id="L83"><span class="lineNum">      83</span>                 :             : namespace cluster {</span>
-<span id="L84"><span class="lineNum">      84</span>                 :             : class ClusterFailureModel;</span>
-<span id="L85"><span class="lineNum">      85</span>                 :             : class RouteInvalidation;</span>
-<span id="L86"><span class="lineNum">      86</span>                 :             : } // namespace cluster</span>
-<span id="L87"><span class="lineNum">      87</span>                 :             : namespace cluster::singleton {</span>
-<span id="L88"><span class="lineNum">      88</span>                 :             : class SingletonManagerActor;</span>
-<span id="L89"><span class="lineNum">      89</span>                 :             : }</span>
-<span id="L90"><span class="lineNum">      90</span>                 :             : </span>
-<span id="L91"><span class="lineNum">      91</span>                 :             : // ── Named state groups ─────────────────────────────────────────────────────</span>
-<span id="L92"><span class="lineNum">      92</span>                 :             : </span>
-<span id="L93"><span class="lineNum">      93</span>                 :             : struct CoreRuntimeState final {</span>
-<span id="L94"><span class="lineNum">      94</span>                 :             :     Config config;</span>
-<span id="L95"><span class="lineNum">      95</span>                 :             :     EndPoint endpoint;</span>
-<span id="L96"><span class="lineNum">      96</span>                 :             :     Clock clock;</span>
-<span id="L97"><span class="lineNum">      97</span>                 :             :     std::chrono::steady_clock::time_point start_time;</span>
-<span id="L98"><span class="lineNum">      98</span>                 :             :     std::atomic&lt;bool&gt; running{true};</span>
-<span id="L99"><span class="lineNum">      99</span>                 :             :     std::atomic&lt;ShutdownPhase&gt; shutdown_phase{ShutdownPhase::Running};</span>
-<span id="L100"><span class="lineNum">     100</span>                 :             :     std::atomic&lt;bool&gt; is_ready{true};</span>
-<span id="L101"><span class="lineNum">     101</span>                 :             :     std::unique_ptr&lt;sched::IScheduler&gt; scheduler;</span>
-<span id="L102"><span class="lineNum">     102</span>                 :             :     ProtoTypeRegistry proto_registry;</span>
-<span id="L103"><span class="lineNum">     103</span>                 :             : };</span>
-<span id="L104"><span class="lineNum">     104</span>                 :             : </span>
-<span id="L105"><span class="lineNum">     105</span>                 :             : struct ActorServiceState final {</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             :     ActorDirectory directory;</span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :     ActorSystem::ActorRegistry registry{directory};</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :     std::unordered_map&lt;ActorType, ActorTypeDef&gt; types;</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             :     Actor system_actor;</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             :     std::unique_ptr&lt;ActorTypeRegistry&gt; type_registry;</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     std::unique_ptr&lt;AskManager&gt; ask;</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     std::unique_ptr&lt;PassivationManager&gt; passivation;</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     std::unique_ptr&lt;net::HttpClient&gt; http_client;</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :     Actor http_gateway_actor{nullptr};</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :     std::shared_ptr&lt;cli::CliActor&gt; cli_actor;</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :     std::shared_ptr&lt;receptionist::Receptionist&gt; receptionist;</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :     std::unique_ptr&lt;ShutdownCoordinator&gt; shutdown_coordinator;</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             : };</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             : </span>
-<span id="L120"><span class="lineNum">     120</span>                 :             : /// \brief Stream protocol state (Phase 4 moves this into StreamRuntime).</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : struct StreamRuntimeState final {</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             :     StreamRegistry registry;</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :     std::atomic&lt;uint64_t&gt; counter{0};</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             : };</span>
-<span id="L125"><span class="lineNum">     125</span>                 :             : </span>
-<span id="L126"><span class="lineNum">     126</span>                 :             : struct NetworkRuntimeState final {</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :     /// \brief Fixed network-control output ports used by messaging.</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :     /// Constructed before messaging components; transport may be null.</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :     MessagingNetworkPorts messaging_ports;</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             : </span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     std::unique_ptr&lt;net::TcpTransport&gt; transport;</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :     ActorSystem::BackpressureSignalWireSink backpressure_signal_wire_sink_for_test;</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :     std::shared_ptr&lt;net::UdpRegistrar&gt; registrar;</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     std::shared_ptr&lt;net::IServiceDiscovery&gt; discovery;</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :     std::shared_ptr&lt;net::ActorLocationCache&gt; location_cache;</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     uint64_t cache_purge_timer{0};</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :     uint64_t retry_timer{0};</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; event_loop;</span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     std::thread network_thread;</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     std::unique_ptr&lt;RpcChannel&gt; rpc_channel;</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             : };</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             : </span>
-<span id="L143"><span class="lineNum">     143</span>                 :             : struct OperationsRuntimeState final {</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             :     metrics::MetricsConfig metrics_config;</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     std::shared_ptr&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;&gt; metrics_ring_buffer;</span>
-<span id="L146"><span class="lineNum">     146</span>                 :             :     metrics::MetricsActor* metrics_actor{nullptr};</span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     log::LogConfig logging_config;</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     std::unique_ptr&lt;log::LogManager&gt; log_manager;</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :     log::Logger* logger{nullptr};</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             :     tracing::TraceConfig tracing_config;</span>
-<span id="L151"><span class="lineNum">     151</span>                 :             :     std::unique_ptr&lt;tracing::TraceManager&gt; trace_manager;</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             :     fault::FaultController fault_controller;</span>
-<span id="L153"><span class="lineNum">     153</span>                 :             : };</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             : </span>
-<span id="L155"><span class="lineNum">     155</span>                 :             : struct ClusterRuntimeState final {</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :     using cluster_cleanup_fn = void (*)(void*);</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             :     bool enabled{false};</span>
-<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     std::unique_ptr&lt;void, cluster_cleanup_fn&gt; failure_model{nullptr, +[](void*) {}};</span></span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :     std::unique_ptr&lt;void, cluster_cleanup_fn&gt; singleton_manager{nullptr,</span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaUNC">           0 :                                                                 +[](void*) {}};</span></span>
-<span id="L161"><span class="lineNum">     161</span>                 :             :     std::unique_ptr&lt;void, cluster_cleanup_fn&gt; route_invalidation{nullptr,</span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaUNC">           0 :                                                                  +[](void*) {}};</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :             : };</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             : </span>
-<span id="L165"><span class="lineNum">     165</span>                 :             : // ── ActorSystem::Impl ──────────────────────────────────────────────────────</span>
-<span id="L166"><span class="lineNum">     166</span>                 :             : </span>
-<span id="L167"><span class="lineNum">     167</span>                 :             : class ActorSystem::Impl final {</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             :   public:</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     Impl(ActorSystem&amp; f, const Config&amp; config);</span>
-<span id="L170"><span class="lineNum">     170</span>                 :             :     ~Impl();</span>
-<span id="L171"><span class="lineNum">     171</span>                 :             : </span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     Impl(const Impl&amp;) = delete;</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             :     Impl&amp; operator=(const Impl&amp;) = delete;</span>
-<span id="L174"><span class="lineNum">     174</span>                 :             : </span>
-<span id="L175"><span class="lineNum">     175</span>                 :             :     ActorSystem&amp; facade;</span>
-<span id="L176"><span class="lineNum">     176</span>                 :             : </span>
-<span id="L177"><span class="lineNum">     177</span>                 :             :     // State groups in destruction order (last declared = first destroyed).</span>
-<span id="L178"><span class="lineNum">     178</span>                 :             :     // Network/callbacks are stopped explicitly before group destruction.</span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :     CoreRuntimeState core;</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :     OperationsRuntimeState operations;</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :     ActorServiceState actors;</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :     std::unique_ptr&lt;MessagingRuntime&gt; messaging_;</span>
-<span id="L183"><span class="lineNum">     183</span>                 :             :     StreamRuntimeState streams;</span>
-<span id="L184"><span class="lineNum">     184</span>                 :             :     NetworkRuntimeState network;</span>
-<span id="L185"><span class="lineNum">     185</span>                 :             :     ClusterRuntimeState cluster;</span>
-<span id="L186"><span class="lineNum">     186</span>                 :             : </span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :     // Spawner — constructed after directory, scheduler, metrics, logger exist.</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :     // Uses std::optional for deferred initialization.</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             :     std::optional&lt;ActorSpawner&gt; spawner;</span>
-<span id="L190"><span class="lineNum">     190</span>                 :             : };</span>
-<span id="L191"><span class="lineNum">     191</span>                 :             : </span>
-<span id="L192"><span class="lineNum">     192</span>                 :             : } // namespace hpactor</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/runtime/network_runtime.hpp&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : </span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/actor/actor_directory.hpp&gt;</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;hpactor/actor/actor_system.hpp&gt;</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;hpactor/actor/actor_type_registry.hpp&gt;</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;hpactor/actor/ask_manager.hpp&gt;</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : #include &lt;hpactor/actor/lifecycle/passivation_manager.hpp&gt;</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : #include &lt;hpactor/actor/lifecycle/shutdown_coordinator.hpp&gt;</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : #include &lt;hpactor/actor/stream_registry.hpp&gt;</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : #include &lt;hpactor/adt/dedup_cache.hpp&gt;</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : #include &lt;hpactor/cli/config/cli_config.hpp&gt;</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : #include &lt;hpactor/fault/fault_controller.hpp&gt;</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : #include &lt;hpactor/log/log_config.hpp&gt;</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : #include &lt;hpactor/log/log_manager.hpp&gt;</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : #include &lt;hpactor/log/logger.hpp&gt;</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : #include &lt;hpactor/mailbox/backpressure_coordinator.hpp&gt;</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             : #include &lt;hpactor/mailbox/delivery_pipeline.hpp&gt;</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             : #include &lt;hpactor/mailbox/local_delivery_engine.hpp&gt;</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             : #include &lt;hpactor/mailbox/mpsc_actor_mailbox.hpp&gt;</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : #include &lt;hpactor/mailbox/outbound_tracker.hpp&gt;</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : #include &lt;hpactor/mailbox/reliable_retry_policy.hpp&gt;</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : #include &lt;hpactor/metrics/metrics_actor.hpp&gt;</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : #include &lt;hpactor/metrics/metrics_config.hpp&gt;</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : #include &lt;hpactor/metrics/metrics_event.hpp&gt;</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : #include &lt;hpactor/metrics/metrics_ring_buffer.hpp&gt;</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : #include &lt;hpactor/msg/dead_letter_record.hpp&gt;</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : #include &lt;hpactor/msg/outbound_delivery_tracker.hpp&gt;</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             : #include &lt;hpactor/msg/proto_type_registry.hpp&gt;</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             : #include &lt;hpactor/net/actor_location_cache.hpp&gt;</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : #include &lt;hpactor/net/event_loop.hpp&gt;</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : #include &lt;hpactor/net/gossip_membership.hpp&gt;</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : #include &lt;hpactor/net/http_client.hpp&gt;</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : #include &lt;hpactor/net/registrar.hpp&gt;</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : #include &lt;hpactor/net/service_discovery.hpp&gt;</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             : #include &lt;hpactor/net/tcp_transport.hpp&gt;</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             : #include &lt;hpactor/process/process_manager.hpp&gt;</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : #include &lt;hpactor/rpc/rpc_channel.hpp&gt;</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : #include &lt;hpactor/sched/scheduler.hpp&gt;</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             : #include &lt;hpactor/tracing/trace_config.hpp&gt;</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : #include &lt;hpactor/tracing/trace_manager.hpp&gt;</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             : </span>
+<span id="L61"><span class="lineNum">      61</span>                 :             : #include &lt;atomic&gt;</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             : #include &lt;chrono&gt;</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : #include &lt;memory&gt;</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : #include &lt;string&gt;</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : #include &lt;thread&gt;</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             : #include &lt;unordered_map&gt;</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             : #include &lt;vector&gt;</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             : </span>
+<span id="L69"><span class="lineNum">      69</span>                 :             : namespace hpactor {</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             : </span>
+<span id="L71"><span class="lineNum">      71</span>                 :             : class ActorTypeRegistry;</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             : class BackpressureCoordinator;</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             : class LocalDeliveryEngine;</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             : class ShutdownCoordinator;</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             : namespace cli {</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             : class CliActor;</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             : }</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             : namespace metrics {</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             : class MetricsActor;</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             : }</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : namespace receptionist {</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : class Receptionist;</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             : }</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             : namespace cluster {</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             : class ClusterFailureModel;</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             : class RouteInvalidation;</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : } // namespace cluster</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : namespace cluster::singleton {</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             : class SingletonManagerActor;</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             : }</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             : </span>
+<span id="L92"><span class="lineNum">      92</span>                 :             : // ── Named state groups ─────────────────────────────────────────────────────</span>
+<span id="L93"><span class="lineNum">      93</span>                 :             : </span>
+<span id="L94"><span class="lineNum">      94</span>                 :             : struct CoreRuntimeState final {</span>
+<span id="L95"><span class="lineNum">      95</span>                 :             :     Config config;</span>
+<span id="L96"><span class="lineNum">      96</span>                 :             :     EndPoint endpoint;</span>
+<span id="L97"><span class="lineNum">      97</span>                 :             :     Clock clock;</span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :     std::chrono::steady_clock::time_point start_time;</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :     std::atomic&lt;bool&gt; running{true};</span>
+<span id="L100"><span class="lineNum">     100</span>                 :             :     std::atomic&lt;ShutdownPhase&gt; shutdown_phase{ShutdownPhase::Running};</span>
+<span id="L101"><span class="lineNum">     101</span>                 :             :     std::atomic&lt;bool&gt; is_ready{true};</span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :     std::unique_ptr&lt;sched::IScheduler&gt; scheduler;</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :     ProtoTypeRegistry proto_registry;</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             : };</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : </span>
+<span id="L106"><span class="lineNum">     106</span>                 :             : struct ActorServiceState final {</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :     ActorDirectory directory;</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :     ActorSystem::ActorRegistry registry{directory};</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :     std::unordered_map&lt;ActorType, ActorTypeDef&gt; types;</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     Actor system_actor;</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :     std::unique_ptr&lt;ActorTypeRegistry&gt; type_registry;</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     std::unique_ptr&lt;AskManager&gt; ask;</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :     std::unique_ptr&lt;PassivationManager&gt; passivation;</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     std::unique_ptr&lt;net::HttpClient&gt; http_client;</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             :     Actor http_gateway_actor{nullptr};</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     std::shared_ptr&lt;cli::CliActor&gt; cli_actor;</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     std::shared_ptr&lt;receptionist::Receptionist&gt; receptionist;</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     std::unique_ptr&lt;ShutdownCoordinator&gt; shutdown_coordinator;</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : };</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             : </span>
+<span id="L121"><span class="lineNum">     121</span>                 :             : /// \brief Stream protocol state (Phase 4 moves this into StreamRuntime).</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             : struct StreamRuntimeState final {</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :     StreamRegistry registry;</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     std::atomic&lt;uint64_t&gt; counter{0};</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             : };</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             : </span>
+<span id="L127"><span class="lineNum">     127</span>                 :             : struct NetworkRuntimeState final {</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     /// \brief Fixed network-control output ports used by messaging.</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :     /// Constructed before messaging components; transport may be null.</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :     MessagingNetworkPorts messaging_ports;</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : </span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     std::unique_ptr&lt;net::TcpTransport&gt; transport;</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     ActorSystem::BackpressureSignalWireSink backpressure_signal_wire_sink_for_test;</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             :     std::shared_ptr&lt;net::UdpRegistrar&gt; registrar;</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     std::shared_ptr&lt;net::IServiceDiscovery&gt; discovery;</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     std::shared_ptr&lt;net::ActorLocationCache&gt; location_cache;</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     uint64_t cache_purge_timer{0};</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     uint64_t retry_timer{0};</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; event_loop;</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     std::thread network_thread;</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     std::unique_ptr&lt;RpcChannel&gt; rpc_channel;</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             : };</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             : </span>
+<span id="L144"><span class="lineNum">     144</span>                 :             : struct OperationsRuntimeState final {</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     metrics::MetricsConfig metrics_config;</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     std::shared_ptr&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;&gt; metrics_ring_buffer;</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     metrics::MetricsActor* metrics_actor{nullptr};</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     log::LogConfig logging_config;</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :     std::unique_ptr&lt;log::LogManager&gt; log_manager;</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     log::Logger* logger{nullptr};</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     tracing::TraceConfig tracing_config;</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :     std::unique_ptr&lt;tracing::TraceManager&gt; trace_manager;</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     fault::FaultController fault_controller;</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             : };</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             : </span>
+<span id="L156"><span class="lineNum">     156</span>                 :             : struct ClusterRuntimeState final {</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :     using cluster_cleanup_fn = void (*)(void*);</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     bool enabled{false};</span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     std::unique_ptr&lt;void, cluster_cleanup_fn&gt; failure_model{nullptr, +[](void*) {}};</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :     std::unique_ptr&lt;void, cluster_cleanup_fn&gt; singleton_manager{nullptr,</span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC">           0 :                                                                 +[](void*) {}};</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :     std::unique_ptr&lt;void, cluster_cleanup_fn&gt; route_invalidation{nullptr,</span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaUNC">           0 :                                                                  +[](void*) {}};</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : };</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             : </span>
+<span id="L166"><span class="lineNum">     166</span>                 :             : // ── ActorSystem::Impl ──────────────────────────────────────────────────────</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             : </span>
+<span id="L168"><span class="lineNum">     168</span>                 :             : class ActorSystem::Impl final {</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :   public:</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :     Impl(ActorSystem&amp; f, const Config&amp; config);</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     ~Impl();</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             : </span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :     Impl(const Impl&amp;) = delete;</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     Impl&amp; operator=(const Impl&amp;) = delete;</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             : </span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :     ActorSystem&amp; facade;</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             : </span>
+<span id="L178"><span class="lineNum">     178</span>                 :             :     // State groups in destruction order (last declared = first destroyed).</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     // network_ is stopped explicitly before group destruction.</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     CoreRuntimeState core;</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     OperationsRuntimeState operations;</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :     ActorServiceState actors;</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     std::unique_ptr&lt;MessagingRuntime&gt; messaging_;</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     StreamRuntimeState streams;</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             :     /// \brief Phase 5: sole network resource owner.</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     /// Null when networking is disabled.</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             :     std::unique_ptr&lt;NetworkRuntime&gt; network_;</span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :     /// \brief Deprecated: retained temporarily for messaging port adapters.</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :     /// Will be removed once adapters are moved into NetworkRuntime.</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             :     NetworkRuntimeState network;</span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     ClusterRuntimeState cluster;</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             : </span>
+<span id="L193"><span class="lineNum">     193</span>                 :             :     // Spawner — constructed after directory, scheduler, metrics, logger exist.</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             :     // Uses std::optional for deferred initialization.</span>
+<span id="L195"><span class="lineNum">     195</span>                 :             :     std::optional&lt;ActorSpawner&gt; spawner;</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             : };</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             : </span>
+<span id="L198"><span class="lineNum">     198</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

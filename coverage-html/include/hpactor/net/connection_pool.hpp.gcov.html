@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
             <td class="headerCovTableEntry">15</td>
-            <td class="headerCovTableEntry">15</td>
+            <td class="headerCovTableEntry">12</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:49:15</td>
+            <td class="headerValue">2026-06-30 07:22:09</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
             <td class="headerCovTableEntry">5</td>
-            <td class="headerCovTableEntry">5</td>
+            <td class="headerCovTableEntry">4</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -255,10 +255,10 @@
 <span id="L177"><span class="lineNum">     177</span>                 :             :     /// \param[in] frame The wire frame.</span>
 <span id="L178"><span class="lineNum">     178</span>                 :             :     using actor_message_handler = std::function&lt;void(const WireFrame&amp; frame)&gt;;</span>
 <span id="L179"><span class="lineNum">     179</span>                 :             : </span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           1 :     void set_actor_message_handler(actor_message_handler handler) {</span></span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           1 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           1 :         actor_message_handler_ = std::move(handler);</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           1 :     }</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           3 :     void set_actor_message_handler(actor_message_handler handler) {</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           3 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           3 :         actor_message_handler_ = std::move(handler);</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             : </span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :     /// \brief Install a unified inbound frame sink.</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :     ///</span>
@@ -320,9 +320,9 @@
 <span id="L242"><span class="lineNum">     242</span>                 :             :     ///</span>
 <span id="L243"><span class="lineNum">     243</span>                 :             :     /// \param[in] buf Pointer to the system-wide metrics ring buffer.</span>
 <span id="L244"><span class="lineNum">     244</span>                 :             :     void</span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">           2 :     set_metrics_ring_buffer(metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* buf) {</span></span>
-<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC">           2 :         metrics_ring_buffer_ = buf;</span></span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">           2 :     }</span></span>
+<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     set_metrics_ring_buffer(metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* buf) {</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaUNC">           0 :         metrics_ring_buffer_ = buf;</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaUNC">           0 :     }</span></span>
 <span id="L248"><span class="lineNum">     248</span>                 :             : </span>
 <span id="L249"><span class="lineNum">     249</span>                 :             :   private:</span>
 <span id="L250"><span class="lineNum">     250</span>                 :             :     ConnectionPtr get_connection();</span>

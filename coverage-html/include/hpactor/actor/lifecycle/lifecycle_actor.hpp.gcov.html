@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 03:49:15</td>
+            <td class="headerValue">2026-06-30 07:22:09</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.0&nbsp;%</td>
@@ -146,8 +146,8 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///         \c transition() call, or \c kStarting if no transition</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     ///         has occurred.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \note Thread safety: lock-free atomic load with acquire ordering.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2526 :     LifecycleState state() const noexcept {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5052 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2536 :     LifecycleState state() const noexcept {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5072 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Whether the actor accepts user (data-plane) messages in</span>
@@ -364,7 +364,7 @@
 <span id="L286"><span class="lineNum">     286</span>                 :             :     /// accepting system messages. The default implementation is a no-op.</span>
 <span id="L287"><span class="lineNum">     287</span>                 :             :     /// \note Called from the CAS path in \c transition(), under the</span>
 <span id="L288"><span class="lineNum">     288</span>                 :             :     ///       owning scheduler thread.</span>
-<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC">          33 :     virtual void on_stop() {}</span></span>
+<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC">          32 :     virtual void on_stop() {}</span></span>
 <span id="L290"><span class="lineNum">     290</span>                 :             : </span>
 <span id="L291"><span class="lineNum">     291</span>                 :             :     /// \brief Hook invoked when the actor enters \c kStopped.</span>
 <span id="L292"><span class="lineNum">     292</span>                 :             :     ///</span>
@@ -373,7 +373,7 @@
 <span id="L295"><span class="lineNum">     295</span>                 :             :     /// nor system messages. The default implementation is a no-op.</span>
 <span id="L296"><span class="lineNum">     296</span>                 :             :     /// \note Called from the CAS path in \c transition(), under the</span>
 <span id="L297"><span class="lineNum">     297</span>                 :             :     ///       owning scheduler thread.</span>
-<span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">          37 :     virtual void on_deactivate() {}</span></span>
+<span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">          36 :     virtual void on_deactivate() {}</span></span>
 <span id="L299"><span class="lineNum">     299</span>                 :             : </span>
 <span id="L300"><span class="lineNum">     300</span>                 :             :     /// \brief Hook invoked when the actor enters \c kFailed.</span>
 <span id="L301"><span class="lineNum">     301</span>                 :             :     ///</span>
