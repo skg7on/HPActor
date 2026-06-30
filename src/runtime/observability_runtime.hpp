@@ -80,6 +80,10 @@ class ObservabilityRuntime final {
     metrics_ring_buffer() const noexcept {
         return metrics_ring_buffer_.get();
     }
+    std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>>
+    metrics_ring_buffer_shared() const noexcept {
+        return metrics_ring_buffer_;
+    }
     log::Logger* logger() const noexcept {
         return logger_;
     }
