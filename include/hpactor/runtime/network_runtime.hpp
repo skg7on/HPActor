@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/runtime/network_runtime_ports.hpp>
+#include <hpactor/runtime/network_runtime_callbacks.hpp>
 
 #include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/event_loop.hpp>

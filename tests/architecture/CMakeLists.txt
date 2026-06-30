@@ -141,7 +141,7 @@ set(_phase5_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_phase5_sources
     ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/network_runtime.cpp
-    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime_ports.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/network_runtime_callbacks.hpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/net/network_snapshot.hpp)
 foreach(_file IN LISTS _phase5_sources)
     add_test(

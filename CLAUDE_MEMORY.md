@@ -245,7 +245,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   runtime files; no late dependency setters; no second `EventLoop` creation;
   no `std::function` in network runtime; no RTTI/exceptions.
 - New files: `include/hpactor/runtime/network_runtime.hpp`, `src/runtime/network_runtime.cpp`,
-  `include/hpactor/runtime/network_runtime_ports.hpp`, `include/hpactor/net/network_snapshot.hpp`.
+  `include/hpactor/runtime/network_runtime_callbacks.hpp`, `include/hpactor/net/network_snapshot.hpp`.
 - Test files: `tests/unit/runtime/test_network_runtime_lifecycle.cpp` (14 tests).
   All 1,788 focused tests pass (14 runtime + 199 unit/net + 195 integration/net
   + 17 rpc + 20 spawn + 302 unit/mailbox + 275 unit/actor + 237 integration/actor

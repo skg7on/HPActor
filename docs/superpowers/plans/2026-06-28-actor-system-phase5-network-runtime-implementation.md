@@ -59,7 +59,7 @@ exception control flow.
 
 - `include/hpactor/runtime/network_runtime.hpp`
 - `src/runtime/network_runtime.cpp`
-- `include/hpactor/runtime/network_runtime_ports.hpp`
+- `include/hpactor/runtime/network_runtime_callbacks.hpp`
 - `include/hpactor/net/network_snapshot.hpp`
 - `tests/unit/runtime/test_network_runtime.cpp`
 - `tests/integration/net/test_network_runtime_lifecycle.cpp`
