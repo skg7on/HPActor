@@ -176,12 +176,17 @@ class ActorSystem::Impl final {
     ActorSystem& facade;
 
     // State groups in destruction order (last declared = first destroyed).
-    // Network/callbacks are stopped explicitly before group destruction.
+    // network_ is stopped explicitly before group destruction.
     CoreRuntimeState core;
     OperationsRuntimeState operations;
     ActorServiceState actors;
     std::unique_ptr<MessagingRuntime> messaging_;
     StreamRuntimeState streams;
+    /// \brief Phase 5: sole network resource owner.
+    /// Null when networking is disabled.
+    std::unique_ptr<NetworkRuntime> network_;
+    /// \brief Deprecated: retained temporarily for messaging port adapters.
+    /// Will be removed once adapters are moved into NetworkRuntime.
     NetworkRuntimeState network;
     ClusterRuntimeState cluster;
 
