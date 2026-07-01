@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/adt/disruptor_mpsc_ring.hpp>
-#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
 #include <hpactor/mailbox/fixed_message_envelope.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
@@ -101,7 +101,7 @@ class FixedActorMailboxCore final
 
     // ── Port wiring (immutable after spawn) ────────────────────────────────
 
-    void set_delivery_port(FixedDeliveryPort port) noexcept {
+    void set_delivery_port(FixedMailboxDelivery port) noexcept {
         delivery_ = port;
     }
 
@@ -274,8 +274,8 @@ class FixedActorMailboxCore final
 
     // ── Port builders ──────────────────────────────────────────────────────
 
-    [[nodiscard]] FixedMailboxBinding make_binding() noexcept {
-        FixedMailboxBinding b;
+    [[nodiscard]] FixedMailboxHandle make_handle() noexcept {
+        FixedMailboxHandle b;
         b.lifetime = this->shared_from_this();
 
         b.control.context = this;
@@ -361,7 +361,7 @@ class FixedActorMailboxCore final
     void* wakeup_ctx_{nullptr};
 
     // Immutable delivery port (set once after spawn).
-    FixedDeliveryPort delivery_;
+    FixedMailboxDelivery delivery_;
 
     // Dispatch callbacks (set once after spawn).
     void* dispatch_ctx_{nullptr};

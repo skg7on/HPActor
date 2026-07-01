@@ -16,7 +16,7 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/mailbox/fixed_actor_mailbox.hpp>
-#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/ref/fixed_actor_ref.hpp>
 
@@ -102,7 +102,7 @@ class FixedMailboxActor : public EventBasedActor {
     }
 
     /// \brief Create the fixed mailbox core and return a populated binding.
-    mailbox::FixedMailboxBinding create_fixed_mailbox() noexcept override {
+    mailbox::FixedMailboxHandle create_fixed_mailbox() noexcept override {
         auto core = std::make_shared<core_type>(this->id(), this->address());
         core_ = core;
         fixed_behavior_ = make_fixed_behavior();
@@ -127,7 +127,7 @@ class FixedMailboxActor : public EventBasedActor {
                                                                   INT64_MAX);
             },
             this);
-        return core->make_binding();
+        return core->make_handle();
     }
 
     /// \brief Return a typed reference for sending to this actor.

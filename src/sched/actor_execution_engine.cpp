@@ -17,7 +17,7 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/enqueue_result.hpp>

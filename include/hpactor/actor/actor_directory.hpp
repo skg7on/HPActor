@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -50,7 +50,7 @@ struct ActorDirectoryEntry {
                                                                       ///< message
                                                                       ///< enqueue.
     /// Fixed-mailbox binding (empty for variable actors).
-    mailbox::FixedMailboxBinding fixed_mailbox;
+    mailbox::FixedMailboxHandle fixed_mailbox;
     std::shared_ptr<ActorContext> context; ///< Actor's execution context.
 };
 
@@ -123,9 +123,9 @@ class ActorDirectory {
     /// \brief Find the fixed-mailbox binding for a fixed-mailbox actor.
     ///
     /// \param[in] id Actor identifier.
-    /// \return The \c FixedMailboxBinding if the actor uses a fixed
+    /// \return The \c FixedMailboxHandle if the actor uses a fixed
     ///         mailbox, or \c std::nullopt if not found or variable.
-    std::optional<mailbox::FixedMailboxBinding> find_fixed_binding(ActorId id) const;
+    std::optional<mailbox::FixedMailboxHandle> find_fixed_binding(ActorId id) const;
 
     /// \brief Register a name-to-address mapping.
     ///

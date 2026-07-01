@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>

@@ -732,7 +732,7 @@ mailbox::MPSCActorMailbox<TypedMessage>* ActorSystem::get_mailbox(ActorId id) {
     return mailbox.get();
 }
 
-std::optional<mailbox::FixedMailboxBinding>
+std::optional<mailbox::FixedMailboxHandle>
 ActorSystem::get_fixed_binding(ActorId id) {
     return impl_->actors.directory.find_fixed_binding(id);
 }

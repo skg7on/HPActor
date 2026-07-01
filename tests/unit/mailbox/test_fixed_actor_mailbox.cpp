@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/mailbox/fixed_actor_mailbox.hpp>
-#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
 
 #include <gtest/gtest.h>
 
@@ -126,7 +126,7 @@ TEST(FixedActorMailboxCoreTest, PushControlMessage) {
 
 TEST(FixedActorMailboxCoreTest, MakeBindingProducesValidPorts) {
     auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{});
-    auto binding = core->make_binding();
+    auto binding = core->make_handle();
     EXPECT_TRUE(binding.valid());
 }
 
