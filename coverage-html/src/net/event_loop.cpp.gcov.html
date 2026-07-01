@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
@@ -191,42 +191,42 @@
 <span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">           3 :     return backend_name_;</span></span>
 <span id="L114"><span class="lineNum">     114</span>                 :             : }</span>
 <span id="L115"><span class="lineNum">     115</span>                 :             : </span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">         210 : bool EventLoop::add_fd(int fd, Event events) {</span></span>
-<span id="L117"><span class="lineNum">     117</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 210 times"> + </span>]:<span class="tlaGNC">         210 :     if (backend_ == nullptr) {</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">         211 : bool EventLoop::add_fd(int fd, Event events) {</span></span>
+<span id="L117"><span class="lineNum">     117</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 211 times"> + </span>]:<span class="tlaGNC">         211 :     if (backend_ == nullptr) {</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L119"><span class="lineNum">     119</span>                 :             :     }</span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC tlaBgGNC">         210 :     IoEvent io_events = IoEvent::Read;</span></span>
-<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 206 times"> + </span>]:<span class="tlaGNC">         210 :     if ((static_cast&lt;uint32_t&gt;(events) &amp; static_cast&lt;uint32_t&gt;(Event::Write)) != 0U) {</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC tlaBgGNC">         211 :     IoEvent io_events = IoEvent::Read;</span></span>
+<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 207 times"> + </span>]:<span class="tlaGNC">         211 :     if ((static_cast&lt;uint32_t&gt;(events) &amp; static_cast&lt;uint32_t&gt;(Event::Write)) != 0U) {</span></span>
 <span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           4 :         io_events = static_cast&lt;IoEvent&gt;(static_cast&lt;uint32_t&gt;(io_events) |</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :             :                                          static_cast&lt;uint32_t&gt;(IoEvent::Write));</span>
 <span id="L124"><span class="lineNum">     124</span>                 :             :     }</span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         210 :     fd_events_[fd] = events;</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         210 :     return backend_-&gt;add_fd(fd, io_events);</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         211 :     fd_events_[fd] = events;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         211 :     return backend_-&gt;add_fd(fd, io_events);</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             : }</span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : </span>
 <span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">          12 : bool EventLoop::update_fd(int fd, Event events) {</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">          12 :     return add_fd(fd, events);</span></span>
 <span id="L131"><span class="lineNum">     131</span>                 :             : }</span>
 <span id="L132"><span class="lineNum">     132</span>                 :             : </span>
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">         201 : bool EventLoop::remove_fd(int fd) {</span></span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">         201 :     fd_events_.erase(fd);</span></span>
-<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 201 times"> + </span>]:<span class="tlaGNC">         201 :     if (!backend_) {</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">         202 : bool EventLoop::remove_fd(int fd) {</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">         202 :     fd_events_.erase(fd);</span></span>
+<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 202 times"> + </span>]:<span class="tlaGNC">         202 :     if (!backend_) {</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :     }</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC tlaBgGNC">         201 :     return backend_-&gt;remove_fd(fd);</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC tlaBgGNC">         202 :     return backend_-&gt;remove_fd(fd);</span></span>
 <span id="L139"><span class="lineNum">     139</span>                 :             : }</span>
 <span id="L140"><span class="lineNum">     140</span>                 :             : </span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">         192 : void EventLoop::set_read_handler(int fd, read_callback handler) {</span></span>
-<span id="L142"><span class="lineNum">     142</span>         [<span class="tlaGBC" title="Branch 0 was taken 192 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         192 :     if (backend_) {</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">         192 :         backend_-&gt;set_read_handler(fd, std::move(handler));</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">         193 : void EventLoop::set_read_handler(int fd, read_callback handler) {</span></span>
+<span id="L142"><span class="lineNum">     142</span>         [<span class="tlaGBC" title="Branch 0 was taken 193 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         193 :     if (backend_) {</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">         193 :         backend_-&gt;set_read_handler(fd, std::move(handler));</span></span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :     }</span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">         192 : }</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">         193 : }</span></span>
 <span id="L146"><span class="lineNum">     146</span>                 :             : </span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         186 : void EventLoop::clear_read_handler(int fd) {</span></span>
-<span id="L148"><span class="lineNum">     148</span>         [<span class="tlaGBC" title="Branch 0 was taken 186 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         186 :     if (backend_) {</span></span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">         186 :         backend_-&gt;clear_read_handler(fd);</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         187 : void EventLoop::clear_read_handler(int fd) {</span></span>
+<span id="L148"><span class="lineNum">     148</span>         [<span class="tlaGBC" title="Branch 0 was taken 187 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         187 :     if (backend_) {</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">         187 :         backend_-&gt;clear_read_handler(fd);</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :     }</span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">         186 : }</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">         187 : }</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :             : </span>
 <span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">          49 : bool EventLoop::supports_read_handler() const {</span></span>
 <span id="L154"><span class="lineNum">     154</span>   [<span class="tlaGBC" title="Branch 0 was taken 49 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 49 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          49 :     return backend_ &amp;&amp; backend_-&gt;supports_read_handler();</span></span>
@@ -306,10 +306,10 @@
 <span id="L228"><span class="lineNum">     228</span>                 :             :     }</span>
 <span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">         352 : }</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">          88 : void EventLoop::enqueue_completion(OpCompletion completion) {</span></span>
-<span id="L232"><span class="lineNum">     232</span>         [<span class="tlaGBC" title="Branch 0 was taken 27 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 61 times"> + </span>]:<span class="tlaGNC">          88 :     if (completion_callback_) {</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">          27 :         completion_callback_(completion);</span></span>
-<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">          27 :         return;</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">          93 : void EventLoop::enqueue_completion(OpCompletion completion) {</span></span>
+<span id="L232"><span class="lineNum">     232</span>         [<span class="tlaGBC" title="Branch 0 was taken 32 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 61 times"> + </span>]:<span class="tlaGNC">          93 :     if (completion_callback_) {</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">          32 :         completion_callback_(completion);</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">          32 :         return;</span></span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :     }</span>
 <span id="L236"><span class="lineNum">     236</span>         [<span class="tlaGBC" title="Branch 0 was taken 61 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          61 :     if (proactor_dispatcher_) {</span></span>
 <span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC">          61 :         proactor_dispatcher_-&gt;on_completion(completion);</span></span>

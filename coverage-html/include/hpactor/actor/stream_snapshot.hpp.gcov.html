@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
@@ -101,10 +101,10 @@
 <span id="L23"><span class="lineNum">      23</span>                 :             : /// \brief std::hash specialization for \c StreamKey.</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : template &lt;&gt; struct std::hash&lt;hpactor::StreamKey&gt; {</span>
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaUNC">           0 :     std::size_t operator()(const hpactor::StreamKey&amp; k) const noexcept {</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :         std::size_t h1 = std::hash&lt;uint64_t&gt;{}(k.stream_id);</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :             :         // Hash EndPoint via its string representation</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             :         std::size_t h2 =</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC">           0 :             std::hash&lt;std::string&gt;{}(hpactor::endpoint_ops::to_string(k.peer));</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :             :         // Hash EndPoint fields directly to avoid heap-allocating</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             :         // a std::string via endpoint_ops::to_string().</span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC">           0 :         std::size_t h1 = std::hash&lt;uint64_t&gt;{}(k.stream_id);</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC">           0 :         std::size_t h2 = hpactor::endpoint_ops::hash(k.peer);</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         return h1 ^ (h2 + 0x9e3779b9 + (h1 &lt;&lt; 6) + (h1 &gt;&gt; 2));</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : };</span>

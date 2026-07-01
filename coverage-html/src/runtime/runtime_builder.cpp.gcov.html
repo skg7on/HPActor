@@ -32,12 +32,12 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">9</td>
-            <td class="headerCovTableEntry">9</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">6</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -97,26 +97,20 @@
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
 <span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          23 : result&lt;RuntimeBuildResult&gt; RuntimeBuilder::build(RuntimeBlueprint bp) noexcept {</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :             :     // ── Map blueprint back to Config for the legacy constructor ────────────</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             :     // TODO(Phase 6 Task 5): Replace with proper blueprint-based construction</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             :     // that does NOT start threads/listeners/actors. For now, we use the</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             :     // existing constructor with zero threads and no network to minimize</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             :     // side effects while establishing the RuntimeBuilder API.</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :             :     (void)bp; // blueprint fields used in Task 5 integration</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             :     // ── Blueprint-based construction ────────────────────────────────────────</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             :     // Uses the FromBlueprint constructor which builds all components from</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             :     // the validated blueprint but does NOT start threads, listeners, or</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             :     // actors.  The RuntimeCoordinator owns startup ordering (Phase 6 Task 5).</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : </span>
+<span id="L27"><span class="lineNum">      27</span>                 :             :     auto system = std::unique_ptr&lt;ActorSystem&gt;(</span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          23 :         new ActorSystem(ActorSystem::FromBlueprint{}, bp));</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          23 :     Config config;</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          23 :     config.scheduler_threads = 0; // no worker threads</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          23 :     config.enable_network = false;</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          23 :     auto system = std::unique_ptr&lt;ActorSystem&gt;(new ActorSystem(config));</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :             : </span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          23 :     RuntimeBuildResult built;</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          23 :     built.system = std::move(system);</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">          23 :     return result&lt;RuntimeBuildResult&gt;::make(std::move(built));</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          23 : }</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :             : </span>
-<span id="L41"><span class="lineNum">      41</span>                 :             : } // namespace hpactor</span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          23 :     RuntimeBuildResult built;</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          23 :     built.system = std::move(system);</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          23 :     return result&lt;RuntimeBuildResult&gt;::make(std::move(built));</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          23 : }</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : </span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

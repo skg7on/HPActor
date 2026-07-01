@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
@@ -100,8 +100,8 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : // ---- Constructors ----</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">      282099 : StreamBuffer::StreamBuffer(size_t count)</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      564198 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">      282097 : StreamBuffer::StreamBuffer(size_t count)</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      564194 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      221988 : StreamBuffer::StreamBuffer(std::initializer_list&lt;uint8_t&gt; ilist)</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">      443976 :     : buf_(ilist), read_pos_(0) {}</span></span>
@@ -128,12 +128,12 @@
 <span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">         791 : StreamBuffer::StreamBuffer(const StreamBuffer&amp; other)</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         791 :     : buf_(other.buf_), read_pos_(other.read_pos_) {}</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">        2235 : StreamBuffer&amp; StreamBuffer::operator=(const StreamBuffer&amp; other) {</span></span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 2235 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        2235 :     if (this != &amp;other) {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">        2235 :         buf_ = other.buf_;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">        2235 :         read_pos_ = other.read_pos_;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">        2189 : StreamBuffer&amp; StreamBuffer::operator=(const StreamBuffer&amp; other) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 2189 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        2189 :     if (this != &amp;other) {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">        2189 :         buf_ = other.buf_;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">        2189 :         read_pos_ = other.read_pos_;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     }</span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">        2235 :     return *this;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">        2189 :     return *this;</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : }</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : // ---- Capacity ----</span>
@@ -266,9 +266,9 @@
 <span id="L188"><span class="lineNum">     188</span>                 :             : </span>
 <span id="L189"><span class="lineNum">     189</span>                 :             : // ---- Private ----</span>
 <span id="L190"><span class="lineNum">     190</span>                 :             : </span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">      286453 : void StreamBuffer::maybe_compact() {</span></span>
-<span id="L192"><span class="lineNum">     192</span>         [<span class="tlaGBC" title="Branch 0 was taken 286363 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 90 times"> + </span>]:<span class="tlaGNC">      286453 :     if (read_pos_ == 0)</span></span>
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">      286363 :         return;</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">      286451 : void StreamBuffer::maybe_compact() {</span></span>
+<span id="L192"><span class="lineNum">     192</span>         [<span class="tlaGBC" title="Branch 0 was taken 286361 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 90 times"> + </span>]:<span class="tlaGNC">      286451 :     if (read_pos_ == 0)</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">      286361 :         return;</span></span>
 <span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">          90 :     size_t readable = buf_.size() - read_pos_;</span></span>
 <span id="L195"><span class="lineNum">     195</span>   [<span class="tlaGBC" title="Branch 0 was taken 30 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 60 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 30 times"> + </span>]:<span class="tlaGNC">          90 :     if (read_pos_ &gt; readable || read_pos_ &gt; kCompactThreshold) {</span></span>
 <span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">          60 :         compact();</span></span>

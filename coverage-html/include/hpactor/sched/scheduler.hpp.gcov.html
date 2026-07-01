@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">31.6&nbsp;%</td>
@@ -441,8 +441,8 @@
 <span id="L363"><span class="lineNum">     363</span>                 :             :     ///</span>
 <span id="L364"><span class="lineNum">     364</span>                 :             :     /// Used by WorkerThread to access per-worker CV fields for adaptive</span>
 <span id="L365"><span class="lineNum">     365</span>                 :             :     /// blocking-wakeup.  Not intended for general use.</span>
-<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">        1934 :     std::vector&lt;WorkPlacementScheduler::WorkerState&gt;&amp; placement_workers() noexcept {</span></span>
-<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaGNC">        1934 :         return placement_.workers();</span></span>
+<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">        1952 :     std::vector&lt;WorkPlacementScheduler::WorkerState&gt;&amp; placement_workers() noexcept {</span></span>
+<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaGNC">        1952 :         return placement_.workers();</span></span>
 <span id="L368"><span class="lineNum">     368</span>                 :             :     }</span>
 <span id="L369"><span class="lineNum">     369</span>                 :             : </span>
 <span id="L370"><span class="lineNum">     370</span>                 :             :     /// \brief Read the current worker ID from thread-local storage.</span>
@@ -493,9 +493,9 @@
 <span id="L415"><span class="lineNum">     415</span>                 :             :             static_cast&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;*&gt;(buf);</span>
 <span id="L416"><span class="lineNum">     416</span>                 :<span class="tlaGNC">         821 :     }</span></span>
 <span id="L417"><span class="lineNum">     417</span>                 :             : </span>
-<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">         821 :     void set_logger(void* logger) noexcept override {</span></span>
-<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">         821 :         logger_ = static_cast&lt;log::Logger*&gt;(logger);</span></span>
-<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">         821 :     }</span></span>
+<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">         798 :     void set_logger(void* logger) noexcept override {</span></span>
+<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">         798 :         logger_ = static_cast&lt;log::Logger*&gt;(logger);</span></span>
+<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">         798 :     }</span></span>
 <span id="L421"><span class="lineNum">     421</span>                 :             : </span>
 <span id="L422"><span class="lineNum">     422</span>                 :             :     std::unordered_map&lt;uint64_t, std::shared_ptr&lt;std::atomic&lt;bool&gt;&gt;&gt; recurring_cancellations_;</span>
 <span id="L423"><span class="lineNum">     423</span>                 :             :     std::mutex cancellation_mutex_;</span>

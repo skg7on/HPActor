@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">66.4&nbsp;%</td>
+            <td class="headerCovTableEntryLo">63.6&nbsp;%</td>
             <td class="headerCovTableEntry">253</td>
-            <td class="headerCovTableEntry">168</td>
+            <td class="headerCovTableEntry">161</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">90.5&nbsp;%</td>
+            <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
             <td class="headerCovTableEntry">21</td>
-            <td class="headerCovTableEntry">19</td>
+            <td class="headerCovTableEntry">18</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">53.7&nbsp;%</td>
+            <td class="headerCovTableEntryLo">51.5&nbsp;%</td>
             <td class="headerCovTableEntry">136</td>
-            <td class="headerCovTableEntry">73</td>
+            <td class="headerCovTableEntry">70</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -185,18 +185,18 @@
 <span id="L107"><span class="lineNum">     107</span>                 :             : }</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             : </span>
 <span id="L109"><span class="lineNum">     109</span>                 :             : PlacementResult</span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC tlaBgGNC">       11919 : WorkPlacementScheduler::enqueue_admitted(const WorkItem&amp; item, uint8_t priority,</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC tlaBgGNC">       11896 : WorkPlacementScheduler::enqueue_admitted(const WorkItem&amp; item, uint8_t priority,</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :                                          bool workers_paused,</span>
 <span id="L112"><span class="lineNum">     112</span>                 :             :                                          const DedicatedDispatch&amp; dedicated_dispatch) {</span>
 <span id="L113"><span class="lineNum">     113</span>                 :             :     {</span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">       11919 :         std::lock_guard&lt;std::mutex&gt; lock(dedicated_-&gt;dedicated_mutex_);</span></span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">       11919 :         if (dedicated_-&gt;dedicated_thread_actors_.find(item.actor) !=</span></span>
-<span id="L116"><span class="lineNum">     116</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11912 times"> + </span>]:<span class="tlaGNC">       23838 :             dedicated_-&gt;dedicated_thread_actors_.end()) {</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">       11896 :         std::lock_guard&lt;std::mutex&gt; lock(dedicated_-&gt;dedicated_mutex_);</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">       11896 :         if (dedicated_-&gt;dedicated_thread_actors_.find(item.actor) !=</span></span>
+<span id="L116"><span class="lineNum">     116</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11889 times"> + </span>]:<span class="tlaGNC">       23792 :             dedicated_-&gt;dedicated_thread_actors_.end()) {</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">           7 :             return PlacementResult::SuppressedDedicatedThread;</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :         }</span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : </span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">       11912 :         auto actor_pool = dedicated_-&gt;actor_pool_map_.find(item.actor);</span></span>
-<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11910 times"> + </span>]:<span class="tlaGNC">       11912 :         if (actor_pool != dedicated_-&gt;actor_pool_map_.end()) {</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">       11889 :         auto actor_pool = dedicated_-&gt;actor_pool_map_.find(item.actor);</span></span>
+<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11887 times"> + </span>]:<span class="tlaGNC">       11889 :         if (actor_pool != dedicated_-&gt;actor_pool_map_.end()) {</span></span>
 <span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           2 :             auto pool = dedicated_-&gt;dedicated_pools_.find(actor_pool-&gt;second);</span></span>
 <span id="L123"><span class="lineNum">     123</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :             if (pool != dedicated_-&gt;dedicated_pools_.end()) {</span></span>
 <span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           2 :                 auto* dedicated_pool = pool-&gt;second.get();</span></span>
@@ -206,10 +206,10 @@
 <span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           2 :                 return PlacementResult::EnqueuedDedicatedPool;</span></span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :             }</span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :         }</span>
-<span id="L131"><span class="lineNum">     131</span>         [<span class="tlaGBC" title="Branch 0 was taken 11910 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">       11919 :     }</span></span>
+<span id="L131"><span class="lineNum">     131</span>         [<span class="tlaGBC" title="Branch 0 was taken 11887 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">       11896 :     }</span></span>
 <span id="L132"><span class="lineNum">     132</span>                 :             : </span>
-<span id="L133"><span class="lineNum">     133</span>         [<span class="tlaGBC" title="Branch 0 was taken 753 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11157 times"> + </span>]:<span class="tlaGNC">       11910 :     if (num_workers_ == 0) {</span></span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">         753 :         return PlacementResult::NoWorkers;</span></span>
+<span id="L133"><span class="lineNum">     133</span>         [<span class="tlaGBC" title="Branch 0 was taken 730 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11157 times"> + </span>]:<span class="tlaGNC">       11887 :     if (num_workers_ == 0) {</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">         730 :         return PlacementResult::NoWorkers;</span></span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     }</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
 <span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">       11157 :     bool is_pinned = false;</span></span>
@@ -224,10 +224,10 @@
 <span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">       11144 :     return PlacementResult::EnqueuedShared;</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :             : }</span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">       16733 : bool WorkPlacementScheduler::pop_edf(uint32_t worker_id, WorkItem&amp; out) {</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">       16733 :     auto&amp; worker = workers_[worker_id];</span></span>
-<span id="L151"><span class="lineNum">     151</span>         [<span class="tlaGBC" title="Branch 0 was taken 16728 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">       16733 :     if (worker.edf_queue.empty()) {</span></span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">       16728 :         return false;</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">       17307 : bool WorkPlacementScheduler::pop_edf(uint32_t worker_id, WorkItem&amp; out) {</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">       17307 :     auto&amp; worker = workers_[worker_id];</span></span>
+<span id="L151"><span class="lineNum">     151</span>         [<span class="tlaGBC" title="Branch 0 was taken 17302 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">       17307 :     if (worker.edf_queue.empty()) {</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">       17302 :         return false;</span></span>
 <span id="L153"><span class="lineNum">     153</span>                 :             :     }</span>
 <span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">           5 :     int64_t deadline = 0;</span></span>
 <span id="L155"><span class="lineNum">     155</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :     if (!worker.edf_queue.peek(deadline)) {</span></span>
@@ -236,23 +236,23 @@
 <span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC tlaBgGNC">           5 :     return worker.edf_queue.pop(out);</span></span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : }</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">       13601 : bool WorkPlacementScheduler::pop_local(uint32_t worker_id, WorkItem&amp; out) {</span></span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">       13601 :     auto&amp; worker = workers_[worker_id];</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">       14175 : bool WorkPlacementScheduler::pop_local(uint32_t worker_id, WorkItem&amp; out) {</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">       14175 :     auto&amp; worker = workers_[worker_id];</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :             : </span>
 <span id="L164"><span class="lineNum">     164</span>                 :             :     // Drain inject ring (fast path: no allocation, sequential access).</span>
 <span id="L165"><span class="lineNum">     165</span>                 :             :     {</span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">       13601 :         WorkItem ring_item;</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">       14175 :         WorkItem ring_item;</span></span>
 <span id="L167"><span class="lineNum">     167</span>                 :             :         uint8_t ring_prio;</span>
-<span id="L168"><span class="lineNum">     168</span>         [<span class="tlaGBC" title="Branch 0 was taken 8876 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13601 times"> + </span>]:<span class="tlaGNC">       36078 :         while (worker.inject_ring.try_pop(ring_item, ring_prio)) {</span></span>
-<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8876 times"> + </span>]:<span class="tlaGNC">        8876 :             if (ring_prio &lt; num_priorities_)</span></span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">        8876 :                 worker.queues[ring_prio].push_bottom(ring_item);</span></span>
+<span id="L168"><span class="lineNum">     168</span>         [<span class="tlaGBC" title="Branch 0 was taken 8881 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14175 times"> + </span>]:<span class="tlaGNC">       37231 :         while (worker.inject_ring.try_pop(ring_item, ring_prio)) {</span></span>
+<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 8881 times"> + </span>]:<span class="tlaGNC">        8881 :             if (ring_prio &lt; num_priorities_)</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">        8881 :                 worker.queues[ring_prio].push_bottom(ring_item);</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :         }</span>
 <span id="L172"><span class="lineNum">     172</span>                 :             :     }</span>
 <span id="L173"><span class="lineNum">     173</span>                 :             : </span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :     // Drain the shared-input stack (fallback for ring-full items).</span>
 <span id="L175"><span class="lineNum">     175</span>                 :             :     SharedInputNode* head =</span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">       13601 :         worker.shared_input.exchange(nullptr, std::memory_order_acquire);</span></span>
-<span id="L177"><span class="lineNum">     177</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 13601 times"> + </span>]:<span class="tlaGNC">       13601 :     if (head) {</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">       14175 :         worker.shared_input.exchange(nullptr, std::memory_order_acquire);</span></span>
+<span id="L177"><span class="lineNum">     177</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14175 times"> + </span>]:<span class="tlaGNC">       14175 :     if (head) {</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :             :         // Reverse the singly-linked list.</span>
 <span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         SharedInputNode* prev = nullptr;</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaUNC">           0 :         SharedInputNode* curr = head;</span></span>
@@ -274,37 +274,37 @@
 <span id="L196"><span class="lineNum">     196</span>                 :             :         }</span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :     }</span>
 <span id="L198"><span class="lineNum">     198</span>                 :             : </span>
-<span id="L199"><span class="lineNum">     199</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13599 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       13601 :     if (pop_edf(worker_id, out)) {</span></span>
+<span id="L199"><span class="lineNum">     199</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14173 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       14175 :     if (pop_edf(worker_id, out)) {</span></span>
 <span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">           2 :         return true;</span></span>
 <span id="L201"><span class="lineNum">     201</span>                 :             :     }</span>
-<span id="L202"><span class="lineNum">     202</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 13599 times"> + </span>]:<span class="tlaGNC">       13599 :     if (num_priorities_ == 1) {</span></span>
+<span id="L202"><span class="lineNum">     202</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14173 times"> + </span>]:<span class="tlaGNC">       14173 :     if (num_priorities_ == 1) {</span></span>
 <span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return worker.queues[0].pop_bottom(out);</span></span>
 <span id="L204"><span class="lineNum">     204</span>                 :             :     }</span>
-<span id="L205"><span class="lineNum">     205</span>         [<span class="tlaGBC" title="Branch 0 was taken 27801 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4734 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       32535 :     for (uint32_t p = 0; p &lt; num_priorities_; ++p) {</span></span>
-<span id="L206"><span class="lineNum">     206</span>         [<span class="tlaGBC" title="Branch 0 was taken 8865 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18936 times"> + </span>]:<span class="tlaGNC">       27801 :         if (worker.queues[p].pop_bottom(out)) {</span></span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">        8865 :             return true;</span></span>
+<span id="L205"><span class="lineNum">     205</span>         [<span class="tlaGBC" title="Branch 0 was taken 30067 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5298 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       35365 :     for (uint32_t p = 0; p &lt; num_priorities_; ++p) {</span></span>
+<span id="L206"><span class="lineNum">     206</span>         [<span class="tlaGBC" title="Branch 0 was taken 8875 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21192 times"> + </span>]:<span class="tlaGNC">       30067 :         if (worker.queues[p].pop_bottom(out)) {</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">        8875 :             return true;</span></span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :         }</span>
 <span id="L209"><span class="lineNum">     209</span>                 :             :     }</span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">        4734 :     return false;</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">        5298 :     return false;</span></span>
 <span id="L211"><span class="lineNum">     211</span>                 :             : }</span>
 <span id="L212"><span class="lineNum">     212</span>                 :             : </span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           1 : void WorkPlacementScheduler::emit_steal_metric(const WorkItem&amp; item,</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WorkPlacementScheduler::emit_steal_metric(const WorkItem&amp; item,</span></span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :                                                uint32_t from_worker) {</span>
-<span id="L215"><span class="lineNum">     215</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (metrics_ring_buffer_) {</span></span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         metrics::MetricEvent evt{};</span></span>
+<span id="L215"><span class="lineNum">     215</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (metrics_ring_buffer_) {</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaUNC">           0 :         metrics::MetricEvent evt{};</span></span>
 <span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaUNC">           0 :         evt.actor_id = item.actor;</span></span>
 <span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaUNC">           0 :         evt.event_type = metrics::MetricEventType::kSchedulerSteal;</span></span>
 <span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaUNC">           0 :         evt.value_hi = from_worker;</span></span>
 <span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaUNC">           0 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L221"><span class="lineNum">     221</span>                 :             :     }</span>
-<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC tlaBgGNC">           1 : }</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L223"><span class="lineNum">     223</span>                 :             : </span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         308 : bool WorkPlacementScheduler::try_steal(uint32_t thief_worker_id, WorkItem&amp; out) {</span></span>
-<span id="L225"><span class="lineNum">     225</span>         [<span class="tlaGBC" title="Branch 0 was taken 499 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 307 times"> + </span>]:<span class="tlaGNC">         806 :     for (uint32_t attempt = 0; attempt &lt; num_workers_; ++attempt) {</span></span>
-<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">         499 :         uint32_t victim_idx = a2ws_.get_victim(attempt % num_workers_);</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         499 :         auto&amp; victim = workers_[victim_idx];</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC tlaBgGNC">         324 : bool WorkPlacementScheduler::try_steal(uint32_t thief_worker_id, WorkItem&amp; out) {</span></span>
+<span id="L225"><span class="lineNum">     225</span>         [<span class="tlaGBC" title="Branch 0 was taken 540 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 324 times"> + </span>]:<span class="tlaGNC">         864 :     for (uint32_t attempt = 0; attempt &lt; num_workers_; ++attempt) {</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">         540 :         uint32_t victim_idx = a2ws_.get_victim(attempt % num_workers_);</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         540 :         auto&amp; victim = workers_[victim_idx];</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :             : </span>
-<span id="L229"><span class="lineNum">     229</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 499 times"> + </span>]:<span class="tlaGNC">         499 :         if (victim.edf_queue.pop(out)) {</span></span>
+<span id="L229"><span class="lineNum">     229</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 540 times"> + </span>]:<span class="tlaGNC">         540 :         if (victim.edf_queue.pop(out)) {</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             a2ws_.record_steal(attempt % num_workers_, victim_idx);</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaUNC">           0 :             emit_steal_metric(out, victim_idx);</span></span>
 <span id="L232"><span class="lineNum">     232</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             HPACTOR_LOG_DEBUG(</span></span>
@@ -316,32 +316,32 @@
 <span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaUNC">           0 :             return true;</span></span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :         }</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             : </span>
-<span id="L241"><span class="lineNum">     241</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 499 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         499 :         if (num_priorities_ == 1) {</span></span>
+<span id="L241"><span class="lineNum">     241</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 540 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         540 :         if (num_priorities_ == 1) {</span></span>
 <span id="L242"><span class="lineNum">     242</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (victim.queues[0].steal_top(out)) {</span></span>
 <span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaUNC">           0 :                 a2ws_.record_steal(attempt % num_workers_, victim_idx);</span></span>
 <span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaUNC">           0 :                 emit_steal_metric(out, victim_idx);</span></span>
 <span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaUNC">           0 :                 return true;</span></span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :             }</span>
 <span id="L247"><span class="lineNum">     247</span>                 :             :         } else {</span>
-<span id="L248"><span class="lineNum">     248</span>         [<span class="tlaGBC" title="Branch 0 was taken 1993 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 498 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        2491 :             for (uint32_t p = 0; p &lt; num_priorities_; ++p) {</span></span>
-<span id="L249"><span class="lineNum">     249</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1992 times"> + </span>]:<span class="tlaGNC">        1993 :                 if (victim.queues[p].steal_top(out)) {</span></span>
-<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">           1 :                     a2ws_.record_steal(attempt % num_workers_, victim_idx);</span></span>
-<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">           1 :                     emit_steal_metric(out, victim_idx);</span></span>
-<span id="L252"><span class="lineNum">     252</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :                     HPACTOR_LOG_DEBUG(</span></span>
+<span id="L248"><span class="lineNum">     248</span>         [<span class="tlaGBC" title="Branch 0 was taken 2160 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 540 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        2700 :             for (uint32_t p = 0; p &lt; num_priorities_; ++p) {</span></span>
+<span id="L249"><span class="lineNum">     249</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2160 times"> + </span>]:<span class="tlaGNC">        2160 :                 if (victim.queues[p].steal_top(out)) {</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                     a2ws_.record_steal(attempt % num_workers_, victim_idx);</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaUNC">           0 :                     emit_steal_metric(out, victim_idx);</span></span>
+<span id="L252"><span class="lineNum">     252</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     HPACTOR_LOG_DEBUG(</span></span>
 <span id="L253"><span class="lineNum">     253</span>                 :             :                         log::LogCategory::kScheduler, out.actor,</span>
 <span id="L254"><span class="lineNum">     254</span>                 :             :                         static_cast&lt;uint32_t&gt;(log::LogEventId::kSchedulerSteal),</span>
 <span id="L255"><span class="lineNum">     255</span>                 :             :                         &quot;work stolen&quot;,</span>
 <span id="L256"><span class="lineNum">     256</span>                 :             :                         log::field(&quot;from_worker&quot;, static_cast&lt;uint64_t&gt;(victim_idx)),</span>
 <span id="L257"><span class="lineNum">     257</span>                 :             :                         log::field(&quot;to_worker&quot;,</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :                                    static_cast&lt;uint64_t&gt;(thief_worker_id)));</span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">           1 :                     return true;</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaUNC">           0 :                     return true;</span></span>
 <span id="L260"><span class="lineNum">     260</span>                 :             :                 }</span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :             }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :         }</span>
 <span id="L263"><span class="lineNum">     263</span>                 :             : </span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">         498 :         a2ws_.record_attempt(attempt % num_workers_, victim_idx, false);</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC tlaBgGNC">         540 :         a2ws_.record_attempt(attempt % num_workers_, victim_idx, false);</span></span>
 <span id="L265"><span class="lineNum">     265</span>                 :             :     }</span>
-<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">         307 :     return false;</span></span>
+<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">         324 :     return false;</span></span>
 <span id="L267"><span class="lineNum">     267</span>                 :             : }</span>
 <span id="L268"><span class="lineNum">     268</span>                 :             : </span>
 <span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">        2265 : bool WorkPlacementScheduler::pop_any_for_test(WorkItem&amp; out) {</span></span>
@@ -477,15 +477,15 @@
 <span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC">           4 :     pinned_actors_.erase(actor);</span></span>
 <span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">           4 : }</span></span>
 <span id="L400"><span class="lineNum">     400</span>                 :             : </span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">        1744 : void WorkPlacementScheduler::flush_pinned_to_shared() {</span></span>
-<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC">        1744 :     std::lock_guard&lt;std::mutex&gt; lock(pinned_mutex_);</span></span>
-<span id="L403"><span class="lineNum">     403</span>         [<span class="tlaGBC" title="Branch 0 was taken 946 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1744 times"> + </span>]:<span class="tlaGNC">        2690 :     for (uint32_t w = 0; w &lt; num_workers_; ++w) {</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">        1756 : void WorkPlacementScheduler::flush_pinned_to_shared() {</span></span>
+<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC">        1756 :     std::lock_guard&lt;std::mutex&gt; lock(pinned_mutex_);</span></span>
+<span id="L403"><span class="lineNum">     403</span>         [<span class="tlaGBC" title="Branch 0 was taken 946 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1756 times"> + </span>]:<span class="tlaGNC">        2702 :     for (uint32_t w = 0; w &lt; num_workers_; ++w) {</span></span>
 <span id="L404"><span class="lineNum">     404</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 946 times"> + </span>]:<span class="tlaGNC">         947 :         for (auto&amp; item : pinned_ready_[w]) {</span></span>
 <span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">           1 :             workers_[w].queues[0].push_bottom(item);</span></span>
 <span id="L406"><span class="lineNum">     406</span>                 :             :         }</span>
 <span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">         946 :         pinned_ready_[w].clear();</span></span>
 <span id="L408"><span class="lineNum">     408</span>                 :             :     }</span>
-<span id="L409"><span class="lineNum">     409</span>                 :<span class="tlaGNC">        1744 : }</span></span>
+<span id="L409"><span class="lineNum">     409</span>                 :<span class="tlaGNC">        1756 : }</span></span>
 <span id="L410"><span class="lineNum">     410</span>                 :             : </span>
 <span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaGNC">          39 : void WorkPlacementScheduler::register_dedicated_thread(ActorId actor,</span></span>
 <span id="L412"><span class="lineNum">     412</span>                 :             :                                                        int cpu_affinity) {</span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
@@ -130,8 +130,8 @@
 <span id="L52"><span class="lineNum">      52</span>                 :             :     /// \brief Construct an overflow queue with an optional depth limit.</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     ///</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     /// \param[in] max_depth Maximum number of elements (0 = unlimited).</span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC tlaBgGNC">        6873 :     explicit OverflowQueue(uint32_t max_depth = 0) noexcept</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">        6873 :         : max_depth_(max_depth) {}</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC tlaBgGNC">        6827 :     explicit OverflowQueue(uint32_t max_depth = 0) noexcept</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">        6827 :         : max_depth_(max_depth) {}</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     /// \brief Update the maximum depth at runtime.</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     ///</span>
@@ -139,10 +139,10 @@
 <span id="L61"><span class="lineNum">      61</span>                 :             :     /// next \c try_push().</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :     ///</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \param[in] max_depth New maximum depth (0 = unlimited).</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        6869 :     void set_max_depth(uint32_t max_depth) noexcept {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        6869 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">        6869 :         max_depth_ = max_depth;</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">        6869 :     }</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        6823 :     void set_max_depth(uint32_t max_depth) noexcept {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        6823 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">        6823 :         max_depth_ = max_depth;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">        6823 :     }</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     /// \brief Return the configured maximum depth.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     ///</span>

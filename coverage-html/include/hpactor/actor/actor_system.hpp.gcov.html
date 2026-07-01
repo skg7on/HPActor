@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.9&nbsp;%</td>
@@ -1075,13 +1075,13 @@
 <span id="L997"><span class="lineNum">     997</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L998"><span class="lineNum">     998</span>                 :             : </span>
 <span id="L999"><span class="lineNum">     999</span>                 :             : template &lt;typename T, typename... Args&gt;</span>
-<span id="L1000"><span class="lineNum">    1000</span>                 :<span class="tlaGNC">        6632 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
-<span id="L1001"><span class="lineNum">    1001</span>                 :<span class="tlaGNC">        6632 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
+<span id="L1000"><span class="lineNum">    1000</span>                 :<span class="tlaGNC">        6586 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
+<span id="L1001"><span class="lineNum">    1001</span>                 :<span class="tlaGNC">        6586 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
 <span id="L1002"><span class="lineNum">    1002</span>                 :             :     if constexpr (requires { T::kActorTypeName; }) {</span>
-<span id="L1003"><span class="lineNum">    1003</span>                 :<span class="tlaGNC">         855 :         return adopt_preconstructed_actor(actor, T::kActorTypeName);</span></span>
+<span id="L1003"><span class="lineNum">    1003</span>                 :<span class="tlaGNC">         832 :         return adopt_preconstructed_actor(actor, T::kActorTypeName);</span></span>
 <span id="L1004"><span class="lineNum">    1004</span>                 :             :     }</span>
-<span id="L1005"><span class="lineNum">    1005</span>                 :<span class="tlaGNC">        5777 :     return adopt_preconstructed_actor(actor, &quot;unknown&quot;);</span></span>
-<span id="L1006"><span class="lineNum">    1006</span>                 :<span class="tlaGNC">        6632 : }</span></span>
+<span id="L1005"><span class="lineNum">    1005</span>                 :<span class="tlaGNC">        5754 :     return adopt_preconstructed_actor(actor, &quot;unknown&quot;);</span></span>
+<span id="L1006"><span class="lineNum">    1006</span>                 :<span class="tlaGNC">        6586 : }</span></span>
 <span id="L1007"><span class="lineNum">    1007</span>                 :             : </span>
 <span id="L1008"><span class="lineNum">    1008</span>                 :             : } // namespace hpactor</span>
         </pre>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 07:10:13</td>
+            <td class="headerValue">2026-07-01 08:50:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -119,8 +119,8 @@
 <span id="L41"><span class="lineNum">      41</span>                 :             :     ///</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     /// \param[in] num_user_lanes Number of user priority lanes (clamped to</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     /// 1–8).</span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">        6876 :     explicit MultiLaneQueue(uint8_t num_user_lanes = 1)</span></span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 55008 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6876 times"> + </span>]:<span class="tlaGNC">       61884 :         : num_user_lanes_(num_user_lanes) {}</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">        6830 :     explicit MultiLaneQueue(uint8_t num_user_lanes = 1)</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 54640 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6830 times"> + </span>]:<span class="tlaGNC">       61470 :         : num_user_lanes_(num_user_lanes) {}</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : </span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :     // ── Producer (lock-free, multi-producer safe) ─────────────────</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
@@ -132,13 +132,13 @@
 <span id="L54"><span class="lineNum">      54</span>                 :             :     ///                     lane, or 0..N-1 for a user lane.</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     /// \note Thread safety: lock-free — safe to call from any thread.</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     ///       Multiple producers may enqueue concurrently.</span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">      214151 :     void enqueue(T* node, uint8_t lane_idx) noexcept {</span></span>
-<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaGBC" title="Branch 0 was taken 182 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 213969 times"> + </span>]:<span class="tlaGNC">      214151 :         if (lane_idx == kSystemLaneSentinel) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">      207813 :     void enqueue(T* node, uint8_t lane_idx) noexcept {</span></span>
+<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaGBC" title="Branch 0 was taken 182 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 207631 times"> + </span>]:<span class="tlaGNC">      207813 :         if (lane_idx == kSystemLaneSentinel) {</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         182 :             system_lane_.enqueue(node);</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :         } else {</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">      213969 :             user_lanes_[lane_idx].enqueue(node);</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">      207631 :             user_lanes_[lane_idx].enqueue(node);</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :         }</span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      214151 :     }</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      207813 :     }</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     // ── Consumer (NOT internally locked — caller serializes) ──────</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
@@ -150,16 +150,16 @@
 <span id="L72"><span class="lineNum">      72</span>                 :             :     /// \note Thread safety: NOT internally locked. The caller</span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     ///       (\c MPSCActorMailbox) must serialize dequeue via its consumer</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :     ///       spin-lock. Safe to call concurrently with producers.</span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">      135637 :     T* dequeue() noexcept {</span></span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">      135637 :         T* node = system_lane_.dequeue();</span></span>
-<span id="L77"><span class="lineNum">      77</span>         [<span class="tlaGBC" title="Branch 0 was taken 139 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135498 times"> + </span>]:<span class="tlaGNC">      135637 :         if (node)</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">         139 :             return node;</span></span>
-<span id="L79"><span class="lineNum">      79</span>         [<span class="tlaGBC" title="Branch 0 was taken 140660 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1716 times"> + </span>]:<span class="tlaGNC">      142376 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i) {</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      140660 :             node = user_lanes_[i].dequeue();</span></span>
-<span id="L81"><span class="lineNum">      81</span>         [<span class="tlaGBC" title="Branch 0 was taken 133782 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6878 times"> + </span>]:<span class="tlaGNC">      140660 :             if (node)</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      133782 :                 return node;</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">      135641 :     T* dequeue() noexcept {</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">      135641 :         T* node = system_lane_.dequeue();</span></span>
+<span id="L77"><span class="lineNum">      77</span>         [<span class="tlaGBC" title="Branch 0 was taken 143 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135498 times"> + </span>]:<span class="tlaGNC">      135641 :         if (node)</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">         143 :             return node;</span></span>
+<span id="L79"><span class="lineNum">      79</span>         [<span class="tlaGBC" title="Branch 0 was taken 140663 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1717 times"> + </span>]:<span class="tlaGNC">      142380 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i) {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      140663 :             node = user_lanes_[i].dequeue();</span></span>
+<span id="L81"><span class="lineNum">      81</span>         [<span class="tlaGBC" title="Branch 0 was taken 133781 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6882 times"> + </span>]:<span class="tlaGNC">      140663 :             if (node)</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      133781 :                 return node;</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :         }</span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">        1716 :         return nullptr;</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">        1717 :         return nullptr;</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     }</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             : </span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :     /// \brief Drop one message from the highest-priority non-empty user lane.</span>
@@ -173,13 +173,13 @@
 <span id="L95"><span class="lineNum">      95</span>                 :             :     ///         were empty. The caller must release the reservation and handle</span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     ///         deferred destruction.</span>
 <span id="L97"><span class="lineNum">      97</span>                 :             :     /// \note Thread safety: NOT internally locked — caller must serialize.</span>
-<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">       80586 :     T* try_drop_oldest_user_lane() noexcept {</span></span>
-<span id="L99"><span class="lineNum">      99</span>         [<span class="tlaGBC" title="Branch 0 was taken 84888 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1434 times"> + </span>]:<span class="tlaGNC">       86322 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i) {</span></span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">       84888 :             T* node = user_lanes_[i].dequeue();</span></span>
-<span id="L101"><span class="lineNum">     101</span>         [<span class="tlaGBC" title="Branch 0 was taken 79152 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5736 times"> + </span>]:<span class="tlaGNC">       84888 :             if (node)</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">       79152 :                 return node;</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">       78544 :     T* try_drop_oldest_user_lane() noexcept {</span></span>
+<span id="L99"><span class="lineNum">      99</span>         [<span class="tlaGBC" title="Branch 0 was taken 95731 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5729 times"> + </span>]:<span class="tlaGNC">      101460 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i) {</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">       95731 :             T* node = user_lanes_[i].dequeue();</span></span>
+<span id="L101"><span class="lineNum">     101</span>         [<span class="tlaGBC" title="Branch 0 was taken 72815 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 22916 times"> + </span>]:<span class="tlaGNC">       95731 :             if (node)</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">       72815 :                 return node;</span></span>
 <span id="L103"><span class="lineNum">     103</span>                 :             :         }</span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">        1434 :         return nullptr;</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">        5729 :         return nullptr;</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :             :     }</span>
 <span id="L106"><span class="lineNum">     106</span>                 :             : </span>
 <span id="L107"><span class="lineNum">     107</span>                 :             :     /// Drop one message from the lowest-priority non-empty user lane.</span>
@@ -220,20 +220,20 @@
 <span id="L142"><span class="lineNum">     142</span>                 :             :     /// \param[in] node Node to stage for deferred destruction. Ownership</span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :     ///                 transfers to the queue.</span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :     /// \note Thread safety: NOT internally locked — caller must serialize.</span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">      212731 :     void set_pending_free(T* node) noexcept {</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">      206398 :     void set_pending_free(T* node) noexcept {</span></span>
 <span id="L146"><span class="lineNum">     146</span>                 :             :         // When the ring is full the slot we are about to overwrite</span>
 <span id="L147"><span class="lineNum">     147</span>                 :             :         // holds the oldest entry — destroy and deallocate it.</span>
-<span id="L148"><span class="lineNum">     148</span>         [<span class="tlaGBC" title="Branch 0 was taken 206878 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5853 times"> + </span>]:<span class="tlaGNC">      212731 :         if (pending_free_count_ == kPendingFreeRingSize) {</span></span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">      206878 :             T* oldest = pending_free_ring_[pending_free_write_idx_];</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">      206878 :             oldest-&gt;~T();</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">      206878 :             mem::deallocate(oldest);</span></span>
+<span id="L148"><span class="lineNum">     148</span>         [<span class="tlaGBC" title="Branch 0 was taken 200539 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5859 times"> + </span>]:<span class="tlaGNC">      206398 :         if (pending_free_count_ == kPendingFreeRingSize) {</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">      200539 :             T* oldest = pending_free_ring_[pending_free_write_idx_];</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">      200539 :             oldest-&gt;~T();</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">      200539 :             mem::deallocate(oldest);</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :             :         } else {</span>
-<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">        5853 :             pending_free_count_++;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">        5859 :             pending_free_count_++;</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :             :         }</span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">      212731 :         pending_free_ring_[pending_free_write_idx_] = node;</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">      212731 :         pending_free_write_idx_ = static_cast&lt;uint8_t&gt;(</span></span>
-<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">      212731 :             (pending_free_write_idx_ + 1) % kPendingFreeRingSize);</span></span>
-<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">      212731 :     }</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">      206398 :         pending_free_ring_[pending_free_write_idx_] = node;</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">      206398 :         pending_free_write_idx_ = static_cast&lt;uint8_t&gt;(</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">      206398 :             (pending_free_write_idx_ + 1) % kPendingFreeRingSize);</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">      206398 :     }</span></span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : </span>
 <span id="L160"><span class="lineNum">     160</span>                 :             :     /// \brief Drain and destroy all staged pending-free nodes.</span>
 <span id="L161"><span class="lineNum">     161</span>                 :             :     ///</span>
@@ -244,21 +244,21 @@
 <span id="L166"><span class="lineNum">     166</span>                 :             :     /// \note Thread safety: NOT internally locked — caller must serialize.</span>
 <span id="L167"><span class="lineNum">     167</span>                 :             :     /// \note The old single-slot API returned the staged pointer; this</span>
 <span id="L168"><span class="lineNum">     168</span>                 :             :     ///       multi-slot variant drains everything in one call.</span>
-<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">        6854 :     void drain_pending_free() noexcept {</span></span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">        6854 :         uint8_t count = pending_free_count_;</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">        6808 :     void drain_pending_free() noexcept {</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">        6808 :         uint8_t count = pending_free_count_;</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :         // oldest entry is at (write_idx - count) mod ring_size</span>
-<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">        6854 :         uint8_t idx = static_cast&lt;uint8_t&gt;(</span></span>
-<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">        6854 :             (pending_free_write_idx_ + kPendingFreeRingSize - count) %</span></span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">        6808 :         uint8_t idx = static_cast&lt;uint8_t&gt;(</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">        6808 :             (pending_free_write_idx_ + kPendingFreeRingSize - count) %</span></span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :             kPendingFreeRingSize);</span>
-<span id="L175"><span class="lineNum">     175</span>         [<span class="tlaGBC" title="Branch 0 was taken 5852 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6854 times"> + </span>]:<span class="tlaGNC">       12706 :         for (uint8_t i = 0; i &lt; count; ++i) {</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">        5852 :             T* node = pending_free_ring_[idx];</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">        5852 :             node-&gt;~T();</span></span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">        5852 :             mem::deallocate(node);</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">        5852 :             idx = static_cast&lt;uint8_t&gt;((idx + 1) % kPendingFreeRingSize);</span></span>
+<span id="L175"><span class="lineNum">     175</span>         [<span class="tlaGBC" title="Branch 0 was taken 5858 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6808 times"> + </span>]:<span class="tlaGNC">       12666 :         for (uint8_t i = 0; i &lt; count; ++i) {</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">        5858 :             T* node = pending_free_ring_[idx];</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">        5858 :             node-&gt;~T();</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">        5858 :             mem::deallocate(node);</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">        5858 :             idx = static_cast&lt;uint8_t&gt;((idx + 1) % kPendingFreeRingSize);</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :         }</span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">        6854 :         pending_free_count_ = 0;</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">        6854 :         pending_free_write_idx_ = 0;</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        6854 :     }</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">        6808 :         pending_free_count_ = 0;</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">        6808 :         pending_free_write_idx_ = 0;</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        6808 :     }</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             : </span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :     /// \brief Release the first staged pending-free node without</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :     ///        destroying it (used by the mailbox destructor).</span>
@@ -291,24 +291,24 @@
 <span id="L213"><span class="lineNum">     213</span>                 :             :     /// \return \c true if the system lane and all user lanes are empty.</span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     /// \note Thread safety: lock-free — safe to call from any thread.</span>
 <span id="L215"><span class="lineNum">     215</span>                 :             :     ///       The result may be stale by the time the caller observes it.</span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">      488728 :     bool empty() const noexcept {</span></span>
-<span id="L217"><span class="lineNum">     217</span>         [<span class="tlaGBC" title="Branch 0 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 488681 times"> + </span>]:<span class="tlaGNC">      488728 :         if (!system_lane_.empty())</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">      482412 :     bool empty() const noexcept {</span></span>
+<span id="L217"><span class="lineNum">     217</span>         [<span class="tlaGBC" title="Branch 0 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 482365 times"> + </span>]:<span class="tlaGNC">      482412 :         if (!system_lane_.empty())</span></span>
 <span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">          47 :             return false;</span></span>
-<span id="L219"><span class="lineNum">     219</span>         [<span class="tlaGBC" title="Branch 0 was taken 580486 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 30594 times"> + </span>]:<span class="tlaGNC">      611080 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i)</span></span>
-<span id="L220"><span class="lineNum">     220</span>         [<span class="tlaGBC" title="Branch 0 was taken 458087 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 122399 times"> + </span>]:<span class="tlaGNC">      580486 :             if (!user_lanes_[i].empty())</span></span>
-<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">      458087 :                 return false;</span></span>
-<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">       30594 :         return true;</span></span>
+<span id="L219"><span class="lineNum">     219</span>         [<span class="tlaGBC" title="Branch 0 was taken 574263 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 30625 times"> + </span>]:<span class="tlaGNC">      604888 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i)</span></span>
+<span id="L220"><span class="lineNum">     220</span>         [<span class="tlaGBC" title="Branch 0 was taken 451740 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 122523 times"> + </span>]:<span class="tlaGNC">      574263 :             if (!user_lanes_[i].empty())</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">      451740 :                 return false;</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">       30625 :         return true;</span></span>
 <span id="L223"><span class="lineNum">     223</span>                 :             :     }</span>
 <span id="L224"><span class="lineNum">     224</span>                 :             : </span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     /// \brief Total depth across all lanes (system + user).</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             :     ///</span>
 <span id="L227"><span class="lineNum">     227</span>                 :             :     /// \return Sum of message counts in all lanes.</span>
 <span id="L228"><span class="lineNum">     228</span>                 :             :     /// \note Thread safety: lock-free — safe to call from any thread.</span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">     1902145 :     int64_t total_depth() const noexcept {</span></span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">     1902145 :         int64_t d = system_lane_.count();</span></span>
-<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaGBC" title="Branch 0 was taken 7608560 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1902145 times"> + </span>]:<span class="tlaGNC">     9510705 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i)</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">     7608560 :             d += user_lanes_[i].count();</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">     1902145 :         return d;</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">     1860040 :     int64_t total_depth() const noexcept {</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">     1860040 :         int64_t d = system_lane_.count();</span></span>
+<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaGBC" title="Branch 0 was taken 7440140 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1860040 times"> + </span>]:<span class="tlaGNC">     9300180 :         for (uint8_t i = 0; i &lt; num_user_lanes_; ++i)</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">     7440140 :             d += user_lanes_[i].count();</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">     1860040 :         return d;</span></span>
 <span id="L234"><span class="lineNum">     234</span>                 :             :     }</span>
 <span id="L235"><span class="lineNum">     235</span>                 :             : </span>
 <span id="L236"><span class="lineNum">     236</span>                 :             :     /// \brief Depth of a single lane.</span>
@@ -316,9 +316,9 @@
 <span id="L238"><span class="lineNum">     238</span>                 :             :     /// \param[in] lane_idx Lane index (0..N-1) or \c kSystemLaneSentinel.</span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :     /// \return Message count in the specified lane.</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             :     /// \note Thread safety: lock-free — safe to call from any thread.</span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">     1060558 :     int64_t lane_depth(uint8_t lane_idx) const noexcept {</span></span>
-<span id="L242"><span class="lineNum">     242</span>         [<span class="tlaGBC" title="Branch 0 was taken 1060240 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 318 times"> + </span>]:<span class="tlaGNC">     1060558 :         if (lane_idx == kSystemLaneSentinel)</span></span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">     1060240 :             return system_lane_.count();</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">     1039508 :     int64_t lane_depth(uint8_t lane_idx) const noexcept {</span></span>
+<span id="L242"><span class="lineNum">     242</span>         [<span class="tlaGBC" title="Branch 0 was taken 1039190 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 318 times"> + </span>]:<span class="tlaGNC">     1039508 :         if (lane_idx == kSystemLaneSentinel)</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">     1039190 :             return system_lane_.count();</span></span>
 <span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">         318 :         return user_lanes_[lane_idx].count();</span></span>
 <span id="L245"><span class="lineNum">     245</span>                 :             :     }</span>
 <span id="L246"><span class="lineNum">     246</span>                 :             : </span>
@@ -332,9 +332,9 @@
 <span id="L254"><span class="lineNum">     254</span>                 :             :     /// \brief Reconfigure the number of user lanes at runtime.</span>
 <span id="L255"><span class="lineNum">     255</span>                 :             :     ///</span>
 <span id="L256"><span class="lineNum">     256</span>                 :             :     /// \param[in] n New lane count (clamped to 1–8).</span>
-<span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC">        6869 :     void set_num_user_lanes(uint8_t n) {</span></span>
-<span id="L258"><span class="lineNum">     258</span>   [<span class="tlaGBC" title="Branch 0 was taken 6869 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 6869 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        6869 :         num_user_lanes_ = (n &gt;= 1 &amp;&amp; n &lt;= kMaxUserLanes) ? n : 1;</span></span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">        6869 :     }</span></span>
+<span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC">        6823 :     void set_num_user_lanes(uint8_t n) {</span></span>
+<span id="L258"><span class="lineNum">     258</span>   [<span class="tlaGBC" title="Branch 0 was taken 6823 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 6823 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        6823 :         num_user_lanes_ = (n &gt;= 1 &amp;&amp; n &lt;= kMaxUserLanes) ? n : 1;</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">        6823 :     }</span></span>
 <span id="L260"><span class="lineNum">     260</span>                 :             : </span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :     // ── Test support ──────────────────────────────────────────────</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             : </span>
