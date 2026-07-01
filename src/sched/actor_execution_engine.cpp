@@ -276,7 +276,10 @@ ActorExecutionEngine::run_fixed_actor(EventBasedActor& actor, const WorkItem& it
     bool budget_exhausted =
         !context.workers_paused && item.sequence >= kRequeueBudget;
 
-    if (has_work && !budget_exhausted) {
+    bool has_more = binding->execution.empty &&
+                    !binding->execution.empty(binding->execution.context);
+
+    if (has_work && has_more && !budget_exhausted) {
         auto admission = ready_gate_.mark_ready_already_admitted(actor);
         if (admission.accepted() ||
             admission.code == ReadyAdmissionCode::AlreadyReady) {
@@ -287,7 +290,10 @@ ActorExecutionEngine::run_fixed_actor(EventBasedActor& actor, const WorkItem& it
 
     actor_state.set(ActorState::kIdle);
     // Double-check: if work appeared during transition, re-admit.
-    if (has_work) {
+    // Uses a fresh empty() query (not has_work) to close the
+    // lost-wakeup window — matching BehaviorActorRunner pattern.
+    if (binding->execution.empty &&
+        !binding->execution.empty(binding->execution.context)) {
         auto admission = ready_gate_.try_mark_ready(item.actor);
         if (admission.accepted() ||
             admission.code == ReadyAdmissionCode::AlreadyReady) {

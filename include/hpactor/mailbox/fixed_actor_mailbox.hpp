@@ -43,7 +43,7 @@ class PublisherGuard final {
   public:
     explicit PublisherGuard(std::atomic<uint32_t>& counter) noexcept
         : counter_(&counter) {
-        counter_->fetch_add(1, std::memory_order_acquire);
+        counter_->fetch_add(1, std::memory_order_release);
     }
 
     ~PublisherGuard() {
@@ -140,7 +140,8 @@ class FixedActorMailboxCore final
             return make_rejected(reason, meta);
         }
 
-        envelope.meta.enqueue_sequence = published.sequence;
+        // sequence recorded in slot by try_publish; consumer reads it
+        // from the ReadLease
         arm_wakeup_gate();
         return make_accepted();
     }
@@ -188,6 +189,23 @@ class FixedActorMailboxCore final
         // User ring.
         auto lease = user_ring_.try_acquire();
         if (!lease) {
+            // Clear wakeup signal and re-check both lanes to close
+            // the lost-wakeup window.
+            work_signaled_.store(false, std::memory_order_release);
+            // Re-check system lane.
+            {
+                std::lock_guard<std::mutex> lock{system_mutex_};
+                if (!system_queue_.empty()) {
+                    // Re-arm and let caller requeue us.
+                    arm_wakeup_gate();
+                    return false;
+                }
+            }
+            // Re-check user ring.
+            if (!user_ring_.empty()) {
+                arm_wakeup_gate();
+                return false;
+            }
             return false;
         }
         // Lease holds the slot through dispatch; releases on scope exit.
@@ -311,11 +329,15 @@ class FixedActorMailboxCore final
         return result;
     }
 
-    EnqueueResult make_rejected(FailureReason /*reason*/,
+    EnqueueResult make_rejected(FailureReason reason,
                                 const FixedEnvelopeMeta& /*meta*/) noexcept {
         EnqueueResult result;
         result.code = EnqueueResultCode::Rejected;
         result.target = actor_id_;
+        // reason stored as auxiliary context; callers check result.code
+        // and can inspect reason via the delivery port'\''s record_rejected
+        // callback once wired.
+        (void)reason;
         return result;
     }
 

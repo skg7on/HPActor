@@ -92,11 +92,11 @@ class FixedMailboxActor : public EventBasedActor {
     void drain_all_immediate() override {
         if (core_) {
             core_->begin_drain();
-        }
-        // Release all user-ring slots without invoking handlers.
-        while (!core_->ring().empty()) {
-            auto lease = core_->ring().try_acquire();
-            // Lease releases on scope exit without dispatch.
+            // Release all user-ring slots without invoking handlers.
+            while (!core_->ring().empty()) {
+                auto lease = core_->ring().try_acquire();
+                // Lease releases on scope exit without dispatch.
+            }
         }
         EventBasedActor::drain_all_immediate();
     }
@@ -105,8 +105,29 @@ class FixedMailboxActor : public EventBasedActor {
     mailbox::FixedMailboxBinding create_fixed_mailbox() noexcept override {
         auto core = std::make_shared<core_type>(this->id(), this->address());
         core_ = core;
-        auto binding = core->make_binding();
-        return binding;
+        fixed_behavior_ = make_fixed_behavior();
+        core->set_dispatch_callbacks(
+            this,
+            /* system_fn */
+            +[](void* ctx, TypedMessage&& msg) noexcept {
+                auto* self = static_cast<FixedMailboxActor*>(ctx);
+                self->receive(msg);
+            },
+            /* user_fn */
+            +[](void* ctx, void* envelope) noexcept {
+                auto* self = static_cast<FixedMailboxActor*>(ctx);
+                auto* env =
+                    static_cast<typename core_type::envelope_type*>(envelope);
+                self->fixed_behavior_.dispatch(env->message);
+            });
+        core->set_wakeup_callback(
+            +[](void* ctx) noexcept {
+                auto* self = static_cast<FixedMailboxActor*>(ctx);
+                self->home_system().get_scheduler()->notify_ready(self->id(), 0,
+                                                                  INT64_MAX);
+            },
+            this);
+        return core->make_binding();
     }
 
     /// \brief Return a typed reference for sending to this actor.
@@ -120,6 +141,7 @@ class FixedMailboxActor : public EventBasedActor {
 
   private:
     std::shared_ptr<core_type> core_;
+    fixed_behavior_type fixed_behavior_;
 };
 
 } // namespace hpactor
