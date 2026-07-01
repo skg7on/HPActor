@@ -1,5 +1,12 @@
 # Mailbox Management and Backpressure Architecture Design
 
+**Runtime ownership:** The dead-letter queue, delivery pipeline, backpressure
+coordinator, dedup cache, and delivery trackers are owned by `MessagingRuntime`.
+Local delivery (`ActorContext::send()`, `ActorRef::send()`) converges on
+`MessagingRuntime::try_deliver()` as the single full-policy admission path. See
+[actor-system-runtime-architecture.md](actor-system-runtime-architecture.md) for
+the full component graph and ownership contracts.
+
 ## 1. Executive Summary
 
 HPActor currently uses a per-actor lock-free MPSC mailbox that accepts every
@@ -17,8 +24,8 @@ results to producers that want flow control.
 
 The recommended architecture is:
 
-- Keep `ActorSystem::deliver_local()` as the single inbound sink for local and
-  remote messages.
+- `MessagingRuntime::try_deliver()` is the single inbound sink for local and
+  remote ordinary messages.
 - Add a `MailboxConfig` per actor, with system-wide defaults and TOML overrides.
 - Extend `MPSCActorMailbox` into a bounded actor mailbox with admission checks,
   watermarks, pressure state, and policy-specific overflow handling.

@@ -1,5 +1,10 @@
 # HPActor — Actor Core Concept and Architecture
 
+**Runtime ownership:** Actor identity, lookup, spawning, and lifecycle are owned
+by `ActorRuntime`. See
+[actor-system-runtime-architecture.md](actor-system-runtime-architecture.md) for
+the full component graph and ownership contracts.
+
 ## 1. Executive Summary
 
 HPActor actors follow an **event-based** programming model with **turn-based
@@ -24,6 +29,10 @@ messaging. The design is inspired by CAF (C++ Actor Framework).
   configurable retry windows.
 - **Unified actor references.** `ActorRef` is a variant over local actor
   pointers and remote proxies, making location transparent to senders.
+- **Unified spawn adoption.** All actor creation (template `spawn<T>()`,
+  TOML-configured, reserved system, remote-spawn factories) converges through
+  `ActorSpawner::adopt(SpawnSpec)` — one transactional pipeline for directory
+  publication, context binding, lifecycle transition, and dispatch registration.
 
 ---
 
