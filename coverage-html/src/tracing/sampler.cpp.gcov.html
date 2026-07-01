@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 11:22:04</td>
+            <td class="headerValue">2026-07-01 01:46:45</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">90.0&nbsp;%</td>
@@ -127,8 +127,8 @@
 <span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           3 :     return {false};</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          13 : TraceIdRatioSampler::TraceIdRatioSampler(double ratio)</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          13 :     : ratio_(std::clamp(ratio, 0.0, 1.0)) {}</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          16 : TraceIdRatioSampler::TraceIdRatioSampler(double ratio)</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          16 :     : ratio_(std::clamp(ratio, 0.0, 1.0)) {}</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             : </span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : SamplingDecision</span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           6 : TraceIdRatioSampler::should_sample(const SamplingParameters&amp; params) const noexcept {</span></span>
@@ -141,8 +141,8 @@
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC">           0 :     return {splitmix64(trace_low64(params.trace_id)) &lt;= threshold};</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">           9 : ParentBasedSampler::ParentBasedSampler(double root_ratio)</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           9 :     : root_sampler_(root_ratio) {}</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">          12 : ParentBasedSampler::ParentBasedSampler(double root_ratio)</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          12 :     : root_sampler_(root_ratio) {}</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : SamplingDecision</span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           7 : ParentBasedSampler::should_sample(const SamplingParameters&amp; params) const noexcept {</span></span>

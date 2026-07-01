@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 11:22:04</td>
+            <td class="headerValue">2026-07-01 01:46:45</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -116,40 +116,40 @@
 <span id="L38"><span class="lineNum">      38</span>                 :             : // T is the message type (e.g., TypedMessage)</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : template &lt;typename T&gt; class MailboxAwaiter {</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :   public:</span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC tlaBgGNC">          25 :     explicit MailboxAwaiter(</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC tlaBgGNC">          24 :     explicit MailboxAwaiter(</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :         CoroutinePromise&amp; promise, mailbox::MPSCActorMailbox&lt;T&gt;* mailbox,</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :         mailbox::DeadLetterQueue* dlq = nullptr,</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :         metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* metrics = nullptr,</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :         ActorId actor_id = ActorId{}) noexcept</span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          25 :         : promise_(promise), mailbox_(mailbox), dlq_(dlq), metrics_(metrics),</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          25 :           actor_id_(actor_id) {}</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          24 :         : promise_(promise), mailbox_(mailbox), dlq_(dlq), metrics_(metrics),</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          24 :           actor_id_(actor_id) {}</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     // Return true if message already available (don't suspend)</span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          22 :     bool await_ready() const noexcept {</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          21 :     bool await_ready() const noexcept {</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :         // Check if message arrived between last suspension and now</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          22 :         return !mailbox_-&gt;was_empty();</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          21 :         return !mailbox_-&gt;was_empty();</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     }</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             : </span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     // Called when suspending</span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          12 :     bool await_suspend(std::coroutine_handle&lt;&gt; continuation) noexcept {</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          11 :     bool await_suspend(std::coroutine_handle&lt;&gt; continuation) noexcept {</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :         // Check emptiness at this moment — a message may have arrived since</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :         // await_ready(). If a message arrived while we were deciding, the</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :         // sender already claimed the wakeup via CAS(true, false) on was_empty —</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :         // don't suspend.</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          12 :         bool was_empty = mailbox_-&gt;was_empty();</span></span>
-<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          12 :         if (!was_empty) {</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          11 :         bool was_empty = mailbox_-&gt;was_empty();</span></span>
+<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">          11 :         if (!was_empty) {</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           1 :             return false;</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :         }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :         // Mailbox is still empty — safely reset edge-trigger so the next</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :         // enqueue (after we suspend) can claim the wakeup.</span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">          11 :         mailbox_-&gt;set_was_empty(true);</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">          10 :         mailbox_-&gt;set_was_empty(true);</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : </span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :         // Transition: Running → Idle</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">          11 :         uint32_t expected = ActorState::kRunning;</span></span>
-<span id="L72"><span class="lineNum">      72</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          11 :         if (promise_.actor_state-&gt;cas(expected, ActorState::kIdle)) {</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">          10 :             promise_.continuation = continuation;</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">          10 :             return true; // successfully suspended</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">          10 :         uint32_t expected = ActorState::kRunning;</span></span>
+<span id="L72"><span class="lineNum">      72</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          10 :         if (promise_.actor_state-&gt;cas(expected, ActorState::kIdle)) {</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           9 :             promise_.continuation = continuation;</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           9 :             return true; // successfully suspended</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :         }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :         // State was not Running — actor may have already terminated</span>
 <span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">           1 :         return false; // don't suspend</span></span>

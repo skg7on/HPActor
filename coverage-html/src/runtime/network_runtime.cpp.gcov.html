@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 11:22:04</td>
+            <td class="headerValue">2026-07-01 01:46:45</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">65.4&nbsp;%</td>
@@ -236,8 +236,8 @@
 <span id="L158"><span class="lineNum">     158</span>                 :             : </span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : // ── Lifecycle ────────────────────────────────────────────────────────────────</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">      567174 : NetworkRuntime::State NetworkRuntime::state() const noexcept {</span></span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">      567174 :     return impl_-&gt;state_.load(std::memory_order_acquire);</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">      520317 : NetworkRuntime::State NetworkRuntime::state() const noexcept {</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">      520317 :     return impl_-&gt;state_.load(std::memory_order_acquire);</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :             : }</span>
 <span id="L164"><span class="lineNum">     164</span>                 :             : </span>
 <span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">         108 : result&lt;void&gt; NetworkRuntime::start() noexcept {</span></span>
@@ -383,10 +383,10 @@
 <span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">         105 :     impl_-&gt;last_stage.store(8, std::memory_order_relaxed);</span></span>
 <span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">         210 :     impl_-&gt;network_thread = std::thread([this]() {</span></span>
 <span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">         105 :         auto&amp; loop = impl_-&gt;transport-&gt;loop();</span></span>
-<span id="L307"><span class="lineNum">     307</span>   [<span class="tlaGBC" title="Branch 0 was taken 139 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 121 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">         365 :         while (impl_-&gt;state_.load(std::memory_order_acquire) != State::Stopping &amp;&amp;</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 121 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 105 times"> + </span>]
-<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaGNC">         139 :                loop.wait(100) &gt;= 0) {</span></span>
-<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaGNC">         121 :             loop.process_completions();</span></span>
+<span id="L307"><span class="lineNum">     307</span>   [<span class="tlaGBC" title="Branch 0 was taken 147 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 129 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">         381 :         while (impl_-&gt;state_.load(std::memory_order_acquire) != State::Stopping &amp;&amp;</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 129 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 105 times"> + </span>]
+<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaGNC">         147 :                loop.wait(100) &gt;= 0) {</span></span>
+<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaGNC">         129 :             loop.process_completions();</span></span>
 <span id="L310"><span class="lineNum">     310</span>                 :             :         }</span>
 <span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaGNC">         105 :     });</span></span>
 <span id="L312"><span class="lineNum">     312</span>                 :             : </span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-30 11:22:04</td>
+            <td class="headerValue">2026-07-01 01:46:45</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">72.0&nbsp;%</td>
@@ -139,8 +139,8 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC tlaBgGNC">        6832 :     virtual ~AbstractActor() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \brief Globally-unique actor identifier assigned at spawn.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      167879 :     ActorId id() const {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">      167879 :         return id_;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      167851 :     ActorId id() const {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">      167851 :         return id_;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     /// \brief Pointer to the actor's \c ActorId for consumers that need</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///        an address without copying.</span>
@@ -152,12 +152,12 @@
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        6680 :         return type_;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     /// \brief Full network-addressable identity.</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      261753 :     ActorAddress address() const {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      261753 :         return address_;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      261741 :     ActorAddress address() const {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      261741 :         return address_;</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :     /// \brief Owning \c ActorSystem reference.</span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      395219 :     ActorSystem&amp; system() {</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      395219 :         return system_;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      395195 :     ActorSystem&amp; system() {</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      395195 :         return system_;</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     }</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     const ActorSystem&amp; system() const {</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :         return system_;</span>
@@ -211,8 +211,8 @@
 <span id="L133"><span class="lineNum">     133</span>                 :             :     /// \brief RTTI-free downcast to the \c LifecycleActor mixin.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// Returns \c nullptr for actors that do not opt into lifecycle management.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      414984 :     virtual LifecycleActor* as_lifecycle() {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      414984 :         return nullptr;</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      414958 :     virtual LifecycleActor* as_lifecycle() {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      414958 :         return nullptr;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">          10 :     virtual const LifecycleActor* as_lifecycle() const {</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          10 :         return nullptr;</span></span>
@@ -257,8 +257,8 @@
 <span id="L179"><span class="lineNum">     179</span>                 :             :     /// \brief Returns \c true for system actors that drain last during node</span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :     ///        shutdown. \c MetricsActor, \c CliActor, and \c SpawnReceiver</span>
 <span id="L181"><span class="lineNum">     181</span>                 :             :     ///        override this.</span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC tlaBgGNC">        5150 :     virtual bool is_system_actor() const {</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5150 :         return false;</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC tlaBgGNC">        5149 :     virtual bool is_system_actor() const {</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5149 :         return false;</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             :     }</span>
 <span id="L185"><span class="lineNum">     185</span>                 :             : </span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :     /// \brief Dispatch policy telling the scheduler how to execute this actor.</span>
@@ -273,8 +273,8 @@
 <span id="L195"><span class="lineNum">     195</span>                 :             :     }</span>
 <span id="L196"><span class="lineNum">     196</span>                 :             : </span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :     /// \brief Human-readable type name for metrics and CLI introspection.</span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">        6031 :     virtual std::string_view type_name() const {</span></span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">        6031 :         return type_name_;</span></span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">        6824 :     virtual std::string_view type_name() const {</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">        6824 :         return type_name_;</span></span>
 <span id="L200"><span class="lineNum">     200</span>                 :             :     }</span>
 <span id="L201"><span class="lineNum">     201</span>                 :             :     /// \brief Set the type name. Called by \c ActorSystem during spawn.</span>
 <span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">        6776 :     void set_type_name(std::string name) {</span></span>
