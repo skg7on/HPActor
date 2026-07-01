@@ -50,12 +50,11 @@ class LocalDeliveryEngine {
     /// \c ActorNotFound.
     ///
     /// \param[in] target Actor ID to deliver to.
-    /// \param[in] msg Message to deliver (ownership transferred).
+    /// \param[in] msg Message to deliver (ownership transferred by move).
     /// \return \c EnqueueResult with code and target ID.
     /// \retval Accepted Message was enqueued.
     /// \retval ActorNotFound No actor with id \p target is registered.
-    mailbox::EnqueueResult
-    try_deliver(ActorId target, std::unique_ptr<TypedMessage> msg);
+    mailbox::EnqueueResult try_deliver(ActorId target, TypedMessage msg);
 
   private:
     ActorDirectory& directory_;
