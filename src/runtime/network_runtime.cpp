@@ -23,63 +23,6 @@
 
 namespace hpactor {
 
-// ── Adapter functions ────────────────────────────────────────────────────────
-//
-// These are bound to the ReliableAckEmitter and BackpressureSignalEmitter
-// function pointers. The void* context points to the owning NetworkRuntime.
-// Neither function captures ActorSystem or Impl.
-
-namespace {
-
-[[maybe_unused]] void
-reliable_ack_adapter(void* context, const ActorAddress& target,
-                     const ActorAddress& acker, uint64_t message_id,
-                     uint8_t status, uint32_t retry_after_ms) noexcept {
-    auto* runtime = static_cast<NetworkRuntime*>(context);
-    if (!runtime)
-        return;
-
-    auto* transport = runtime->transport();
-    if (!transport)
-        return;
-
-    net::WireFrame frame;
-    bool is_nack = (status == 1); // 1 = AckStatus::Rejected
-    frame.pb_envelope.mutable_data_frame()->set_flags(
-        is_nack ? net::WireFrame::AckResponse : net::WireFrame::AckRequested);
-    frame.pb_envelope.mutable_data_frame()->set_message_id(message_id);
-    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(), acker);
-    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
-                  target);
-
-    if (is_nack) {
-        frame.pb_envelope.mutable_data_frame()->set_type_tag(
-            static_cast<uint32_t>(status));
-        std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
-                                sizeof(uint32_t));
-        frame.pb_envelope.mutable_data_frame()->set_payload(payload_str);
-    }
-
-    auto encoded = frame.encode();
-    (void)transport->try_send(target, encoded);
-}
-
-[[maybe_unused]] bool
-backpressure_wire_adapter(void* context, const ActorAddress& target,
-                          const StreamBuffer& encoded) noexcept {
-    auto* runtime = static_cast<NetworkRuntime*>(context);
-    if (!runtime)
-        return false;
-
-    auto* transport = runtime->transport();
-    if (transport) {
-        return transport->try_send(target, encoded) == TransportSendResult::Sent;
-    }
-    return false;
-}
-
-} // namespace
-
 // ── NetworkRuntime::Impl ─────────────────────────────────────────────────────
 
 struct NetworkRuntime::Impl {

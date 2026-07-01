@@ -23,20 +23,20 @@ LocalDeliveryEngine::LocalDeliveryEngine(ActorDirectory& directory)
     : directory_(directory) {}
 
 mailbox::EnqueueResult
-LocalDeliveryEngine::try_deliver(ActorId target, std::unique_ptr<TypedMessage> msg) {
+LocalDeliveryEngine::try_deliver(ActorId target, TypedMessage msg) {
     auto mailbox = directory_.find_mailbox(target);
     if (!mailbox) {
         return mailbox::EnqueueResult{
             .code = mailbox::EnqueueResultCode::ActorNotFound, .target = target};
     }
     mailbox::MailboxEnvelopeMeta meta;
-    meta.sender = msg->sender_address();
-    meta.type_tag = msg->type_id();
+    meta.sender = msg.sender_address();
+    meta.type_tag = msg.type_id();
     meta.priority = 0;
     meta.deadline_ns = INT64_MAX;
     auto* mbox =
         static_cast<mailbox::MPSCActorMailbox<TypedMessage>*>(mailbox.get());
-    auto result = mbox->try_push(std::move(*msg), meta);
+    auto result = mbox->try_push(std::move(msg), meta);
     result.target = target;
     return result;
 }

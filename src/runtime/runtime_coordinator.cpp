@@ -17,6 +17,13 @@
 namespace hpactor {
 
 RuntimeCoordinator::~RuntimeCoordinator() {
+    // Invoke stage rollback actions in reverse order before freeing contexts.
+    for (size_t i = stages_.size(); i > 0; --i) {
+        const auto& stage = stages_[i - 1];
+        if (stage.rollback.action) {
+            stage.rollback.action(stage.rollback.context);
+        }
+    }
     // Free heap-allocated stage contexts.
     for (auto& stage : stages_) {
         if (stage.destroy_context) {
@@ -116,6 +123,14 @@ result<void> RuntimeCoordinator::stop() noexcept {
         transition_to(RuntimeLifecycleState::Stopping);
     }
 
+    // Invoke stage rollback actions in reverse order to unwind startup.
+    for (size_t i = stages_.size(); i > 0; --i) {
+        const auto& stage = stages_[i - 1];
+        if (stage.rollback.action) {
+            stage.rollback.action(stage.rollback.context);
+        }
+    }
+
     transition_to(RuntimeLifecycleState::Stopped);
     return result<void>::make();
 }
@@ -140,12 +155,20 @@ result<void> RuntimeCoordinator::shutdown() noexcept {
         ready_.store(false, std::memory_order_release);
         transition_to(RuntimeLifecycleState::Draining);
         transition_to(RuntimeLifecycleState::Stopping);
-        transition_to(RuntimeLifecycleState::Stopped);
-        return result<void>::make();
+    } else {
+        transition_to(RuntimeLifecycleState::Stopping);
     }
 
-    // Any other state — just stop.
-    return stop();
+    // Invoke stage rollback actions in reverse order.
+    for (size_t i = stages_.size(); i > 0; --i) {
+        const auto& stage = stages_[i - 1];
+        if (stage.rollback.action) {
+            stage.rollback.action(stage.rollback.context);
+        }
+    }
+
+    transition_to(RuntimeLifecycleState::Stopped);
+    return result<void>::make();
 }
 
 } // namespace hpactor

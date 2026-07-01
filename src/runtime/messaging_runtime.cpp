@@ -19,11 +19,14 @@
 namespace hpactor {
 
 MessagingRuntime::MessagingRuntime(Dependencies deps, const Config& config)
-    : dead_letters_(config.dead_letters), dedup_cache_(adt::DedupCache::Config{}),
+    : network_emitters_(deps.network), // copy into stable member BEFORE taking
+                                       // addresses
+      dead_letters_(config.dead_letters), dedup_cache_(adt::DedupCache::Config{}),
       outbound_tracker_(), reliable_tracker_(mailbox::ReliableRetryPolicy{}),
       backpressure_(BackpressureCoordinator::Config{
           .metrics = deps.metrics,
-          .wire_port = &deps.network.backpressure,
+          .wire_port = &network_emitters_.backpressure, // stable: points to
+                                                        // member, not parameter
           .actor_directory = &deps.actors,
           .endpoint = deps.endpoint,
       }),
@@ -36,7 +39,9 @@ MessagingRuntime::MessagingRuntime(Dependencies deps, const Config& config)
           .actors = &deps.actors,
           .backpressure = &backpressure_,
           .outbound_tracker = &outbound_tracker_,
-          .reliable_ack = &deps.network.reliable_ack,
+          .reliable_ack = &network_emitters_.reliable_ack, // stable: points to
+                                                           // member, not
+                                                           // parameter
       }),
       local_delivery_engine_(deps.actors) {}
 
@@ -63,8 +68,7 @@ MessagingRuntime::try_deliver_fast(ActorId target, TypedMessage msg,
                                    FastDeliveryReason reason) {
     (void)reason; // observed in debug/test instrumentation; enforced by
                   // architecture allowlist
-    return local_delivery_engine_.try_deliver(
-        target, std::make_unique<TypedMessage>(std::move(msg)));
+    return local_delivery_engine_.try_deliver(target, std::move(msg));
 }
 
 void MessagingRuntime::on_reliable_ack(MessageId message_id,

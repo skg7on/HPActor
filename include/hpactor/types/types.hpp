@@ -228,6 +228,33 @@ namespace endpoint_ops {
 [[nodiscard]] int address_family(const EndPoint& ep);
 [[nodiscard]] std::string to_string(const EndPoint& ep);
 [[nodiscard]] EndPoint parse_endpoint(std::string_view node_id);
+
+/// \brief Hash an EndPoint without allocating.
+///
+/// Computes a deterministic hash directly from the raw address and port
+/// fields, avoiding the heap allocation incurred by to_string().
+[[nodiscard]] inline std::size_t hash(const EndPoint& ep) noexcept {
+    return std::visit(
+        [](const auto& e) -> std::size_t {
+            using T = std::decay_t<decltype(e)>;
+            if constexpr (std::is_same_v<T, Ipv4Endpoint>) {
+                std::size_t h = std::hash<uint32_t>{}(e.addr);
+                h ^= std::hash<uint16_t>{}(e.port_nw) + 0x9e3779b9 + (h << 6) +
+                     (h >> 2);
+                return h;
+            } else {
+                // Ipv6Endpoint: hash the 16-byte address array and port.
+                std::size_t h = 0;
+                for (uint8_t b : e.addr) {
+                    h ^= std::hash<uint8_t>{}(b) + 0x9e3779b9 + (h << 6) + (h >> 2);
+                }
+                h ^= std::hash<uint16_t>{}(e.port_nw) + 0x9e3779b9 + (h << 6) +
+                     (h >> 2);
+                return h;
+            }
+        },
+        ep);
+}
 } // namespace endpoint_ops
 
 // -----------------------------------------------------------------------------

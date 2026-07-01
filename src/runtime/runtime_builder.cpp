@@ -19,19 +19,13 @@
 namespace hpactor {
 
 result<RuntimeBuildResult> RuntimeBuilder::build(RuntimeBlueprint bp) noexcept {
-    // ── Map blueprint back to Config for the legacy constructor ────────────
-    // TODO(Phase 6 Task 5): Replace with proper blueprint-based construction
-    // that does NOT start threads/listeners/actors. For now, we use the
-    // existing constructor with zero threads and no network to minimize
-    // side effects while establishing the RuntimeBuilder API.
+    // ── Blueprint-based construction ────────────────────────────────────────
+    // Uses the FromBlueprint constructor which builds all components from
+    // the validated blueprint but does NOT start threads, listeners, or
+    // actors.  The RuntimeCoordinator owns startup ordering (Phase 6 Task 5).
 
-    (void)bp; // blueprint fields used in Task 5 integration
-
-    Config config;
-    config.scheduler_threads = 0; // no worker threads
-    config.enable_network = false;
-
-    auto system = std::unique_ptr<ActorSystem>(new ActorSystem(config));
+    auto system = std::unique_ptr<ActorSystem>(
+        new ActorSystem(ActorSystem::FromBlueprint{}, bp));
 
     RuntimeBuildResult built;
     built.system = std::move(system);

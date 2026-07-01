@@ -129,9 +129,92 @@ bool ActorSystem::Impl::backpressure_wire_adapter(void* context,
 // Only accessible to RuntimeBuilder and RuntimeCoordinator (friends).
 ActorSystem::ActorSystem(FromBlueprint, const RuntimeBlueprint& bp)
     : impl_(std::make_unique<Impl>(*this, bp)) {
-    // The Impl blueprint constructor builds all components but does NOT start
-    // threads, listeners, timers, or spawn actors.  The RuntimeCoordinator
-    // owns startup ordering (Task 5).
+    // impl_ is now valid — safe to construct components that may callback
+    // into ActorSystem methods (which access impl_).
+
+    // ── Observability runtime (construction only, no start yet) ────────────
+    {
+        ObservabilityRuntimeConfig obs_cfg;
+        obs_cfg.metrics_enabled = bp.observability().metrics_enabled;
+        obs_cfg.metrics_ring_buffer_capacity =
+            bp.observability().metrics_ring_buffer_capacity;
+        obs_cfg.logging_enabled = bp.observability().logging_enabled;
+        obs_cfg.logging_ring_buffer_capacity =
+            bp.observability().logging_ring_buffer_capacity;
+        obs_cfg.tracing_enabled = bp.observability().tracing_enabled;
+        obs_cfg.tracing_ring_buffer_capacity =
+            bp.observability().tracing_ring_buffer_capacity;
+        obs_cfg.fault_injection_enabled = bp.observability().fault_injection_enabled;
+
+        impl_->observability_ = ObservabilityRuntime::create(obs_cfg);
+    }
+
+    // Start observability so ring buffer is available for messaging.
+    (void)impl_->observability_->start();
+
+    // ── Bind fixed network-control ports ────────────────────────────────────
+    impl_->messaging_ports.reliable_ack = ReliableAckEmitter{
+        .context = impl_.get(),
+        .emit = Impl::reliable_ack_adapter,
+    };
+    impl_->messaging_ports.backpressure = BackpressureSignalEmitter{
+        .context = impl_.get(),
+        .send = Impl::backpressure_wire_adapter,
+    };
+
+    // ── Messaging runtime ───────────────────────────────────────────────────
+    impl_->messaging_ = std::make_unique<MessagingRuntime>(
+        MessagingRuntime::Dependencies{
+            .actors = impl_->actors.directory,
+            .metrics = impl_->observability_->metrics_ring_buffer(),
+            .network = impl_->messaging_ports,
+            .endpoint = impl_->core.endpoint,
+        },
+        MessagingRuntime::Config{
+            .dead_letters = {},
+            .default_message_ttl = bp.messaging().default_message_ttl_ms,
+        });
+
+    // ── Scheduler ───────────────────────────────────────────────────────────
+    impl_->core.scheduler = std::make_unique<sched::HybridScheduler>(
+        *this, bp.actor().scheduler_threads, 4 /* num_priorities */,
+        sched::TimerBackend::TimingWheel, bp.actor().scheduler_start_paused);
+
+    if (auto* ring = impl_->observability_->metrics_ring_buffer()) {
+        impl_->core.scheduler->set_metrics_ring_buffer(ring);
+    }
+
+    // ── Fallback RpcChannel ──────────────────────────────────────────────────
+    impl_->rpc_channel_ =
+        std::make_unique<RpcChannel>(nullptr, impl_->core.scheduler.get(), 3);
+
+    // ── Actor services ──────────────────────────────────────────────────────
+    impl_->actors.type_registry = std::make_unique<ActorTypeRegistry>();
+
+    // Spawner — constructed after directory, scheduler, metrics exist.
+    impl_->spawner.emplace(ActorSpawner::Dependencies{
+        .facade = *this,
+        .endpoint = impl_->core.endpoint,
+        .directory = impl_->actors.directory,
+        .scheduler = *impl_->core.scheduler,
+        .metrics = impl_->observability_->metrics_ring_buffer(),
+        .logger = impl_->observability_->logger(),
+    });
+
+    // ── Shutdown coordinator ─────────────────────────────────────────────────
+    {
+        ShutdownCoordinatorDependencies sc_deps;
+        sc_deps.phase = &impl_->core.shutdown_phase;
+        sc_deps.running = &impl_->core.running;
+        sc_deps.set_ready = [this](bool ready) {
+            impl_->core.is_ready.store(ready, std::memory_order_release);
+        };
+        impl_->actors.shutdown_coordinator =
+            std::make_unique<ShutdownCoordinator>(sc_deps);
+    }
+
+    // ── Fault controller ────────────────────────────────────────────────────
+    impl_->observability_->fault_controller().install();
 }
 
 // ── Preferred factory: blueprint → builder → coordinator → ready ──────────
@@ -385,7 +468,12 @@ ActorSystem::ActorSystem(const Config& config)
         auto start_result = impl_->network_->start();
         if (start_result.is_error()) {
             impl_->core.running.store(false, std::memory_order_release);
+            HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
+                              "network_runtime_start_failed");
             // start() already rolled back on failure.
+            // Continue construction so the caller can inspect the error via
+            // network_view().snapshot().last_error. The system is not running
+            // but remains usable for diagnostics and controlled shutdown.
         }
 
         // ── Actor services that depend on network being started ──────────
@@ -855,8 +943,16 @@ const PassivationManager* ActorSystem::passivation_manager() const {
 }
 
 net::HttpClient& ActorSystem::http_client() {
-    if (impl_->network_)
-        return *impl_->network_->http_client();
+    if (impl_->network_) {
+        auto* client = impl_->network_->http_client();
+        if (client)
+            return *client;
+    }
+    // Fallback when networking is disabled or http_client not created.
+    // HttpClient is a forward-looking stub — nullptr EventLoop is safe.
+    if (!impl_->actors.http_client) {
+        impl_->actors.http_client = std::make_unique<net::HttpClient>(nullptr);
+    }
     return *impl_->actors.http_client;
 }
 

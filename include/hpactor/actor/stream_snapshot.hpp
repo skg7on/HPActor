@@ -23,10 +23,10 @@ struct StreamKey {
 /// \brief std::hash specialization for \c StreamKey.
 template <> struct std::hash<hpactor::StreamKey> {
     std::size_t operator()(const hpactor::StreamKey& k) const noexcept {
+        // Hash EndPoint fields directly to avoid heap-allocating
+        // a std::string via endpoint_ops::to_string().
         std::size_t h1 = std::hash<uint64_t>{}(k.stream_id);
-        // Hash EndPoint via its string representation
-        std::size_t h2 =
-            std::hash<std::string>{}(hpactor::endpoint_ops::to_string(k.peer));
+        std::size_t h2 = hpactor::endpoint_ops::hash(k.peer);
         return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
     }
 };

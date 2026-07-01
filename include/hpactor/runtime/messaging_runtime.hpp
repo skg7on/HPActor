@@ -141,6 +141,9 @@ class MessagingRuntime final {
 
   private:
     // Members in dependency order (destructed in reverse).
+    // network_emitters_ MUST precede backpressure_ and delivery_pipeline_
+    // because their Config structs store pointers into network_emitters_.
+    MessagingNetworkEmitters network_emitters_;
     mailbox::DeadLetterQueue dead_letters_;
     adt::DedupCache dedup_cache_;
     msg::OutboundDeliveryTracker outbound_tracker_;
