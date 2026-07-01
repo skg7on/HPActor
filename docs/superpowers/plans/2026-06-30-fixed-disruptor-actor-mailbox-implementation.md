@@ -44,12 +44,17 @@ limitations under the License.
 ## Reference Documents
 
 - Design: `docs/superpowers/specs/2026-06-30-fixed-disruptor-actor-mailbox-design.md`
-- Concurrency rules: `docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md`
+- Concurrency rules: `docs/architecture/mailbox/actor-concurrency-and-lockfree-mailbox-rules.md`
 - Existing mailbox: `include/hpactor/mailbox/mpsc_actor_mailbox.hpp`
 - Existing sequence ring: `include/hpactor/adt/mpsc_ring_buffer.hpp`
-- Actor adoption: `src/runtime/actor_spawner.cpp`
-- Scheduler runner: `src/sched/actor_execution_engine.cpp`
-- Messaging ownership: `src/runtime/messaging_runtime.hpp`
+- Actor adoption: `include/hpactor/runtime/actor_spawner.hpp` + `src/runtime/actor_spawner.cpp`
+- Spawn spec: `include/hpactor/runtime/spawn_spec.hpp`
+- Scheduler runner: `include/hpactor/sched/actor_execution_engine.hpp` + `src/sched/actor_execution_engine.cpp`
+- Messaging ownership: `include/hpactor/runtime/messaging_runtime.hpp` + `src/runtime/messaging_runtime.cpp`
+- Local delivery engine: `include/hpactor/mailbox/local_delivery_engine.hpp` + `src/mailbox/local_delivery_engine.cpp`
+- Actor directory: `include/hpactor/actor/actor_directory.hpp` + `src/actor/actor_directory.cpp`
+- Actor runtime: `include/hpactor/runtime/actor_runtime.hpp` + `src/runtime/actor_runtime.cpp`
+- Impl state: `src/runtime/actor_system_impl.hpp`
 
 ## File Structure
 
@@ -73,13 +78,13 @@ limitations under the License.
 - `CMakeLists.txt` and `include/hpactor/hpactor_config.hpp.in` — experimental build gate.
 - `include/hpactor/actor/abstract_actor.hpp` — RTTI-free mailbox kind/adoption hooks.
 - `include/hpactor/actor/event_based_actor.hpp` and `src/actor/event_based_actor.cpp` — virtual immediate-drain seam.
-- `include/hpactor/actor/actor_directory.hpp` and `src/actor/actor_directory.cpp` — fixed ports in atomic publication records.
-- `src/runtime/spawn_spec.hpp`, `src/runtime/actor_spawner.hpp`, and `src/runtime/actor_spawner.cpp` — fixed-core adoption.
+- `include/hpactor/actor/actor_directory.hpp` and `src/actor/actor_directory.cpp` — `MailboxKind`, `FixedMailboxBinding`, `find_fixed_binding()`.
+- `include/hpactor/runtime/spawn_spec.hpp`, `include/hpactor/runtime/actor_spawner.hpp`, and `src/runtime/actor_spawner.cpp` — fixed-core adoption branch.
 - `include/hpactor/actor/actor_system.hpp` and `src/actor/actor_system.cpp` — `spawn_fixed` and fixed port wiring.
 - `include/hpactor/actor/actor_context.hpp` — metadata-populating fixed `try_send` overload.
-- `src/runtime/messaging_runtime.hpp` and `src/runtime/messaging_runtime.cpp` — preflight/outcome port.
-- `include/hpactor/mailbox/local_delivery_engine.hpp` and `src/mailbox/local_delivery_engine.cpp` — fixed control-ingress routing.
-- `include/hpactor/sched/actor_execution_engine.hpp` and `src/sched/actor_execution_engine.cpp` — backend selection and fixed runner.
+- `include/hpactor/runtime/messaging_runtime.hpp` and `src/runtime/messaging_runtime.cpp` — `fixed_delivery_port()` + preflight/outcome adapters.
+- `include/hpactor/mailbox/local_delivery_engine.hpp` and `src/mailbox/local_delivery_engine.cpp` — `MailboxKind` branch for fixed control-ingress routing.
+- `include/hpactor/sched/actor_execution_engine.hpp` and `src/sched/actor_execution_engine.cpp` — `MailboxKind` branch and `FixedMailboxActorRunner`.
 - `include/hpactor/msg/enqueue_result.hpp` — exact failure-reason override for fixed rejection paths.
 - `include/hpactor/msg/failure_reason.hpp` and `src/msg/failure_reason.cpp` — unsupported-remote/dynamic reasons.
 - `include/hpactor/msg/dead_letter_record.hpp` — metadata-only fixed-message evidence.
@@ -588,8 +593,10 @@ struct FixedMailboxLifecyclePort {
 };
 ```
 
-`FixedMailboxBinding` owns `std::shared_ptr<void> lifetime` plus all three
-ports. Empty ports are invalid and must fail spawn validation.
+`FixedMailboxBinding` owns `std::shared_ptr<void> lifetime` plus all four
+ports (delivery, control, execution, lifecycle). The binding is stored in
+`ActorDirectoryEntry` alongside the existing `actor`, `instance`, `mailbox`,
+and `context` fields. Empty ports are invalid and must fail spawn validation.
 
 - [ ] **Step 2: Write mailbox RED tests**
 
@@ -855,14 +862,14 @@ git commit -m "feat: add fixed mailbox actor API"
 ### Task 6: Publish fixed mailboxes through unified spawning and ActorDirectory
 
 **Files:**
-- Modify: `include/hpactor/actor/actor_directory.hpp`
-- Modify: `src/actor/actor_directory.cpp`
-- Modify: `src/runtime/spawn_spec.hpp`
-- Modify: `src/runtime/actor_spawner.hpp`
-- Modify: `src/runtime/actor_spawner.cpp`
-- Modify: `include/hpactor/actor/actor_system.hpp`
-- Modify: `src/actor/actor_system.cpp`
-- Modify: `tests/unit/actor/test_actor_directory.cpp`
+- Modify: `include/hpactor/actor/actor_directory.hpp` — add `MailboxKind`, `FixedMailboxBinding`, `find_fixed_binding()`.
+- Modify: `src/actor/actor_directory.cpp` — implement `find_fixed_binding()`.
+- Modify: `include/hpactor/runtime/spawn_spec.hpp` — extend for fixed-mailbox config validation.
+- Modify: `include/hpactor/runtime/actor_spawner.hpp` — add `FixedDeliveryPort` to `Dependencies`.
+- Modify: `src/runtime/actor_spawner.cpp` — branch mailbox construction on `mailbox_kind()`.
+- Modify: `include/hpactor/actor/actor_system.hpp` — `spawn_fixed<T>()`.
+- Modify: `src/actor/actor_system.cpp` — wire fixed port from `MessagingRuntime` to spawner.
+- Modify: `tests/unit/actor/test_actor_directory.cpp` — directory publication test additions.
 - Create: `tests/integration/actor/test_fixed_mailbox_delivery.cpp`
 - Modify: `tests/integration/actor/CMakeLists.txt`
 
@@ -884,17 +891,12 @@ rollback publishes neither partial binding nor name.
 In `test_fixed_mailbox_delivery.cpp`:
 
 ```cpp
-ActorSystem::Config cfg;
-cfg.scheduler_threads = 0;
-cfg.scheduler_start_paused = true;
-ActorSystem system(cfg);
-
-auto ref = system.spawn_fixed<CounterActor>();
+auto system = ActorSystem::create(cfg).value();
+auto ref = system->spawn_fixed<CounterActor>();
 ASSERT_TRUE(ref);
-EXPECT_EQ(ref.address().endpoint, system.endpoint());
+EXPECT_EQ(ref.address().endpoint, system->endpoint());
 EXPECT_TRUE(ref.try_send(Increment{3}).accepted());
-EXPECT_TRUE(system.scheduler_test_driver().run_one_ready());
-EXPECT_EQ(observed_total.load(), 3u);
+// ... scheduler test driver verification
 ```
 
 - [ ] **Step 3: Run RED**
@@ -907,81 +909,56 @@ Expected: missing `find_fixed_binding` and `spawn_fixed`.
 
 - [ ] **Step 4: Extend the directory entry without slowing variable lookup**
 
-Use:
+The existing `ActorDirectoryEntry` already bundles `actor`, `instance`,
+`mailbox`, and `context`. Add two fields:
 
 ```cpp
-struct ActorDirectoryEntry {
-    Actor actor;
-    std::shared_ptr<AbstractActor> instance;
-    mailbox::MailboxKind mailbox_kind{mailbox::MailboxKind::VariableMpsc};
-    std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox;
-    mailbox::FixedMailboxBinding fixed_mailbox;
-    std::shared_ptr<ActorContext> context;
-};
+mailbox::MailboxKind mailbox_kind{mailbox::MailboxKind::VariableMpsc};
+mailbox::FixedMailboxBinding fixed_mailbox;
 ```
 
-`find_mailbox` remains a direct concrete lookup. Add
-`std::optional<FixedMailboxBinding> find_fixed_binding(ActorId) const`. The
-existing mutex makes publication atomic.
+`find_mailbox()` remains a direct concrete `shared_ptr` lookup — the
+`mailbox_kind` field is not inspected on the hot path. Add
+`std::optional<FixedMailboxBinding> find_fixed_binding(ActorId) const`.
+The existing mutex makes publication atomic.
 
 - [ ] **Step 5: Branch mailbox construction inside ActorSpawner**
 
-Extend dependencies with immutable `FixedDeliveryPort fixed_delivery`. In
-`adopt`:
+The spawner's `Dependencies` gain `FixedDeliveryPort fixed_delivery` (initially
+empty for early system-actor adoption). In `adopt()`, branch before the line
+that unconditionally creates `MPSCActorMailbox`:
 
 ```cpp
-if (actor->mailbox_kind() == MailboxKind::VariableMpsc) {
-    // Preserve the existing mailbox construction and injection unchanged.
+if (actor->mailbox_kind() == mailbox::MailboxKind::VariableMpsc) {
+    // Existing path: construct MPSCActorMailbox, bind context, inject.
 } else {
-    FixedMailboxSpawnContext spawn_ctx{
-        .actor_id = id,
-        .actor_address = actor->address(),
-        .scheduler = &deps_.scheduler,
-        .delivery = deps_.fixed_delivery,
-        .metrics = deps_.metrics,
-        .logger = deps_.logger,
-        .config = FixedMailboxRuntimeConfig::from_general(spec.mailbox),
-    };
-    auto created = actor->create_fixed_mailbox(spawn_ctx);
-    if (created.is_error())
-        return result<Actor>::make(created.error_value());
-    entry.fixed_mailbox = std::move(created.value());
-    entry.mailbox_kind = MailboxKind::FixedDisruptor;
+    // Validate fixed_delivery is nonempty.
+    // Call actor->create_fixed_mailbox(spawn_ctx).
+    // Store result in entry.fixed_mailbox; set entry.mailbox_kind.
+    // entry.mailbox stays nullptr for fixed actors.
 }
 ```
 
 Validate nonempty ports, checked ring bytes, memory-region admission, and
-`RejectNewest`. For `SpawnOrigin::Topology`, reject explicit priority-aware,
-overflow-depth, non-RejectNewest, or mismatched capacity settings. Do not copy
+`RejectNewest`. For `SpawnOrigin::Configured`, reject explicit priority-aware,
+overflow-depth, non-RejectNewest, or capacity-mismatch settings. Do not copy
 the global default priority-level count into the fixed core.
 
 - [ ] **Step 6: Add `spawn_fixed`**
 
-```cpp
-template <typename T, typename... Args>
-requires FixedMailboxActorType<T>
-typename T::fixed_actor_ref_type
-ActorSystem::spawn_fixed(Args&&... args) {
-    auto actor = std::make_shared<T>(nullptr, *this,
-                                     std::forward<Args>(args)...);
-    Actor adopted;
-    if constexpr (requires { T::kActorTypeName; })
-        adopted = adopt_preconstructed_actor(actor, T::kActorTypeName);
-    else
-        adopted = adopt_preconstructed_actor(actor, "unknown");
-    if (!adopted)
-        return {};
-    return actor->fixed_ref();
-}
-```
+`ActorSystem::spawn_fixed<T>()` constructs the actor, calls
+`adopt_preconstructed_actor()`, and returns `actor->fixed_ref()`. Uses the
+preferred `ActorSystem::create()` factory where possible; also works with
+the legacy constructor for backward compatibility.
 
 Do not route `spawn<T>` automatically; explicit opt-in keeps source behavior
 obvious.
 
 - [ ] **Step 7: Wire spawner dependencies after MessagingRuntime exists**
 
-The early spawner instance receives an empty fixed port and may adopt variable
-system actors only. The reconstructed spawner after `messaging_` creation uses
+`ActorSystem::Impl` owns an `std::optional<ActorSpawner> spawner`. The early
+instance receives an empty fixed port and may adopt variable system actors
+only. After `messaging_` is constructed, rebuild the spawner with
 `impl_->messaging_->fixed_delivery_port()`. Add an assertion that fixed adoption
 with an empty port returns a typed spawn error.
 
@@ -1001,8 +978,9 @@ Expected: all selected tests pass.
 
 ```bash
 git add include/hpactor/actor/actor_directory.hpp \
-  src/actor/actor_directory.cpp src/runtime/spawn_spec.hpp \
-  src/runtime/actor_spawner.hpp src/runtime/actor_spawner.cpp \
+  src/actor/actor_directory.cpp \
+  include/hpactor/runtime/spawn_spec.hpp \
+  include/hpactor/runtime/actor_spawner.hpp src/runtime/actor_spawner.cpp \
   include/hpactor/actor/actor_system.hpp src/actor/actor_system.cpp \
   tests/unit/actor/test_actor_directory.cpp \
   tests/integration/actor/test_fixed_mailbox_delivery.cpp \
@@ -1015,16 +993,16 @@ git commit -m "feat: adopt fixed mailbox actors"
 ### Task 7: Integrate fixed delivery with MessagingRuntime and ActorContext
 
 **Files:**
-- Modify: `src/runtime/messaging_runtime.hpp`
-- Modify: `src/runtime/messaging_runtime.cpp`
-- Create: `src/runtime/fixed_mailbox_delivery.cpp`
+- Modify: `include/hpactor/runtime/messaging_runtime.hpp` — add `fixed_delivery_port()` declaration.
+- Modify: `src/runtime/messaging_runtime.cpp` — implement preflight/outcome adapters.
+- Create: `src/runtime/fixed_mailbox_delivery.cpp` — adapter implementations.
 - Modify: `src/runtime/CMakeLists.txt`
-- Modify: `include/hpactor/mailbox/local_delivery_engine.hpp`
-- Modify: `src/mailbox/local_delivery_engine.cpp`
-- Modify: `include/hpactor/actor/actor_context.hpp`
-- Modify: `include/hpactor/msg/enqueue_result.hpp`
+- Modify: `include/hpactor/mailbox/local_delivery_engine.hpp` — add `MailboxKind`-aware overload.
+- Modify: `src/mailbox/local_delivery_engine.cpp` — branch on `mailbox_kind` for control routing.
+- Modify: `include/hpactor/actor/actor_context.hpp` — `try_send` for `FixedActorRef`.
+- Modify: `include/hpactor/msg/enqueue_result.hpp` — `reason_override` field.
 - Modify: `include/hpactor/msg/failure_reason.hpp`
-- Modify: `src/msg/failure_reason.cpp`
+- Modify: `src/msg/failure_reason.cpp` — new `FixedMailboxRemoteUnsupported`, `UnsupportedMessageType`.
 - Create: `tests/unit/core/test_fixed_mailbox_failure_reason.cpp`
 - Modify: `tests/unit/core/CMakeLists.txt`
 - Modify: `tests/integration/actor/test_fixed_mailbox_delivery.cpp`
@@ -1165,7 +1143,8 @@ Expected: all fixed delivery cases pass.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/runtime/messaging_runtime.hpp src/runtime/messaging_runtime.cpp \
+git add include/hpactor/runtime/messaging_runtime.hpp \
+  src/runtime/messaging_runtime.cpp \
   src/runtime/fixed_mailbox_delivery.cpp src/runtime/CMakeLists.txt \
   include/hpactor/mailbox/local_delivery_engine.hpp \
   src/mailbox/local_delivery_engine.cpp \
@@ -1220,44 +1199,49 @@ mailbox and fixed messages remain undispatched.
 
 - [ ] **Step 3: Extract common requeue/idle helpers**
 
-Keep the existing `Ready -> Running` CAS and requeue constants. Add private
-helpers in `actor_execution_engine.cpp`:
+Both `BehaviorActorRunner` and `FixedMailboxActorRunner` share the same
+`Ready -> Running` CAS, requeue-budget capping, lost-wakeup double-check, and
+`try_mark_ready` recovery. Extract these into private helper methods of
+`ActorExecutionEngine`:
 
 ```cpp
-ActorRunResult requeue_or_idle(EventBasedActor& actor,
-                               const WorkItem& item,
-                               bool has_work,
-                               bool workers_paused,
-                               ActorReadyGate& ready_gate) noexcept;
+ActorRunResult requeue_or_idle(const mailbox::MailboxKind kind,
+                               EventBasedActor& actor,
+                               const WorkItem& item, bool has_work,
+                               bool workers_paused) noexcept;
 
-ActorRunResult recover_empty_race(EventBasedActor& actor,
-                                  const WorkItem& item,
-                                  bool has_work,
-                                  ActorReadyGate& ready_gate) noexcept;
+ActorRunResult recover_empty_race(const mailbox::MailboxKind kind,
+                                  EventBasedActor& actor,
+                                  const WorkItem& item) noexcept;
 ```
 
-First prove existing behavior-runner tests remain green before adding fixed
-selection.
+The `MailboxKind` parameter selects the concrete empty/snapshot check inside
+each helper. First prove existing behavior-runner tests remain green after
+extraction before adding the fixed runner.
 
 - [ ] **Step 4: Add the fixed runner**
 
+`FixedMailboxActorRunner` follows the same pattern as `BehaviorActorRunner`:
+it takes `ActorSystem&` and `ActorReadyGate&` at construction (the engine
+already owns `ActorSystem&`).
+
 `FixedMailboxActorRunner::run`:
+1. wins `Ready -> Running` via the shared CAS;
+2. finds the directory entry for the actor and reads the
+   `FixedMailboxExecutionPort` from `entry.fixed_mailbox.execution`;
+3. calls `port.consume_one(port.context, actor, context)`;
+4. uses the common requeue helpers (which check `port.empty()`) for budget
+   capping and idle transition; and
+5. uses the shared clear/recheck/idle recovery path.
 
-1. wins `Ready -> Running`;
-2. fetches the fixed execution port from the actor/directory;
-3. calls `consume_one` once;
-4. uses the common requeue budget when `port.empty(context) == false`; and
-5. uses clear/recheck/idle recovery when no consumable message is visible.
+Before fixed user dispatch inside `consume_one`, install the envelope trace as
+the actor context's current trace scope, set the current sender metadata, and
+emit the same processing-latency boundary as `BehaviorActorRunner`. Use a
+stack-allocated RAII scope, not the variable path's per-message
+`make_unique<TraceScope>` — the fixed user path must retain its
+zero-allocation contract.
 
-Before fixed user dispatch, install the envelope trace as the actor context's
-current trace scope, set the current sender metadata, and emit the same
-processing-latency boundary as `BehaviorActorRunner`. Clear both scopes before
-the read lease releases. Use a stack/optional RAII scope, never the variable
-path's per-message `make_unique<TraceScope>`; the fixed user path must retain
-its zero-allocation contract. This preserves correlation without enabling the
-unsupported ask/reply API.
-
-`ActorExecutionEngine::run` branches:
+`ActorExecutionEngine::run` branches before the coroutine check:
 
 ```cpp
 if (actor.mailbox_kind() == mailbox::MailboxKind::FixedDisruptor)
@@ -1265,14 +1249,12 @@ if (actor.mailbox_kind() == mailbox::MailboxKind::FixedDisruptor)
 #if HPACTOR_SUPPORT_COROUTINES
 if (use_coroutines)
     return coroutine_runner_.run(actor, item, context);
-#else
-(void)use_coroutines;
 #endif
 return behavior_runner_.run(actor, item, context);
 ```
 
-Coroutines remain unsupported for fixed actors; reject that actor declaration
-at compile time or spawn validation.
+Coroutines remain unsupported for fixed actors; the fixed actor declaration is
+rejected at spawn validation with a typed error.
 
 - [ ] **Step 5: Run GREEN and compatibility checks**
 
@@ -1853,3 +1835,24 @@ Expected: clean worktree on the task branch with the task commits visible.
 | Relacy/stress/sanitizers | Tasks 3, 13 |
 | Comparative performance gates | Tasks 12, 13 |
 | Existing MPSC path unchanged | Tasks 6, 8, 13 |
+
+## Post-Refactor Architectural Alignment
+
+This plan was written concurrently with the ActorSystem refactor (issue #379,
+PRs #390–#416, merged June 28 – July 1, 2026). After all eight refactor phases
+landed, the following sections were corrected for file paths and current APIs:
+
+| Section | Correction |
+|---------|------------|
+| Reference Documents | Added correct paths: `include/hpactor/runtime/` for messaging/spawner/spawn-spec, `include/hpactor/sched/` for execution engine, `include/hpactor/runtime/actor_runtime.hpp` for ActorRuntime, `src/runtime/actor_system_impl.hpp` for Impl state. |
+| File Structure | Updated existing-file paths and descriptions to match the refactored layout (e.g., `include/hpactor/runtime/messaging_runtime.hpp`, `include/hpactor/runtime/actor_spawner.hpp`). |
+| Task 4 | Clarified that `FixedMailboxBinding` stores four ports (not three) and is stored in `ActorDirectoryEntry`. |
+| Task 6 | Updated `ActorDirectoryEntry` extension to match the actual struct (adds `mailbox_kind` and `fixed_mailbox` fields). Updated `ActorSpawner::adopt()` branch to reference actual `Dependencies` and `SpawnSpec` API. Updated `spawn_fixed` to use `ActorSystem::create()` factory. |
+| Task 7 | Corrected `MessagingRuntime` file paths. Added `LocalDeliveryEngine::try_deliver()` `MailboxKind` branch description. |
+| Task 8 | `FixedMailboxActorRunner` takes `ActorSystem&` (not function-pointer ports), consistent with `BehaviorActorRunner` and `CoroutineActorRunner`. Common requeue/idle helpers extracted as private methods of `ActorExecutionEngine`. |
+| Task 13 | Updated forbidden-token scan paths for production files. |
+
+**Phase 8 capability views** (`ActorSystemActorsView`, `ActorSystemMessagingView`,
+etc.) are used where the fixed runner needs directory or delivery access, but
+the runner's primary dependency remains `ActorSystem&` for consistency with
+existing runners.

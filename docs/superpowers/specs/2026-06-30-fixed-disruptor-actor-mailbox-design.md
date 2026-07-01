@@ -465,19 +465,55 @@ this sequence for both lanes.
 
 ### 10.1 Actor directory
 
-The actor directory record gains a `MailboxKind` discriminator:
+The actor directory is owned by `ActorRuntime` and stores entries as simple
+aggregates:
+
+```cpp
+struct ActorDirectoryEntry {
+    Actor actor;
+    std::shared_ptr<AbstractActor> instance;
+    std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox;
+    std::shared_ptr<ActorContext> context;
+};
+```
+
+The entry gains a `MailboxKind` discriminator and a `FixedMailboxBinding` member
+that bundles the fixed-core lifetime plus its delivery, control-ingress,
+execution, and lifecycle ports:
 
 ```cpp
 enum class MailboxKind : uint8_t {
-    VariableMpsc,
-    FixedDisruptor,
+    VariableMpsc = 0,
+    FixedDisruptor = 1,
+};
+
+struct FixedMailboxBinding {
+    std::shared_ptr<void> lifetime;   // retains the shared core
+    FixedDeliveryPort delivery;
+    FixedControlIngressPort control;
+    FixedMailboxExecutionPort execution;
+    FixedMailboxLifecyclePort lifecycle;
+};
+
+struct ActorDirectoryEntry {
+    Actor actor;
+    std::shared_ptr<AbstractActor> instance;
+    mailbox::MailboxKind mailbox_kind{mailbox::MailboxKind::VariableMpsc};
+    std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox;
+    mailbox::FixedMailboxBinding fixed_mailbox;
+    std::shared_ptr<ActorContext> context;
 };
 ```
 
 Variable actors retain their concrete `MPSCActorMailbox<TypedMessage>*` fast
-path. Fixed actors register narrow RTTI-free ports containing `void*` context
-and function pointers. The directory atomically publishes the actor, name,
-mailbox kind, and matching ingress/execution data as one adoption operation.
+path through the existing `mailbox` field. The `fixed_mailbox` binding is empty
+for variable actors. The directory atomically publishes the actor, name, mailbox
+kind, and matching binding as one adoption operation through
+`ActorSpawner::adopt()`.
+
+`ActorDirectory` gains `std::optional<FixedMailboxBinding> find_fixed_binding(ActorId)`
+for use by the delivery and execution paths. `find_mailbox()` continues to
+return the variable mailbox for existing callers.
 
 ### 10.2 Fixed delivery port
 
@@ -508,19 +544,23 @@ the non-goals in Section 4.
 
 ### 10.3 System/control ingress
 
-Fixed actor directory records expose a `TypedMessage` control-ingress function.
-It accepts only TypeTags below `TypeTag::User`. A user `TypedMessage` targeting a
-fixed actor returns `FailureReason::UnsupportedMessageType`; it is not routed to
-the ring and does not fall back.
+`LocalDeliveryEngine::try_deliver()` gains a `MailboxKind` branch. When the
+target entry is `VariableMpsc`, the existing concrete MPSC path is unchanged.
+When the target entry is `FixedDisruptor`:
 
-System ingress allocates one conventional `TypedMessage` node, applies the
-protected system-message limit, publishes to the MPSC system lane, then arms
-the shared wakeup gate. Its ownership and deferred reclamation follow the
-existing MPSC rules.
+- TypeTags below `TypeTag::User` are routed through the entry's
+  `FixedControlIngressPort`, which allocates one conventional `TypedMessage`
+  node, applies the protected system-message limit, publishes to the MPSC
+  system lane, then arms the shared wakeup gate. Ownership and deferred
+  reclamation follow the existing MPSC rules.
+- A user `TypedMessage` (TypeTag >= User) returns
+  `FailureReason::UnsupportedMessageType`; it is not routed to the ring and
+  does not fall back to the variable mailbox.
 
 ### 10.4 Scheduler execution port
 
-Fixed actor records expose:
+The `FixedMailboxBinding` bundles an execution port inspected by the scheduler
+engine:
 
 ```cpp
 struct FixedMailboxExecutionPort {
@@ -532,11 +572,21 @@ struct FixedMailboxExecutionPort {
 };
 ```
 
-`ActorExecutionEngine` switches on `MailboxKind` once per activation. Existing
-actors continue through `BehaviorActorRunner`. Fixed actors use a focused
-`FixedMailboxActorRunner` that shares the existing `Ready -> Running`, requeue
-budget, idle transition, and lost-wakeup rules. The port prevents RTTI,
-`dynamic_cast`, and a virtual mailbox hierarchy.
+`ActorExecutionEngine::run()` gains a `MailboxKind` branch before the coroutine
+check. Existing actors continue through `BehaviorActorRunner`. Fixed actors use
+a focused `FixedMailboxActorRunner`. Both runners take `ActorSystem&` for
+directory and capability-view access, matching the existing pattern — the
+engine already owns an `ActorSystem&` reference.
+
+`FixedMailboxActorRunner` shares the existing `Ready -> Running` CAS, requeue
+budget, idle transition, and lost-wakeup rules from `BehaviorActorRunner`,
+extracting those helpers into private methods of `ActorExecutionEngine`. The
+fixed runner reads the execution port from the directory entry, calls
+`consume_one` once per activation, and applies the same requeue/idle logic.
+
+The port prevents RTTI, `dynamic_cast`, and a virtual mailbox hierarchy.
+Coroutines remain unsupported for fixed actors; the actor declaration is
+rejected at spawn validation.
 
 ## 11. Delivery and Failure Semantics
 
@@ -800,20 +850,26 @@ Benchmark thresholds are review gates, not timing assertions in CI unit tests.
 
 ## 16. File and Component Boundaries
 
-Planned components:
+Planned components with correct paths under the refactored runtime architecture:
 
-| Component | Responsibility |
-|---|---|
-| `disruptor_mpsc_ring.hpp` | Fixed-slot claim, publish, lease, release, and diagnostics |
-| `fixed_message_envelope.hpp` | Closed fixed variant and delivery metadata |
-| `fixed_actor_mailbox.hpp` | Hybrid system lane, user ring, readiness, pressure, and lifecycle |
-| `fixed_mailbox_actor.hpp` | Actor base, fixed behavior registration, and variant dispatch |
-| `fixed_actor_ref.hpp` | Typed local reference and non-blocking send API |
-| `fixed_mailbox_ports.hpp` | RTTI-free delivery, control-ingress, and execution ports |
-| `fixed_mailbox_actor_runner.*` | Scheduler activation for fixed actors |
-| existing actor directory/runtime files | Atomic publication and mailbox-kind routing |
-| existing snapshots/metrics/CLI files | Backend-aware operational visibility |
-| benchmark app | Comparative MPSC versus fixed-ring evidence |
+| Component | Header | Source |
+|---|---|---|
+| `disruptor_mpsc_ring.hpp` | `include/hpactor/mailbox/` | header-only |
+| `fixed_message_envelope.hpp` | `include/hpactor/mailbox/` | header-only |
+| `fixed_mailbox_ports.hpp` | `include/hpactor/mailbox/` | header-only |
+| `fixed_actor_mailbox.hpp` | `include/hpactor/mailbox/` | header-only |
+| `fixed_mailbox_actor.hpp` | `include/hpactor/actor/` | header-only |
+| `fixed_actor_ref.hpp` | `include/hpactor/ref/` | header-only |
+| `mailbox_kind.hpp` | `include/hpactor/mailbox/` | header-only |
+| `FixedMailboxActorRunner` | — | `src/sched/fixed_mailbox_actor_runner.cpp` |
+| `MessagingRuntime` fixed port | `include/hpactor/runtime/messaging_runtime.hpp` | `src/runtime/messaging_runtime.cpp` |
+| `LocalDeliveryEngine` routing | `include/hpactor/mailbox/local_delivery_engine.hpp` | `src/mailbox/local_delivery_engine.cpp` |
+| `ActorDirectory` binding | `include/hpactor/actor/actor_directory.hpp` | `src/actor/actor_directory.cpp` |
+| `ActorSpawner` adoption | `include/hpactor/runtime/actor_spawner.hpp` | `src/runtime/actor_spawner.cpp` |
+| `SpawnSpec` | `include/hpactor/runtime/spawn_spec.hpp` | header-only |
+| `ActorExecutionEngine` | `include/hpactor/sched/actor_execution_engine.hpp` | `src/sched/actor_execution_engine.cpp` |
+| Snapshots/metrics/CLI | existing public headers | existing sources |
+| benchmark app | `apps/bench_fixed_mailbox/` | — |
 
 Each component has one owner. The ring knows nothing about actors, scheduling,
 DLQ, or logging. The mailbox core owns queue composition and readiness. The
@@ -860,3 +916,19 @@ No phase changes the default mailbox of existing actors.
 8. Fixed-message DLQ evidence is metadata-only and non-replayable.
 9. The feature remains experimental until both correctness and performance
    gates pass.
+
+## 20. Post-Refactor Architectural Alignment
+
+This design was approved concurrently with the ActorSystem refactor (issue #379,
+PRs #390–#416). After all eight refactor phases landed, the following sections
+were updated to match the current runtime architecture:
+
+| Section | Alignment |
+|---------|-----------|
+| 10.1 | `ActorDirectoryEntry` updated to reflect the actual simple aggregate (actor, instance, mailbox, context). Added `MailboxKind` discriminator and `FixedMailboxBinding` with all four ports. `find_fixed_binding()` added to `ActorDirectory`, owned by `ActorRuntime`. |
+| 10.3 | `LocalDeliveryEngine::try_deliver()` gains the `MailboxKind` branch. Control routing for system TypedMessages and rejection of user TypedMessages are explicit. |
+| 10.4 | `FixedMailboxActorRunner` takes `ActorSystem&`, consistent with the existing `BehaviorActorRunner` and `CoroutineActorRunner` pattern. Common requeue/idle helpers extracted as private methods of `ActorExecutionEngine`. |
+| 16 | File-boundary table corrected: runtime headers at `include/hpactor/runtime/`, spawner at `include/hpactor/runtime/actor_spawner.hpp`, `SpawnSpec` at `include/hpactor/runtime/spawn_spec.hpp`. |
+
+The implementation plan (`2026-06-30-fixed-disruptor-actor-mailbox-implementation.md`)
+was similarly updated to reference correct file paths and APIs.
