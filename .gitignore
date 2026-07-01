@@ -13,6 +13,9 @@ Testing/
 .worktrees/
 .claude/worktrees
 
+# Understand Anything Skill
+.understand-anything/
+
 # IDE and editor
 .DS_Store
 *.swp
