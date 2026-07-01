@@ -17,6 +17,8 @@
 #include "actor_spawner.hpp"
 #include "messaging_network_ports.hpp"
 #include "messaging_runtime.hpp"
+#include "observability_runtime.hpp"
+#include <hpactor/runtime/cluster_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
 
 #include <hpactor/actor/actor_directory.hpp>
@@ -153,14 +155,10 @@ struct OperationsRuntimeState final {
     fault::FaultController fault_controller;
 };
 
+/// \brief Phase 7: IClusterRuntime replaces type-erased cluster ownership.
+/// Deprecated struct retained only for the `enabled` flag during migration.
 struct ClusterRuntimeState final {
-    using cluster_cleanup_fn = void (*)(void*);
     bool enabled{false};
-    std::unique_ptr<void, cluster_cleanup_fn> failure_model{nullptr, +[](void*) {}};
-    std::unique_ptr<void, cluster_cleanup_fn> singleton_manager{nullptr,
-                                                                +[](void*) {}};
-    std::unique_ptr<void, cluster_cleanup_fn> route_invalidation{nullptr,
-                                                                 +[](void*) {}};
 };
 
 // ── ActorSystem::Impl ──────────────────────────────────────────────────────
@@ -181,6 +179,11 @@ class ActorSystem::Impl final {
     // State groups in destruction order (last declared = first destroyed).
     // network_ is stopped explicitly before group destruction.
     CoreRuntimeState core;
+    /// \brief Phase 7: sole observability resource owner (metrics, logging,
+    ///        tracing, fault injection). Created before any producer.
+    std::unique_ptr<ObservabilityRuntime> observability_;
+    /// \brief Deprecated: retained temporarily for migration compatibility.
+    /// New code must use observability_-> instead.
     OperationsRuntimeState operations;
     ActorServiceState actors;
     std::unique_ptr<MessagingRuntime> messaging_;
@@ -191,6 +194,11 @@ class ActorSystem::Impl final {
     /// \brief Deprecated: retained temporarily for messaging port adapters.
     /// Will be removed once adapters are moved into NetworkRuntime.
     NetworkRuntimeState network;
+    /// \brief Phase 7: typed optional cluster runtime.
+    /// Null when cluster is disabled.
+    std::unique_ptr<IClusterRuntime> cluster_;
+
+    /// \brief Deprecated: retained temporarily for `enabled` flag migration.
     ClusterRuntimeState cluster;
 
     // Spawner — constructed after directory, scheduler, metrics, logger exist.

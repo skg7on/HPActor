@@ -47,6 +47,24 @@ struct StreamRuntimeConfig final {
     size_t max_active_streams{4096};
 };
 
+/// \brief Validated observability-runtime configuration (metrics, logging,
+///        tracing, fault injection).
+struct ObservabilityRuntimeConfig final {
+    bool metrics_enabled{true};
+    bool logging_enabled{true};
+    bool tracing_enabled{false}; // tracing defaults to off
+    uint32_t metrics_ring_buffer_capacity{65536};
+    uint32_t logging_ring_buffer_capacity{65536};
+    uint32_t tracing_ring_buffer_capacity{65536};
+    bool fault_injection_enabled{true};
+};
+
+/// \brief Validated cluster-runtime configuration.
+struct ClusterRuntimeConfig final {
+    bool enabled{false};
+    std::string node_id;
+};
+
 /// \brief Validated network-runtime configuration (present when networking
 ///        is enabled).
 struct BlueprintNetworkConfig final {
@@ -94,6 +112,12 @@ class RuntimeBlueprint final {
     const std::optional<BlueprintNetworkConfig>& network() const noexcept {
         return network_;
     }
+    const ObservabilityRuntimeConfig& observability() const noexcept {
+        return observability_;
+    }
+    const ClusterRuntimeConfig& cluster() const noexcept {
+        return cluster_;
+    }
 
     /// \brief Validated topology actor specs (empty if no topology loaded).
     const std::vector<ConfiguredActorSpec>& actors() const noexcept {
@@ -115,6 +139,8 @@ class RuntimeBlueprint final {
     ActorRuntimeConfig actor_;
     MessagingRuntimeConfig messaging_;
     StreamRuntimeConfig streams_;
+    ObservabilityRuntimeConfig observability_;
+    ClusterRuntimeConfig cluster_;
     std::optional<BlueprintNetworkConfig> network_;
     std::vector<ConfiguredActorSpec> actors_;
     uint64_t fingerprint_{0};

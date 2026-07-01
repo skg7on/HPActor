@@ -205,13 +205,29 @@ ActorSystem::ActorSystem(const Config& config)
     // ── System protobuf types ──────────────────────────────────────────
     impl_->core.proto_registry.register_system_types();
 
-    // ── Metrics ring buffer (create first so messaging components can
-    //    receive stable pointers at construction) ───────────────────────
-    if (impl_->operations.metrics_config.enabled) {
-        impl_->operations.metrics_ring_buffer =
-            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
-        impl_->core.scheduler->set_metrics_ring_buffer(
-            impl_->operations.metrics_ring_buffer.get());
+    // ── Observability runtime ────────────────────────────────────────────
+    // Create and start before any producer so stable ports are available.
+    {
+        ObservabilityRuntimeConfig obs_cfg;
+        obs_cfg.metrics_enabled = impl_->operations.metrics_config.enabled;
+        obs_cfg.metrics_ring_buffer_capacity =
+            impl_->operations.metrics_config.ring_buffer_capacity;
+        obs_cfg.logging_enabled = impl_->operations.logging_config.enabled;
+        obs_cfg.logging_ring_buffer_capacity =
+            impl_->operations.logging_config.ring_buffer_capacity;
+        obs_cfg.tracing_enabled = impl_->core.config.tracing.enabled;
+        obs_cfg.tracing_ring_buffer_capacity =
+            impl_->core.config.tracing.ring_buffer_capacity;
+        obs_cfg.fault_injection_enabled = true;
+
+        impl_->observability_ = ObservabilityRuntime::create(obs_cfg);
+        (void)impl_->observability_->start();
+
+        // Wire scheduler to observability ports.
+        if (impl_->observability_->metrics_ring_buffer()) {
+            impl_->core.scheduler->set_metrics_ring_buffer(
+                impl_->observability_->metrics_ring_buffer());
+        }
     }
 
     // ── Bind fixed network-control ports ────────────────────────────────
@@ -236,7 +252,7 @@ ActorSystem::ActorSystem(const Config& config)
     impl_->messaging_ = std::make_unique<MessagingRuntime>(
         MessagingRuntime::Dependencies{
             .actors = impl_->actors.directory,
-            .metrics = impl_->operations.metrics_ring_buffer.get(),
+            .metrics = impl_->observability_->metrics_ring_buffer(),
             .network = impl_->network.messaging_ports,
             .endpoint = impl_->core.endpoint,
         },
@@ -245,24 +261,17 @@ ActorSystem::ActorSystem(const Config& config)
             .default_message_ttl = impl_->core.config.default_message_ttl_ms,
         });
 
-    // ── Metrics subsystem ──────────────────────────────────────────────
-    if (impl_->operations.metrics_config.enabled) {
-        auto m_actor =
-            spawn<metrics::MetricsActor>(impl_->operations.metrics_ring_buffer);
+    // ── Metrics actor (owned by ActorRuntime, not ObservabilityRuntime) ──
+    if (impl_->observability_->metrics_config().enabled) {
+        auto m_actor = spawn<metrics::MetricsActor>(
+            impl_->observability_->metrics_ring_buffer_shared());
         impl_->operations.metrics_actor =
             static_cast<metrics::MetricsActor*>(m_actor.get().get());
     }
 
-    // ── Logging subsystem ──────────────────────────────────────────────
-    if (impl_->operations.logging_config.enabled) {
-        impl_->operations.log_manager =
-            std::make_unique<log::LogManager>(impl_->operations.logging_config);
-        impl_->operations.log_manager->start();
-        impl_->operations.logger = &impl_->operations.log_manager->logger();
-    }
-
-    if (impl_->operations.logger) [[unlikely]] {
-        impl_->core.scheduler->set_logger(impl_->operations.logger);
+    // ── Logger wiring to scheduler ──────────────────────────────────────
+    if (impl_->observability_->logger()) [[unlikely]] {
+        impl_->core.scheduler->set_logger(impl_->observability_->logger());
     }
 
     // Reconstruct spawner with now-valid metrics/logger pointers.
@@ -271,12 +280,12 @@ ActorSystem::ActorSystem(const Config& config)
         .endpoint = impl_->core.endpoint,
         .directory = impl_->actors.directory,
         .scheduler = *impl_->core.scheduler,
-        .metrics = impl_->operations.metrics_ring_buffer.get(),
-        .logger = impl_->operations.logger,
+        .metrics = impl_->observability_->metrics_ring_buffer(),
+        .logger = impl_->observability_->logger(),
     });
 
-    impl_->operations.fault_controller.set_log_manager(
-        impl_->operations.log_manager.get());
+    impl_->observability_->fault_controller().set_log_manager(
+        impl_->observability_->log_manager());
 
     // Initialize process-mode subystem (daemonize, pidfile, signal handling).
     // Must happen before impl_->core.scheduler->start() so daemonization forks
@@ -285,7 +294,12 @@ ActorSystem::ActorSystem(const Config& config)
 
     impl_->core.scheduler->start();
 
-    apply_tracing_config(impl_->core.config.tracing);
+    // Start observability background threads AFTER the scheduler so the
+    // timer thread is already running.  Starting them before the
+    // scheduler can delay timer processing under coverage builds.
+    impl_->observability_->start_background_threads();
+
+    impl_->observability_->apply_tracing_config(impl_->core.config.tracing);
 
     if (config.enable_network) {
         // ── Build NetworkRuntimeConfig from facade Config ────────────────
@@ -355,10 +369,9 @@ ActorSystem::ActorSystem(const Config& config)
         impl_->network_ = std::make_unique<NetworkRuntime>(net_config, net_deps);
 
         // Transfer metrics ring buffer pointer to transport.
-        if (impl_->operations.metrics_ring_buffer) {
+        if (auto* ring = impl_->observability_->metrics_ring_buffer()) {
             if (auto* t = impl_->network_->transport()) {
-                t->set_metrics_ring_buffer(
-                    impl_->operations.metrics_ring_buffer.get());
+                t->set_metrics_ring_buffer(ring);
             }
         }
 
@@ -425,7 +438,7 @@ ActorSystem::ActorSystem(const Config& config)
             std::static_pointer_cast<receptionist::Receptionist>(spawned.get());
     }
 
-    impl_->operations.fault_controller.install();
+    impl_->observability_->fault_controller().install();
 
     impl_->actors.shutdown_coordinator =
         std::make_unique<ShutdownCoordinator>(ShutdownCoordinatorDependencies{
@@ -474,6 +487,10 @@ ActorSystem::ActorSystem(const Config& config)
 
 ActorSystem::~ActorSystem() {
     impl_->core.running.store(false);
+    // Phase 7: Stop cluster before network (cluster depends on discovery).
+    if (impl_->cluster_) {
+        impl_->cluster_->stop(ClusterStopRequest{});
+    }
     // Phase 5: NetworkRuntime handles its own teardown.
     if (impl_->network_) {
         impl_->network_->stop(NetworkRuntime::StopMode::Abort);
@@ -492,28 +509,17 @@ ActorSystem::~ActorSystem() {
     if (impl_->network.discovery) {
         impl_->network.discovery->stop();
     }
-    if (impl_->operations.log_manager) {
-        impl_->operations.log_manager->stop();
-    }
-    if (impl_->operations.trace_manager) {
-        impl_->operations.trace_manager->stop();
-    }
+    // Stop scheduler BEFORE destroying observability: workers hold raw
+    // pointers to the metrics ring buffer and logger owned by
+    // ObservabilityRuntime. Workers must quiesce before those pointers
+    // become invalid.
     impl_->core.scheduler->stop();
-    impl_->operations.fault_controller.remove();
+    // Now safe: no worker threads can access metrics/log resources.
+    impl_->observability_.reset();
 }
 
 void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
-    impl_->operations.tracing_config = config;
-    if (!impl_->operations.tracing_config.enabled) {
-        if (impl_->operations.trace_manager) {
-            impl_->operations.trace_manager->stop();
-            impl_->operations.trace_manager.reset();
-        }
-        return;
-    }
-    impl_->operations.trace_manager = std::make_unique<tracing::TraceManager>(
-        impl_->operations.tracing_config, this);
-    impl_->operations.trace_manager->start();
+    impl_->observability_->apply_tracing_config(config);
 }
 
 sched::TimerStatsSnapshot ActorSystem::timer_stats() const {
@@ -738,32 +744,32 @@ RpcChannel& ActorSystem::rpc_channel() {
 }
 
 tracing::TraceManager* ActorSystem::trace_manager() noexcept {
-    return impl_->operations.trace_manager.get();
+    return impl_->observability_->trace_manager();
 }
 
 const tracing::TraceManager* ActorSystem::trace_manager() const noexcept {
-    return impl_->operations.trace_manager.get();
+    return impl_->observability_->trace_manager();
 }
 
 log::LogManager* ActorSystem::log_manager() noexcept {
-    return impl_->operations.log_manager.get();
+    return impl_->observability_->log_manager();
 }
 
 const log::LogManager* ActorSystem::log_manager() const noexcept {
-    return impl_->operations.log_manager.get();
+    return impl_->observability_->log_manager();
 }
 
 fault::FaultController& ActorSystem::fault_controller() noexcept {
-    return impl_->operations.fault_controller;
+    return impl_->observability_->fault_controller();
 }
 
 const fault::FaultController& ActorSystem::fault_controller() const noexcept {
-    return impl_->operations.fault_controller;
+    return impl_->observability_->fault_controller();
 }
 
 metrics::MpscRingBuffer<metrics::MetricEvent>*
 ActorSystem::metrics_ring_buffer() const {
-    return impl_->operations.metrics_ring_buffer.get();
+    return impl_->observability_->metrics_ring_buffer();
 }
 
 bool ActorSystem::cluster_enabled() const {
@@ -771,18 +777,27 @@ bool ActorSystem::cluster_enabled() const {
 }
 
 cluster::ClusterFailureModel* ActorSystem::cluster_failure_model() {
-    return static_cast<cluster::ClusterFailureModel*>(
-        impl_->cluster.failure_model.get());
+    if (impl_->cluster_) {
+        return static_cast<cluster::ClusterFailureModel*>(
+            impl_->cluster_->legacy_views().failure_model);
+    }
+    return nullptr;
 }
 
 cluster::singleton::SingletonManagerActor* ActorSystem::singleton_manager() {
-    return static_cast<cluster::singleton::SingletonManagerActor*>(
-        impl_->cluster.singleton_manager.get());
+    if (impl_->cluster_) {
+        return static_cast<cluster::singleton::SingletonManagerActor*>(
+            impl_->cluster_->legacy_views().singleton_manager);
+    }
+    return nullptr;
 }
 
 cluster::RouteInvalidation* ActorSystem::route_invalidation() {
-    return static_cast<cluster::RouteInvalidation*>(
-        impl_->cluster.route_invalidation.get());
+    if (impl_->cluster_) {
+        return static_cast<cluster::RouteInvalidation*>(
+            impl_->cluster_->legacy_views().route_invalidation);
+    }
+    return nullptr;
 }
 
 Clock& ActorSystem::clock() {
@@ -1177,14 +1192,14 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     actor->set_scheduler(impl_->core.scheduler.get());
     actor->set_mailbox(mbox);
 
-    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
-        mbox->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
-        actor->set_metrics_ring_buffer(impl_->operations.metrics_ring_buffer.get());
+    if (auto* ring = impl_->observability_->metrics_ring_buffer()) [[unlikely]] {
+        mbox->set_metrics_ring_buffer(ring);
+        actor->set_metrics_ring_buffer(ring);
     }
 
-    if (impl_->operations.logger) [[unlikely]] {
-        mbox->set_logger(impl_->operations.logger);
-        actor->set_logger(impl_->operations.logger);
+    if (auto* logger = impl_->observability_->logger()) [[unlikely]] {
+        mbox->set_logger(logger);
+        actor->set_logger(logger);
     }
 
     auto policy = actor->dispatch_policy();
@@ -1233,12 +1248,12 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
                      "actor spawned",
                      log::field_lit("type", actor->type_name().data()));
 
-    if (impl_->operations.metrics_ring_buffer) [[unlikely]] {
+    if (auto* ring = impl_->observability_->metrics_ring_buffer()) [[unlikely]] {
         metrics::MetricEvent event{};
         event.actor_id = id;
         event.event_type = metrics::MetricEventType::kActorSpawned;
         event.value_hi = 1;
-        impl_->operations.metrics_ring_buffer->try_push(event);
+        ring->try_push(event);
     }
 
     return Actor(actor);

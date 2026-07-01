@@ -42,11 +42,25 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
 
     core.proto_registry.register_system_types();
 
-    // ── Metrics ring buffer ─────────────────────────────────────────────────
-    if (operations.metrics_config.enabled) {
-        operations.metrics_ring_buffer =
-            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
+    // ── Observability runtime (construction only, no start yet) ────────────
+    {
+        ObservabilityRuntimeConfig obs_cfg;
+        obs_cfg.metrics_enabled = bp.observability().metrics_enabled;
+        obs_cfg.metrics_ring_buffer_capacity =
+            bp.observability().metrics_ring_buffer_capacity;
+        obs_cfg.logging_enabled = bp.observability().logging_enabled;
+        obs_cfg.logging_ring_buffer_capacity =
+            bp.observability().logging_ring_buffer_capacity;
+        obs_cfg.tracing_enabled = bp.observability().tracing_enabled;
+        obs_cfg.tracing_ring_buffer_capacity =
+            bp.observability().tracing_ring_buffer_capacity;
+        obs_cfg.fault_injection_enabled = bp.observability().fault_injection_enabled;
+
+        observability_ = ObservabilityRuntime::create(obs_cfg);
     }
+
+    // Start observability so ring buffer is available for messaging.
+    (void)observability_->start();
 
     // ── Bind fixed network-control ports ────────────────────────────────────
     // Context pointer uses legacy NetworkRuntimeState; adapters are wired
@@ -67,7 +81,7 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
     messaging_ = std::make_unique<MessagingRuntime>(
         MessagingRuntime::Dependencies{
             .actors = actors.directory,
-            .metrics = operations.metrics_ring_buffer.get(),
+            .metrics = observability_->metrics_ring_buffer(),
             .network = network.messaging_ports,
             .endpoint = core.endpoint,
         },
@@ -83,9 +97,8 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
         f, bp.actor().scheduler_threads, 4 /* num_priorities */,
         sched::TimerBackend::TimingWheel, bp.actor().scheduler_start_paused);
 
-    if (operations.metrics_ring_buffer) {
-        core.scheduler->set_metrics_ring_buffer(
-            operations.metrics_ring_buffer.get());
+    if (auto* ring = observability_->metrics_ring_buffer()) {
+        core.scheduler->set_metrics_ring_buffer(ring);
     }
 
     // ── Actor services ──────────────────────────────────────────────────────
@@ -97,8 +110,8 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
         .endpoint = core.endpoint,
         .directory = actors.directory,
         .scheduler = *core.scheduler,
-        .metrics = operations.metrics_ring_buffer.get(),
-        .logger = nullptr, // logger not yet created (start phase)
+        .metrics = observability_->metrics_ring_buffer(),
+        .logger = observability_->logger(),
     });
 
     // ── Shutdown coordinator (placeholder — replaced by RuntimeCoordinator
@@ -113,7 +126,7 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
 
     // ── Fault controller ────────────────────────────────────────────────────
     // Installed but no fault points are active by default.
-    operations.fault_controller.install();
+    observability_->fault_controller().install();
 }
 
 ActorSystem::Impl::~Impl() = default;

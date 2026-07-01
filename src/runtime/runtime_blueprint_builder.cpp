@@ -73,6 +73,17 @@ RuntimeBlueprintBuilder::from_config(const Config& config) noexcept {
         bp.network_ = std::move(net);
     }
 
+    // ── Observability config ─────────────────────────────────────────────────
+    bp.observability_.tracing_enabled = config.tracing.enabled;
+    bp.observability_.tracing_ring_buffer_capacity =
+        config.tracing.ring_buffer_capacity;
+
+    // Cluster is disabled by default in Config; the concrete Config does not
+    // carry an explicit cluster-enable flag. enable_cluster() is called
+    // post-construction. Blueprint captures the default (disabled) until the
+    // cluster factory is injected.
+    bp.cluster_.enabled = false;
+
     // ── Compute fingerprint ─────────────────────────────────────────────────
     uint64_t fp = 0xcbf29ce484222325ULL; // FNV offset basis
 
@@ -95,6 +106,20 @@ RuntimeBlueprintBuilder::from_config(const Config& config) noexcept {
     } else {
         fp = hash_u64(0, fp); // network disabled marker
     }
+
+    // Observability fingerprint
+    fp = hash_u64(static_cast<uint64_t>(bp.observability_.metrics_enabled), fp);
+    fp = hash_u64(static_cast<uint64_t>(bp.observability_.logging_enabled), fp);
+    fp = hash_u64(static_cast<uint64_t>(bp.observability_.tracing_enabled), fp);
+    fp = hash_u64(bp.observability_.metrics_ring_buffer_capacity, fp);
+    fp = hash_u64(bp.observability_.logging_ring_buffer_capacity, fp);
+    fp = hash_u64(bp.observability_.tracing_ring_buffer_capacity, fp);
+    fp = hash_u64(
+        static_cast<uint64_t>(bp.observability_.fault_injection_enabled), fp);
+
+    // Cluster fingerprint
+    fp = hash_u64(static_cast<uint64_t>(bp.cluster_.enabled), fp);
+    fp = hash_string(bp.cluster_.node_id, fp);
 
     bp.fingerprint_ = fp;
 

@@ -206,3 +206,134 @@ TEST(RuntimeBlueprintBuilderTest, RejectsNetworkEnabledWithoutPort) {
     auto result = hpactor::RuntimeBlueprintBuilder::from_config(cfg);
     EXPECT_TRUE(result.is_error());
 }
+
+// ── ObservabilityRuntimeConfig ─────────────────────────────────────────────
+
+TEST(ObservabilityRuntimeConfigTest, DefaultConstruction) {
+    hpactor::ObservabilityRuntimeConfig cfg;
+    EXPECT_TRUE(cfg.metrics_enabled);
+    EXPECT_TRUE(cfg.logging_enabled);
+    EXPECT_FALSE(cfg.tracing_enabled); // tracing defaults to off
+    EXPECT_EQ(cfg.metrics_ring_buffer_capacity, 65536u);
+    EXPECT_EQ(cfg.logging_ring_buffer_capacity, 65536u);
+    EXPECT_EQ(cfg.tracing_ring_buffer_capacity, 65536u);
+    EXPECT_TRUE(cfg.fault_injection_enabled);
+}
+
+TEST(ObservabilityRuntimeConfigTest, ExplicitConstruction) {
+    hpactor::ObservabilityRuntimeConfig cfg{/*metrics_enabled=*/false,
+                                            /*logging_enabled=*/true,
+                                            /*tracing_enabled=*/true,
+                                            /*metrics_ring_buffer_capacity=*/8192,
+                                            /*logging_ring_buffer_capacity=*/4096,
+                                            /*tracing_ring_buffer_capacity=*/1024,
+                                            /*fault_injection_enabled=*/false};
+    EXPECT_FALSE(cfg.metrics_enabled);
+    EXPECT_TRUE(cfg.logging_enabled);
+    EXPECT_TRUE(cfg.tracing_enabled);
+    EXPECT_EQ(cfg.metrics_ring_buffer_capacity, 8192u);
+    EXPECT_EQ(cfg.logging_ring_buffer_capacity, 4096u);
+    EXPECT_EQ(cfg.tracing_ring_buffer_capacity, 1024u);
+    EXPECT_FALSE(cfg.fault_injection_enabled);
+}
+
+TEST(ObservabilityRuntimeConfigTest, AllDisabledIsValid) {
+    hpactor::ObservabilityRuntimeConfig cfg{false, false, false, 0,
+                                            0,     0,     false};
+    // All subsystems disabled is a valid configuration (headless/testing mode).
+    EXPECT_FALSE(cfg.metrics_enabled);
+    EXPECT_FALSE(cfg.logging_enabled);
+    EXPECT_FALSE(cfg.tracing_enabled);
+    EXPECT_FALSE(cfg.fault_injection_enabled);
+}
+
+// ── ClusterRuntimeConfig ────────────────────────────────────────────────────
+
+TEST(ClusterRuntimeConfigTest, DefaultConstruction) {
+    hpactor::ClusterRuntimeConfig cfg;
+    EXPECT_FALSE(cfg.enabled);
+    EXPECT_TRUE(cfg.node_id.empty());
+}
+
+TEST(ClusterRuntimeConfigTest, ExplicitConstruction) {
+    hpactor::ClusterRuntimeConfig cfg{/*enabled=*/true,
+                                      /*node_id=*/"node-1"};
+    EXPECT_TRUE(cfg.enabled);
+    EXPECT_EQ(cfg.node_id, "node-1");
+}
+
+TEST(ClusterRuntimeConfigTest, DisabledWithNodeId) {
+    // Cluster can have a node_id configured but be disabled.
+    hpactor::ClusterRuntimeConfig cfg{/*enabled=*/false,
+                                      /*node_id=*/"node-5"};
+    EXPECT_FALSE(cfg.enabled);
+    EXPECT_EQ(cfg.node_id, "node-5");
+}
+
+// ── Blueprint accessors for new config types ────────────────────────────────
+
+TEST(RuntimeBlueprintTest, ObservabilityAccessorDefaults) {
+    hpactor::RuntimeBlueprint bp;
+    const auto& obs = bp.observability();
+    // Default-constructed blueprint should have sensible observability
+    // defaults.
+    EXPECT_TRUE(obs.metrics_enabled);
+    EXPECT_FALSE(obs.tracing_enabled);
+}
+
+TEST(RuntimeBlueprintTest, ClusterAccessorDefaults) {
+    hpactor::RuntimeBlueprint bp;
+    const auto& cluster = bp.cluster();
+    // Default-constructed blueprint should have cluster disabled.
+    EXPECT_FALSE(cluster.enabled);
+}
+
+// ── Builder populates observability from Config ─────────────────────────────
+
+TEST(RuntimeBlueprintBuilderTest, FromConfigPopulatesTracingEnabled) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 1;
+    cfg.enable_network = false;
+    cfg.tracing.enabled = true;
+    cfg.tracing.ring_buffer_capacity = 8192;
+
+    auto result = hpactor::RuntimeBlueprintBuilder::from_config(cfg);
+    ASSERT_TRUE(result.ok());
+
+    const auto& bp = result.value();
+    EXPECT_TRUE(bp.observability().tracing_enabled);
+    EXPECT_EQ(bp.observability().tracing_ring_buffer_capacity, 8192u);
+}
+
+TEST(RuntimeBlueprintBuilderTest, FromConfigTracingIncludedInFingerprint) {
+    hpactor::Config cfg1;
+    cfg1.scheduler_threads = 1;
+    cfg1.enable_network = false;
+    cfg1.tracing.enabled = false;
+
+    hpactor::Config cfg2;
+    cfg2.scheduler_threads = 1;
+    cfg2.enable_network = false;
+    cfg2.tracing.enabled = true;
+
+    auto r1 = hpactor::RuntimeBlueprintBuilder::from_config(cfg1);
+    auto r2 = hpactor::RuntimeBlueprintBuilder::from_config(cfg2);
+    ASSERT_TRUE(r1.ok());
+    ASSERT_TRUE(r2.ok());
+
+    // Different tracing config → different fingerprint.
+    EXPECT_NE(r1.value().fingerprint(), r2.value().fingerprint());
+}
+
+TEST(RuntimeBlueprintBuilderTest, FromConfigPopulatesClusterConfig) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 1;
+    cfg.enable_network = false;
+
+    auto result = hpactor::RuntimeBlueprintBuilder::from_config(cfg);
+    ASSERT_TRUE(result.ok());
+
+    const auto& bp = result.value();
+    // Cluster is disabled by default.
+    EXPECT_FALSE(bp.cluster().enabled);
+}
