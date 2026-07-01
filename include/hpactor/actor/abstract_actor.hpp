@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
@@ -192,6 +193,15 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     /// \brief Dispatch hints (CPU affinity, pool size) for dedicated actors.
     virtual sched::DispatchHints dispatch_hints() const {
         return {};
+    }
+
+    /// \brief The mailbox backend kind for this actor.
+    ///
+    /// Default is \c VariableMpsc. Fixed-mailbox actors override to
+    /// \c FixedDisruptor so the scheduler and delivery engine can
+    /// select the correct backend without RTTI.
+    [[nodiscard]] virtual mailbox::MailboxKind mailbox_kind() const noexcept {
+        return mailbox::MailboxKind::VariableMpsc;
     }
 
     /// \brief Human-readable type name for metrics and CLI introspection.
