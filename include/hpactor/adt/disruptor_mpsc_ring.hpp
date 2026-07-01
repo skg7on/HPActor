@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace hpactor::mailbox {
+namespace hpactor::adt {
 
 // ── Publish result ────────────────────────────────────────────────────────
 
@@ -97,7 +97,7 @@ struct DisruptorRingSnapshot {
 ///          a FIFO gap. The consumer does not skip the gap. This is a
 ///          deliberate multi-producer Disruptor tradeoff.
 template <typename T, size_t Capacity>
-    requires(valid_fixed_ring_capacity(Capacity))
+    requires(mailbox::valid_fixed_ring_capacity(Capacity))
 class DisruptorMpscRing final {
     static constexpr size_t kMask = Capacity - 1;
 
@@ -324,4 +324,4 @@ class DisruptorMpscRing final {
     std::array<Slot, Capacity> slots_;
 };
 
-} // namespace hpactor::mailbox
+} // namespace hpactor::adt

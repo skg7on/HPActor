@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/mailbox/disruptor_mpsc_ring.hpp>
+#include <hpactor/adt/disruptor_mpsc_ring.hpp>
 #include <hpactor/mailbox/fixed_mailbox_ports.hpp>
 #include <hpactor/mailbox/fixed_message_envelope.hpp>
 #include <hpactor/msg/typed_message.hpp>
@@ -83,7 +83,7 @@ class FixedActorMailboxCore final
     : public std::enable_shared_from_this<FixedActorMailboxCore<Capacity, Messages...>> {
   public:
     using envelope_type = FixedMessageEnvelope<Messages...>;
-    using ring_type = DisruptorMpscRing<envelope_type, Capacity>;
+    using ring_type = adt::DisruptorMpscRing<envelope_type, Capacity>;
 
     /// \brief Construct the mailbox core.
     ///

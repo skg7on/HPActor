@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/mailbox/disruptor_mpsc_ring.hpp>
+#include <hpactor/adt/disruptor_mpsc_ring.hpp>
 
 #include <gtest/gtest.h>
 
@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <thread>
 
-namespace hpactor::mailbox {
+namespace hpactor::adt {
 namespace {
 
 using Ring4 = DisruptorMpscRing<uint64_t, 4>;
@@ -258,4 +258,4 @@ TEST(DisruptorMpscRingTest, TwoProducersUniqueClaims) {
 }
 
 } // namespace
-} // namespace hpactor::mailbox
+} // namespace hpactor::adt
