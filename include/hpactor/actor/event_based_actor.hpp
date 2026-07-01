@@ -277,8 +277,9 @@ class EventBasedActor : public LocalActor {
 
     /// \brief Dead-letter all messages currently in the mailbox.
     ///
-    /// Used for \c DrainPolicy::ImmediateStop.
-    void drain_all_immediate();
+    /// Used for \c DrainPolicy::ImmediateStop. Overridden by
+    /// \c FixedMailboxActor to drain the fixed ring.
+    virtual void drain_all_immediate();
 
     // ── Quarantine & circuit breaker ────────────────────
 

@@ -88,8 +88,21 @@ class FixedMailboxActor : public EventBasedActor {
         return mailbox::MailboxKind::FixedDisruptor;
     }
 
+    /// \brief Drain all messages immediately (immediate stop).
+    void drain_all_immediate() override {
+        if (core_) {
+            core_->begin_drain();
+        }
+        // Release all user-ring slots without invoking handlers.
+        while (!core_->ring().empty()) {
+            auto lease = core_->ring().try_acquire();
+            // Lease releases on scope exit without dispatch.
+        }
+        EventBasedActor::drain_all_immediate();
+    }
+
     /// \brief Create the fixed mailbox core and return a populated binding.
-    mailbox::FixedMailboxBinding create_fixed_mailbox() noexcept {
+    mailbox::FixedMailboxBinding create_fixed_mailbox() noexcept override {
         auto core = std::make_shared<core_type>(this->id(), this->address());
         core_ = core;
         auto binding = core->make_binding();
