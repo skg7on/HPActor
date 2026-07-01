@@ -101,6 +101,11 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
         core.scheduler->set_metrics_ring_buffer(ring);
     }
 
+    // ── Fallback RpcChannel ──────────────────────────────────────────────────
+    // Created unconditionally so rpc_channel() never returns a dangling
+    // reference when networking is disabled.
+    rpc_channel_ = std::make_unique<RpcChannel>(nullptr, core.scheduler.get(), 3);
+
     // ── Actor services ──────────────────────────────────────────────────────
     actors.type_registry = std::make_unique<ActorTypeRegistry>();
 

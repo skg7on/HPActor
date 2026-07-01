@@ -162,6 +162,11 @@ class ActorSystem::Impl final {
     /// Null when cluster is disabled.
     std::unique_ptr<IClusterRuntime> cluster_;
 
+    /// \brief Fallback RpcChannel used when networking is disabled.
+    /// Created during construction with the system scheduler; transport
+    /// will be null.  Callers must check enable_network before using.
+    std::unique_ptr<RpcChannel> rpc_channel_;
+
     // Spawner — constructed after directory, scheduler, metrics, logger exist.
     // Uses std::optional for deferred initialization.
     std::optional<ActorSpawner> spawner;

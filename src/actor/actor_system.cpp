@@ -187,6 +187,13 @@ ActorSystem::ActorSystem(const Config& config)
         config.scheduler_start_paused);
     impl_->actors.type_registry = std::make_unique<ActorTypeRegistry>();
 
+    // ── Fallback RpcChannel ──────────────────────────────────────────────
+    // Created unconditionally so that rpc_channel() never returns a dangling
+    // reference, even when networking is disabled.  Transport is null when
+    // networking is off; callers must check enable_network first.
+    impl_->rpc_channel_ =
+        std::make_unique<RpcChannel>(nullptr, impl_->core.scheduler.get(), 3);
+
     // ── Spawner ──────────────────────────────────────────────────────────
     // Must exist before any spawn<>() call.
     // Metrics and logger pointers are captured by address so later
@@ -722,9 +729,11 @@ net::UdpRegistrar* ActorSystem::registrar() {
 }
 
 RpcChannel& ActorSystem::rpc_channel() {
-    // Requires NetworkRuntime; callers must verify networking is enabled
-    // before calling this method (e.g., spawn_remote_async checks first).
-    return *impl_->network_->rpc_channel();
+    if (impl_->network_)
+        return *impl_->network_->rpc_channel();
+    // Fallback when networking is disabled — rpc_channel_ is always created
+    // during construction with the system scheduler (transport is null).
+    return *impl_->rpc_channel_;
 }
 
 tracing::TraceManager* ActorSystem::trace_manager() noexcept {
