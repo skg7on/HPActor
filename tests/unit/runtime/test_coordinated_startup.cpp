@@ -8,10 +8,10 @@
 /// \brief Integration tests for coordinating real ActorSystem startup through
 ///        RuntimeCoordinator stages.
 
-#include "src/runtime/runtime_blueprint.hpp"
-#include "src/runtime/runtime_blueprint_builder.hpp"
-#include "src/runtime/runtime_builder.hpp"
-#include "src/runtime/runtime_coordinator.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
+#include <hpactor/runtime/runtime_builder.hpp>
+#include <hpactor/runtime/runtime_coordinator.hpp>
 
 #include <gtest/gtest.h>
 
@@ -161,7 +161,7 @@ TEST(CoordinatedStartupTest, MultipleSystemsHaveIndependentCoordinators) {
 
 // ── Real startup stages ─────────────────────────────────────────────────────
 
-#include "src/runtime/runtime_startup.hpp"
+#include <hpactor/runtime/runtime_startup.hpp>
 
 TEST(CoordinatedStartupTest, RegisterAndStartRealStages) {
     auto sys = build_minimal_system();

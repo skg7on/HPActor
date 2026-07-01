@@ -107,7 +107,7 @@ TEST(TraceSinkPortTest, PortIdentityIsStable) {
 
 // ── ObservabilityRuntime skeleton ──────────────────────────────────────────
 
-#include "src/runtime/observability_runtime.hpp"
+#include <hpactor/runtime/observability_runtime.hpp>
 
 #include <hpactor/types/types.hpp> // for result<T>, error
 

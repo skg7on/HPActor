@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "runtime_blueprint_builder.hpp"
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
 
 #include <hpactor/actor/actor_system.hpp> // for Config
 

@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "runtime_coordinator.hpp"
+#include <hpactor/runtime/runtime_coordinator.hpp>
 
 namespace hpactor {
 

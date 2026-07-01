@@ -17,8 +17,8 @@
 /// \brief Unit tests for reload classification — ConfigPathId, ReloadClass,
 ///        descriptor registration, and blueprint diff.
 
-#include "src/runtime/runtime_blueprint.hpp"
-#include "src/runtime/runtime_blueprint_builder.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
 
 #include <gtest/gtest.h>
 

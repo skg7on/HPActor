@@ -4,11 +4,11 @@
 /// \file test_unified_shutdown.cpp
 /// \brief Tests for unified shutdown through RuntimeCoordinator.
 
-#include "src/runtime/runtime_blueprint.hpp"
-#include "src/runtime/runtime_blueprint_builder.hpp"
-#include "src/runtime/runtime_builder.hpp"
-#include "src/runtime/runtime_coordinator.hpp"
-#include "src/runtime/runtime_startup.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
+#include <hpactor/runtime/runtime_builder.hpp>
+#include <hpactor/runtime/runtime_coordinator.hpp>
+#include <hpactor/runtime/runtime_startup.hpp>
 
 #include <gtest/gtest.h>
 #include <hpactor/actor/actor_system.hpp>
