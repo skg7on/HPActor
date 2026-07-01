@@ -15,8 +15,8 @@
 #pragma once
 
 #include <hpactor/adt/disruptor_mpsc_ring.hpp>
-#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
-#include <hpactor/mailbox/fixed_message_envelope.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
+#include <hpactor/mailbox/disruptor_message_envelope.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
 #include <atomic>

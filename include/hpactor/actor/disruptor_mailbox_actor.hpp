@@ -15,10 +15,10 @@
 #pragma once
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/mailbox/fixed_actor_mailbox.hpp>
-#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
+#include <hpactor/mailbox/disruptor_actor_mailbox.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
-#include <hpactor/ref/fixed_actor_ref.hpp>
+#include <hpactor/ref/disruptor_actor_ref.hpp>
 
 #include <functional>
 #include <memory>

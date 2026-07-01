@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/mailbox/fixed_message_envelope.hpp>
+#include <hpactor/mailbox/disruptor_message_envelope.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 
 #include <gtest/gtest.h>

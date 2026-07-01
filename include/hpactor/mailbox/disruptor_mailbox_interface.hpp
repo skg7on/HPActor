@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/mailbox/fixed_message_envelope.hpp>
+#include <hpactor/mailbox/disruptor_message_envelope.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/ref/actor_address.hpp>

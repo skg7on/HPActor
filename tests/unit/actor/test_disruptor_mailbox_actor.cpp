@@ -3,8 +3,8 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // ...
 
-#include <hpactor/actor/fixed_mailbox_actor.hpp>
-#include <hpactor/mailbox/fixed_message_envelope.hpp>
+#include <hpactor/actor/disruptor_mailbox_actor.hpp>
+#include <hpactor/mailbox/disruptor_message_envelope.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 
 #include <gtest/gtest.h>

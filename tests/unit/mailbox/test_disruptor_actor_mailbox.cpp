@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/mailbox/fixed_actor_mailbox.hpp>
-#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
+#include <hpactor/mailbox/disruptor_actor_mailbox.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 
 #include <gtest/gtest.h>
 

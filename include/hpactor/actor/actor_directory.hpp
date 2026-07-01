@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/ref/actor_address.hpp>

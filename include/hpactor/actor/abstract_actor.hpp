@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/cli/cli_types.hpp>
-#include <hpactor/mailbox/fixed_mailbox_interface.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
