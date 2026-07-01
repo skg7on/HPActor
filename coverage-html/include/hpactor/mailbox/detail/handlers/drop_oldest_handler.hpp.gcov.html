@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 01:46:45</td>
+            <td class="headerValue">2026-07-01 07:10:13</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
@@ -114,38 +114,38 @@
 <span id="L36"><span class="lineNum">      36</span>                 :             :     /// \return \c DroppedExisting on successful eviction, \c Rejected</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     /// otherwise.</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     EnqueueResult</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC tlaBgGNC">       80515 :     handle(OverflowContext&lt;T&gt;&amp; ctx, ReservationResult reason) override {</span></span>
-<span id="L40"><span class="lineNum">      40</span>   [<span class="tlaGBC" title="Branch 0 was taken 80514 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 79771 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 743 times"> + </span> :<span class="tlaGNC">       80515 :         if (ctx.drop_oldest_fn &amp;&amp; ctx.drop_oldest_fn()) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 79771 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 744 times"> + </span>]
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">       79771 :             EnqueueResult r;</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">       79771 :             r.code = EnqueueResultCode::DroppedExisting;</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">       79771 :             r.target = ctx.actor_id;</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">       79771 :             r.depth = ctx.current_depth;</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">       79771 :             r.capacity = ctx.config.capacity.max_messages;</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">       79771 :             r.bytes = ctx.current_bytes;</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">       79771 :             r.byte_capacity = ctx.config.capacity.max_bytes;</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">       79771 :             r.pressure_reason = BackpressureReason::OverflowPolicy;</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">       79771 :             return r;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC tlaBgGNC">       80587 :     handle(OverflowContext&lt;T&gt;&amp; ctx, ReservationResult reason) override {</span></span>
+<span id="L40"><span class="lineNum">      40</span>   [<span class="tlaGBC" title="Branch 0 was taken 80586 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 79152 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1434 times"> + </span> :<span class="tlaGNC">       80587 :         if (ctx.drop_oldest_fn &amp;&amp; ctx.drop_oldest_fn()) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 79152 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1435 times"> + </span>]
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">       79152 :             EnqueueResult r;</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">       79152 :             r.code = EnqueueResultCode::DroppedExisting;</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">       79152 :             r.target = ctx.actor_id;</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">       79152 :             r.depth = ctx.current_depth;</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">       79152 :             r.capacity = ctx.config.capacity.max_messages;</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">       79152 :             r.bytes = ctx.current_bytes;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">       79152 :             r.byte_capacity = ctx.config.capacity.max_bytes;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">       79152 :             r.pressure_reason = BackpressureReason::OverflowPolicy;</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">       79152 :             return r;</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :         }</span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         744 :         ctx.total_rejected.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 744 times"> + </span>]:<span class="tlaGNC">         744 :         if (ctx.metrics_buf) [[unlikely]] {</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">        1435 :         ctx.total_rejected.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1435 times"> + </span>]:<span class="tlaGNC">        1435 :         if (ctx.metrics_buf) [[unlikely]] {</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             metrics::MetricEvent evt{};</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaUNC">           0 :             evt.actor_id = ctx.actor_id;</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :             evt.event_type = metrics::MetricEventType::kMailboxRejected;</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC">           0 :             evt.value_hi = 1;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :             ctx.metrics_buf-&gt;try_push(evt);</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :         }</span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC tlaBgGNC">         744 :         EnqueueResult r;</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         744 :         r.code = EnqueueResultCode::Rejected;</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         744 :         r.target = ctx.actor_id;</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">         744 :         r.depth = ctx.current_depth;</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">         744 :         r.capacity = ctx.config.capacity.max_messages;</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">         744 :         r.bytes = ctx.current_bytes;</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         744 :         r.byte_capacity = ctx.config.capacity.max_bytes;</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">         744 :         r.pressure_reason = reason == ReservationResult::ByteCapacity</span></span>
-<span id="L67"><span class="lineNum">      67</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 744 times"> + </span>]:<span class="tlaGNC">         744 :                                 ? BackpressureReason::ByteCapacity</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC tlaBgGNC">        1435 :         EnqueueResult r;</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">        1435 :         r.code = EnqueueResultCode::Rejected;</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">        1435 :         r.target = ctx.actor_id;</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">        1435 :         r.depth = ctx.current_depth;</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">        1435 :         r.capacity = ctx.config.capacity.max_messages;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        1435 :         r.bytes = ctx.current_bytes;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        1435 :         r.byte_capacity = ctx.config.capacity.max_bytes;</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">        1435 :         r.pressure_reason = reason == ReservationResult::ByteCapacity</span></span>
+<span id="L67"><span class="lineNum">      67</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1435 times"> + </span>]:<span class="tlaGNC">        1435 :                                 ? BackpressureReason::ByteCapacity</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :                                 : BackpressureReason::HardCapacity;</span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         744 :         return r;</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">        1435 :         return r;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : </span>
 <span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           2 :     OverflowPolicy policy() const override {</span></span>

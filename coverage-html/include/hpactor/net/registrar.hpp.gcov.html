@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 01:46:45</td>
+            <td class="headerValue">2026-07-01 07:10:13</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
@@ -478,8 +478,8 @@
 <span id="L400"><span class="lineNum">     400</span>                 :             :     /// \brief Access the node registry.</span>
 <span id="L401"><span class="lineNum">     401</span>                 :             :     ///</span>
 <span id="L402"><span class="lineNum">     402</span>                 :             :     /// \return Pointer to the internal registry (lifetime matches the server).</span>
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">           6 :     NodeRegistry* registry() {</span></span>
-<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">           6 :         return &amp;registry_;</span></span>
+<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">           5 :     NodeRegistry* registry() {</span></span>
+<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">           5 :         return &amp;registry_;</span></span>
 <span id="L405"><span class="lineNum">     405</span>                 :             :     }</span>
 <span id="L406"><span class="lineNum">     406</span>                 :             : </span>
 <span id="L407"><span class="lineNum">     407</span>                 :             :     /// \brief Set the event loop (must be called before \c start()).</span>
@@ -705,9 +705,9 @@
 <span id="L627"><span class="lineNum">     627</span>                 :             :     ///</span>
 <span id="L628"><span class="lineNum">     628</span>                 :             :     /// Invoked after \c kMaxReconnectAttempts consecutive failures.</span>
 <span id="L629"><span class="lineNum">     629</span>                 :             :     /// \param[in] cb Callback for failover handling.</span>
-<span id="L630"><span class="lineNum">     630</span>                 :<span class="tlaGNC">          21 :     void set_failover_callback(std::function&lt;void()&gt; cb) {</span></span>
-<span id="L631"><span class="lineNum">     631</span>                 :<span class="tlaGNC">          21 :         failover_callback_ = std::move(cb);</span></span>
-<span id="L632"><span class="lineNum">     632</span>                 :<span class="tlaGNC">          21 :     }</span></span>
+<span id="L630"><span class="lineNum">     630</span>                 :<span class="tlaGNC">          20 :     void set_failover_callback(std::function&lt;void()&gt; cb) {</span></span>
+<span id="L631"><span class="lineNum">     631</span>                 :<span class="tlaGNC">          20 :         failover_callback_ = std::move(cb);</span></span>
+<span id="L632"><span class="lineNum">     632</span>                 :<span class="tlaGNC">          20 :     }</span></span>
 <span id="L633"><span class="lineNum">     633</span>                 :             : </span>
 <span id="L634"><span class="lineNum">     634</span>                 :             :     /// \brief Reconnect to the server after a disconnect.</span>
 <span id="L635"><span class="lineNum">     635</span>                 :             :     void reconnect();</span>
