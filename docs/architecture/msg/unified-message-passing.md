@@ -193,7 +193,7 @@ and transport send failure handling should all call `ActorSystem::dead_letter()`
 when a message cannot be delivered because the actor is gone, the route is
 missing, the remote node is partitioned, or the frame cannot be decoded.
 
-See [Mailbox Management and Backpressure Architecture Design](../actor/mailbox-management-backpressure-design.md)
+See [Mailbox Management and Backpressure Architecture Design](../mailbox/mailbox-management-backpressure-design.md)
 for the bounded mailbox, overflow policy, pressure signal, metrics, CLI, and
 configuration model.
 

@@ -1,5 +1,12 @@
 # Streaming Message Protocol — Core Concept and Architecture Design
 
+**Runtime ownership:** Stream session state, id allocation, and protocol
+handlers are owned by `StreamRuntime`. Inbound stream frames are classified by
+`InboundFrameRouter` on the network-loop thread and dispatched to
+`StreamRuntime`. See
+[actor-system-runtime-architecture.md](../runtime/actor-system-runtime-architecture.md) for
+the full component graph and ownership contracts.
+
 ## 1. Executive Summary
 
 The streaming message protocol gives HPActor a session-oriented, flow-controlled
@@ -19,6 +26,18 @@ over ingestion rate.
   Protocol state, credit tracking, sequencing, and timers live in actors —
   reusing the existing mailbox, scheduling, supervision, tracing, and CLI
   infrastructure without adding new concurrency primitives.
+
+- **`StreamRuntime` ownership**: The stream registry is a peer-qualified bounded
+  session map (`StreamKey{EndPoint, uint64_t}`, max 4096 active streams)
+  protected by a dedicated mutex. Two-phase open (reserve Opening → spawn actors
+  → commit Active) with rollback. Network callbacks look up/remove entries under
+  the mutex; all callers release the lock before actor spawning, delivery,
+  transport calls, or callbacks.
+
+- **`InboundFrameRouter` classification**: Stream frames are routed by oneof
+  type (StreamOpen/Data/Ack/Close/Error) from the single
+  `InboundFrameRouter::dispatch()` entry point. No stream protocol demultiplexing
+  remains in `ActorSystem`.
 
 - **Credit-based byte-window flow control**: The receiver advertises
   `window_bytes` in every `StreamAckFrame`. The sender tracks `bytes_in_flight`

@@ -634,7 +634,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
 - Architecture: `docs/architecture/production/architecture-requirement-backlog.md` (summary production requirement backlog)
 - Architecture: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` (detailed feature-gap requirement backlog)
-- Architecture: `docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md` (normative actor concurrency, MPSC mailbox, scheduler readiness, and concurrency test rules)
+- Architecture: `docs/architecture/mailbox/actor-concurrency-and-lockfree-mailbox-rules.md` (normative actor concurrency, MPSC mailbox, scheduler readiness, and concurrency test rules)
 - Architecture: `docs/architecture/production/actor-delivery-semantics-design.md` (delivery result, TTL, retry, duplicate semantics)
 - Architecture: `docs/architecture/production/dead-letter-queue-design.md` (DLQ retention, replay, observability)
 - Architecture: `docs/architecture/production/cluster-failure-model-design.md` (node state, partitions, quarantine, fencing)
@@ -663,13 +663,13 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Plan: `docs/superpowers/plans/2026-04-25-unix-domain-socket-support-impl.md`
 - Spec: `docs/superpowers/specs/2026-04-25-registrar-protobuf-async-udp-design.md` (registrar protobuf + async UDP)
 - Plan: `docs/superpowers/plans/2026-04-25-registrar-protobuf-async-udp-plan.md`
-- Spec: `docs/architecture/memory/memory-management-architecture-design.md` (memory management)
-- Spec: `docs/architecture/core/actor-toml-config-core-concept.md` (TOML config philosophy)
-- Spec: `docs/architecture/core/actor-toml-config-architecture.md` (TOML config detailed spec)
+- Spec: `docs/architecture/mem/memory-management-architecture-design.md` (memory management)
+- Spec: `docs/architecture/config/actor-toml-config-core-concept.md` (TOML config philosophy)
+- Spec: `docs/architecture/config/actor-toml-config-architecture.md` (TOML config detailed spec)
 - Plan: `docs/superpowers/plans/2026-05-03-toml-config-topology-impl.md` (TOML config implementation)
 - Plan: `docs/superpowers/plans/2026-05-03-memory-management-impl.md`
-- Architecture: `docs/architecture/actor/actor-metrics-design.md` (metrics core concept)
-- Architecture: `docs/architecture/actor/cli-interactive-design.md` (CLI interactive core concept)
+- Architecture: `docs/architecture/metrics/actor-metrics-design.md` (metrics core concept)
+- Architecture: `docs/architecture/cli/cli-interactive-design.md` (CLI interactive core concept)
 - Spec: `docs/superpowers/specs/2026-05-04-actor-metrics-design.md` (metrics detailed spec)
 - Spec: `docs/superpowers/specs/2026-05-05-actor-cli-interactive-design.md` (CLI interactive detailed spec)
 - Plan: `docs/superpowers/plans/2026-05-04-actor-metrics-impl.md` (metrics implementation plan)

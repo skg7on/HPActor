@@ -67,8 +67,8 @@ Primary docs:
 - [Actor Delivery Semantics](actor-delivery-semantics-design.md)
 - [Dead-Letter Queue](dead-letter-queue-design.md)
 - [Reliable Messaging](reliable-messaging-design.md)
-- Existing [Mailbox Management and Backpressure](../actor/mailbox-management-backpressure-design.md)
-- Existing [Distributed Tracing](../actor/distributed-tracing-design.md)
+- Existing [Mailbox Management and Backpressure](../mailbox/mailbox-management-backpressure-design.md)
+- Existing [Distributed Tracing](../tracing/distributed-tracing-design.md)
 
 ### 3.2 Control Plane
 
