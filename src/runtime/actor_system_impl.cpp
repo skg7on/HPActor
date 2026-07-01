@@ -63,16 +63,16 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
     (void)observability_->start();
 
     // ── Bind fixed network-control ports ────────────────────────────────────
-    // Context pointer uses legacy NetworkRuntimeState; adapters are wired
-    // during start (Task 5).  Context is valid (fields exist, transport is
-    // null).
-    network.messaging_ports.reliable_ack = ReliableAckPort{
-        .context = &network,
-        .emit = nullptr, // wired during coordinator start
+    // Context points to this Impl; transport is reached via
+    // impl->network_->transport().  Adapters check for null transport at
+    // call time.
+    messaging_ports.reliable_ack = ReliableAckPort{
+        .context = this,
+        .emit = Impl::reliable_ack_adapter,
     };
-    network.messaging_ports.backpressure = BackpressureWirePort{
-        .context = &network,
-        .send = nullptr, // wired during coordinator start
+    messaging_ports.backpressure = BackpressureWirePort{
+        .context = this,
+        .send = Impl::backpressure_wire_adapter,
     };
 
     // ── Messaging runtime ───────────────────────────────────────────────────
@@ -82,7 +82,7 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
         MessagingRuntime::Dependencies{
             .actors = actors.directory,
             .metrics = observability_->metrics_ring_buffer(),
-            .network = network.messaging_ports,
+            .network = messaging_ports,
             .endpoint = core.endpoint,
         },
         MessagingRuntime::Config{

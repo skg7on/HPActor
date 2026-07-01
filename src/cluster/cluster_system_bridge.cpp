@@ -20,8 +20,6 @@
 namespace hpactor {
 
 void ActorSystem::enable_cluster(const std::string& node_id) {
-    impl_->cluster.enabled = true;
-
     ClusterRuntimeDependencies deps;
     deps.node_id = node_id;
 
