@@ -66,11 +66,11 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
     // Context points to this Impl; transport is reached via
     // impl->network_->transport().  Adapters check for null transport at
     // call time.
-    messaging_ports.reliable_ack = ReliableAckPort{
+    messaging_ports.reliable_ack = ReliableAckEmitter{
         .context = this,
         .emit = Impl::reliable_ack_adapter,
     };
-    messaging_ports.backpressure = BackpressureWirePort{
+    messaging_ports.backpressure = BackpressureSignalEmitter{
         .context = this,
         .send = Impl::backpressure_wire_adapter,
     };

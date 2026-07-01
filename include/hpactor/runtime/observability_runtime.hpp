@@ -22,7 +22,7 @@
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
-#include <hpactor/runtime/observability_ports.hpp>
+#include <hpactor/runtime/observability_sinks.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -65,13 +65,13 @@ class ObservabilityRuntime final {
     result<void> stop() noexcept;
 
     // ── Stable ports ─────────────────────────────────────────────────────
-    const MetricsSinkPort& metrics_sink() const noexcept {
+    const MetricsSink& metrics_sink() const noexcept {
         return metrics_port_;
     }
-    const LogSinkPort& log_sink() const noexcept {
+    const LogSink& log_sink() const noexcept {
         return log_port_;
     }
-    const TraceSinkPort& trace_sink() const noexcept {
+    const TraceSink& trace_sink() const noexcept {
         return trace_port_;
     }
 
@@ -139,9 +139,9 @@ class ObservabilityRuntime final {
     fault::FaultController fault_controller_;
 
     // Stable ports — identity never changes.
-    MetricsSinkPort metrics_port_;
-    LogSinkPort log_port_;
-    TraceSinkPort trace_port_;
+    MetricsSink metrics_port_;
+    LogSink log_port_;
+    TraceSink trace_port_;
 
     std::atomic<bool> started_{false};
     std::atomic<uint64_t> metrics_drops_{0};

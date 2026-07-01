@@ -32,7 +32,7 @@ add_executable(test_unit_mailbox
     test_reliable_retry_policy.cpp
     test_outbound_tracker.cpp
     test_delivery_store.cpp
-    test_messaging_network_ports.cpp
+    test_messaging_network_emitters.cpp
 )
 target_include_directories(test_unit_mailbox PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)

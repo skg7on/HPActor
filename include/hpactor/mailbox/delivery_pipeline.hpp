@@ -37,7 +37,7 @@ namespace hpactor {
 class AbstractActor;
 class ActorDirectory;
 class BackpressureCoordinator;
-class ReliableAckPort;
+class ReliableAckEmitter;
 
 namespace mailbox {
 
@@ -105,9 +105,9 @@ class DeliveryPipeline {
 
         /// \brief Fixed ACK/NACK emission port pointer (replaces
         ///        \c std::function emit_ack callback).
-        /// Points to a stable \c ReliableAckPort in network state.
+        /// Points to a stable \c ReliableAckEmitter in network state.
         /// \c nullptr = network unavailable (safe no-op).
-        const ReliableAckPort* reliable_ack = nullptr;
+        const ReliableAckEmitter* reliable_ack = nullptr;
     };
 
     /// \brief Construct the delivery pipeline with injected dependencies.

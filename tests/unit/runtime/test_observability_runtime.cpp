@@ -24,19 +24,19 @@
 
 // ── Stable telemetry ports ─────────────────────────────────────────────────
 
-#include <hpactor/runtime/observability_ports.hpp>
+#include <hpactor/runtime/observability_sinks.hpp>
 #include <hpactor/tracing/span.hpp> // for SpanHandle
 
-TEST(MetricsSinkPortTest, DefaultConstructedIsNoop) {
-    hpactor::MetricsSinkPort port;
+TEST(MetricsSinkTest, DefaultConstructedIsNoop) {
+    hpactor::MetricsSink port;
     EXPECT_EQ(port.context, nullptr);
     EXPECT_EQ(port.emit, nullptr);
 }
 
-TEST(MetricsSinkPortTest, WiredPortDeliversEvent) {
+TEST(MetricsSinkTest, WiredPortDeliversEvent) {
     std::atomic<uint32_t> event_count{0};
 
-    hpactor::MetricsSinkPort port;
+    hpactor::MetricsSink port;
     port.context = &event_count;
     port.emit = [](void* ctx, uint32_t /*event_type*/, uint64_t /*val*/) noexcept {
         auto* c = static_cast<std::atomic<uint32_t>*>(ctx);
@@ -48,24 +48,24 @@ TEST(MetricsSinkPortTest, WiredPortDeliversEvent) {
     EXPECT_EQ(event_count.load(), 1u);
 }
 
-TEST(MetricsSinkPortTest, PortIdentityIsStable) {
-    hpactor::MetricsSinkPort port;
+TEST(MetricsSinkTest, PortIdentityIsStable) {
+    hpactor::MetricsSink port;
     const auto* addr = &port;
     EXPECT_EQ(addr, &port);
 }
 
-// ── LogSinkPort ────────────────────────────────────────────────────────────
+// ── LogSink ────────────────────────────────────────────────────────────
 
-TEST(LogSinkPortTest, DefaultConstructedIsNoop) {
-    hpactor::LogSinkPort port;
+TEST(LogSinkTest, DefaultConstructedIsNoop) {
+    hpactor::LogSink port;
     EXPECT_EQ(port.context, nullptr);
     EXPECT_EQ(port.emit, nullptr);
 }
 
-TEST(LogSinkPortTest, WiredPortHasEmitCallback) {
+TEST(LogSinkTest, WiredPortHasEmitCallback) {
     std::atomic<uint32_t> log_count{0};
 
-    hpactor::LogSinkPort port;
+    hpactor::LogSink port;
     port.context = &log_count;
     port.emit = [](void* ctx, const hpactor::log::LogEvent& /*event*/,
                    bool /*high_priority*/) noexcept {
@@ -76,22 +76,22 @@ TEST(LogSinkPortTest, WiredPortHasEmitCallback) {
     EXPECT_NE(port.emit, nullptr);
 }
 
-TEST(LogSinkPortTest, PortIdentityIsStable) {
-    hpactor::LogSinkPort port;
+TEST(LogSinkTest, PortIdentityIsStable) {
+    hpactor::LogSink port;
     const auto* addr = &port;
     EXPECT_EQ(addr, &port);
 }
 
-// ── TraceSinkPort ──────────────────────────────────────────────────────────
+// ── TraceSink ──────────────────────────────────────────────────────────
 
-TEST(TraceSinkPortTest, DefaultConstructedIsNoop) {
-    hpactor::TraceSinkPort port;
+TEST(TraceSinkTest, DefaultConstructedIsNoop) {
+    hpactor::TraceSink port;
     EXPECT_EQ(port.context, nullptr);
     EXPECT_EQ(port.record_span, nullptr);
 }
 
-TEST(TraceSinkPortTest, WiredPortHasRecordSpanCallback) {
-    hpactor::TraceSinkPort port;
+TEST(TraceSinkTest, WiredPortHasRecordSpanCallback) {
+    hpactor::TraceSink port;
     port.record_span = [](void* /*ctx*/,
                           const hpactor::tracing::SpanStart& /*span*/) noexcept {
         return hpactor::tracing::SpanHandle{};
@@ -99,8 +99,8 @@ TEST(TraceSinkPortTest, WiredPortHasRecordSpanCallback) {
     EXPECT_NE(port.record_span, nullptr);
 }
 
-TEST(TraceSinkPortTest, PortIdentityIsStable) {
-    hpactor::TraceSinkPort port;
+TEST(TraceSinkTest, PortIdentityIsStable) {
+    hpactor::TraceSink port;
     const auto* addr = &port;
     EXPECT_EQ(addr, &port);
 }

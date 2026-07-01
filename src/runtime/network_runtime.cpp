@@ -25,8 +25,8 @@ namespace hpactor {
 
 // ── Adapter functions ────────────────────────────────────────────────────────
 //
-// These are bound to the ReliableAckPort and BackpressureWirePort function
-// pointers. The void* context points to the owning NetworkRuntime.
+// These are bound to the ReliableAckEmitter and BackpressureSignalEmitter
+// function pointers. The void* context points to the owning NetworkRuntime.
 // Neither function captures ActorSystem or Impl.
 
 namespace {

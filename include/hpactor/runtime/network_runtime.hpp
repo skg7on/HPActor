@@ -139,11 +139,11 @@ class NetworkRuntime final {
         ActorDirectory* actors{nullptr};
         MessagingRuntime* messaging{nullptr};
         sched::IScheduler* scheduler{nullptr};
-        InboundFrameSinkPort inbound_sink{};
+        InboundFrameSink inbound_sink{};
         NodeEventSink node_events{};
-        OutboundRetryPort retry_port{};
-        RemoteSpawnPort spawn_port{};
-        NetworkTelemetryPort telemetry{};
+        OutboundRetryHandler retry_port{};
+        RemoteSpawnHandler spawn_port{};
+        NetworkTelemetrySink telemetry{};
     };
 
     /// \brief Construct with validated config and fixed dependencies.

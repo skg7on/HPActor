@@ -15,7 +15,7 @@
 #pragma once
 
 #include "actor_spawner.hpp"
-#include "messaging_network_ports.hpp"
+#include "messaging_network_emitters.hpp"
 #include "messaging_runtime.hpp"
 #include <hpactor/runtime/cluster_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
@@ -154,7 +154,7 @@ class ActorSystem::Impl final {
     /// \brief Fixed network-control output ports used by messaging.
     /// Constructed before messaging components; adapters reach transport
     /// via impl->network_->transport().
-    MessagingNetworkPorts messaging_ports;
+    MessagingNetworkEmitters messaging_ports;
     /// \brief Phase 5: sole network resource owner.
     /// Null when networking is disabled.
     std::unique_ptr<NetworkRuntime> network_;
@@ -174,7 +174,7 @@ class ActorSystem::Impl final {
     // ── Network port adapters ────────────────────────────────────────────
     // Static methods that emit reliable ACKs and backpressure signals
     // through the transport owned by NetworkRuntime.  Bound to
-    // ReliableAckPort/BackpressureWirePort with `this` as context.
+    // ReliableAckEmitter/BackpressureSignalEmitter with `this` as context.
 
     static void
     reliable_ack_adapter(void* context, const ActorAddress& target,

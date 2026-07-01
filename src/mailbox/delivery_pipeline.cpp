@@ -21,7 +21,7 @@
 #include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 
-#include "../runtime/messaging_network_ports.hpp"
+#include "../runtime/messaging_network_emitters.hpp"
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/delivery_mode.hpp>

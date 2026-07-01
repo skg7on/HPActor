@@ -28,8 +28,8 @@ struct LogEvent;
 ///
 /// Stable for the lifetime of ObservabilityRuntime. When metrics are
 /// disabled, `emit` is null — callers must check before calling.
-/// Port address never changes across reload or enable/disable transitions.
-struct MetricsSinkPort {
+/// Sink address never changes across reload or enable/disable transitions.
+struct MetricsSink {
     void* context{nullptr};
 
     /// \brief Emit a metric event. Called from any thread.
@@ -47,8 +47,8 @@ struct MetricsSinkPort {
 /// \brief Fixed-size non-owning sink for log events.
 ///
 /// Stable for the lifetime of ObservabilityRuntime. When logging is
-/// disabled, `emit` is null. Port address never changes.
-struct LogSinkPort {
+/// disabled, `emit` is null. Sink address never changes.
+struct LogSink {
     void* context{nullptr};
 
     /// \brief Emit a log event. Called from any thread.
@@ -63,8 +63,8 @@ struct LogSinkPort {
 /// \brief Fixed-size non-owning sink for trace span recording.
 ///
 /// Stable for the lifetime of ObservabilityRuntime. When tracing is
-/// disabled, `record_span` is null. Port address never changes.
-struct TraceSinkPort {
+/// disabled, `record_span` is null. Sink address never changes.
+struct TraceSink {
     void* context{nullptr};
 
     /// \brief Record a new span. Called from any thread.

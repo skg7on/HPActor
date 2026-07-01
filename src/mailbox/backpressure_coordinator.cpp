@@ -6,7 +6,7 @@
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 
-#include "../runtime/messaging_network_ports.hpp"
+#include "../runtime/messaging_network_emitters.hpp"
 
 namespace hpactor {
 

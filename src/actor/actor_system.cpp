@@ -72,7 +72,7 @@ namespace hpactor {
 
 // ── ActorSystem::Impl network port adapters ──────────────────────────────
 //
-// Static methods bound to ReliableAckPort and BackpressureWirePort with
+// Static methods bound to ReliableAckEmitter and BackpressureSignalEmitter with
 // Impl* context.  Reach transport via impl->network_->transport().
 
 void ActorSystem::Impl::reliable_ack_adapter(void* context,
@@ -240,11 +240,11 @@ ActorSystem::ActorSystem(const Config& config)
     // impl->network_->transport() which becomes valid when networking
     // is initialized.
     {
-        impl_->messaging_ports.reliable_ack = ReliableAckPort{
+        impl_->messaging_ports.reliable_ack = ReliableAckEmitter{
             .context = impl_.get(),
             .emit = Impl::reliable_ack_adapter,
         };
-        impl_->messaging_ports.backpressure = BackpressureWirePort{
+        impl_->messaging_ports.backpressure = BackpressureSignalEmitter{
             .context = impl_.get(),
             .send = Impl::backpressure_wire_adapter,
         };
@@ -330,7 +330,7 @@ ActorSystem::ActorSystem(const Config& config)
         net_deps.scheduler = impl_->core.scheduler.get();
 
         // Inbound frame sink — route remote frames into deliver_remote.
-        net_deps.inbound_sink = InboundFrameSinkPort{
+        net_deps.inbound_sink = InboundFrameSink{
             .context = this,
             .sink =
                 [](void* ctx, const net::WireFrame& frame) noexcept {
@@ -351,7 +351,7 @@ ActorSystem::ActorSystem(const Config& config)
         };
 
         // Retry port — route to MessagingRuntime::process_retries.
-        net_deps.retry_port = OutboundRetryPort{
+        net_deps.retry_port = OutboundRetryHandler{
             .context = impl_->messaging_.get(),
             .process_due =
                 [](void* ctx, uint64_t now_ns) noexcept {
@@ -365,7 +365,7 @@ ActorSystem::ActorSystem(const Config& config)
 
         // Spawn port — canonical actor adoption through spawner.
         // Phase 6 moves SpawnReceiver into ActorRuntime fully.
-        net_deps.spawn_port = RemoteSpawnPort{
+        net_deps.spawn_port = RemoteSpawnHandler{
             .context = this,
             .install_receiver = nullptr, // wired in Phase 6
             .remove_receiver = nullptr,  // wired in Phase 6
@@ -398,7 +398,7 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         // ── Manual SpawnReceiver setup (TODO: move to ActorRuntime in
-        //    Phase 6, using RemoteSpawnPort properly) ──────────────────────
+        //    Phase 6, using RemoteSpawnHandler properly) ──────────────────────
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
             *this, *impl_->actors.type_registry, impl_->network_->transport());
 
