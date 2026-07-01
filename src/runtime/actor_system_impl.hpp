@@ -14,12 +14,12 @@
 
 #pragma once
 
-#include "actor_spawner.hpp"
-#include "messaging_network_ports.hpp"
-#include "messaging_runtime.hpp"
-#include "observability_runtime.hpp"
+#include <hpactor/runtime/actor_spawner.hpp>
 #include <hpactor/runtime/cluster_runtime.hpp>
+#include <hpactor/runtime/messaging_network_emitters.hpp>
+#include <hpactor/runtime/messaging_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
+#include <hpactor/runtime/observability_runtime.hpp>
 
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/actor_system.hpp>
@@ -118,47 +118,13 @@ struct ActorServiceState final {
     std::shared_ptr<cli::CliActor> cli_actor;
     std::shared_ptr<receptionist::Receptionist> receptionist;
     std::unique_ptr<ShutdownCoordinator> shutdown_coordinator;
+    metrics::MetricsActor* metrics_actor{nullptr};
 };
 
 /// \brief Stream protocol state (Phase 4 moves this into StreamRuntime).
 struct StreamRuntimeState final {
     StreamRegistry registry;
     std::atomic<uint64_t> counter{0};
-};
-
-struct NetworkRuntimeState final {
-    /// \brief Fixed network-control output ports used by messaging.
-    /// Constructed before messaging components; transport may be null.
-    MessagingNetworkPorts messaging_ports;
-
-    std::unique_ptr<net::TcpTransport> transport;
-    ActorSystem::BackpressureSignalWireSink backpressure_signal_wire_sink_for_test;
-    std::shared_ptr<net::UdpRegistrar> registrar;
-    std::shared_ptr<net::IServiceDiscovery> discovery;
-    std::shared_ptr<net::ActorLocationCache> location_cache;
-    uint64_t cache_purge_timer{0};
-    uint64_t retry_timer{0};
-    std::unique_ptr<net::EventLoop> event_loop;
-    std::thread network_thread;
-    std::unique_ptr<RpcChannel> rpc_channel;
-};
-
-struct OperationsRuntimeState final {
-    metrics::MetricsConfig metrics_config;
-    std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer;
-    metrics::MetricsActor* metrics_actor{nullptr};
-    log::LogConfig logging_config;
-    std::unique_ptr<log::LogManager> log_manager;
-    log::Logger* logger{nullptr};
-    tracing::TraceConfig tracing_config;
-    std::unique_ptr<tracing::TraceManager> trace_manager;
-    fault::FaultController fault_controller;
-};
-
-/// \brief Phase 7: IClusterRuntime replaces type-erased cluster ownership.
-/// Deprecated struct retained only for the `enabled` flag during migration.
-struct ClusterRuntimeState final {
-    bool enabled{false};
 };
 
 // ── ActorSystem::Impl ──────────────────────────────────────────────────────
@@ -182,28 +148,41 @@ class ActorSystem::Impl final {
     /// \brief Phase 7: sole observability resource owner (metrics, logging,
     ///        tracing, fault injection). Created before any producer.
     std::unique_ptr<ObservabilityRuntime> observability_;
-    /// \brief Deprecated: retained temporarily for migration compatibility.
-    /// New code must use observability_-> instead.
-    OperationsRuntimeState operations;
     ActorServiceState actors;
     std::unique_ptr<MessagingRuntime> messaging_;
     StreamRuntimeState streams;
+    /// \brief Fixed network-control output ports used by messaging.
+    /// Constructed before messaging components; adapters reach transport
+    /// via impl->network_->transport().
+    MessagingNetworkEmitters messaging_ports;
     /// \brief Phase 5: sole network resource owner.
     /// Null when networking is disabled.
     std::unique_ptr<NetworkRuntime> network_;
-    /// \brief Deprecated: retained temporarily for messaging port adapters.
-    /// Will be removed once adapters are moved into NetworkRuntime.
-    NetworkRuntimeState network;
     /// \brief Phase 7: typed optional cluster runtime.
     /// Null when cluster is disabled.
     std::unique_ptr<IClusterRuntime> cluster_;
 
-    /// \brief Deprecated: retained temporarily for `enabled` flag migration.
-    ClusterRuntimeState cluster;
+    /// \brief Fallback RpcChannel used when networking is disabled.
+    /// Created during construction with the system scheduler; transport
+    /// will be null.  Callers must check enable_network before using.
+    std::unique_ptr<RpcChannel> rpc_channel_;
 
     // Spawner — constructed after directory, scheduler, metrics, logger exist.
     // Uses std::optional for deferred initialization.
     std::optional<ActorSpawner> spawner;
+
+    // ── Network port adapters ────────────────────────────────────────────
+    // Static methods that emit reliable ACKs and backpressure signals
+    // through the transport owned by NetworkRuntime.  Bound to
+    // ReliableAckEmitter/BackpressureSignalEmitter with `this` as context.
+
+    static void
+    reliable_ack_adapter(void* context, const ActorAddress& target,
+                         const ActorAddress& acker, uint64_t message_id,
+                         uint8_t status, uint32_t retry_after_ms) noexcept;
+
+    static bool backpressure_wire_adapter(void* context, const ActorAddress& target,
+                                          const StreamBuffer& encoded) noexcept;
 };
 
 } // namespace hpactor

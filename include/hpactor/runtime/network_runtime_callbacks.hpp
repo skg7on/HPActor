@@ -38,21 +38,22 @@ struct NodeEventSink {
                            bool joined) noexcept {nullptr};
 };
 
-/// \brief Fixed-size non-owning port for reliable-retry processing.
+/// \brief Fixed-size non-owning handler for reliable-retry processing.
 ///
 /// Called from the network loop thread at a fixed poll interval.
 /// The target (MessagingRuntime) must outlive NetworkRuntime.
-struct OutboundRetryPort {
+struct OutboundRetryHandler {
     void* context{nullptr};
     void (*process_due)(void* ctx, uint64_t now_ns) noexcept {nullptr};
 };
 
-/// \brief Fixed-size non-owning port for remote-spawn receiver lifecycle.
+/// \brief Fixed-size non-owning handler for remote-spawn receiver
+///        lifecycle.
 ///
 /// Called from the network component during startup and stop.
 /// The target (ActorRuntime) owns the spawn receiver actor and its
 /// directory entry; NetworkRuntime owns only the protocol registration.
-struct RemoteSpawnPort {
+struct RemoteSpawnHandler {
     void* context{nullptr};
 
     /// \brief Install the remote-spawn receiver actor into the directory
@@ -70,7 +71,7 @@ struct RemoteSpawnPort {
 ///
 /// May be null when metrics are disabled. Callers check for null
 /// before each call.
-struct NetworkTelemetryPort {
+struct NetworkTelemetrySink {
     void* context{nullptr};
     void (*emit_event)(void* ctx, uint32_t event_type,
                        uint64_t val) noexcept {nullptr};
@@ -80,7 +81,7 @@ struct NetworkTelemetryPort {
 ///
 /// Installed before listening. The target (InboundFrameRouter) must
 /// outlive NetworkRuntime.
-struct InboundFrameSinkPort {
+struct InboundFrameSink {
     void* context{nullptr};
     void (*sink)(void* ctx, const net::WireFrame& frame) noexcept {nullptr};
 };

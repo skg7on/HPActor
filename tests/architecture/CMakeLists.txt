@@ -25,9 +25,9 @@ add_test(
 # facade or its private state.
 set(_forbidden "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_messaging_files
-    ${CMAKE_SOURCE_DIR}/src/runtime/messaging_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/messaging_runtime.cpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/messaging_network_ports.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_network_emitters.hpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/mailbox/delivery_pipeline.hpp
     ${CMAKE_SOURCE_DIR}/src/mailbox/delivery_pipeline.cpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/mailbox/backpressure_coordinator.hpp
@@ -81,14 +81,14 @@ add_test(
 add_test(
     NAME MessagingRuntime.NoRttiInRuntimeHeader
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/messaging_runtime.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_runtime.hpp
         "-DFORBIDDEN=${_forbidden}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
 add_test(
     NAME MessagingRuntime.NoRttiInPorts
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/messaging_network_ports.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_network_emitters.hpp
         "-DFORBIDDEN=${_forbidden}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
@@ -100,7 +100,7 @@ set(_phase4_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_phase4_sources
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.hpp
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.cpp
-    ${CMAKE_SOURCE_DIR}/src/actor/stream_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/actor/stream_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/actor/stream_runtime.cpp)
 foreach(_file IN LISTS _phase4_sources)
     add_test(
@@ -200,14 +200,14 @@ add_test(
 # Check 1: No RTTI/exceptions in runtime lifecycle files.
 set(_phase6_no_rtti "dynamic_cast" "typeid" "throw " "try {" "catch (")
 set(_phase6_sources
-    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_blueprint.hpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_blueprint_builder.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/runtime_blueprint.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/runtime_blueprint_builder.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/runtime_blueprint_builder.cpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_builder.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/runtime_builder.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/runtime_builder.cpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_coordinator.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/runtime_coordinator.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/runtime_coordinator.cpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/runtime_startup.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/runtime_startup.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/runtime_startup.cpp)
 foreach(_file IN LISTS _phase6_sources)
     add_test(
@@ -223,7 +223,7 @@ endforeach()
 add_test(
     NAME Phase6.NoStdFunctionInCoordinator
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/runtime_coordinator.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/runtime_coordinator.hpp
         "-DFORBIDDEN=std::function"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
@@ -233,9 +233,9 @@ add_test(
 # Check 1: No RTTI/exceptions in observability and cluster runtime files.
 set(_phase7_no_rtti "dynamic_cast" "typeid" "throw " "try {" "catch (")
 set(_phase7_sources
-    ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/observability_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.cpp
-    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/observability_ports.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/observability_sinks.hpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/cluster_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.hpp
     ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.cpp
@@ -253,7 +253,7 @@ endforeach()
 # Check 2: No ActorSystem*/& captures in observability and cluster runtime.
 set(_phase7_no_facade "ActorSystem*" "ActorSystem&")
 set(_phase7_no_facade_sources
-    ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/observability_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.cpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/cluster_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/cluster/cluster_runtime_impl.hpp
@@ -287,7 +287,7 @@ endforeach()
 add_test(
     NAME Phase7.NoStdFunctionInObservability
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/observability_runtime.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/observability_runtime.hpp
         "-DFORBIDDEN=std::function"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )

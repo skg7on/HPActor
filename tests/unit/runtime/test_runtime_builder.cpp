@@ -8,9 +8,9 @@
 /// \brief Unit tests for RuntimeBuilder — constructs stopped component graph
 ///        from an immutable RuntimeBlueprint without starting anything.
 
-#include "src/runtime/runtime_blueprint.hpp"
-#include "src/runtime/runtime_blueprint_builder.hpp"
-#include "src/runtime/runtime_builder.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
+#include <hpactor/runtime/runtime_builder.hpp>
 
 #include <gtest/gtest.h>
 

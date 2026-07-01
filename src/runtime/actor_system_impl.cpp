@@ -14,9 +14,9 @@
 
 #include "actor_system_impl.hpp"
 
-#include "actor_spawner.hpp"
-#include "messaging_runtime.hpp"
-#include "runtime_blueprint.hpp" // private blueprint header
+#include <hpactor/runtime/actor_spawner.hpp>
+#include <hpactor/runtime/messaging_runtime.hpp>
+#include <hpactor/runtime/runtime_blueprint.hpp>
 
 #include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
@@ -63,16 +63,16 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
     (void)observability_->start();
 
     // ── Bind fixed network-control ports ────────────────────────────────────
-    // Context pointer uses legacy NetworkRuntimeState; adapters are wired
-    // during start (Task 5).  Context is valid (fields exist, transport is
-    // null).
-    network.messaging_ports.reliable_ack = ReliableAckPort{
-        .context = &network,
-        .emit = nullptr, // wired during coordinator start
+    // Context points to this Impl; transport is reached via
+    // impl->network_->transport().  Adapters check for null transport at
+    // call time.
+    messaging_ports.reliable_ack = ReliableAckEmitter{
+        .context = this,
+        .emit = Impl::reliable_ack_adapter,
     };
-    network.messaging_ports.backpressure = BackpressureWirePort{
-        .context = &network,
-        .send = nullptr, // wired during coordinator start
+    messaging_ports.backpressure = BackpressureSignalEmitter{
+        .context = this,
+        .send = Impl::backpressure_wire_adapter,
     };
 
     // ── Messaging runtime ───────────────────────────────────────────────────
@@ -82,7 +82,7 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
         MessagingRuntime::Dependencies{
             .actors = actors.directory,
             .metrics = observability_->metrics_ring_buffer(),
-            .network = network.messaging_ports,
+            .network = messaging_ports,
             .endpoint = core.endpoint,
         },
         MessagingRuntime::Config{
@@ -100,6 +100,11 @@ ActorSystem::Impl::Impl(ActorSystem& f, const RuntimeBlueprint& bp)
     if (auto* ring = observability_->metrics_ring_buffer()) {
         core.scheduler->set_metrics_ring_buffer(ring);
     }
+
+    // ── Fallback RpcChannel ──────────────────────────────────────────────────
+    // Created unconditionally so rpc_channel() never returns a dangling
+    // reference when networking is disabled.
+    rpc_channel_ = std::make_unique<RpcChannel>(nullptr, core.scheduler.get(), 3);
 
     // ── Actor services ──────────────────────────────────────────────────────
     actors.type_registry = std::make_unique<ActorTypeRegistry>();

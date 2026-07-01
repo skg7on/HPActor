@@ -8,7 +8,7 @@
 /// \brief RED tests for RuntimeCoordinator — lifecycle state machine with
 ///        fake components. Exhaustively proves start/rollback/stop.
 
-#include "src/runtime/runtime_coordinator.hpp"
+#include <hpactor/runtime/runtime_coordinator.hpp>
 
 #include <gtest/gtest.h>
 

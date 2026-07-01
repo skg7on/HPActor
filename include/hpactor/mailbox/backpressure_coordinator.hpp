@@ -25,7 +25,7 @@
 namespace hpactor {
 
 class ActorDirectory;
-class BackpressureWirePort;
+class BackpressureSignalEmitter;
 
 namespace net {
 class EventLoop;
@@ -53,9 +53,9 @@ class BackpressureCoordinator {
         metrics::MpscRingBuffer<metrics::MetricEvent>* metrics = nullptr;
 
         /// \brief Fixed wire port for remote backpressure signals.
-        /// Points to a stable \c BackpressureWirePort in network state.
+        /// Points to a stable \c BackpressureSignalEmitter in network state.
         /// \c nullptr when networking is disabled.
-        const BackpressureWirePort* wire_port = nullptr;
+        const BackpressureSignalEmitter* wire_port = nullptr;
 
         /// \brief Actor directory for delivering signals to local senders'
         ///        \c ActorContext handles.  Must not be \c nullptr.

@@ -15,13 +15,7 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
 
-#include "../runtime/actor_spawner.hpp"
 #include "../runtime/actor_system_impl.hpp"
-#include "../runtime/runtime_blueprint.hpp"
-#include "../runtime/runtime_blueprint_builder.hpp"
-#include "../runtime/runtime_builder.hpp"
-#include "../runtime/runtime_coordinator.hpp"
-#include "../runtime/runtime_startup.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -45,6 +39,12 @@
 #include <hpactor/mailbox/reliable_retry_policy.hpp>
 #include <hpactor/msg/outbound_delivery_tracker.hpp>
 #include <hpactor/process/process_manager.hpp>
+#include <hpactor/runtime/actor_spawner.hpp>
+#include <hpactor/runtime/runtime_blueprint.hpp>
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
+#include <hpactor/runtime/runtime_builder.hpp>
+#include <hpactor/runtime/runtime_coordinator.hpp>
+#include <hpactor/runtime/runtime_startup.hpp>
 
 #include <chrono>
 #include <mutex>
@@ -70,19 +70,21 @@
 
 namespace hpactor {
 
-namespace {
-
-// ── Network port adapter functions ───────────────────────────────────────
+// ── ActorSystem::Impl network port adapters ──────────────────────────────
 //
-// These are bound to ReliableAckPort and BackpressureWirePort function
-// pointers.  The void* context points to a stable NetworkRuntimeState
-// instance.  Neither function captures ActorSystem or Impl.
+// Static methods bound to ReliableAckEmitter and BackpressureSignalEmitter with
+// Impl* context.  Reach transport via impl->network_->transport().
 
-void reliable_ack_adapter(void* context, const ActorAddress& target,
-                          const ActorAddress& acker, uint64_t message_id,
-                          uint8_t status, uint32_t retry_after_ms) noexcept {
-    auto* net = static_cast<NetworkRuntimeState*>(context);
-    if (!net || !net->transport)
+void ActorSystem::Impl::reliable_ack_adapter(void* context,
+                                             const ActorAddress& target,
+                                             const ActorAddress& acker,
+                                             uint64_t message_id, uint8_t status,
+                                             uint32_t retry_after_ms) noexcept {
+    auto* impl = static_cast<Impl*>(context);
+    if (!impl || !impl->network_)
+        return;
+    auto* transport = impl->network_->transport();
+    if (!transport)
         return;
 
     net::WireFrame frame;
@@ -103,26 +105,21 @@ void reliable_ack_adapter(void* context, const ActorAddress& target,
     }
 
     auto encoded = frame.encode();
-    (void)net->transport->try_send(target, encoded);
+    (void)transport->try_send(target, encoded);
 }
 
-bool backpressure_wire_adapter(void* context, const ActorAddress& target,
-                               const StreamBuffer& encoded) noexcept {
-    auto* net = static_cast<NetworkRuntimeState*>(context);
-    if (!net)
+bool ActorSystem::Impl::backpressure_wire_adapter(void* context,
+                                                  const ActorAddress& target,
+                                                  const StreamBuffer& encoded) noexcept {
+    auto* impl = static_cast<Impl*>(context);
+    if (!impl || !impl->network_)
         return false;
-
-    if (net->backpressure_signal_wire_sink_for_test) {
-        return net->backpressure_signal_wire_sink_for_test(target, encoded);
-    }
-    if (net->transport) {
-        return net->transport->try_send(target, encoded) ==
-               TransportSendResult::Sent;
+    auto* transport = impl->network_->transport();
+    if (transport) {
+        return transport->try_send(target, encoded) == TransportSendResult::Sent;
     }
     return false;
 }
-
-} // namespace
 
 // -----------------------------------------------------------------------------
 // ActorSystem implementation
@@ -190,6 +187,13 @@ ActorSystem::ActorSystem(const Config& config)
         config.scheduler_start_paused);
     impl_->actors.type_registry = std::make_unique<ActorTypeRegistry>();
 
+    // ── Fallback RpcChannel ──────────────────────────────────────────────
+    // Created unconditionally so that rpc_channel() never returns a dangling
+    // reference, even when networking is disabled.  Transport is null when
+    // networking is off; callers must check enable_network first.
+    impl_->rpc_channel_ =
+        std::make_unique<RpcChannel>(nullptr, impl_->core.scheduler.get(), 3);
+
     // ── Spawner ──────────────────────────────────────────────────────────
     // Must exist before any spawn<>() call.
     // Metrics and logger pointers are captured by address so later
@@ -209,12 +213,13 @@ ActorSystem::ActorSystem(const Config& config)
     // Create and start before any producer so stable ports are available.
     {
         ObservabilityRuntimeConfig obs_cfg;
-        obs_cfg.metrics_enabled = impl_->operations.metrics_config.enabled;
-        obs_cfg.metrics_ring_buffer_capacity =
-            impl_->operations.metrics_config.ring_buffer_capacity;
-        obs_cfg.logging_enabled = impl_->operations.logging_config.enabled;
-        obs_cfg.logging_ring_buffer_capacity =
-            impl_->operations.logging_config.ring_buffer_capacity;
+        // Use system defaults for metrics/logging; topology load
+        // may override via load_topology() which directly sets fields
+        // used before ObservabilityRuntime creation.
+        obs_cfg.metrics_enabled = true;
+        obs_cfg.metrics_ring_buffer_capacity = 4096;
+        obs_cfg.logging_enabled = true;
+        obs_cfg.logging_ring_buffer_capacity = 4096;
         obs_cfg.tracing_enabled = impl_->core.config.tracing.enabled;
         obs_cfg.tracing_ring_buffer_capacity =
             impl_->core.config.tracing.ring_buffer_capacity;
@@ -231,16 +236,17 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     // ── Bind fixed network-control ports ────────────────────────────────
-    // Context points to stable NetworkRuntimeState; transport is still null
-    // but will become valid when networking is initialized later.
+    // Context points to stable Impl; transport is reached via
+    // impl->network_->transport() which becomes valid when networking
+    // is initialized.
     {
-        impl_->network.messaging_ports.reliable_ack = ReliableAckPort{
-            .context = &impl_->network,
-            .emit = reliable_ack_adapter,
+        impl_->messaging_ports.reliable_ack = ReliableAckEmitter{
+            .context = impl_.get(),
+            .emit = Impl::reliable_ack_adapter,
         };
-        impl_->network.messaging_ports.backpressure = BackpressureWirePort{
-            .context = &impl_->network,
-            .send = backpressure_wire_adapter,
+        impl_->messaging_ports.backpressure = BackpressureSignalEmitter{
+            .context = impl_.get(),
+            .send = Impl::backpressure_wire_adapter,
         };
     }
 
@@ -253,7 +259,7 @@ ActorSystem::ActorSystem(const Config& config)
         MessagingRuntime::Dependencies{
             .actors = impl_->actors.directory,
             .metrics = impl_->observability_->metrics_ring_buffer(),
-            .network = impl_->network.messaging_ports,
+            .network = impl_->messaging_ports,
             .endpoint = impl_->core.endpoint,
         },
         MessagingRuntime::Config{
@@ -265,7 +271,7 @@ ActorSystem::ActorSystem(const Config& config)
     if (impl_->observability_->metrics_config().enabled) {
         auto m_actor = spawn<metrics::MetricsActor>(
             impl_->observability_->metrics_ring_buffer_shared());
-        impl_->operations.metrics_actor =
+        impl_->actors.metrics_actor =
             static_cast<metrics::MetricsActor*>(m_actor.get().get());
     }
 
@@ -324,7 +330,7 @@ ActorSystem::ActorSystem(const Config& config)
         net_deps.scheduler = impl_->core.scheduler.get();
 
         // Inbound frame sink — route remote frames into deliver_remote.
-        net_deps.inbound_sink = InboundFrameSinkPort{
+        net_deps.inbound_sink = InboundFrameSink{
             .context = this,
             .sink =
                 [](void* ctx, const net::WireFrame& frame) noexcept {
@@ -345,7 +351,7 @@ ActorSystem::ActorSystem(const Config& config)
         };
 
         // Retry port — route to MessagingRuntime::process_retries.
-        net_deps.retry_port = OutboundRetryPort{
+        net_deps.retry_port = OutboundRetryHandler{
             .context = impl_->messaging_.get(),
             .process_due =
                 [](void* ctx, uint64_t now_ns) noexcept {
@@ -359,7 +365,7 @@ ActorSystem::ActorSystem(const Config& config)
 
         // Spawn port — canonical actor adoption through spawner.
         // Phase 6 moves SpawnReceiver into ActorRuntime fully.
-        net_deps.spawn_port = RemoteSpawnPort{
+        net_deps.spawn_port = RemoteSpawnHandler{
             .context = this,
             .install_receiver = nullptr, // wired in Phase 6
             .remove_receiver = nullptr,  // wired in Phase 6
@@ -392,7 +398,7 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         // ── Manual SpawnReceiver setup (TODO: move to ActorRuntime in
-        //    Phase 6, using RemoteSpawnPort properly) ──────────────────────
+        //    Phase 6, using RemoteSpawnHandler properly) ──────────────────────
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
             *this, *impl_->actors.type_registry, impl_->network_->transport());
 
@@ -495,20 +501,6 @@ ActorSystem::~ActorSystem() {
     if (impl_->network_) {
         impl_->network_->stop(NetworkRuntime::StopMode::Abort);
     }
-    // Legacy fallback: if NetworkRuntime was never created but legacy
-    // network fields were populated, clean them up.
-    if (impl_->network.event_loop) {
-        impl_->network.event_loop->stop();
-    }
-    if (impl_->network.network_thread.joinable()) {
-        impl_->network.network_thread.join();
-    }
-    if (impl_->network.transport) {
-        impl_->network.transport->stop_listening();
-    }
-    if (impl_->network.discovery) {
-        impl_->network.discovery->stop();
-    }
     // Stop scheduler BEFORE destroying observability: workers hold raw
     // pointers to the metrics ring buffer and logger owned by
     // ObservabilityRuntime. Workers must quiesce before those pointers
@@ -541,8 +533,8 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
             }
         }
     }
-    if (impl_->network.location_cache)
-        impl_->network.location_cache->evict_node(dead_ep);
+    if (impl_->network_ && impl_->network_->location_cache())
+        impl_->network_->location_cache()->evict_node(dead_ep);
 }
 
 // ── Backpressure API (logging wrappers around BackpressureCoordinator) ───────
@@ -593,8 +585,7 @@ void ActorSystem::emit_remote_backpressure_signal(
                        static_cast<uint64_t>(signal.retry_after.count())));
     }
     impl_->messaging_->backpressure().emit_remote_signal(signal, state);
-    if (!impl_->network.transport &&
-        !impl_->network.backpressure_signal_wire_sink_for_test) {
+    if (!impl_->network_ || !impl_->network_->transport()) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMailbox, signal.target.id, 0,
                             "backpressure_signal_remote_send_failed",
                             log::field("sender", signal.sender.id.value()));
@@ -670,7 +661,7 @@ cli::CliActor* ActorSystem::cli_actor() const {
 }
 
 metrics::MetricsActor* ActorSystem::metrics_actor() const {
-    return impl_->operations.metrics_actor;
+    return impl_->actors.metrics_actor;
 }
 
 receptionist::Receptionist* ActorSystem::receptionist() const {
@@ -722,25 +713,27 @@ const adt::DedupCache* ActorSystem::dedup_cache() const {
 net::EventLoop* ActorSystem::event_loop() {
     if (impl_->network_)
         return impl_->network_->event_loop();
-    return impl_->network.event_loop.get(); // legacy fallback
+    return nullptr;
 }
 
 net::Transport* ActorSystem::transport() {
     if (impl_->network_)
         return impl_->network_->transport();
-    return impl_->network.transport.get(); // legacy fallback
+    return nullptr;
 }
 
 net::UdpRegistrar* ActorSystem::registrar() {
     if (impl_->network_)
         return impl_->network_->registrar();
-    return impl_->network.registrar.get(); // legacy fallback
+    return nullptr;
 }
 
 RpcChannel& ActorSystem::rpc_channel() {
     if (impl_->network_)
         return *impl_->network_->rpc_channel();
-    return *impl_->network.rpc_channel; // legacy fallback
+    // Fallback when networking is disabled — rpc_channel_ is always created
+    // during construction with the system scheduler (transport is null).
+    return *impl_->rpc_channel_;
 }
 
 tracing::TraceManager* ActorSystem::trace_manager() noexcept {
@@ -773,7 +766,7 @@ ActorSystem::metrics_ring_buffer() const {
 }
 
 bool ActorSystem::cluster_enabled() const {
-    return impl_->cluster.enabled;
+    return impl_->cluster_ != nullptr;
 }
 
 cluster::ClusterFailureModel* ActorSystem::cluster_failure_model() {
@@ -864,7 +857,7 @@ const PassivationManager* ActorSystem::passivation_manager() const {
 net::HttpClient& ActorSystem::http_client() {
     if (impl_->network_)
         return *impl_->network_->http_client();
-    return *impl_->actors.http_client; // legacy fallback
+    return *impl_->actors.http_client;
 }
 
 ActorTypeRegistry& ActorSystem::actor_type_registry() {
@@ -1036,7 +1029,8 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
                      std::move(payload));
     msg.set_sender_address(net::from_proto(frame.pb_envelope.data_frame().sender()));
     if (frame.pb_envelope.data_frame().has_trace_context()) {
-        uint16_t max_state = impl_->operations.tracing_config.max_tracestate_len;
+        uint16_t max_state =
+            impl_->observability_->tracing_config().max_tracestate_len;
         auto parsed = net::trace_context_from_proto(
             frame.pb_envelope.data_frame().trace_context(), max_state);
         if (parsed.has_value()) {
@@ -1065,7 +1059,7 @@ net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
     }
     if (impl_->network_)
         return impl_->network_->transport();
-    return impl_->network.transport.get(); // legacy fallback
+    return nullptr;
 }
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
@@ -1083,7 +1077,8 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     auto state = std::make_shared<RequestHandle<ActorRef>::State>();
     RequestHandle<ActorRef> handle(state);
 
-    if (!impl_->core.config.enable_network || !impl_->network.rpc_channel) {
+    if (!impl_->core.config.enable_network || !impl_->network_ ||
+        !impl_->network_->rpc_channel()) {
         handle.resolve_error(error(spawn_errors::node_unreachable, "networking "
                                                                    "disabled"));
         return handle;
@@ -1108,7 +1103,7 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     ActorAddress target{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
 
     auto rpc_future =
-        impl_->network.rpc_channel->call_raw(target, request_bytes, timeout_ms);
+        impl_->network_->rpc_channel()->call_raw(target, request_bytes, timeout_ms);
 
     std::thread([state, fut = std::move(rpc_future)]() mutable {
         RequestHandle<ActorRef> inner(state);
@@ -1269,14 +1264,9 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     auto& model = parse_result.value();
 
-    if (model.system.metrics_enabled) {
-        impl_->operations.metrics_config.enabled = model.system.metrics_enabled;
-        impl_->operations.metrics_config.ring_buffer_capacity =
-            model.system.metrics_ring_buffer_capacity;
-        impl_->operations.metrics_config.metrics_path = model.system.metrics_path;
-    }
-
-    impl_->operations.logging_config = model.system.logging;
+    // TODO(Phase 9): Route topology metrics/logging config through
+    // ObservabilityRuntime::reconfigure() so runtime observability
+    // reflects the loaded topology.
 
 #define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
     impl_->core.config.name =                                                  \
@@ -1305,8 +1295,8 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     impl_->core.config.pool.outbound_limits = model.system.transport_outbound_limits;
     impl_->core.config.pool.circuit_breaker_cfg =
         model.system.transport_circuit_breaker;
-    if (impl_->network.transport) {
-        impl_->network.transport->set_pool_config(impl_->core.config.pool);
+    if (impl_->network_ && impl_->network_->transport()) {
+        impl_->network_->transport()->set_pool_config(impl_->core.config.pool);
     }
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
@@ -1386,8 +1376,8 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
                                     uint8_t status, uint32_t retry_after_ms) {
     // Route through the fixed network-control port — same frame construction
     // as reliable_ack_adapter, but called from actor-facing code paths.
-    impl_->network.messaging_ports.reliable_ack(target, acker, msg_id, status,
-                                                retry_after_ms);
+    impl_->messaging_ports.reliable_ack(target, acker, msg_id, status,
+                                        retry_after_ms);
 }
 
 // ── Stream protocol ─────────────────────────────────────────────────────────
@@ -1598,6 +1588,194 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
     }
 
     return handle;
+}
+
+// ── Capability-oriented view accessors ───────────────────────────────────────
+
+ActorSystemActorsView ActorSystem::actors_view() noexcept {
+    return ActorSystemActorsView(impl_->actors.directory,
+                                 *impl_->actors.type_registry,
+                                 impl_->actors.system_actor);
+}
+
+ActorSystemMessagingView ActorSystem::messaging_view() noexcept {
+    return ActorSystemMessagingView(*impl_->messaging_);
+}
+
+ActorSystemNetworkView ActorSystem::network_view() noexcept {
+    return ActorSystemNetworkView(impl_->network_.get(), impl_->core.endpoint);
+}
+
+ActorSystemOperationsView ActorSystem::operations_view() const noexcept {
+    return ActorSystemOperationsView(impl_->core, impl_->observability_.get(),
+                                     impl_->actors.directory.size());
+}
+
+// ── ActorSystemActorsView ────────────────────────────────────────────────────
+
+ActorSystemActorsView::ActorSystemActorsView(const ActorDirectory& directory,
+                                             const ActorTypeRegistry& type_registry,
+                                             Actor system_actor) noexcept
+    : directory_(&directory), type_registry_(&type_registry),
+      system_actor_(system_actor) {}
+
+std::size_t ActorSystemActorsView::actor_count() const noexcept {
+    return directory_->size();
+}
+
+std::optional<Actor> ActorSystemActorsView::find_actor(ActorId id) const {
+    return directory_->find_actor(id);
+}
+
+std::optional<Actor>
+ActorSystemActorsView::resolve_actor(const std::string& name) const {
+    return directory_->resolve_actor(name);
+}
+
+Actor ActorSystemActorsView::system_actor() const noexcept {
+    return system_actor_;
+}
+
+const ActorTypeRegistry&
+ActorSystemActorsView::actor_type_registry() const noexcept {
+    return *type_registry_;
+}
+
+// ── ActorSystemMessagingView ─────────────────────────────────────────────────
+
+ActorSystemMessagingView::ActorSystemMessagingView(MessagingRuntime& messaging) noexcept
+    : messaging_(&messaging) {}
+
+mailbox::DeadLetterQueueSnapshot
+ActorSystemMessagingView::dead_letter_snapshot() const noexcept {
+    return messaging_->dead_letters().snapshot();
+}
+
+mailbox::DeadLetterQueue*
+ActorSystemMessagingView::dead_letter_queue() const noexcept {
+    return &messaging_->dead_letters();
+}
+
+msg::OutboundDeliveryTracker*
+ActorSystemMessagingView::outbound_tracker() const noexcept {
+    return &messaging_->delivery_receipt_tracker();
+}
+
+mailbox::OutboundTracker*
+ActorSystemMessagingView::reliable_tracker() const noexcept {
+    return &messaging_->mailbox_reliable_tracker();
+}
+
+adt::DedupCache* ActorSystemMessagingView::dedup_cache() const noexcept {
+    return &messaging_->dedup_cache();
+}
+
+// ── ActorSystemNetworkView ───────────────────────────────────────────────────
+
+ActorSystemNetworkView::ActorSystemNetworkView(NetworkRuntime* network,
+                                               EndPoint endpoint) noexcept
+    : network_(network), endpoint_(endpoint) {}
+
+bool ActorSystemNetworkView::is_enabled() const noexcept {
+    return network_ != nullptr;
+}
+
+net::NetworkSnapshot ActorSystemNetworkView::snapshot() const noexcept {
+    if (network_)
+        return network_->snapshot();
+    return net::NetworkSnapshot{};
+}
+
+EndPoint ActorSystemNetworkView::endpoint() const noexcept {
+    return endpoint_;
+}
+
+net::EventLoop* ActorSystemNetworkView::event_loop() const noexcept {
+    if (network_)
+        return network_->event_loop();
+    return nullptr;
+}
+
+net::Transport* ActorSystemNetworkView::transport() const noexcept {
+    if (network_)
+        return network_->transport();
+    return nullptr;
+}
+
+net::UdpRegistrar* ActorSystemNetworkView::registrar() const noexcept {
+    if (network_)
+        return network_->registrar();
+    return nullptr;
+}
+
+// ── ActorSystemOperationsView ────────────────────────────────────────────────
+
+ActorSystemOperationsView::ActorSystemOperationsView(
+    const CoreRuntimeState& core, const ObservabilityRuntime* observability,
+    size_t actor_count) noexcept
+    : core_(&core), observability_(observability), actor_count_(actor_count) {}
+
+std::chrono::milliseconds ActorSystemOperationsView::uptime() const noexcept {
+    auto elapsed = std::chrono::steady_clock::now() - core_->start_time;
+    return std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+}
+
+bool ActorSystemOperationsView::is_running() const noexcept {
+    return core_->running.load(std::memory_order_acquire);
+}
+
+bool ActorSystemOperationsView::is_ready() const noexcept {
+    return core_->is_ready.load(std::memory_order_acquire);
+}
+
+bool ActorSystemOperationsView::is_draining() const noexcept {
+    auto phase = core_->shutdown_phase.load(std::memory_order_acquire);
+    return phase == ShutdownPhase::DrainingIngress ||
+           phase == ShutdownPhase::DrainingActors;
+}
+
+ShutdownPhase ActorSystemOperationsView::shutdown_phase() const noexcept {
+    return core_->shutdown_phase.load(std::memory_order_acquire);
+}
+
+OperationsSnapshot ActorSystemOperationsView::snapshot() const noexcept {
+    OperationsSnapshot snap;
+    snap.collection_start_ns = 0; // filled by caller if needed
+
+    auto phase = core_->shutdown_phase.load(std::memory_order_acquire);
+    switch (phase) {
+        case ShutdownPhase::Running:
+            snap.lifecycle_phase = "running";
+            break;
+        case ShutdownPhase::DrainingIngress:
+        case ShutdownPhase::DrainingActors:
+            snap.lifecycle_phase = "draining";
+            break;
+        case ShutdownPhase::Stopped:
+            snap.lifecycle_phase = "stopped";
+            break;
+        case ShutdownPhase::ForcedStop:
+            snap.lifecycle_phase = "forced_stop";
+            break;
+        default:
+            snap.lifecycle_phase = "unknown";
+            break;
+    }
+
+    snap.actor_count = actor_count_;
+
+    if (observability_) {
+        auto obs_snap = observability_->snapshot();
+        snap.metrics_enabled = obs_snap.metrics_enabled;
+        snap.logging_enabled = obs_snap.logging_enabled;
+        snap.tracing_enabled = obs_snap.tracing_enabled;
+        snap.metrics_drops = obs_snap.metrics_drops;
+        snap.log_drops = obs_snap.log_drops;
+        snap.trace_drops = obs_snap.trace_drops;
+    }
+
+    snap.collection_end_ns = 0; // filled by caller if needed
+    return snap;
 }
 
 } // namespace hpactor

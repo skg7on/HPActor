@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "actor_spawner.hpp"
+#include <hpactor/runtime/actor_spawner.hpp>
 
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>

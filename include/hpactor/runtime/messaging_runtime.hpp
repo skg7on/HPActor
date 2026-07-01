@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "messaging_network_ports.hpp"
+#include <hpactor/runtime/messaging_network_emitters.hpp>
 
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
@@ -67,7 +67,7 @@ class MessagingRuntime final {
     struct Dependencies {
         ActorDirectory& actors;
         metrics::MpscRingBuffer<metrics::MetricEvent>* metrics;
-        MessagingNetworkPorts network;
+        MessagingNetworkEmitters network;
         EndPoint endpoint;
     };
 

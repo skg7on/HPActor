@@ -23,15 +23,15 @@
 
 namespace hpactor {
 
-/// \brief Non-owning, allocation-free output port for reliable ACK/NACK
-///        emission.
+/// \brief Non-owning, allocation-free emitter for reliable ACK/NACK
+///        frames.
 ///
 /// Uses a function pointer plus opaque \c void* context instead of
 /// \c std::function to avoid heap allocation and facade capture.
 ///
-/// A null context or function pointer is a safe no-op (the port reports
-/// unavailability and returns).
-class ReliableAckPort final {
+/// A null context or function pointer is a safe no-op (the emitter
+/// reports unavailability and returns).
+class ReliableAckEmitter final {
   public:
     /// \brief Signature for a reliable ACK/NACK emitter.
     ///
@@ -41,11 +41,11 @@ class ReliableAckPort final {
     /// \param message_id    Message being acknowledged.
     /// \param status        ACK status: 0=Accepted, 1=Rejected, 2=Duplicate.
     /// \param retry_after_ms Suggested retry delay for NACK (0 if unused).
-    using Emit = void (*)(void* context, const ActorAddress& target,
-                          const ActorAddress& acker, uint64_t message_id,
-                          uint8_t status, uint32_t retry_after_ms) noexcept;
+    using EmitFn = void (*)(void* context, const ActorAddress& target,
+                            const ActorAddress& acker, uint64_t message_id,
+                            uint8_t status, uint32_t retry_after_ms) noexcept;
 
-    /// \brief Invoke the port.  Safe no-op when unavailable.
+    /// \brief Invoke the emitter.  Safe no-op when unavailable.
     ///
     /// \param target        Destination address.
     /// \param acker         ACK emitter identity.
@@ -64,17 +64,17 @@ class ReliableAckPort final {
     void* context{nullptr};
 
     /// \brief Emit function, or \c nullptr when networking is unavailable.
-    Emit emit{nullptr};
+    EmitFn emit{nullptr};
 };
 
-static_assert(std::is_trivially_copyable_v<ReliableAckPort>,
-              "ReliableAckPort must be allocation-free");
+static_assert(std::is_trivially_copyable_v<ReliableAckEmitter>,
+              "ReliableAckEmitter must be allocation-free");
 
-/// \brief Non-owning, allocation-free output port for remote backpressure
-///        signal emission.
+/// \brief Non-owning, allocation-free emitter for remote backpressure
+///        signals.
 ///
-/// Same design as \c ReliableAckPort: function pointer + opaque context.
-class BackpressureWirePort final {
+/// Same design as \c ReliableAckEmitter: function pointer + opaque context.
+class BackpressureSignalEmitter final {
   public:
     /// \brief Signature for a remote backpressure signal sender.
     ///
@@ -83,10 +83,10 @@ class BackpressureWirePort final {
     /// \param encoded Pre-encoded backpressure frame bytes.
     /// \return \c true if the frame was sent (or queued), \c false if
     ///         unavailable.
-    using Send = bool (*)(void* context, const ActorAddress& target,
-                          const StreamBuffer& encoded) noexcept;
+    using SendFn = bool (*)(void* context, const ActorAddress& target,
+                            const StreamBuffer& encoded) noexcept;
 
-    /// \brief Invoke the port.  Returns \c false when unavailable.
+    /// \brief Invoke the emitter.  Returns \c false when unavailable.
     ///
     /// \param target  Destination address.
     /// \param encoded Pre-encoded frame bytes.
@@ -103,26 +103,27 @@ class BackpressureWirePort final {
     void* context{nullptr};
 
     /// \brief Send function, or \c nullptr when networking is unavailable.
-    Send send{nullptr};
+    SendFn send{nullptr};
 };
 
-static_assert(std::is_trivially_copyable_v<BackpressureWirePort>,
-              "BackpressureWirePort must be allocation-free");
+static_assert(std::is_trivially_copyable_v<BackpressureSignalEmitter>,
+              "BackpressureSignalEmitter must be allocation-free");
 
-/// \brief Aggregate of network-control output ports used by messaging.
+/// \brief Aggregate of network-control emitters used by messaging.
 ///
-/// These ports cross the future \c NetworkRuntime boundary without
+/// These emitters cross the \c NetworkRuntime boundary without
 /// capturing \c ActorSystem or creating a circular dependency.
-/// Individual ports may be null/unavailable when networking is disabled.
-struct MessagingNetworkPorts final {
-    /// \brief Reliable ACK/NACK emission port.
-    ReliableAckPort reliable_ack;
+/// Individual emitters may be null/unavailable when networking is
+/// disabled.
+struct MessagingNetworkEmitters final {
+    /// \brief Reliable ACK/NACK emission emitter.
+    ReliableAckEmitter reliable_ack;
 
-    /// \brief Remote backpressure signal emission port.
-    BackpressureWirePort backpressure;
+    /// \brief Remote backpressure signal emitter.
+    BackpressureSignalEmitter backpressure;
 };
 
-static_assert(std::is_trivially_copyable_v<MessagingNetworkPorts>,
-              "MessagingNetworkPorts must be allocation-free");
+static_assert(std::is_trivially_copyable_v<MessagingNetworkEmitters>,
+              "MessagingNetworkEmitters must be allocation-free");
 
 } // namespace hpactor

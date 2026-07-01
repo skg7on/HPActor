@@ -17,14 +17,14 @@
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/ref/actor_address.hpp>
 
-#include "runtime/messaging_network_ports.hpp"
+#include <hpactor/runtime/messaging_network_emitters.hpp>
 
 namespace hpactor {
 namespace {
 
 // ── Test fixture ──────────────────────────────────────────────────────────
 
-class MessagingNetworkPortsTest : public ::testing::Test {
+class MessagingNetworkEmittersTest : public ::testing::Test {
   protected:
     void SetUp() override {
         captured_target_ = ActorAddress{};
@@ -37,11 +37,11 @@ class MessagingNetworkPortsTest : public ::testing::Test {
         bp_call_count_ = 0;
     }
 
-    // ── ReliableAckPort test adapter ─────────────────────────────────
+    // ── ReliableAckEmitter test adapter ─────────────────────────────────
     static void test_ack_emit(void* context, const ActorAddress& target,
                               const ActorAddress& acker, uint64_t message_id,
                               uint8_t status, uint32_t retry_after_ms) noexcept {
-        auto* self = static_cast<MessagingNetworkPortsTest*>(context);
+        auto* self = static_cast<MessagingNetworkEmittersTest*>(context);
         self->captured_target_ = target;
         self->captured_acker_ = acker;
         self->captured_msg_id_ = message_id;
@@ -50,10 +50,10 @@ class MessagingNetworkPortsTest : public ::testing::Test {
         ++self->ack_call_count_;
     }
 
-    // ── BackpressureWirePort test adapter ────────────────────────────
+    // ── BackpressureSignalEmitter test adapter ────────────────────────────
     static bool test_bp_send(void* context, const ActorAddress& target,
                              const StreamBuffer& encoded) noexcept {
-        auto* self = static_cast<MessagingNetworkPortsTest*>(context);
+        auto* self = static_cast<MessagingNetworkEmittersTest*>(context);
         self->captured_target_ = target;
         self->captured_encoded_ = std::string(encoded.begin(), encoded.end());
         ++self->bp_call_count_;
@@ -70,10 +70,10 @@ class MessagingNetworkPortsTest : public ::testing::Test {
     int bp_call_count_;
 };
 
-// ── ReliableAckPort tests ─────────────────────────────────────────────────
+// ── ReliableAckEmitter tests ─────────────────────────────────────────────────
 
-TEST_F(MessagingNetworkPortsTest, ReliableAckPortNullContextIsSafeNoop) {
-    ReliableAckPort port;
+TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterNullContextIsSafeNoop) {
+    ReliableAckEmitter port;
     port.context = nullptr;
     port.emit = test_ack_emit;
     // operator() should safely return when context is null
@@ -81,8 +81,8 @@ TEST_F(MessagingNetworkPortsTest, ReliableAckPortNullContextIsSafeNoop) {
     EXPECT_EQ(ack_call_count_, 0);
 }
 
-TEST_F(MessagingNetworkPortsTest, ReliableAckPortNullEmitIsSafeNoop) {
-    ReliableAckPort port;
+TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterNullEmitIsSafeNoop) {
+    ReliableAckEmitter port;
     port.context = this;
     port.emit = nullptr;
     // operator() should safely return when emit is null
@@ -90,13 +90,13 @@ TEST_F(MessagingNetworkPortsTest, ReliableAckPortNullEmitIsSafeNoop) {
     EXPECT_EQ(ack_call_count_, 0);
 }
 
-TEST_F(MessagingNetworkPortsTest, ReliableAckPortForwardsArgumentsExactlyOnce) {
+TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterForwardsArgumentsExactlyOnce) {
     ActorAddress target;
     target.id = ActorId{10};
     ActorAddress acker;
     acker.id = ActorId{20};
 
-    ReliableAckPort port;
+    ReliableAckEmitter port;
     port.context = this;
     port.emit = test_ack_emit;
     port(target, acker, 12345, 2, 5000);
@@ -109,10 +109,12 @@ TEST_F(MessagingNetworkPortsTest, ReliableAckPortForwardsArgumentsExactlyOnce) {
     EXPECT_EQ(captured_retry_ms_, 5000u);
 }
 
-// ── BackpressureWirePort tests ────────────────────────────────────────────
+// ── BackpressureSignalEmitter tests
+// ────────────────────────────────────────────
 
-TEST_F(MessagingNetworkPortsTest, BackpressureWirePortNullContextReturnsFalse) {
-    BackpressureWirePort port;
+TEST_F(MessagingNetworkEmittersTest,
+       BackpressureSignalEmitterNullContextReturnsFalse) {
+    BackpressureSignalEmitter port;
     port.context = nullptr;
     port.send = test_bp_send;
     bool result = port(ActorAddress{}, StreamBuffer{});
@@ -120,8 +122,8 @@ TEST_F(MessagingNetworkPortsTest, BackpressureWirePortNullContextReturnsFalse) {
     EXPECT_EQ(bp_call_count_, 0);
 }
 
-TEST_F(MessagingNetworkPortsTest, BackpressureWirePortNullSendReturnsFalse) {
-    BackpressureWirePort port;
+TEST_F(MessagingNetworkEmittersTest, BackpressureSignalEmitterNullSendReturnsFalse) {
+    BackpressureSignalEmitter port;
     port.context = this;
     port.send = nullptr;
     bool result = port(ActorAddress{}, StreamBuffer{});
@@ -129,13 +131,13 @@ TEST_F(MessagingNetworkPortsTest, BackpressureWirePortNullSendReturnsFalse) {
     EXPECT_EQ(bp_call_count_, 0);
 }
 
-TEST_F(MessagingNetworkPortsTest, BackpressureWirePortForwardsExactlyOnce) {
+TEST_F(MessagingNetworkEmittersTest, BackpressureSignalEmitterForwardsExactlyOnce) {
     ActorAddress target;
     target.id = ActorId{30};
     const char hello[] = "hello";
     auto data = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(hello), 5);
 
-    BackpressureWirePort port;
+    BackpressureSignalEmitter port;
     port.context = this;
     port.send = test_bp_send;
     bool result = port(target, std::move(data));
@@ -146,10 +148,10 @@ TEST_F(MessagingNetworkPortsTest, BackpressureWirePortForwardsExactlyOnce) {
     EXPECT_EQ(captured_encoded_, "hello");
 }
 
-// ── MessagingNetworkPorts aggregate tests ─────────────────────────────────
+// ── MessagingNetworkEmitters aggregate tests ─────────────────────────────────
 
-TEST_F(MessagingNetworkPortsTest, DefaultPortsAreSafeNoops) {
-    MessagingNetworkPorts ports;
+TEST_F(MessagingNetworkEmittersTest, DefaultPortsAreSafeNoops) {
+    MessagingNetworkEmitters ports;
     // Default-constructed ports have null context/emit/send
     ports.reliable_ack(ActorAddress{}, ActorAddress{}, 1, 0, 0);
     // Should not crash
@@ -157,12 +159,12 @@ TEST_F(MessagingNetworkPortsTest, DefaultPortsAreSafeNoops) {
     EXPECT_FALSE(result);
 }
 
-TEST_F(MessagingNetworkPortsTest, PortsAreTriviallyCopyable) {
+TEST_F(MessagingNetworkEmittersTest, PortsAreTriviallyCopyable) {
     // Port structs contain only function pointers and void* — no heap
     // allocation
-    EXPECT_TRUE(std::is_trivially_copyable_v<ReliableAckPort>);
-    EXPECT_TRUE(std::is_trivially_copyable_v<BackpressureWirePort>);
-    EXPECT_TRUE(std::is_trivially_copyable_v<MessagingNetworkPorts>);
+    EXPECT_TRUE(std::is_trivially_copyable_v<ReliableAckEmitter>);
+    EXPECT_TRUE(std::is_trivially_copyable_v<BackpressureSignalEmitter>);
+    EXPECT_TRUE(std::is_trivially_copyable_v<MessagingNetworkEmitters>);
 }
 
 } // namespace

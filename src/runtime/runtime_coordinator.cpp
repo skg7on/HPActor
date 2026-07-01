@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "runtime_coordinator.hpp"
+#include <hpactor/runtime/runtime_coordinator.hpp>
 
 namespace hpactor {
 

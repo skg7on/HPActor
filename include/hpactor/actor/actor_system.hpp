@@ -17,13 +17,16 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/actor_system_actors_view.hpp>
+#include <hpactor/actor/actor_system_messaging_view.hpp>
+#include <hpactor/actor/actor_system_network_view.hpp>
+#include <hpactor/actor/actor_system_operations_view.hpp>
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_options.hpp>
 #include <hpactor/actor/lifecycle/shutdown_phase.hpp>
-#include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/config/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/fault/fault_controller.hpp>
@@ -79,6 +82,9 @@ class ActorTypeRegistry;
 class LocalDeliveryEngine;
 class BackpressureCoordinator;
 class ShutdownCoordinator;
+namespace adt {
+class DedupCache;
+}
 namespace msg {
 class OutboundDeliveryTracker;
 }
@@ -291,6 +297,8 @@ class ActorSystem {
     /// \param[in] actor Fully constructed actor instance.
     /// \param[in] def Actor definition from topology config.
     /// \return An \c Actor handle.
+    /// \deprecated Use ActorSpawner::adopt() with SpawnSpec instead.
+    ///            This is a Phase 2 migration seam.
     Actor spawn_configured(std::shared_ptr<AbstractActor> actor,
                            const struct config::ActorDef& def);
 
@@ -678,6 +686,20 @@ class ActorSystem {
     adt::DedupCache* dedup_cache();
     const adt::DedupCache* dedup_cache() const;
 
+    // ── Capability-oriented views ─────────────────────────────────────────
+
+    /// \brief Non-owning view of the actor subsystem.
+    [[nodiscard]] ActorSystemActorsView actors_view() noexcept;
+
+    /// \brief Non-owning view of the messaging subsystem.
+    [[nodiscard]] ActorSystemMessagingView messaging_view() noexcept;
+
+    /// \brief Non-owning view of the network subsystem.
+    [[nodiscard]] ActorSystemNetworkView network_view() noexcept;
+
+    /// \brief Non-owning view of operations state.
+    [[nodiscard]] ActorSystemOperationsView operations_view() const noexcept;
+
     // Build a MailboxConfig from system-wide defaults in Config::mailbox.
     // ── Mailbox configuration ─────────────────────────────────────────────
 
@@ -747,6 +769,7 @@ class ActorSystem {
     /// \param[in] signal Backpressure signal from a downstream mailbox.
     void signal_backpressure(const mailbox::BackpressureSignal& signal);
 
+    [[deprecated("Backpressure is handled by DeliveryPipeline; this is a no-op")]]
     void
     maybe_emit_backpressure_signal(mailbox::MPSCActorMailbox<TypedMessage>* mailbox,
                                    const mailbox::EnqueueResult& result,
@@ -888,6 +911,7 @@ class ActorSystem {
     /// by spawning code that has already created a concrete T and selected
     /// its type-name string. This is a migration seam — Phase 2 replaces
     /// it with ActorSpawner::adopt() and SpawnSpec.
+    /// \deprecated Phase 2 migration seam; will be inlined into spawn<T>().
     Actor adopt_preconstructed_actor(std::shared_ptr<AbstractActor> actor,
                                      std::string_view type_name);
 
@@ -956,15 +980,6 @@ class ActorSystem {
     // Logging subsystem
 
     // Dead-letter queue owned by impl_->messaging.dead_letters
-
-    // Outbound delivery tracker for at-least-once delivery
-    std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker_;
-
-    // Reliable messaging outbound tracker (ACK/NACK/retry/expiry)
-    std::unique_ptr<mailbox::OutboundTracker> reliable_tracker_;
-
-    // Receiver dedup cache for at-least-once delivery
-    std::unique_ptr<adt::DedupCache> dedup_cache_;
 
     // Tracing subsystem
 

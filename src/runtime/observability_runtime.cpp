@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "observability_runtime.hpp"
+#include <hpactor/runtime/observability_runtime.hpp>
 
 #include <hpactor/log/log_event.hpp>         // for LogEvent
 #include <hpactor/log/log_manager.hpp>       // for LogManager
