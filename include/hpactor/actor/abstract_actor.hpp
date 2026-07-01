@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -202,6 +203,16 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     /// select the correct backend without RTTI.
     [[nodiscard]] virtual mailbox::MailboxKind mailbox_kind() const noexcept {
         return mailbox::MailboxKind::VariableMpsc;
+    }
+
+    /// \brief Create the fixed mailbox binding for this actor.
+    ///
+    /// Default returns an empty (invalid) binding.  Fixed-mailbox actors
+    /// override to create their \c FixedActorMailboxCore and return a
+    /// populated \c FixedMailboxBinding.
+    [[nodiscard]] virtual mailbox::FixedMailboxBinding
+    create_fixed_mailbox() noexcept {
+        return {};
     }
 
     /// \brief Human-readable type name for metrics and CLI introspection.

@@ -80,6 +80,16 @@ std::shared_ptr<ActorContext> ActorDirectory::find_context(ActorId id) const {
     return entry->context;
 }
 
+std::optional<mailbox::FixedMailboxBinding>
+ActorDirectory::find_fixed_binding(ActorId id) const {
+    auto entry = find(id);
+    if (!entry.has_value() ||
+        entry->mailbox_kind != mailbox::MailboxKind::FixedDisruptor) {
+        return std::nullopt;
+    }
+    return entry->fixed_mailbox;
+}
+
 bool ActorDirectory::register_name(std::string name, ActorAddress address) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto [it, inserted] = names_.emplace(std::move(name), address);

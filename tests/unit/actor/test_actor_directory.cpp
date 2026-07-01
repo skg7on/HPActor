@@ -55,7 +55,12 @@ TEST(ActorDirectoryTest, InsertAndFindEntry) {
         ActorId{42}, nullptr, mailbox::MailboxConfig{});
     auto context = std::shared_ptr<ActorContext>{};
 
-    ASSERT_TRUE(directory.insert({actor, instance, mailbox, context}));
+    ASSERT_TRUE(directory.insert({.actor = actor,
+                                  .instance = instance,
+                                  .mailbox_kind = mailbox::MailboxKind::VariableMpsc,
+                                  .mailbox = mailbox,
+                                  .fixed_mailbox = {},
+                                  .context = context}));
 
     auto found = directory.find(ActorId{42});
     ASSERT_TRUE(found.has_value());
@@ -72,7 +77,12 @@ TEST(ActorDirectoryTest, ResolveActorByName) {
     instance->set_address(
         ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{7}, 0});
     Actor actor{instance};
-    ASSERT_TRUE(directory.insert({actor, nullptr, nullptr, nullptr}));
+    ASSERT_TRUE(directory.insert({.actor = actor,
+                                  .instance = {},
+                                  .mailbox_kind = {},
+                                  .mailbox = {},
+                                  .fixed_mailbox = {},
+                                  .context = {}}));
     ASSERT_TRUE(directory.register_name("service", actor.address()));
 
     auto resolved = directory.resolve_actor("service");
@@ -110,7 +120,12 @@ TEST(ActorDirectoryTest, EraseActorRemovesAllNamesForActor) {
     instance->set_address(
         ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{9}, 0});
     Actor actor{instance};
-    ASSERT_TRUE(directory.insert({actor, instance, nullptr, nullptr}));
+    ASSERT_TRUE(directory.insert({.actor = actor,
+                                  .instance = instance,
+                                  .mailbox_kind = {},
+                                  .mailbox = {},
+                                  .fixed_mailbox = {},
+                                  .context = {}}));
     ASSERT_TRUE(directory.register_name("primary", actor.address()));
     ASSERT_TRUE(directory.register_name("alias", actor.address()));
 
@@ -128,7 +143,12 @@ TEST(ActorDirectoryTest, PublishCommitsEntryAndNameTogether) {
     instance->set_address(
         ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, ActorId{41}, 0});
     Actor actor{instance};
-    ActorDirectoryEntry entry{actor, instance, nullptr, nullptr};
+    ActorDirectoryEntry entry{.actor = actor,
+                              .instance = instance,
+                              .mailbox_kind = {},
+                              .mailbox = {},
+                              .fixed_mailbox = {},
+                              .context = {}};
 
     auto status = directory.publish(std::move(entry), "worker-41");
 
@@ -148,7 +168,12 @@ TEST(ActorDirectoryTest, DuplicateNamePublishesNoOrphanEntry) {
         auto inst = std::make_shared<DirectoryTestActor>(nullptr, system);
         inst->set_address(
             ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, id, 0});
-        return ActorDirectoryEntry{Actor{inst}, inst, nullptr, nullptr};
+        return ActorDirectoryEntry{.actor = Actor{inst},
+                                   .instance = inst,
+                                   .mailbox_kind = {},
+                                   .mailbox = {},
+                                   .fixed_mailbox = {},
+                                   .context = {}};
     };
 
     ASSERT_EQ(directory.publish(make_entry(ActorId{41}), "worker"),
@@ -170,7 +195,12 @@ TEST(ActorDirectoryTest, DuplicateIdPublishesNoSecondName) {
         auto inst = std::make_shared<DirectoryTestActor>(nullptr, system);
         inst->set_address(
             ActorAddress{EndPoint{LocalEndpoint}, ActorType{1}, id, 0});
-        return ActorDirectoryEntry{Actor{inst}, inst, nullptr, nullptr};
+        return ActorDirectoryEntry{.actor = Actor{inst},
+                                   .instance = inst,
+                                   .mailbox_kind = {},
+                                   .mailbox = {},
+                                   .fixed_mailbox = {},
+                                   .context = {}};
     };
 
     ASSERT_EQ(directory.publish(make_entry(ActorId{41}), "first"),

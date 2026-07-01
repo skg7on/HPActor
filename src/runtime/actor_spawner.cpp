@@ -77,29 +77,45 @@ result<Actor> ActorSpawner::adopt(std::shared_ptr<AbstractActor> actor,
     actor->set_type_name(std::string{spec.type_name});
 
     // ── Verify context binding ─────────────────────────────────────────
-    // Now bind the real context
-    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
-        id, &deps_.scheduler, spec.mailbox);
-    auto* mbox = mailbox_ptr.get();
-
     auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), &deps_.facade);
     if (!actor->bind_context(actor_ctx.get())) {
         return result<Actor>::make(
             error(errors::invalid_argument, "actor cannot bind local context"));
     }
 
-    // ── Inject scheduler, mailbox, metrics, logger ─────────────────────
     actor->set_scheduler(&deps_.scheduler);
-    actor->set_mailbox(mbox);
 
-    if (deps_.metrics) [[unlikely]] {
-        mbox->set_metrics_ring_buffer(deps_.metrics);
-        actor->set_metrics_ring_buffer(deps_.metrics);
-    }
+    // ── Build mailbox (branch on backend kind) ─────────────────────────
+    ActorDirectoryEntry entry;
+    entry.actor = Actor(actor);
+    entry.instance = actor;
+    entry.context = actor_ctx;
+    entry.mailbox_kind = actor->mailbox_kind();
 
-    if (deps_.logger) [[unlikely]] {
-        mbox->set_logger(deps_.logger);
-        actor->set_logger(deps_.logger);
+    if (entry.mailbox_kind == mailbox::MailboxKind::FixedDisruptor) {
+        auto binding = actor->create_fixed_mailbox();
+        if (!binding.valid()) {
+            return result<Actor>::make(error(errors::invalid_argument,
+                                             "fixed mailbox binding is invalid"));
+        }
+        entry.fixed_mailbox = binding;
+        // entry.mailbox remains nullptr for fixed actors.
+    } else {
+        auto mailbox_ptr =
+            std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+                id, &deps_.scheduler, spec.mailbox);
+        auto* mbox = mailbox_ptr.get();
+        actor->set_mailbox(mbox);
+
+        if (deps_.metrics) [[unlikely]] {
+            mbox->set_metrics_ring_buffer(deps_.metrics);
+            actor->set_metrics_ring_buffer(deps_.metrics);
+        }
+        if (deps_.logger) [[unlikely]] {
+            mbox->set_logger(deps_.logger);
+            actor->set_logger(deps_.logger);
+        }
+        entry.mailbox = mailbox_ptr;
     }
 
     // ── Apply quarantine ──────────────────────────────────────────────
@@ -110,13 +126,6 @@ result<Actor> ActorSpawner::adopt(std::shared_ptr<AbstractActor> actor,
             eba->configure_quarantine(*spec.quarantine);
         }
     }
-
-    // ── Build and publish directory entry ─────────────────────────────
-    ActorDirectoryEntry entry;
-    entry.actor = Actor(actor);
-    entry.instance = actor;
-    entry.mailbox = mailbox_ptr;
-    entry.context = actor_ctx;
 
     auto status = deps_.directory.publish(std::move(entry), spec.registered_name);
     if (status != ActorDirectory::PublishStatus::Published) {
