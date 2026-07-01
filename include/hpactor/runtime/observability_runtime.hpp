@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "runtime_blueprint.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
 
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/log/log_config.hpp>

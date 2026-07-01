@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "runtime_startup.hpp"
+#include <hpactor/runtime/runtime_startup.hpp>
 
 #include "actor_system_impl.hpp"
-#include "observability_runtime.hpp"
+#include <hpactor/runtime/observability_runtime.hpp>
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>

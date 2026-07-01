@@ -19,7 +19,7 @@
 #include <hpactor/types/types.hpp>
 
 // Private runtime header — accessible via CMAKE_SOURCE_DIR include path.
-#include "src/runtime/runtime_blueprint.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
 
 #include <gtest/gtest.h>
 
@@ -56,8 +56,8 @@ TEST(RuntimeBlueprintTest, IsImmutableAfterConstruction) {
 
 // ── Builder: from_config ────────────────────────────────────────────────────
 
-#include "src/runtime/runtime_blueprint_builder.hpp"
 #include <hpactor/actor/actor_system.hpp> // for Config
+#include <hpactor/runtime/runtime_blueprint_builder.hpp>
 
 TEST(RuntimeBlueprintBuilderTest, FromConfigProducesNonZeroFingerprint) {
     hpactor::Config cfg;

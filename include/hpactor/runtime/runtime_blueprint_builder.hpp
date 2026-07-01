@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "runtime_blueprint.hpp"
+#include <hpactor/runtime/runtime_blueprint.hpp>
 
 #include <hpactor/config/reload_report.hpp>
 #include <hpactor/types/types.hpp>

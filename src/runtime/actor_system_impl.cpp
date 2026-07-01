@@ -16,7 +16,7 @@
 
 #include "actor_spawner.hpp"
 #include "messaging_runtime.hpp"
-#include "runtime_blueprint.hpp" // private blueprint header
+#include <hpactor/runtime/runtime_blueprint.hpp>
 
 #include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>

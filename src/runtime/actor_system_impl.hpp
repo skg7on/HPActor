@@ -17,9 +17,9 @@
 #include "actor_spawner.hpp"
 #include "messaging_network_ports.hpp"
 #include "messaging_runtime.hpp"
-#include "observability_runtime.hpp"
 #include <hpactor/runtime/cluster_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
+#include <hpactor/runtime/observability_runtime.hpp>
 
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/actor_system.hpp>
