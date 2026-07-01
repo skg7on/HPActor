@@ -120,7 +120,7 @@ class FixedMailboxActor : public EventBasedActor {
                     static_cast<typename core_type::envelope_type*>(envelope);
                 self->fixed_behavior_.dispatch(env->message);
             });
-        core->set_wakeup_callback(
+        core->set_signal_callback(
             +[](void* ctx) noexcept {
                 auto* self = static_cast<FixedMailboxActor*>(ctx);
                 self->home_system().get_scheduler()->notify_ready(self->id(), 0,

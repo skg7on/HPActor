@@ -142,7 +142,7 @@ class FixedActorMailboxCore final
 
         // sequence recorded in slot by try_publish; consumer reads it
         // from the ReadLease
-        arm_wakeup_gate();
+        signal_work();
         return make_accepted();
     }
 
@@ -156,7 +156,7 @@ class FixedActorMailboxCore final
     EnqueueResult try_push_control(TypedMessage msg) noexcept {
         std::lock_guard<std::mutex> lock{system_mutex_};
         system_queue_.push_back(std::move(msg));
-        arm_wakeup_gate();
+        signal_work();
         return make_accepted();
     }
 
@@ -197,13 +197,13 @@ class FixedActorMailboxCore final
                 std::lock_guard<std::mutex> lock{system_mutex_};
                 if (!system_queue_.empty()) {
                     // Re-arm and let caller requeue us.
-                    arm_wakeup_gate();
+                    signal_work();
                     return false;
                 }
             }
             // Re-check user ring.
             if (!user_ring_.empty()) {
-                arm_wakeup_gate();
+                signal_work();
                 return false;
             }
             return false;
@@ -240,9 +240,9 @@ class FixedActorMailboxCore final
     ///
     /// Called once after spawn.  The callback is invoked when the
     /// mailbox transitions from empty to non-empty.
-    void set_wakeup_callback(void (*fn)(void*), void* ctx) noexcept {
-        wakeup_fn_ = fn;
-        wakeup_ctx_ = ctx;
+    void set_signal_callback(void (*fn)(void*), void* ctx) noexcept {
+        signal_fn_ = fn;
+        signal_ctx_ = ctx;
     }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
@@ -311,13 +311,17 @@ class FixedActorMailboxCore final
     }
 
   private:
-    void arm_wakeup_gate() noexcept {
+    /// Edge-triggered: on the empty-to-non-empty transition, sets the
+    /// signaled flag and notifies the scheduler that work is available.
+    /// Subsequent calls while signaled are no-ops — the consumer must
+    /// clear the flag (in consume_one) before the gate can fire again.
+    void signal_work() noexcept {
         bool expected = false;
         if (work_signaled_.compare_exchange_strong(expected, true,
                                                    std::memory_order_acq_rel,
                                                    std::memory_order_acquire)) {
-            if (wakeup_fn_) {
-                wakeup_fn_(wakeup_ctx_);
+            if (signal_fn_) {
+                signal_fn_(signal_ctx_);
             }
         }
     }
@@ -357,8 +361,8 @@ class FixedActorMailboxCore final
     std::atomic<bool> work_signaled_{false};
 
     // Wakeup callback (set once after spawn).
-    void (*wakeup_fn_)(void*){nullptr};
-    void* wakeup_ctx_{nullptr};
+    void (*signal_fn_)(void*){nullptr};
+    void* signal_ctx_{nullptr};
 
     // Immutable delivery port (set once after spawn).
     FixedMailboxDelivery delivery_;
