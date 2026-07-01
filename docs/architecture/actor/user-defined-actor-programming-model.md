@@ -872,6 +872,5 @@ tests/
 ## 14. References
 
 - [Actor Core Concept & Type Hierarchy](actors-data-structure-design.md)
-- [Protobuf Serialization Design](../core/protobuf-serialization-design.md) (TBD)
-- [Distributed Actor System Architecture](../Distributed-Actor-System-Software-Architecture-and-Key-Concept-Description-High-Level-Design.md)
+- [Distributed Actor System Architecture](../system-architecture-and-key-concept-high-level-design.md)
 - [CAF Actor Types](https://github.com/actor-framework/actor-framework)

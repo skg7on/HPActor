@@ -5,7 +5,7 @@
 This document specifies the architecture for loading actor topologies from TOML configuration files. It covers the bootstrap engine, schema design, module system, template inheritance, AOT compilation path, and integration with the existing HPActor spawn infrastructure.
 
 **Related documents:**
-- [Actor Core Concept](actor-core-concept.md) — actor type hierarchy and messaging model
+- [Actor Core Concept](../actor/actor-core-concept.md) — actor type hierarchy and messaging model
 - [Actor TOML Config Core Concept](actor-toml-config-core-concept.md) — philosophy and usage overview
 - [TOML Config Implementation Plan](../../superpowers/plans/2026-05-03-toml-config-topology-impl.md) — phased implementation steps
 

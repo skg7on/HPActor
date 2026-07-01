@@ -4,7 +4,7 @@
 coordinator, dedup cache, and delivery trackers are owned by `MessagingRuntime`.
 Local delivery (`ActorContext::send()`, `ActorRef::send()`) converges on
 `MessagingRuntime::try_deliver()` as the single full-policy admission path. See
-[actor-system-runtime-architecture.md](actor-system-runtime-architecture.md) for
+[actor-system-runtime-architecture.md](../runtime/actor-system-runtime-architecture.md) for
 the full component graph and ownership contracts.
 
 ## 1. Executive Summary

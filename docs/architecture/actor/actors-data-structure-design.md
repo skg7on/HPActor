@@ -2,7 +2,7 @@
 
 **Runtime ownership:** Actor identity, lookup, spawning, and lifecycle are owned
 by `ActorRuntime`. See
-[actor-system-runtime-architecture.md](actor-system-runtime-architecture.md) for
+[actor-system-runtime-architecture.md](../runtime/actor-system-runtime-architecture.md) for
 the full component graph and ownership contracts.
 
 ## 1. Executive Summary
@@ -407,7 +407,7 @@ include/hpactor/
 
 - [ACT-008 Passivation Design Spec](../../superpowers/specs/2026-06-06-act-008-actor-passivation-design.md)
 - [Actor Routing Design](actor-routing-design.md)
-- [Actor Concurrency and Lock-Free Mailbox Rules](actor-concurrency-and-lockfree-mailbox-rules.md)
-- [Mailbox Management and Backpressure Design](mailbox-management-backpressure-design.md)
+- [Actor Concurrency and Lock-Free Mailbox Rules](../mailbox/actor-concurrency-and-lockfree-mailbox-rules.md)
+- [Mailbox Management and Backpressure Design](../mailbox/mailbox-management-backpressure-design.md)
 - [Distributed Actor System Architecture](../system-architecture-and-key-concept-high-level-design.md)
 - [CAF Actor Types](https://github.com/actor-framework/actor-framework)

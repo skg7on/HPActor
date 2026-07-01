@@ -4,7 +4,7 @@
 handlers are owned by `StreamRuntime`. Inbound stream frames are classified by
 `InboundFrameRouter` on the network-loop thread and dispatched to
 `StreamRuntime`. See
-[actor-system-runtime-architecture.md](actor-system-runtime-architecture.md) for
+[actor-system-runtime-architecture.md](../runtime/actor-system-runtime-architecture.md) for
 the full component graph and ownership contracts.
 
 ## 1. Executive Summary
