@@ -14,8 +14,8 @@
 
 #include "actor_system_impl.hpp"
 
-#include "actor_spawner.hpp"
-#include "messaging_runtime.hpp"
+#include <hpactor/runtime/actor_spawner.hpp>
+#include <hpactor/runtime/messaging_runtime.hpp>
 #include <hpactor/runtime/runtime_blueprint.hpp>
 
 #include <hpactor/actor/actor_type_registry.hpp>

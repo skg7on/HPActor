@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // ...
 
-#include "actor_runtime.hpp"
+#include <hpactor/runtime/actor_runtime.hpp>
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>

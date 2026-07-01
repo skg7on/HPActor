@@ -25,9 +25,9 @@ add_test(
 # facade or its private state.
 set(_forbidden "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_messaging_files
-    ${CMAKE_SOURCE_DIR}/src/runtime/messaging_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/runtime/messaging_runtime.cpp
-    ${CMAKE_SOURCE_DIR}/src/runtime/messaging_network_ports.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_network_emitters.hpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/mailbox/delivery_pipeline.hpp
     ${CMAKE_SOURCE_DIR}/src/mailbox/delivery_pipeline.cpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/mailbox/backpressure_coordinator.hpp
@@ -81,14 +81,14 @@ add_test(
 add_test(
     NAME MessagingRuntime.NoRttiInRuntimeHeader
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/messaging_runtime.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_runtime.hpp
         "-DFORBIDDEN=${_forbidden}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
 add_test(
     NAME MessagingRuntime.NoRttiInPorts
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/src/runtime/messaging_network_ports.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/runtime/messaging_network_emitters.hpp
         "-DFORBIDDEN=${_forbidden}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
@@ -100,7 +100,7 @@ set(_phase4_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_phase4_sources
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.hpp
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.cpp
-    ${CMAKE_SOURCE_DIR}/src/actor/stream_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/actor/stream_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/actor/stream_runtime.cpp)
 foreach(_file IN LISTS _phase4_sources)
     add_test(

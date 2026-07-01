@@ -17,7 +17,7 @@
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/ref/actor_address.hpp>
 
-#include "runtime/messaging_network_emitters.hpp"
+#include <hpactor/runtime/messaging_network_emitters.hpp>
 
 namespace hpactor {
 namespace {
@@ -109,9 +109,11 @@ TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterForwardsArgumentsExactlyO
     EXPECT_EQ(captured_retry_ms_, 5000u);
 }
 
-// ── BackpressureSignalEmitter tests ────────────────────────────────────────────
+// ── BackpressureSignalEmitter tests
+// ────────────────────────────────────────────
 
-TEST_F(MessagingNetworkEmittersTest, BackpressureSignalEmitterNullContextReturnsFalse) {
+TEST_F(MessagingNetworkEmittersTest,
+       BackpressureSignalEmitterNullContextReturnsFalse) {
     BackpressureSignalEmitter port;
     port.context = nullptr;
     port.send = test_bp_send;

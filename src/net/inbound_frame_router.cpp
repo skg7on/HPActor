@@ -6,7 +6,7 @@
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 
-#include "runtime/messaging_runtime.hpp"
+#include <hpactor/runtime/messaging_runtime.hpp>
 
 namespace hpactor::net {
 

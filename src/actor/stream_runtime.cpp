@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // (Apache 2.0 license header)
 
-#include "stream_runtime.hpp"
+#include <hpactor/actor/stream_runtime.hpp>
 
 #include <hpactor/actor/stream_config.hpp>
 #include <hpactor/actor/stream_handle.hpp>
@@ -10,7 +10,7 @@
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/net/inbound_frame_sink.hpp>
 
-#include "runtime/messaging_runtime.hpp"
+#include <hpactor/runtime/messaging_runtime.hpp>
 
 namespace hpactor {
 

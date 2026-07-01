@@ -14,10 +14,10 @@
 
 #pragma once
 
-#include "actor_spawner.hpp"
-#include "messaging_network_emitters.hpp"
-#include "messaging_runtime.hpp"
+#include <hpactor/runtime/actor_spawner.hpp>
 #include <hpactor/runtime/cluster_runtime.hpp>
+#include <hpactor/runtime/messaging_network_emitters.hpp>
+#include <hpactor/runtime/messaging_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
 

@@ -13,8 +13,8 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
 
-#include "actor/stream_runtime.hpp"
-#include "runtime/messaging_runtime.hpp"
+#include <hpactor/actor/stream_runtime.hpp>
+#include <hpactor/runtime/messaging_runtime.hpp>
 
 namespace hpactor {
 

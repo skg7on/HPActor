@@ -18,7 +18,7 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
-#include "spawn_spec.hpp"
+#include <hpactor/runtime/spawn_spec.hpp>
 
 #include <memory>
 

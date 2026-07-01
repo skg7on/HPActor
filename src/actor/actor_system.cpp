@@ -15,7 +15,6 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
 
-#include "../runtime/actor_spawner.hpp"
 #include "../runtime/actor_system_impl.hpp"
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
@@ -40,6 +39,7 @@
 #include <hpactor/mailbox/reliable_retry_policy.hpp>
 #include <hpactor/msg/outbound_delivery_tracker.hpp>
 #include <hpactor/process/process_manager.hpp>
+#include <hpactor/runtime/actor_spawner.hpp>
 #include <hpactor/runtime/runtime_blueprint.hpp>
 #include <hpactor/runtime/runtime_blueprint_builder.hpp>
 #include <hpactor/runtime/runtime_builder.hpp>

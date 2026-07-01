@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "messaging_runtime.hpp"
+#include <hpactor/runtime/messaging_runtime.hpp>
 
 #include <hpactor/actor/actor_directory.hpp>
 
