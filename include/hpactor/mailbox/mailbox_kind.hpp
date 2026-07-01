@@ -34,20 +34,20 @@ enum class MailboxKind : uint8_t {
 
     /// Experimental fixed-message Disruptor-style MPSC ring.
     /// Only set when \c HPACTOR_ENABLE_FIXED_DISRUPTOR_MAILBOX is 1.
-    FixedDisruptor = 1,
+    Disruptor = 1,
 };
 
 /// \brief Maximum allowed fixed-ring capacity (1 Mi slots).
-inline constexpr size_t kMaxFixedRingCapacity = 1u << 20;
+inline constexpr size_t kMaxDisruptorRingCapacity = 1u << 20;
 
 /// \brief Compile-time power-of-two capacity check.
 ///
 /// \param[in] capacity The requested ring capacity.
-/// \retval true  \p capacity is in [2, kMaxFixedRingCapacity] and is
+/// \retval true  \p capacity is in [2, kMaxDisruptorRingCapacity] and is
 ///               a power of two.
 /// \retval false The capacity is out of range or not a power of two.
-[[nodiscard]] consteval bool valid_fixed_ring_capacity(size_t capacity) {
-    return capacity >= 2 && capacity <= kMaxFixedRingCapacity &&
+[[nodiscard]] consteval bool valid_disruptor_ring_capacity(size_t capacity) {
+    return capacity >= 2 && capacity <= kMaxDisruptorRingCapacity &&
            (capacity & (capacity - 1)) == 0;
 }
 

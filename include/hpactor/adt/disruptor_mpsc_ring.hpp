@@ -78,7 +78,8 @@ struct DisruptorRingSnapshot {
 ///
 /// \tparam T      The type stored in each slot. Must be nothrow
 ///                movable or copyable.
-/// \tparam Capacity Power-of-two ring capacity in [2, kMaxFixedRingCapacity].
+/// \tparam Capacity Power-of-two ring capacity in [2,
+/// kMaxDisruptorRingCapacity].
 ///
 /// \note Thread safety:
 ///       - Multiple producers may call \c try_publish() concurrently.
@@ -97,7 +98,7 @@ struct DisruptorRingSnapshot {
 ///          a FIFO gap. The consumer does not skip the gap. This is a
 ///          deliberate multi-producer Disruptor tradeoff.
 template <typename T, size_t Capacity>
-    requires(mailbox::valid_fixed_ring_capacity(Capacity))
+    requires(mailbox::valid_disruptor_ring_capacity(Capacity))
 class DisruptorMpscRing final {
     static constexpr size_t kMask = Capacity - 1;
 

@@ -234,7 +234,7 @@ ActorRunResult
 ActorExecutionEngine::run(EventBasedActor& actor, const WorkItem& item,
                           const ActorExecutionContext& context,
                           bool use_coroutines) noexcept {
-    if (actor.mailbox_kind() == mailbox::MailboxKind::FixedDisruptor) {
+    if (actor.mailbox_kind() == mailbox::MailboxKind::Disruptor) {
         return run_fixed_actor(actor, item, context);
     }
 #if HPACTOR_SUPPORT_COROUTINES

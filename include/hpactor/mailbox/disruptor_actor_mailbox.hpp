@@ -36,7 +36,7 @@ namespace hpactor::mailbox {
 /// \brief RAII guard that increments an in-flight publisher count on
 ///        construction and decrements on destruction.
 ///
-/// Used by \c FixedActorMailboxCore to track senders that are between
+/// Used by \c DisruptorActorMailboxCore to track senders that are between
 /// the \c accepting_user_ check and publication/rejection.  When the
 /// count reaches zero after drain starts, drain can declare quiescence.
 class PublisherGuard final {
@@ -59,14 +59,15 @@ class PublisherGuard final {
     std::atomic<uint32_t>* counter_;
 };
 
-// ── Fixed actor mailbox core ──────────────────────────────────────────────
+// ── Disruptor actor mailbox core
+// ──────────────────────────────────────────────
 
 /// \brief Hybrid mailbox core combining a Disruptor user ring with a
 ///        protected MPSC system lane and a shared scheduler wakeup gate.
 ///
 /// Owns the fixed ring, the system-message queue, admission state,
 /// and lifecycle flags.  The core outlives the actor object so that
-/// surviving \c FixedActorRef instances observe a clean rejection
+/// surviving \c DisruptorActorRef instances observe a clean rejection
 /// rather than a dangling pointer.
 ///
 /// \tparam Capacity Power-of-two ring capacity.
@@ -78,30 +79,30 @@ class PublisherGuard final {
 ///       - \c consume_one() is called by at most one scheduler worker.
 ///       - \c begin_drain(), \c close() are called from the owning actor
 ///         or scheduler thread.
-template <size_t Capacity, FixedMailboxMessage... Messages>
-class FixedActorMailboxCore final
-    : public std::enable_shared_from_this<FixedActorMailboxCore<Capacity, Messages...>> {
+template <size_t Capacity, DisruptorMessage... Messages>
+class DisruptorActorMailboxCore final
+    : public std::enable_shared_from_this<DisruptorActorMailboxCore<Capacity, Messages...>> {
   public:
-    using envelope_type = FixedMessageEnvelope<Messages...>;
+    using envelope_type = DisruptorMessageEnvelope<Messages...>;
     using ring_type = adt::DisruptorMpscRing<envelope_type, Capacity>;
 
     /// \brief Construct the mailbox core.
     ///
     /// \param[in] actor_id    The owning actor's ID.
     /// \param[in] actor_addr  The owning actor's address.
-    explicit FixedActorMailboxCore(ActorId actor_id, ActorAddress actor_addr) noexcept
+    explicit DisruptorActorMailboxCore(ActorId actor_id, ActorAddress actor_addr) noexcept
         : actor_id_(actor_id), actor_address_(actor_addr) {}
 
-    FixedActorMailboxCore(const FixedActorMailboxCore&) = delete;
-    FixedActorMailboxCore& operator=(const FixedActorMailboxCore&) = delete;
-    FixedActorMailboxCore(FixedActorMailboxCore&&) = delete;
-    FixedActorMailboxCore& operator=(FixedActorMailboxCore&&) = delete;
+    DisruptorActorMailboxCore(const DisruptorActorMailboxCore&) = delete;
+    DisruptorActorMailboxCore& operator=(const DisruptorActorMailboxCore&) = delete;
+    DisruptorActorMailboxCore(DisruptorActorMailboxCore&&) = delete;
+    DisruptorActorMailboxCore& operator=(DisruptorActorMailboxCore&&) = delete;
 
-    ~FixedActorMailboxCore() = default;
+    ~DisruptorActorMailboxCore() = default;
 
     // ── Port wiring (immutable after spawn) ────────────────────────────────
 
-    void set_delivery_port(FixedMailboxDelivery port) noexcept {
+    void set_delivery_port(DisruptorMailboxDelivery port) noexcept {
         delivery_ = port;
     }
 
@@ -114,8 +115,9 @@ class FixedActorMailboxCore final
     /// a ring slot, copy the envelope, publish, and arm the wakeup gate.
     ///
     /// \return \c Accepted or a rejection with the canonical failure reason.
-    template <FixedMailboxMessage Message>
-    EnqueueResult try_push_user(Message message, FixedEnvelopeMeta meta) noexcept {
+    template <DisruptorMessage Message>
+    EnqueueResult
+    try_push_user(Message message, DisruptorEnvelopeMeta meta) noexcept {
         PublisherGuard guard{in_flight_publishers_};
 
         if (!accepting_user_.load(std::memory_order_acquire)) {
@@ -274,14 +276,14 @@ class FixedActorMailboxCore final
 
     // ── Port builders ──────────────────────────────────────────────────────
 
-    [[nodiscard]] FixedMailboxHandle make_handle() noexcept {
-        FixedMailboxHandle b;
+    [[nodiscard]] DisruptorMailboxHandle make_handle() noexcept {
+        DisruptorMailboxHandle b;
         b.lifetime = this->shared_from_this();
 
         b.control.context = this;
         b.control.try_push =
             +[](void* ctx, TypedMessage&& msg) noexcept -> EnqueueResult {
-            return static_cast<FixedActorMailboxCore*>(ctx)->try_push_control(
+            return static_cast<DisruptorActorMailboxCore*>(ctx)->try_push_control(
                 std::move(msg));
         };
 
@@ -289,22 +291,23 @@ class FixedActorMailboxCore final
         b.execution.consume_one =
             +[](void* ctx, EventBasedActor& actor,
                 const sched::ActorExecutionContext& exec_ctx) noexcept -> bool {
-            return static_cast<FixedActorMailboxCore*>(ctx)->consume_one(
+            return static_cast<DisruptorActorMailboxCore*>(ctx)->consume_one(
                 &actor, exec_ctx);
         };
         b.execution.empty = +[](const void* ctx) noexcept -> bool {
-            return static_cast<const FixedActorMailboxCore*>(ctx)->empty();
+            return static_cast<const DisruptorActorMailboxCore*>(ctx)->empty();
         };
 
         b.lifecycle.context = this;
         b.lifecycle.begin_drain = +[](void* ctx) noexcept {
-            static_cast<FixedActorMailboxCore*>(ctx)->begin_drain();
+            static_cast<DisruptorActorMailboxCore*>(ctx)->begin_drain();
         };
         b.lifecycle.close = +[](void* ctx) noexcept {
-            static_cast<FixedActorMailboxCore*>(ctx)->close();
+            static_cast<DisruptorActorMailboxCore*>(ctx)->close();
         };
         b.lifecycle.publishers_quiescent = +[](const void* ctx) noexcept -> bool {
-            return static_cast<const FixedActorMailboxCore*>(ctx)->publishers_quiescent();
+            return static_cast<const DisruptorActorMailboxCore*>(ctx)
+                ->publishers_quiescent();
         };
 
         return b;
@@ -334,7 +337,7 @@ class FixedActorMailboxCore final
     }
 
     EnqueueResult make_rejected(FailureReason reason,
-                                const FixedEnvelopeMeta& /*meta*/) noexcept {
+                                const DisruptorEnvelopeMeta& /*meta*/) noexcept {
         EnqueueResult result;
         result.code = EnqueueResultCode::Rejected;
         result.target = actor_id_;
@@ -365,7 +368,7 @@ class FixedActorMailboxCore final
     void* signal_ctx_{nullptr};
 
     // Immutable delivery port (set once after spawn).
-    FixedMailboxDelivery delivery_;
+    DisruptorMailboxDelivery delivery_;
 
     // Dispatch callbacks (set once after spawn).
     void* dispatch_ctx_{nullptr};

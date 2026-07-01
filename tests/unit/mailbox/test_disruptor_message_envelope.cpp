@@ -24,7 +24,8 @@
 namespace hpactor::mailbox {
 namespace {
 
-// ── Fixed-message concept ─────────────────────────────────────────────────
+// ── Disruptor-message concept
+// ─────────────────────────────────────────────────
 
 struct Quote {
     uint64_t instrument;
@@ -48,43 +49,44 @@ struct NonStandardLayout {
 };
 
 // Compile-time concept checks
-static_assert(FixedMailboxMessage<Quote>);
-static_assert(FixedMailboxMessage<CancelQuote>);
-static_assert(FixedMailboxMessage<uint64_t>);
-static_assert(FixedMailboxMessage<int32_t>);
-static_assert(!FixedMailboxMessage<NonTrivial>);
-static_assert(!FixedMailboxMessage<NonStandardLayout>);
-static_assert(!FixedMailboxMessage<std::string>);
+static_assert(DisruptorMessage<Quote>);
+static_assert(DisruptorMessage<CancelQuote>);
+static_assert(DisruptorMessage<uint64_t>);
+static_assert(DisruptorMessage<int32_t>);
+static_assert(!DisruptorMessage<NonTrivial>);
+static_assert(!DisruptorMessage<NonStandardLayout>);
+static_assert(!DisruptorMessage<std::string>);
 
 // ── Capacity validation ───────────────────────────────────────────────────
 
-static_assert(valid_fixed_ring_capacity(2));
-static_assert(valid_fixed_ring_capacity(4));
-static_assert(valid_fixed_ring_capacity(1024));
-static_assert(valid_fixed_ring_capacity(1u << 20));
-static_assert(!valid_fixed_ring_capacity(0));
-static_assert(!valid_fixed_ring_capacity(1));
-static_assert(!valid_fixed_ring_capacity(3));
-static_assert(!valid_fixed_ring_capacity(5));
-static_assert(!valid_fixed_ring_capacity(100));
-static_assert(!valid_fixed_ring_capacity((1u << 20) + 1));
+static_assert(valid_disruptor_ring_capacity(2));
+static_assert(valid_disruptor_ring_capacity(4));
+static_assert(valid_disruptor_ring_capacity(1024));
+static_assert(valid_disruptor_ring_capacity(1u << 20));
+static_assert(!valid_disruptor_ring_capacity(0));
+static_assert(!valid_disruptor_ring_capacity(1));
+static_assert(!valid_disruptor_ring_capacity(3));
+static_assert(!valid_disruptor_ring_capacity(5));
+static_assert(!valid_disruptor_ring_capacity(100));
+static_assert(!valid_disruptor_ring_capacity((1u << 20) + 1));
 
 // ── MailboxKind ───────────────────────────────────────────────────────────
 
 static_assert(static_cast<uint8_t>(MailboxKind::VariableMpsc) == 0);
-static_assert(static_cast<uint8_t>(MailboxKind::FixedDisruptor) == 1);
+static_assert(static_cast<uint8_t>(MailboxKind::Disruptor) == 1);
 
-// ── FixedSendOptions ──────────────────────────────────────────────────────
+// ── DisruptorSendOptions
+// ──────────────────────────────────────────────────────
 
-TEST(FixedSendOptionsTest, DefaultOptions) {
-    FixedSendOptions opts;
+TEST(DisruptorSendOptionsTest, DefaultOptions) {
+    DisruptorSendOptions opts;
     EXPECT_EQ(opts.deadline_ns, INT64_MAX);
     EXPECT_EQ(opts.message_id, 0u);
     EXPECT_EQ(opts.flags, 0u);
 }
 
-TEST(FixedSendOptionsTest, ExplicitOptions) {
-    FixedSendOptions opts;
+TEST(DisruptorSendOptionsTest, ExplicitOptions) {
+    DisruptorSendOptions opts;
     opts.deadline_ns = 5000000;
     opts.message_id = 42;
     opts.flags = 0x01;
@@ -93,10 +95,11 @@ TEST(FixedSendOptionsTest, ExplicitOptions) {
     EXPECT_EQ(opts.flags, 0x01u);
 }
 
-// ── FixedEnvelopeMeta ─────────────────────────────────────────────────────
+// ── DisruptorEnvelopeMeta
+// ─────────────────────────────────────────────────────
 
-TEST(FixedEnvelopeMetaTest, DefaultMeta) {
-    FixedEnvelopeMeta meta;
+TEST(DisruptorEnvelopeMetaTest, DefaultMeta) {
+    DisruptorEnvelopeMeta meta;
     EXPECT_EQ(meta.deadline_ns, INT64_MAX);
     EXPECT_EQ(meta.message_id, 0u);
     EXPECT_EQ(meta.enqueue_sequence, 0u);
@@ -104,8 +107,8 @@ TEST(FixedEnvelopeMetaTest, DefaultMeta) {
     EXPECT_FALSE(meta.has_trace);
 }
 
-TEST(FixedEnvelopeMetaTest, SetFields) {
-    FixedEnvelopeMeta meta;
+TEST(DisruptorEnvelopeMetaTest, SetFields) {
+    DisruptorEnvelopeMeta meta;
     meta.message_id = 99;
     meta.deadline_ns = 1000;
     meta.enqueue_sequence = 7;
@@ -118,18 +121,19 @@ TEST(FixedEnvelopeMetaTest, SetFields) {
     EXPECT_TRUE(meta.has_trace);
 }
 
-// ── FixedMessageEnvelope ──────────────────────────────────────────────────
+// ── DisruptorMessageEnvelope
+// ──────────────────────────────────────────────────
 
-using QuoteEnvelope = FixedMessageEnvelope<Quote>;
+using QuoteEnvelope = DisruptorMessageEnvelope<Quote>;
 
-TEST(FixedMessageEnvelopeTest, DefaultConstruction) {
+TEST(DisruptorMessageEnvelopeTest, DefaultConstruction) {
     QuoteEnvelope env;
     // Default-constructed variant holds the first alternative.
     EXPECT_TRUE(std::holds_alternative<Quote>(env.message));
     EXPECT_EQ(env.meta.message_id, 0u);
 }
 
-TEST(FixedMessageEnvelopeTest, AssignMessageAndMetadata) {
+TEST(DisruptorMessageEnvelopeTest, AssignMessageAndMetadata) {
     QuoteEnvelope env;
     env.message = Quote{7, 10125};
     env.meta.message_id = 44;
@@ -142,9 +146,9 @@ TEST(FixedMessageEnvelopeTest, AssignMessageAndMetadata) {
     EXPECT_EQ(env.meta.deadline_ns, 9000);
 }
 
-using MultiEnvelope = FixedMessageEnvelope<Quote, CancelQuote>;
+using MultiEnvelope = DisruptorMessageEnvelope<Quote, CancelQuote>;
 
-TEST(FixedMessageEnvelopeTest, MultipleAlternatives) {
+TEST(DisruptorMessageEnvelopeTest, MultipleAlternatives) {
     MultiEnvelope env;
     // Default constructs the first alternative.
     EXPECT_TRUE(std::holds_alternative<Quote>(env.message));
@@ -161,7 +165,7 @@ TEST(FixedMessageEnvelopeTest, MultipleAlternatives) {
     EXPECT_EQ(std::get<Quote>(env.message).price, 100);
 }
 
-TEST(FixedMessageEnvelopeTest, VariantIndexOfMatchesOrder) {
+TEST(DisruptorMessageEnvelopeTest, VariantIndexOfMatchesOrder) {
     MultiEnvelope env;
     env.message = Quote{};
     EXPECT_EQ(env.message.index(), 0u);

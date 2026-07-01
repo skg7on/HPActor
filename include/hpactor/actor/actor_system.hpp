@@ -521,9 +521,9 @@ class ActorSystem {
     /// \brief Find the fixed-mailbox binding for an actor.
     ///
     /// \param[in] id Actor identifier.
-    /// \return The \c FixedMailboxHandle if the actor uses a fixed
+    /// \return The \c DisruptorMailboxHandle if the actor uses a fixed
     ///         mailbox, or \c std::nullopt if not found or variable.
-    std::optional<mailbox::FixedMailboxHandle> get_fixed_binding(ActorId id);
+    std::optional<mailbox::DisruptorMailboxHandle> get_fixed_binding(ActorId id);
 
     // ── Actor enumeration ─────────────────────────────────────────────────
 

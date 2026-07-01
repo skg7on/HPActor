@@ -80,11 +80,11 @@ std::shared_ptr<ActorContext> ActorDirectory::find_context(ActorId id) const {
     return entry->context;
 }
 
-std::optional<mailbox::FixedMailboxHandle>
+std::optional<mailbox::DisruptorMailboxHandle>
 ActorDirectory::find_fixed_binding(ActorId id) const {
     auto entry = find(id);
     if (!entry.has_value() ||
-        entry->mailbox_kind != mailbox::MailboxKind::FixedDisruptor) {
+        entry->mailbox_kind != mailbox::MailboxKind::Disruptor) {
         return std::nullopt;
     }
     return entry->fixed_mailbox;

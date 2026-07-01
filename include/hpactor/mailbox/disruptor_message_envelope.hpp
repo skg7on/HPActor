@@ -23,7 +23,8 @@
 
 namespace hpactor::mailbox {
 
-// ── Fixed-message concept ─────────────────────────────────────────────────
+// ── Disruptor-message concept
+// ─────────────────────────────────────────────────
 
 /// \brief Concept for messages suitable for fixed-mailbox ring storage.
 ///
@@ -38,7 +39,7 @@ namespace hpactor::mailbox {
 ///       boundaries. Prefer IDs, offsets, handles, or immutable views
 ///       with externally guaranteed lifetime.
 template <typename T>
-concept FixedMailboxMessage =
+concept DisruptorMessage =
     std::is_standard_layout_v<T> && std::is_trivially_default_constructible_v<T> &&
     std::is_trivially_copyable_v<T> && std::is_trivially_destructible_v<T>;
 
@@ -79,7 +80,7 @@ inline constexpr bool one_of_v = one_of<T, Options...>::value;
 /// populates the sender address, trace, and message-id fields
 /// automatically; direct-reference callers provide only the
 /// application-visible options here.
-struct FixedSendOptions {
+struct DisruptorSendOptions {
     /// Deadline as a monotonic nanosecond timestamp.
     /// \c INT64_MAX means no deadline.
     int64_t deadline_ns{INT64_MAX};
@@ -99,7 +100,7 @@ struct FixedSendOptions {
 /// variant message payload.  The metadata is populated before the
 /// message is published to the ring and is stable through handler
 /// dispatch.
-struct FixedEnvelopeMeta {
+struct DisruptorEnvelopeMeta {
     /// Sender's actor address (empty for non-actor callers).
     ActorAddress sender{};
 
@@ -123,7 +124,8 @@ struct FixedEnvelopeMeta {
     bool has_trace{false};
 };
 
-// ── Fixed message envelope ────────────────────────────────────────────────
+// ── Disruptor message envelope
+// ────────────────────────────────────────────────
 
 /// \brief Compile-time fixed envelope for ring storage.
 ///
@@ -133,12 +135,12 @@ struct FixedEnvelopeMeta {
 /// discriminator and metadata — there is no dynamic payload.
 ///
 /// \tparam Messages The closed set of fixed-message types.  Each must
-///         satisfy \c FixedMailboxMessage and must be unique.
-template <FixedMailboxMessage... Messages> struct FixedMessageEnvelope {
+///         satisfy \c DisruptorMessage and must be unique.
+template <DisruptorMessage... Messages> struct DisruptorMessageEnvelope {
     static_assert(sizeof...(Messages) > 0,
-                  "FixedMessageEnvelope requires at least one message type");
+                  "DisruptorMessageEnvelope requires at least one message type");
     static_assert(detail::are_unique_v<Messages...>,
-                  "FixedMessageEnvelope message types must be unique");
+                  "DisruptorMessageEnvelope message types must be unique");
 
     /// The closed variant of allowed message types.
     using message_type = std::variant<Messages...>;
@@ -147,7 +149,7 @@ template <FixedMailboxMessage... Messages> struct FixedMessageEnvelope {
     message_type message{};
 
     /// Delivery metadata.
-    FixedEnvelopeMeta meta{};
+    DisruptorEnvelopeMeta meta{};
 };
 
 } // namespace hpactor::mailbox

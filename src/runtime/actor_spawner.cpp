@@ -92,8 +92,8 @@ result<Actor> ActorSpawner::adopt(std::shared_ptr<AbstractActor> actor,
     entry.context = actor_ctx;
     entry.mailbox_kind = actor->mailbox_kind();
 
-    if (entry.mailbox_kind == mailbox::MailboxKind::FixedDisruptor) {
-        auto binding = actor->create_fixed_mailbox();
+    if (entry.mailbox_kind == mailbox::MailboxKind::Disruptor) {
+        auto binding = actor->create_disruptor_mailbox();
         if (!binding.valid()) {
             return result<Actor>::make(error(errors::invalid_argument,
                                              "fixed mailbox binding is invalid"));

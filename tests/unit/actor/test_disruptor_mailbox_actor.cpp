@@ -24,25 +24,26 @@ struct Undeclared {
     uint64_t value;
 };
 
-static_assert(FixedMailboxMessage<Increment>);
-static_assert(FixedMailboxMessage<Reset>);
-static_assert(FixedMailboxMessage<Undeclared>);
+static_assert(DisruptorMessage<Increment>);
+static_assert(DisruptorMessage<Reset>);
+static_assert(DisruptorMessage<Undeclared>);
 
 // ── Test actor ────────────────────────────────────────────────────────────
 
-class CounterActor final : public FixedMailboxActor<8, Increment, Reset> {
+class CounterActor final : public DisruptorMailboxActor<8, Increment, Reset> {
   public:
-    using FixedMailboxActor::FixedMailboxActor;
+    using DisruptorMailboxActor::DisruptorMailboxActor;
 
     uint64_t total() const {
         return total_;
     }
 
   protected:
-    fixed_behavior_type make_fixed_behavior() override {
-        return {on_fixed<Increment>(
+    disruptor_behavior_type make_disruptor_behavior() override {
+        return {on_disruptor<Increment>(
                     [this](const Increment& msg) { total_ += msg.value; }),
-                on_fixed<Reset>([this](const Reset& msg) { total_ = msg.value; })};
+                on_disruptor<Reset>(
+                    [this](const Reset& msg) { total_ = msg.value; })};
     }
 
   private:
@@ -51,19 +52,19 @@ class CounterActor final : public FixedMailboxActor<8, Increment, Reset> {
 
 // ── Compile-time API checks ───────────────────────────────────────────────
 
-using RefType = CounterActor::fixed_actor_ref_type;
+using RefType = CounterActor::disruptor_actor_ref_type;
 
 static_assert(requires(RefType ref) { ref.try_send(Increment{1}); });
 static_assert(requires(RefType ref) { ref.try_send(Reset{1}); });
 
 // ── Reference tests ───────────────────────────────────────────────────────
 
-TEST(FixedActorRefTest, DefaultConstructedRefIsEmpty) {
+TEST(DisruptorActorRefTest, DefaultConstructedRefIsEmpty) {
     RefType ref;
     EXPECT_FALSE(ref.valid());
 }
 
-TEST(FixedActorRefTest, TrySendToInvalidRefReturnsRejected) {
+TEST(DisruptorActorRefTest, TrySendToInvalidRefReturnsRejected) {
     RefType ref;
     auto result = ref.try_send(Increment{1});
     EXPECT_FALSE(result.accepted());
@@ -72,10 +73,10 @@ TEST(FixedActorRefTest, TrySendToInvalidRefReturnsRejected) {
 
 // ── Mailbox kind ──────────────────────────────────────────────────────────
 
-TEST(FixedMailboxActorTest, MailboxKindIsFixedDisruptor) {
+TEST(DisruptorMailboxActorTest, MailboxKindIsDisruptor) {
     // We can't fully construct the actor without ActorSystem, but we can
     // check the type-level contract.
-    EXPECT_EQ(static_cast<uint8_t>(MailboxKind::FixedDisruptor), 1u);
+    EXPECT_EQ(static_cast<uint8_t>(MailboxKind::Disruptor), 1u);
 }
 
 } // namespace

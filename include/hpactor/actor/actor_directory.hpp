@@ -42,7 +42,7 @@ struct ActorDirectoryEntry {
     std::shared_ptr<AbstractActor> instance; ///< Shared ownership of the actor
                                              ///< instance.
     /// Mailbox backend kind. \c VariableMpsc by default; set to
-    /// \c FixedDisruptor for fixed-mailbox actors.
+    /// \c Disruptor for fixed-mailbox actors.
     mailbox::MailboxKind mailbox_kind{mailbox::MailboxKind::VariableMpsc};
     std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox; ///< Actor's
                                                                       ///< mailbox
@@ -50,7 +50,7 @@ struct ActorDirectoryEntry {
                                                                       ///< message
                                                                       ///< enqueue.
     /// Fixed-mailbox binding (empty for variable actors).
-    mailbox::FixedMailboxHandle fixed_mailbox;
+    mailbox::DisruptorMailboxHandle fixed_mailbox;
     std::shared_ptr<ActorContext> context; ///< Actor's execution context.
 };
 
@@ -123,9 +123,10 @@ class ActorDirectory {
     /// \brief Find the fixed-mailbox binding for a fixed-mailbox actor.
     ///
     /// \param[in] id Actor identifier.
-    /// \return The \c FixedMailboxHandle if the actor uses a fixed
+    /// \return The \c DisruptorMailboxHandle if the actor uses a fixed
     ///         mailbox, or \c std::nullopt if not found or variable.
-    std::optional<mailbox::FixedMailboxHandle> find_fixed_binding(ActorId id) const;
+    std::optional<mailbox::DisruptorMailboxHandle>
+    find_fixed_binding(ActorId id) const;
 
     /// \brief Register a name-to-address mapping.
     ///

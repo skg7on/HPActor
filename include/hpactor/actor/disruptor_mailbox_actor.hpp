@@ -27,7 +27,8 @@
 
 namespace hpactor {
 
-// ── Fixed behavior ────────────────────────────────────────────────────────
+// ── Disruptor behavior
+// ────────────────────────────────────────────────────────
 
 /// \brief Handler table for a fixed-mailbox actor.
 ///
@@ -36,12 +37,12 @@ namespace hpactor {
 /// the matching handler by type.
 ///
 /// \tparam Messages The closed set of fixed user-message types.
-template <typename... Messages> struct FixedBehavior {
+template <typename... Messages> struct DisruptorBehavior {
     std::tuple<std::function<void(const Messages&)>...> handlers;
 
-    FixedBehavior() = default;
+    DisruptorBehavior() = default;
 
-    FixedBehavior(std::function<void(const Messages&)>... hs) noexcept
+    DisruptorBehavior(std::function<void(const Messages&)>... hs) noexcept
         : handlers(std::move(hs)...) {}
 
     /// \brief Dispatch the active variant alternative to its handler.
@@ -59,13 +60,14 @@ template <typename... Messages> struct FixedBehavior {
 
 /// \brief Create a handler wrapper for a specific fixed-message type.
 ///
-/// Usage: \c on_fixed<Increment>([this](const Increment& m) { ... })
+/// Usage: \c on_disruptor<Increment>([this](const Increment& m) { ... })
 template <typename T, typename Fn>
-[[nodiscard]] std::function<void(const T&)> on_fixed(Fn&& fn) {
+[[nodiscard]] std::function<void(const T&)> on_disruptor(Fn&& fn) {
     return std::function<void(const T&)>(std::forward<Fn>(fn));
 }
 
-// ── Fixed mailbox actor ───────────────────────────────────────────────────
+// ── Disruptor mailbox actor
+// ───────────────────────────────────────────────────
 
 /// \brief Actor base class for fixed-message Disruptor mailbox actors.
 ///
@@ -74,18 +76,18 @@ template <typename T, typename Fn>
 ///
 /// \tparam Capacity Power-of-two ring capacity.
 /// \tparam Messages The closed set of fixed user-message types.
-template <size_t Capacity, mailbox::FixedMailboxMessage... Messages>
-class FixedMailboxActor : public EventBasedActor {
+template <size_t Capacity, mailbox::DisruptorMessage... Messages>
+class DisruptorMailboxActor : public EventBasedActor {
   public:
-    using core_type = mailbox::FixedActorMailboxCore<Capacity, Messages...>;
-    using fixed_actor_ref_type = FixedActorRef<Capacity, Messages...>;
-    using fixed_behavior_type = FixedBehavior<Messages...>;
+    using core_type = mailbox::DisruptorActorMailboxCore<Capacity, Messages...>;
+    using disruptor_actor_ref_type = DisruptorActorRef<Capacity, Messages...>;
+    using disruptor_behavior_type = DisruptorBehavior<Messages...>;
 
     using EventBasedActor::EventBasedActor;
 
     /// \brief Return the mailbox backend kind.
     [[nodiscard]] mailbox::MailboxKind mailbox_kind() const noexcept override {
-        return mailbox::MailboxKind::FixedDisruptor;
+        return mailbox::MailboxKind::Disruptor;
     }
 
     /// \brief Drain all messages immediately (immediate stop).
@@ -102,27 +104,27 @@ class FixedMailboxActor : public EventBasedActor {
     }
 
     /// \brief Create the fixed mailbox core and return a populated binding.
-    mailbox::FixedMailboxHandle create_fixed_mailbox() noexcept override {
+    mailbox::DisruptorMailboxHandle create_disruptor_mailbox() noexcept override {
         auto core = std::make_shared<core_type>(this->id(), this->address());
         core_ = core;
-        fixed_behavior_ = make_fixed_behavior();
+        disruptor_behavior_ = make_disruptor_behavior();
         core->set_dispatch_callbacks(
             this,
             /* system_fn */
             +[](void* ctx, TypedMessage&& msg) noexcept {
-                auto* self = static_cast<FixedMailboxActor*>(ctx);
+                auto* self = static_cast<DisruptorMailboxActor*>(ctx);
                 self->receive(msg);
             },
             /* user_fn */
             +[](void* ctx, void* envelope) noexcept {
-                auto* self = static_cast<FixedMailboxActor*>(ctx);
+                auto* self = static_cast<DisruptorMailboxActor*>(ctx);
                 auto* env =
                     static_cast<typename core_type::envelope_type*>(envelope);
-                self->fixed_behavior_.dispatch(env->message);
+                self->disruptor_behavior_.dispatch(env->message);
             });
         core->set_signal_callback(
             +[](void* ctx) noexcept {
-                auto* self = static_cast<FixedMailboxActor*>(ctx);
+                auto* self = static_cast<DisruptorMailboxActor*>(ctx);
                 self->home_system().get_scheduler()->notify_ready(self->id(), 0,
                                                                   INT64_MAX);
             },
@@ -131,17 +133,17 @@ class FixedMailboxActor : public EventBasedActor {
     }
 
     /// \brief Return a typed reference for sending to this actor.
-    [[nodiscard]] fixed_actor_ref_type fixed_ref() const noexcept {
-        return fixed_actor_ref_type(this->address(), core_);
+    [[nodiscard]] disruptor_actor_ref_type disruptor_ref() const noexcept {
+        return disruptor_actor_ref_type(this->address(), core_);
     }
 
   protected:
     /// \brief Build the handler table for this actor's message types.
-    [[nodiscard]] virtual fixed_behavior_type make_fixed_behavior() = 0;
+    [[nodiscard]] virtual disruptor_behavior_type make_disruptor_behavior() = 0;
 
   private:
     std::shared_ptr<core_type> core_;
-    fixed_behavior_type fixed_behavior_;
+    disruptor_behavior_type disruptor_behavior_;
 };
 
 } // namespace hpactor

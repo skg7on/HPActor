@@ -34,7 +34,7 @@ LocalDeliveryEngine::try_deliver(ActorId target, TypedMessage msg) {
 
     // Fixed-mailbox actors: system messages through control port,
     // user messages rejected with UnsupportedMessageType.
-    if (entry->mailbox_kind == mailbox::MailboxKind::FixedDisruptor) {
+    if (entry->mailbox_kind == mailbox::MailboxKind::Disruptor) {
         if (static_cast<uint32_t>(msg.type_id()) >=
             static_cast<uint32_t>(TypeTag::User)) {
             mailbox::EnqueueResult result;

@@ -199,7 +199,7 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     /// \brief The mailbox backend kind for this actor.
     ///
     /// Default is \c VariableMpsc. Fixed-mailbox actors override to
-    /// \c FixedDisruptor so the scheduler and delivery engine can
+    /// \c Disruptor so the scheduler and delivery engine can
     /// select the correct backend without RTTI.
     [[nodiscard]] virtual mailbox::MailboxKind mailbox_kind() const noexcept {
         return mailbox::MailboxKind::VariableMpsc;
@@ -208,10 +208,10 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     /// \brief Create the fixed mailbox binding for this actor.
     ///
     /// Default returns an empty (invalid) binding.  Fixed-mailbox actors
-    /// override to create their \c FixedActorMailboxCore and return a
-    /// populated \c FixedMailboxHandle.
-    [[nodiscard]] virtual mailbox::FixedMailboxHandle
-    create_fixed_mailbox() noexcept {
+    /// override to create their \c DisruptorActorMailboxCore and return a
+    /// populated \c DisruptorMailboxHandle.
+    [[nodiscard]] virtual mailbox::DisruptorMailboxHandle
+    create_disruptor_mailbox() noexcept {
         return {};
     }
 

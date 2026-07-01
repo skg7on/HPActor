@@ -29,19 +29,19 @@ struct UserB {
     int64_t value;
 };
 
-static_assert(FixedMailboxMessage<UserA>);
-static_assert(FixedMailboxMessage<UserB>);
+static_assert(DisruptorMessage<UserA>);
+static_assert(DisruptorMessage<UserB>);
 
-using Core = FixedActorMailboxCore<8, UserA, UserB>;
+using Core = DisruptorActorMailboxCore<8, UserA, UserB>;
 
 // ── Construction and empty state ──────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, ConstructsEmpty) {
+TEST(DisruptorActorMailboxCoreTest, ConstructsEmpty) {
     Core core(ActorId{1}, ActorAddress{});
     EXPECT_TRUE(core.empty());
 }
 
-TEST(FixedActorMailboxCoreTest, RingIsEmptyOnConstruction) {
+TEST(DisruptorActorMailboxCoreTest, RingIsEmptyOnConstruction) {
     Core core(ActorId{1}, ActorAddress{});
     EXPECT_TRUE(core.ring().empty());
     EXPECT_FALSE(core.ring().is_closed());
@@ -49,10 +49,10 @@ TEST(FixedActorMailboxCoreTest, RingIsEmptyOnConstruction) {
 
 // ── User message FIFO ─────────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, PushAndConsumeUserMessage) {
+TEST(DisruptorActorMailboxCoreTest, PushAndConsumeUserMessage) {
     Core core(ActorId{1}, ActorAddress{});
 
-    auto result = core.try_push_user(UserA{42}, FixedEnvelopeMeta{});
+    auto result = core.try_push_user(UserA{42}, DisruptorEnvelopeMeta{});
     EXPECT_TRUE(result.accepted());
 
     EXPECT_FALSE(core.empty());
@@ -61,58 +61,58 @@ TEST(FixedActorMailboxCoreTest, PushAndConsumeUserMessage) {
 
 // ── Full ring rejection ───────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, RejectsWhenRingFull) {
+TEST(DisruptorActorMailboxCoreTest, RejectsWhenRingFull) {
     Core core(ActorId{1}, ActorAddress{});
 
     // Fill the ring (capacity 8).
     for (int i = 0; i < 8; ++i) {
         auto result = core.try_push_user(UserA{static_cast<uint64_t>(i)},
-                                         FixedEnvelopeMeta{});
+                                         DisruptorEnvelopeMeta{});
         EXPECT_TRUE(result.accepted()) << "i=" << i;
     }
 
     // 9th push should fail.
-    auto result = core.try_push_user(UserA{99}, FixedEnvelopeMeta{});
+    auto result = core.try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
     EXPECT_FALSE(result.accepted());
     EXPECT_EQ(result.code, EnqueueResultCode::Rejected);
 }
 
 // ── Close semantics ───────────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, CloseRejectsNewPushes) {
+TEST(DisruptorActorMailboxCoreTest, CloseRejectsNewPushes) {
     Core core(ActorId{1}, ActorAddress{});
     core.close();
 
-    auto result = core.try_push_user(UserA{1}, FixedEnvelopeMeta{});
+    auto result = core.try_push_user(UserA{1}, DisruptorEnvelopeMeta{});
     EXPECT_FALSE(result.accepted());
     EXPECT_EQ(result.code, EnqueueResultCode::Rejected);
 }
 
 // ── Drain rejects new user messages ───────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, DrainRejectsNewUserMessages) {
+TEST(DisruptorActorMailboxCoreTest, DrainRejectsNewUserMessages) {
     Core core(ActorId{1}, ActorAddress{});
 
     core.begin_drain();
-    auto result = core.try_push_user(UserA{1}, FixedEnvelopeMeta{});
+    auto result = core.try_push_user(UserA{1}, DisruptorEnvelopeMeta{});
     EXPECT_FALSE(result.accepted());
 }
 
 // ── Publisher quiescence ──────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, PublishersQuiescentAfterPushCompletes) {
+TEST(DisruptorActorMailboxCoreTest, PublishersQuiescentAfterPushCompletes) {
     Core core(ActorId{1}, ActorAddress{});
 
     EXPECT_TRUE(core.publishers_quiescent());
 
-    auto result = core.try_push_user(UserA{1}, FixedEnvelopeMeta{});
+    auto result = core.try_push_user(UserA{1}, DisruptorEnvelopeMeta{});
     EXPECT_TRUE(result.accepted());
     EXPECT_TRUE(core.publishers_quiescent());
 }
 
 // ── System control message ────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, PushControlMessage) {
+TEST(DisruptorActorMailboxCoreTest, PushControlMessage) {
     Core core(ActorId{1}, ActorAddress{});
 
     // Create a minimal system-level TypedMessage.
@@ -124,7 +124,7 @@ TEST(FixedActorMailboxCoreTest, PushControlMessage) {
 
 // ── Binding ────────────────────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, MakeBindingProducesValidPorts) {
+TEST(DisruptorActorMailboxCoreTest, MakeBindingProducesValidPorts) {
     auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{});
     auto binding = core->make_handle();
     EXPECT_TRUE(binding.valid());
@@ -132,13 +132,13 @@ TEST(FixedActorMailboxCoreTest, MakeBindingProducesValidPorts) {
 
 // ── Multiple message types ─────────────────────────────────────────────────
 
-TEST(FixedActorMailboxCoreTest, HandlesBothMessageTypes) {
+TEST(DisruptorActorMailboxCoreTest, HandlesBothMessageTypes) {
     Core core(ActorId{1}, ActorAddress{});
 
-    auto r1 = core.try_push_user(UserA{10}, FixedEnvelopeMeta{});
+    auto r1 = core.try_push_user(UserA{10}, DisruptorEnvelopeMeta{});
     EXPECT_TRUE(r1.accepted());
 
-    auto r2 = core.try_push_user(UserB{-5}, FixedEnvelopeMeta{});
+    auto r2 = core.try_push_user(UserB{-5}, DisruptorEnvelopeMeta{});
     EXPECT_TRUE(r2.accepted());
 
     EXPECT_FALSE(core.empty());

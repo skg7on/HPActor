@@ -29,21 +29,21 @@ class ActorContext;
 /// \brief Typed local reference to a fixed-mailbox actor.
 ///
 /// Carries the actor's address and a shared pointer to the stable
-/// \c FixedActorMailboxCore.  The core outlives the actor, so a
+/// \c DisruptorActorMailboxCore.  The core outlives the actor, so a
 /// surviving reference observes a clean rejection rather than a
 /// dangling pointer.
 ///
 /// \tparam Capacity Power-of-two ring capacity.
 /// \tparam Messages The closed set of fixed user-message types.
-template <size_t Capacity, mailbox::FixedMailboxMessage... Messages>
-class FixedActorRef final {
+template <size_t Capacity, mailbox::DisruptorMessage... Messages>
+class DisruptorActorRef final {
   public:
-    using core_type = mailbox::FixedActorMailboxCore<Capacity, Messages...>;
+    using core_type = mailbox::DisruptorActorMailboxCore<Capacity, Messages...>;
 
-    FixedActorRef() noexcept = default;
+    DisruptorActorRef() noexcept = default;
 
     /// \brief Construct from an address and shared mailbox core.
-    FixedActorRef(ActorAddress address, std::shared_ptr<core_type> core) noexcept
+    DisruptorActorRef(ActorAddress address, std::shared_ptr<core_type> core) noexcept
         : address_(address), core_(std::move(core)) {}
 
     /// \brief True when the reference has a valid target.
@@ -68,14 +68,15 @@ class FixedActorRef final {
     template <typename Message>
         requires mailbox::detail::one_of_v<std::remove_cvref_t<Message>, Messages...>
     [[nodiscard]] mailbox::EnqueueResult
-    try_send(Message&& message, mailbox::FixedSendOptions options = {}) const noexcept {
+    try_send(Message&& message,
+             mailbox::DisruptorSendOptions options = {}) const noexcept {
         if (!core_) {
             mailbox::EnqueueResult result;
             result.code = mailbox::EnqueueResultCode::Rejected;
             result.target = address_.id;
             return result;
         }
-        mailbox::FixedEnvelopeMeta meta;
+        mailbox::DisruptorEnvelopeMeta meta;
         meta.deadline_ns = options.deadline_ns;
         meta.message_id = options.message_id;
         meta.flags = options.flags;
@@ -90,7 +91,7 @@ class FixedActorRef final {
         requires mailbox::detail::one_of_v<std::remove_cvref_t<Message>, Messages...>
     [[nodiscard]] mailbox::EnqueueResult
     try_send_with_meta(Message&& message,
-                       mailbox::FixedEnvelopeMeta meta) const noexcept {
+                       mailbox::DisruptorEnvelopeMeta meta) const noexcept {
         if (!core_) {
             mailbox::EnqueueResult result;
             result.code = mailbox::EnqueueResultCode::Rejected;
