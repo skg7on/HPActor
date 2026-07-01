@@ -1,6 +1,7 @@
 add_executable(test_unit_mailbox
     test_fixed_message_envelope.cpp
     test_disruptor_mpsc_ring.cpp
+    test_fixed_actor_mailbox.cpp
     test_message.cpp
     test_message_advanced.cpp
     test_bounded_mailbox.cpp
