@@ -518,6 +518,13 @@ class ActorSystem {
     /// \return Pointer to the mailbox, or \c nullptr if not found.
     mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox(ActorId id);
 
+    /// \brief Find the fixed-mailbox binding for an actor.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return The \c FixedMailboxBinding if the actor uses a fixed
+    ///         mailbox, or \c std::nullopt if not found or variable.
+    std::optional<mailbox::FixedMailboxBinding> get_fixed_binding(ActorId id);
+
     // ── Actor enumeration ─────────────────────────────────────────────────
 
     /// \brief Approximate count of live actors in this system.

@@ -17,6 +17,8 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/fixed_mailbox_ports.hpp>
+#include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/failure_envelope.hpp>
@@ -219,7 +221,8 @@ CoroutineActorRunner::run(EventBasedActor& actor, const WorkItem& item,
 
 ActorExecutionEngine::ActorExecutionEngine(ActorSystem& system,
                                            ActorReadyGate& ready_gate) noexcept
-    : behavior_runner_(system, ready_gate)
+    : system_(system), ready_gate_(ready_gate),
+      behavior_runner_(system, ready_gate)
 #if HPACTOR_SUPPORT_COROUTINES
       ,
       coroutine_runner_(system)
@@ -231,6 +234,9 @@ ActorRunResult
 ActorExecutionEngine::run(EventBasedActor& actor, const WorkItem& item,
                           const ActorExecutionContext& context,
                           bool use_coroutines) noexcept {
+    if (actor.mailbox_kind() == mailbox::MailboxKind::FixedDisruptor) {
+        return run_fixed_actor(actor, item, context);
+    }
 #if HPACTOR_SUPPORT_COROUTINES
     if (use_coroutines) {
         return coroutine_runner_.run(actor, item, context);
@@ -239,6 +245,56 @@ ActorExecutionEngine::run(EventBasedActor& actor, const WorkItem& item,
     (void)use_coroutines;
 #endif
     return behavior_runner_.run(actor, item, context);
+}
+
+ActorRunResult
+ActorExecutionEngine::run_fixed_actor(EventBasedActor& actor, const WorkItem& item,
+                                      const ActorExecutionContext& context) noexcept {
+    auto& actor_state = actor.actor_state();
+
+    uint32_t expected = ActorState::kReady;
+    if (!actor_state.cas(expected, ActorState::kRunning)) {
+        if (actor_state.is_terminated()) {
+            actor.set_exit_reason(errors::actor_down);
+            actor.on_exit();
+            return {ActorRunDisposition::Terminated, 0, INT64_MAX};
+        }
+        return {ActorRunDisposition::Skipped, 0, INT64_MAX};
+    }
+
+    auto binding = system_.get_fixed_binding(item.actor);
+    if (!binding.has_value() || !binding->execution.consume_one) {
+        actor_state.set(ActorState::kIdle);
+        return {ActorRunDisposition::Skipped, 0, INT64_MAX};
+    }
+
+    bool has_work = binding->execution.consume_one(binding->execution.context,
+                                                   actor, context);
+
+    // Requeue budget: same as BehaviorActorRunner (64 cycles).
+    static constexpr uint64_t kRequeueBudget = 64;
+    bool budget_exhausted =
+        !context.workers_paused && item.sequence >= kRequeueBudget;
+
+    if (has_work && !budget_exhausted) {
+        auto admission = ready_gate_.mark_ready_already_admitted(actor);
+        if (admission.accepted() ||
+            admission.code == ReadyAdmissionCode::AlreadyReady) {
+            return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};
+        }
+        return {ActorRunDisposition::Skipped, 0, INT64_MAX};
+    }
+
+    actor_state.set(ActorState::kIdle);
+    // Double-check: if work appeared during transition, re-admit.
+    if (has_work) {
+        auto admission = ready_gate_.try_mark_ready(item.actor);
+        if (admission.accepted() ||
+            admission.code == ReadyAdmissionCode::AlreadyReady) {
+            return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};
+        }
+    }
+    return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};
 }
 
 } // namespace hpactor::sched
