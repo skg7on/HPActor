@@ -35,17 +35,26 @@ class IScheduler;
 ///
 /// Stores only stable non-owning references.  All owners outlive it.
 /// Performs no topology lookup, delivery, remote I/O, or passivation.
+///
+/// \note Thread safety: Must be externally serialized. The spawner publishes
+///       into a shared \c ActorDirectory — concurrent adoptions would race
+///       on directory insertion.
 class ActorSpawner final {
   public:
+    /// \brief Non-owning dependencies that must outlive the spawner.
     struct Dependencies {
-        ActorSystem& facade;
-        EndPoint endpoint;
-        ActorDirectory& directory;
-        sched::IScheduler& scheduler;
-        metrics::MpscRingBuffer<metrics::MetricEvent>* metrics;
-        log::Logger* logger;
+        ActorSystem& facade;          ///< Owning actor system facade.
+        EndPoint endpoint;            ///< Local endpoint.
+        ActorDirectory& directory;    ///< Target directory for publication.
+        sched::IScheduler& scheduler; ///< Scheduler for worker assignment.
+        metrics::MpscRingBuffer<metrics::MetricEvent>* metrics; ///< Metrics
+                                                                ///< ring buffer
+                                                                ///< (nullable).
+        log::Logger* logger; ///< Structured logger (nullable).
     };
 
+    /// \brief Construct the spawner with fixed dependencies.
+    /// \param[in] dependencies Stable non-owning references.
     explicit ActorSpawner(Dependencies dependencies) noexcept;
 
     /// \brief Adopt a constructed local actor through the unified pipeline.
@@ -53,6 +62,11 @@ class ActorSpawner final {
     /// Returns a valid \c Actor on success, or a typed error on failure.
     /// The spawner is the only production code that constructs and publishes
     /// a complete \c ActorDirectoryEntry.
+    ///
+    /// \param[in] actor The fully constructed actor (shared ownership
+    ///                  transferred to the directory).
+    /// \param[in] spec  Resolved spawn specification with effective config.
+    /// \return A valid \c Actor on success, or a typed error code.
     result<Actor>
     adopt(std::shared_ptr<AbstractActor> actor, const SpawnSpec& spec) noexcept;
 
