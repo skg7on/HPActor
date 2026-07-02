@@ -15,6 +15,8 @@
 #pragma once
 
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
+#include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
@@ -191,6 +193,25 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     }
     /// \brief Dispatch hints (CPU affinity, pool size) for dedicated actors.
     virtual sched::DispatchHints dispatch_hints() const {
+        return {};
+    }
+
+    /// \brief The mailbox backend kind for this actor.
+    ///
+    /// Default is \c VariableMpsc. Fixed-mailbox actors override to
+    /// \c Disruptor so the scheduler and delivery engine can
+    /// select the correct backend without RTTI.
+    [[nodiscard]] virtual mailbox::MailboxKind mailbox_kind() const noexcept {
+        return mailbox::MailboxKind::VariableMpsc;
+    }
+
+    /// \brief Create the fixed mailbox binding for this actor.
+    ///
+    /// Default returns an empty (invalid) binding.  Fixed-mailbox actors
+    /// override to create their \c DisruptorActorMailboxCore and return a
+    /// populated \c DisruptorMailboxHandle.
+    [[nodiscard]] virtual mailbox::DisruptorMailboxHandle
+    create_disruptor_mailbox() noexcept {
         return {};
     }
 

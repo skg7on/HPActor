@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
+#include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
@@ -24,6 +26,31 @@ LocalDeliveryEngine::LocalDeliveryEngine(ActorDirectory& directory)
 
 mailbox::EnqueueResult
 LocalDeliveryEngine::try_deliver(ActorId target, TypedMessage msg) {
+    auto entry = directory_.find(target);
+    if (!entry.has_value()) {
+        return mailbox::EnqueueResult{
+            .code = mailbox::EnqueueResultCode::ActorNotFound, .target = target};
+    }
+
+    // Fixed-mailbox actors: system messages through control port,
+    // user messages rejected with UnsupportedMessageType.
+    if (entry->mailbox_kind == mailbox::MailboxKind::Disruptor) {
+        if (static_cast<uint32_t>(msg.type_id()) >=
+            static_cast<uint32_t>(TypeTag::User)) {
+            mailbox::EnqueueResult result;
+            result.code = mailbox::EnqueueResultCode::Rejected;
+            result.target = target;
+            return result;
+        }
+        if (entry->fixed_mailbox.control.try_push) {
+            return entry->fixed_mailbox.control.try_push(
+                entry->fixed_mailbox.control.context, std::move(msg));
+        }
+        return mailbox::EnqueueResult{
+            .code = mailbox::EnqueueResultCode::Rejected, .target = target};
+    }
+
+    // Default path: variable MPSC mailbox.
     auto mailbox = directory_.find_mailbox(target);
     if (!mailbox) {
         return mailbox::EnqueueResult{

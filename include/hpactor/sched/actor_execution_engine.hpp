@@ -17,6 +17,7 @@
 #include <hpactor/actor/actor_fwd.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/actor_ready_gate.hpp>
@@ -156,6 +157,11 @@ class ActorExecutionEngine {
         const ActorExecutionContext& context, bool use_coroutines) noexcept;
 
   private:
+    ActorRunResult run_fixed_actor(EventBasedActor& actor, const WorkItem& item,
+                                   const ActorExecutionContext& context) noexcept;
+
+    ActorSystem& system_;
+    ActorReadyGate& ready_gate_;
     BehaviorActorRunner behavior_runner_;
 #if HPACTOR_SUPPORT_COROUTINES
     CoroutineActorRunner coroutine_runner_;

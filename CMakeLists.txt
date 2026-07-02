@@ -33,6 +33,8 @@ option(ENABLE_FAULT_INJECTION "Enable deterministic fault injection hooks" ON)
 option(ENABLE_ACTOR_PASSIVATION "Enable actor passivation subsystem" ON)
 option(ENABLE_AI_ACCELERATORS "Enable AI accelerator resource plane (CPU/mock baseline, runtime opt-in)" ON)
 option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20 is available" OFF)
+option(ENABLE_FIXED_DISRUPTOR_MAILBOX
+       "Enable experimental fixed-message Disruptor actor mailbox" OFF)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -79,6 +81,7 @@ set(HPACTOR_ENABLE_ACTOR_TRACING ${ENABLE_ACTOR_TRACING})
 set(HPACTOR_ENABLE_FAULT_INJECTION ${ENABLE_FAULT_INJECTION})
 set(HPACTOR_ENABLE_PASSIVATION ${ENABLE_ACTOR_PASSIVATION})
 set(HPACTOR_ENABLE_AI_ACCELERATORS ${ENABLE_AI_ACCELERATORS})
+set(HPACTOR_ENABLE_FIXED_DISRUPTOR_MAILBOX ${ENABLE_FIXED_DISRUPTOR_MAILBOX})
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/include/hpactor/hpactor_config.hpp.in

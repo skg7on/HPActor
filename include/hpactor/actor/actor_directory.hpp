@@ -15,6 +15,8 @@
 #pragma once
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
+#include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
@@ -39,11 +41,16 @@ struct ActorDirectoryEntry {
     Actor actor; ///< Actor handle (address + proxy).
     std::shared_ptr<AbstractActor> instance; ///< Shared ownership of the actor
                                              ///< instance.
+    /// Mailbox backend kind. \c VariableMpsc by default; set to
+    /// \c Disruptor for fixed-mailbox actors.
+    mailbox::MailboxKind mailbox_kind{mailbox::MailboxKind::VariableMpsc};
     std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox; ///< Actor's
                                                                       ///< mailbox
                                                                       ///< for
                                                                       ///< message
                                                                       ///< enqueue.
+    /// Fixed-mailbox binding (empty for variable actors).
+    mailbox::DisruptorMailboxHandle fixed_mailbox;
     std::shared_ptr<ActorContext> context; ///< Actor's execution context.
 };
 
@@ -112,6 +119,14 @@ class ActorDirectory {
     /// \param[in] id Actor identifier.
     /// \return Shared pointer to the context, or \c nullptr if not found.
     std::shared_ptr<ActorContext> find_context(ActorId id) const;
+
+    /// \brief Find the fixed-mailbox binding for a fixed-mailbox actor.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return The \c DisruptorMailboxHandle if the actor uses a fixed
+    ///         mailbox, or \c std::nullopt if not found or variable.
+    std::optional<mailbox::DisruptorMailboxHandle>
+    find_fixed_binding(ActorId id) const;
 
     /// \brief Register a name-to-address mapping.
     ///
