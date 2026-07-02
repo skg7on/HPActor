@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 08:50:57</td>
+            <td class="headerValue">2026-07-02 02:17:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -335,15 +335,15 @@
 <span id="L257"><span class="lineNum">     257</span>                 :             :         }</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             : </span>
 <span id="L259"><span class="lineNum">     259</span>                 :             :         /// \brief Pop one item (owner only). Returns \c false if empty.</span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC tlaBgGNC">       28340 :         bool try_pop(WorkItem&amp; out, uint8_t&amp; priority) noexcept {</span></span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">       28340 :             Slot&amp; slot = slots[head &amp; kMask];</span></span>
-<span id="L262"><span class="lineNum">     262</span>         [<span class="tlaGBC" title="Branch 0 was taken 17305 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11035 times"> + </span>]:<span class="tlaGNC">       56680 :             if (slot.seq.load(std::memory_order_acquire) != head + 1)</span></span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">       17305 :                 return false;</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">       11035 :             out = slot.item;</span></span>
-<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">       11035 :             priority = slot.priority;</span></span>
-<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">       11035 :             slot.seq.store(head + kCapacity, std::memory_order_release);</span></span>
-<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">       11035 :             ++head;</span></span>
-<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC">       11035 :             return true;</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC tlaBgGNC">       28445 :         bool try_pop(WorkItem&amp; out, uint8_t&amp; priority) noexcept {</span></span>
+<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">       28445 :             Slot&amp; slot = slots[head &amp; kMask];</span></span>
+<span id="L262"><span class="lineNum">     262</span>         [<span class="tlaGBC" title="Branch 0 was taken 17408 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11037 times"> + </span>]:<span class="tlaGNC">       56890 :             if (slot.seq.load(std::memory_order_acquire) != head + 1)</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">       17408 :                 return false;</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">       11037 :             out = slot.item;</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">       11037 :             priority = slot.priority;</span></span>
+<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">       11037 :             slot.seq.store(head + kCapacity, std::memory_order_release);</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">       11037 :             ++head;</span></span>
+<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC">       11037 :             return true;</span></span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :         }</span>
 <span id="L270"><span class="lineNum">     270</span>                 :             :     };</span>
 <span id="L271"><span class="lineNum">     271</span>                 :             : </span>
@@ -404,8 +404,8 @@
 <span id="L326"><span class="lineNum">     326</span>                 :             : </span>
 <span id="L327"><span class="lineNum">     327</span>                 :             :     /// \return Reference to the worker state vector (for \c WorkerThread</span>
 <span id="L328"><span class="lineNum">     328</span>                 :             :     ///         use).</span>
-<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">        2270 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
-<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">        2270 :         return workers_;</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">        2218 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">        2218 :         return workers_;</span></span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     }</span>
 <span id="L332"><span class="lineNum">     332</span>                 :             : </span>
 <span id="L333"><span class="lineNum">     333</span>                 :             :   private:</span>

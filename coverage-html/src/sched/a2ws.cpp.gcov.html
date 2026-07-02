@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 08:50:57</td>
+            <td class="headerValue">2026-07-02 02:17:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -104,27 +104,27 @@
 <span id="L26"><span class="lineNum">      26</span>                 :             :     }</span>
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         850 : }</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         550 : uint32_t A2WS::get_victim(uint32_t thief_index) {</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         463 : uint32_t A2WS::get_victim(uint32_t thief_index) {</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             :     // Simple round-robin with hint</span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">         550 :     uint32_t hint = victim_hints_[thief_index].load(std::memory_order_relaxed);</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         550 :     return hint;</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">         463 :     uint32_t hint = victim_hints_[thief_index].load(std::memory_order_relaxed);</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         463 :     return hint;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : }</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         545 : void A2WS::record_attempt(uint32_t thief, uint32_t victim, bool success) {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         545 :     workers_[thief].steal_attempts.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         458 : void A2WS::record_attempt(uint32_t thief, uint32_t victim, bool success) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         458 :     workers_[thief].steal_attempts.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 542 times"> + </span>]:<span class="tlaGNC">         545 :     if (success) {</span></span>
+<span id="L38"><span class="lineNum">      38</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 455 times"> + </span>]:<span class="tlaGNC">         458 :     if (success) {</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           3 :         workers_[thief].steal_successes.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     }</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : </span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     // Update victim hint based on result</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     // If steal failed, advance to next potential victim</span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         545 :     uint32_t current_hint = victim_hints_[thief].load(std::memory_order_relaxed);</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">         545 :     uint32_t next_hint = (victim + 1) % num_workers_;</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         458 :     uint32_t current_hint = victim_hints_[thief].load(std::memory_order_relaxed);</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">         458 :     uint32_t next_hint = (victim + 1) % num_workers_;</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : </span>
-<span id="L47"><span class="lineNum">      47</span>         [<span class="tlaGBC" title="Branch 0 was taken 542 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">         545 :     if (!success) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>         [<span class="tlaGBC" title="Branch 0 was taken 455 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">         458 :     if (!success) {</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :         // Failed steal - try next victim</span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         542 :         victim_hints_[thief].store(next_hint, std::memory_order_relaxed);</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         455 :         victim_hints_[thief].store(next_hint, std::memory_order_relaxed);</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     } else {</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :         // Success - stick with current victim for now</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :         // Could also use adaptive logic to prefer victims with history of</span>
@@ -133,7 +133,7 @@
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     (void)thief;        // Currently unused in victim selection</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     (void)current_hint; // Currently unused</span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         545 : }</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         458 : }</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           2 : void A2WS::record_steal(uint32_t thief, uint32_t victim) {</span></span>
 <span id="L61"><span class="lineNum">      61</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :     if (same_pool(thief, victim)) {</span></span>

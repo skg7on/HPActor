@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 08:50:57</td>
+            <td class="headerValue">2026-07-02 02:17:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -101,54 +101,54 @@
 <span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC tlaBgGNC">         829 : ActorReadyGate::ActorReadyGate(ActorSystem&amp; system) noexcept</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         829 :     : system_(system) {}</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : </span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">       13093 : ReadyAdmission ActorReadyGate::try_mark_ready(ActorId actor) noexcept {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       13093 :     auto actor_ptr = system_.get_actor(actor);</span></span>
-<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13088 times"> + </span>]:<span class="tlaGNC">       13093 :     if (!actor_ptr) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">       13095 : ReadyAdmission ActorReadyGate::try_mark_ready(ActorId actor) noexcept {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       13095 :     auto actor_ptr = system_.get_actor(actor);</span></span>
+<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13090 times"> + </span>]:<span class="tlaGNC">       13095 :     if (!actor_ptr) {</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           5 :         return {ReadyAdmissionCode::MissingActor};</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             :     }</span>
-<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13086 times"> + </span>]:<span class="tlaGNC">       13088 :     if (!actor_ptr-&gt;is_event_based_actor()) {</span></span>
+<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13088 times"> + </span>]:<span class="tlaGNC">       13090 :     if (!actor_ptr-&gt;is_event_based_actor()) {</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           2 :         return {ReadyAdmissionCode::Accepted};</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :     }</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">       13086 :     auto* eb = static_cast&lt;EventBasedActor*&gt;(actor_ptr.get());</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">       13086 :     auto&amp; state = eb-&gt;actor_state();</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">       13088 :     auto* eb = static_cast&lt;EventBasedActor*&gt;(actor_ptr.get());</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">       13088 :     auto&amp; state = eb-&gt;actor_state();</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     for (;;) {</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">       13086 :         uint32_t current = state.get();</span></span>
-<span id="L40"><span class="lineNum">      40</span>   [<span class="tlaGBC" title="Branch 0 was taken 8272 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4580 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 233 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">       13086 :         switch (current) {</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">       13088 :         uint32_t current = state.get();</span></span>
+<span id="L40"><span class="lineNum">      40</span>   [<span class="tlaGBC" title="Branch 0 was taken 8279 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4572 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 236 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">       13088 :         switch (current) {</span></span>
 <span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 4 was not taken"> - </span>]
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        8272 :             case ActorState::kIdle:</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        8279 :             case ActorState::kIdle:</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :             case ActorState::kIOWaiting: {</span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">        8272 :                 uint32_t expected = current;</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 8272 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        8272 :                 if (state.cas(expected, ActorState::kReady)) {</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">        8272 :                     return {ReadyAdmissionCode::Accepted};</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">        8279 :                 uint32_t expected = current;</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 8279 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        8279 :                 if (state.cas(expected, ActorState::kReady)) {</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">        8279 :                     return {ReadyAdmissionCode::Accepted};</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :                 }</span>
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 continue;</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC">           0 :             }</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC tlaBgGNC">        4580 :             case ActorState::kReady:</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        4580 :                 return {ReadyAdmissionCode::AlreadyReady};</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         233 :             case ActorState::kRunning:</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">         233 :                 return {ReadyAdmissionCode::AlreadyRunning};</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC tlaBgGNC">        4572 :             case ActorState::kReady:</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        4572 :                 return {ReadyAdmissionCode::AlreadyReady};</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         236 :             case ActorState::kRunning:</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">         236 :                 return {ReadyAdmissionCode::AlreadyRunning};</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           1 :             case ActorState::kTerminated:</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           1 :                 return {ReadyAdmissionCode::Terminated};</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             default:</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC">           0 :                 return {ReadyAdmissionCode::NotAdmissible};</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :         }</span>
 <span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaUNC">           0 :     }</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC tlaBgGNC">       13093 : }</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC tlaBgGNC">       13095 : }</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : ReadyAdmission</span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">      125807 : ActorReadyGate::mark_ready_already_admitted(EventBasedActor&amp; actor) noexcept {</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      125807 :     auto&amp; state = actor.actor_state();</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">      125798 : ActorReadyGate::mark_ready_already_admitted(EventBasedActor&amp; actor) noexcept {</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      125798 :     auto&amp; state = actor.actor_state();</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     for (;;) {</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">      125807 :         uint32_t current = state.get();</span></span>
-<span id="L66"><span class="lineNum">      66</span>   [<span class="tlaGBC" title="Branch 0 was taken 125807 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      125807 :         switch (current) {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      125807 :             case ActorState::kRunning:</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">      125798 :         uint32_t current = state.get();</span></span>
+<span id="L66"><span class="lineNum">      66</span>   [<span class="tlaGBC" title="Branch 0 was taken 125798 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      125798 :         switch (current) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      125798 :             case ActorState::kRunning:</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :             case ActorState::kIdle:</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :             case ActorState::kIOWaiting: {</span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">      125807 :                 uint32_t expected = current;</span></span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 125807 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      125807 :                 if (state.cas(expected, ActorState::kReady)) {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      125807 :                     return {ReadyAdmissionCode::Accepted};</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">      125798 :                 uint32_t expected = current;</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 125798 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      125798 :                 if (state.cas(expected, ActorState::kReady)) {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      125798 :                     return {ReadyAdmissionCode::Accepted};</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :                 }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 continue;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC">           0 :             }</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-01 08:50:57</td>
+            <td class="headerValue">2026-07-02 02:17:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">87.3&nbsp;%</td>
@@ -115,9 +115,9 @@
 <span id="L37"><span class="lineNum">      37</span>                 :             : namespace hpactor {</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : // constexpr network-to-host byte-order conversion (ntohs is not constexpr)</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC tlaBgGNC">       11516 : inline constexpr uint16_t net_to_host_u16(uint16_t net_val) noexcept {</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC tlaBgGNC">       11544 : inline constexpr uint16_t net_to_host_u16(uint16_t net_val) noexcept {</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__</span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">       11516 :     return __builtin_bswap16(net_val);</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">       11544 :     return __builtin_bswap16(net_val);</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : #else</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :     return net_val;</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : #endif</span>
@@ -150,11 +150,11 @@
 <span id="L72"><span class="lineNum">      72</span>                 :             :     uint16_t port_nw; // Network byte order</span>
 <span id="L73"><span class="lineNum">      73</span>                 :             : </span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        1609 :     constexpr Ipv4Endpoint() noexcept : addr(0), port_nw(0) {}</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">     1238856 :     constexpr Ipv4Endpoint(uint32_t a, uint16_t p) noexcept</span></span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">     1238856 :         : addr(a), port_nw(p) {}</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">     1238835 :     constexpr Ipv4Endpoint(uint32_t a, uint16_t p) noexcept</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">     1238835 :         : addr(a), port_nw(p) {}</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       11511 :     [[nodiscard]] constexpr uint16_t port() const noexcept {</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">       11511 :         return net_to_host_u16(port_nw);</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       11539 :     [[nodiscard]] constexpr uint16_t port() const noexcept {</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">       11539 :         return net_to_host_u16(port_nw);</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :     }</span>
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">           2 :     [[nodiscard]] constexpr bool is_ipv4() const noexcept {</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">           2 :         return true;</span></span>
@@ -172,11 +172,11 @@
 <span id="L94"><span class="lineNum">      94</span>                 :             :     }</span>
 <span id="L95"><span class="lineNum">      95</span>                 :             :     void to_sockaddr(sockaddr_in* out) const noexcept;</span>
 <span id="L96"><span class="lineNum">      96</span>                 :             : </span>
-<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">      134772 :     constexpr bool operator==(const Ipv4Endpoint&amp; other) const noexcept {</span></span>
-<span id="L98"><span class="lineNum">      98</span>   [<span class="tlaGBC" title="Branch 0 was taken 134735 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 134702 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 33 times"> + </span>]:<span class="tlaGNC">      134772 :         return addr == other.addr &amp;&amp; port_nw == other.port_nw;</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">      134837 :     constexpr bool operator==(const Ipv4Endpoint&amp; other) const noexcept {</span></span>
+<span id="L98"><span class="lineNum">      98</span>   [<span class="tlaGBC" title="Branch 0 was taken 134800 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 134767 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 33 times"> + </span>]:<span class="tlaGNC">      134837 :         return addr == other.addr &amp;&amp; port_nw == other.port_nw;</span></span>
 <span id="L99"><span class="lineNum">      99</span>                 :             :     }</span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">      132807 :     constexpr bool operator!=(const Ipv4Endpoint&amp; other) const noexcept {</span></span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">      132807 :         return !(*this == other);</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">      132799 :     constexpr bool operator!=(const Ipv4Endpoint&amp; other) const noexcept {</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">      132799 :         return !(*this == other);</span></span>
 <span id="L102"><span class="lineNum">     102</span>                 :             :     }</span>
 <span id="L103"><span class="lineNum">     103</span>                 :             : };</span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : </span>
@@ -364,7 +364,7 @@
 <span id="L285"><span class="lineNum">     285</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L286"><span class="lineNum">     286</span>                 :             : class error {</span>
 <span id="L287"><span class="lineNum">     287</span>                 :             :   public:</span>
-<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC tlaBgGNC">      102732 :     error() = default;</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC tlaBgGNC">       99719 :     error() = default;</span></span>
 <span id="L289"><span class="lineNum">     289</span>                 :             : </span>
 <span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">         484 :     explicit error(uint32_t code, std::string msg = {})</span></span>
 <span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">         484 :         : code_(code), message_(std::move(msg)) {}</span></span>
@@ -480,15 +480,15 @@
 <span id="L400"><span class="lineNum">     400</span>                 :             : </span>
 <span id="L401"><span class="lineNum">     401</span>                 :             : template &lt;&gt; class result&lt;void&gt; {</span>
 <span id="L402"><span class="lineNum">     402</span>                 :             :   public:</span>
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">      102716 :     static result&lt;void&gt; make() {</span></span>
-<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">      102716 :         return result&lt;void&gt;();</span></span>
+<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">       99703 :     static result&lt;void&gt; make() {</span></span>
+<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">       99703 :         return result&lt;void&gt;();</span></span>
 <span id="L405"><span class="lineNum">     405</span>                 :             :     }</span>
 <span id="L406"><span class="lineNum">     406</span>                 :<span class="tlaGNC">          24 :     static result&lt;void&gt; make(class error err) {</span></span>
 <span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">          24 :         return result&lt;void&gt;(std::move(err));</span></span>
 <span id="L408"><span class="lineNum">     408</span>                 :             :     }</span>
 <span id="L409"><span class="lineNum">     409</span>                 :             : </span>
-<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">       98776 :     bool has_value() const {</span></span>
-<span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaGNC">       98776 :         return has_value_;</span></span>
+<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">       95763 :     bool has_value() const {</span></span>
+<span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaGNC">       95763 :         return has_value_;</span></span>
 <span id="L412"><span class="lineNum">     412</span>                 :             :     }</span>
 <span id="L413"><span class="lineNum">     413</span>                 :<span class="tlaGNC">         103 :     bool ok() const {</span></span>
 <span id="L414"><span class="lineNum">     414</span>                 :<span class="tlaGNC">         103 :         return has_value_;</span></span>
@@ -502,7 +502,7 @@
 <span id="L422"><span class="lineNum">     422</span>                 :             :     }</span>
 <span id="L423"><span class="lineNum">     423</span>                 :             : </span>
 <span id="L424"><span class="lineNum">     424</span>                 :             :   private:</span>
-<span id="L425"><span class="lineNum">     425</span>                 :<span class="tlaGNC">      102716 :     result() : has_value_(true) {}</span></span>
+<span id="L425"><span class="lineNum">     425</span>                 :<span class="tlaGNC">       99703 :     result() : has_value_(true) {}</span></span>
 <span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">          24 :     result(class error err) : has_value_(false), error_(std::move(err)) {}</span></span>
 <span id="L427"><span class="lineNum">     427</span>                 :             : </span>
 <span id="L428"><span class="lineNum">     428</span>                 :             :     bool has_value_;</span>
@@ -622,10 +622,10 @@
 <span id="L542"><span class="lineNum">     542</span>                 :             : // std::hash specializations (must be in namespace std)</span>
 <span id="L543"><span class="lineNum">     543</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L544"><span class="lineNum">     544</span>                 :             : template &lt;&gt; struct std::hash&lt;hpactor::Ipv4Endpoint&gt; {</span>
-<span id="L545"><span class="lineNum">     545</span>                 :<span class="tlaGNC">        9184 :     std::size_t operator()(const hpactor::Ipv4Endpoint&amp; ep) const noexcept {</span></span>
-<span id="L546"><span class="lineNum">     546</span>                 :<span class="tlaGNC">        9184 :         std::size_t h = std::hash&lt;uint32_t&gt;{}(ep.addr);</span></span>
-<span id="L547"><span class="lineNum">     547</span>                 :<span class="tlaGNC">        9184 :         h ^= std::hash&lt;uint16_t&gt;{}(ep.port()) + 0x9e3779b9 + (h &lt;&lt; 6) + (h &gt;&gt; 2);</span></span>
-<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC">        9184 :         return h;</span></span>
+<span id="L545"><span class="lineNum">     545</span>                 :<span class="tlaGNC">        9212 :     std::size_t operator()(const hpactor::Ipv4Endpoint&amp; ep) const noexcept {</span></span>
+<span id="L546"><span class="lineNum">     546</span>                 :<span class="tlaGNC">        9212 :         std::size_t h = std::hash&lt;uint32_t&gt;{}(ep.addr);</span></span>
+<span id="L547"><span class="lineNum">     547</span>                 :<span class="tlaGNC">        9212 :         h ^= std::hash&lt;uint16_t&gt;{}(ep.port()) + 0x9e3779b9 + (h &lt;&lt; 6) + (h &gt;&gt; 2);</span></span>
+<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC">        9212 :         return h;</span></span>
 <span id="L549"><span class="lineNum">     549</span>                 :             :     }</span>
 <span id="L550"><span class="lineNum">     550</span>                 :             : };</span>
 <span id="L551"><span class="lineNum">     551</span>                 :             : </span>
@@ -641,9 +641,9 @@
 <span id="L561"><span class="lineNum">     561</span>                 :             : };</span>
 <span id="L562"><span class="lineNum">     562</span>                 :             : </span>
 <span id="L563"><span class="lineNum">     563</span>                 :             : template &lt;&gt; struct std::hash&lt;hpactor::EndPoint&gt; {</span>
-<span id="L564"><span class="lineNum">     564</span>                 :<span class="tlaGNC tlaBgGNC">        9182 :     std::size_t operator()(const hpactor::EndPoint&amp; ep) const noexcept {</span></span>
-<span id="L565"><span class="lineNum">     565</span>         [<span class="tlaGBC" title="Branch 0 was taken 9182 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        9182 :         if (auto* ipv4 = std::get_if&lt;hpactor::Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
-<span id="L566"><span class="lineNum">     566</span>                 :<span class="tlaGNC">        9182 :             return std::hash&lt;hpactor::Ipv4Endpoint&gt;{}(*ipv4);</span></span>
+<span id="L564"><span class="lineNum">     564</span>                 :<span class="tlaGNC tlaBgGNC">        9210 :     std::size_t operator()(const hpactor::EndPoint&amp; ep) const noexcept {</span></span>
+<span id="L565"><span class="lineNum">     565</span>         [<span class="tlaGBC" title="Branch 0 was taken 9210 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        9210 :         if (auto* ipv4 = std::get_if&lt;hpactor::Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
+<span id="L566"><span class="lineNum">     566</span>                 :<span class="tlaGNC">        9210 :             return std::hash&lt;hpactor::Ipv4Endpoint&gt;{}(*ipv4);</span></span>
 <span id="L567"><span class="lineNum">     567</span>                 :             :         }</span>
 <span id="L568"><span class="lineNum">     568</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return std::hash&lt;hpactor::Ipv6Endpoint&gt;{}(</span></span>
 <span id="L569"><span class="lineNum">     569</span>                 :<span class="tlaUNC">           0 :             std::get&lt;hpactor::Ipv6Endpoint&gt;(ep));</span></span>
