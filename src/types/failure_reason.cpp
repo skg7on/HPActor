@@ -87,6 +87,16 @@ const char* to_string(FailureReason reason) noexcept {
             return "passivation_queue_full";
         case FailureReason::SchemaVersionMismatch:
             return "schema_version_mismatch";
+        case FailureReason::RingFull:
+            return "ring_full";
+        case FailureReason::RingClosed:
+            return "ring_closed";
+        case FailureReason::FixedMessageTooLarge:
+            return "fixed_message_too_large";
+        case FailureReason::SystemLaneFull:
+            return "system_lane_full";
+        case FailureReason::RingCapacityExceeded:
+            return "ring_capacity_exceeded";
         case FailureReason::Unknown:
             return "unknown";
     }

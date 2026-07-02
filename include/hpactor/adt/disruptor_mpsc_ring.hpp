@@ -240,11 +240,21 @@ class DisruptorMpscRing final {
     /// next slot has been published.  Returns an invalid lease if no
     /// slot is ready.  Never spins.
     ///
+    /// Increments \c gap_observations_ when the next expected slot is
+    /// not yet published but later slots are (indicating a
+    /// claimed-but-not-published producer gap).
+    ///
     /// \pre Only the consumer may call this method.
     [[nodiscard]] ReadLease try_acquire() noexcept {
         uint64_t c = consumer_mirror_.load(std::memory_order_acquire);
         Slot& slot = slots_[c & kMask];
         if (slot.sequence.load(std::memory_order_acquire) != c + 1) {
+            // Gap detection: next slot not ready, but later slots may be
+            // published.  This occurs when a producer is preempted after
+            // claim and before publication.
+            if (published_cursor_.load(std::memory_order_acquire) > c + 1) {
+                gap_observations_.fetch_add(1, std::memory_order_relaxed);
+            }
             return {};
         }
         // Advance the consumer mirror so this slot cannot be re-acquired

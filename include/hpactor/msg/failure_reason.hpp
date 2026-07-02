@@ -95,6 +95,14 @@ enum class FailureReason : uint8_t {
     PassivationQueueFull = 103,      ///< Reactivation buffer exhausted.
     SchemaVersionMismatch = 104,     ///< Stored schema has no migration path.
 
+    // ── Disruptor mailbox (110-119) ────────────────────────────
+    RingFull = 110,             ///< Disruptor ring is at slot capacity.
+    RingClosed = 111,           ///< Disruptor ring has been closed.
+    FixedMessageTooLarge = 112, ///< Fixed message exceeds ring slot size.
+    SystemLaneFull = 113, ///< Disruptor system lane is at protected capacity.
+    RingCapacityExceeded = 114, ///< Reserved capacity would exceed compile-time
+                                ///< ring limit.
+
     // ── Sentinel ────────────────────────────────────────────────
     Unknown = 255, ///< Unclassified failure. Must not be used for new
                    ///< production paths.
