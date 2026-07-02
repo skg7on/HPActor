@@ -8,7 +8,7 @@
 [![CI](https://github.com/skg7on/HPActor/actions/workflows/ci.yml/badge.svg)](https://github.com/skg7on/HPActor/actions/workflows/ci.yml)
 [![Coverage](https://skg7on.github.io/HPActor/coverage-badge.svg)](https://skg7on.github.io/HPActor/coverage-html/)
 
-A high-performance distributed actor framework for C++20 with million-level concurrency support. Combines work-stealing schedulers, EDF real-time scheduling, multi-priority queues, and a two-tier slab memory allocator for deterministic response times without GC pauses.
+A high-performance C++20 actor framework for million-level concurrency on a small thread pool via cooperative coroutines. Combines a work-stealing hybrid scheduler with EDF real-time scheduling, lock-free priority-aware mailboxes with backpressure, a two-tier slab memory allocator, and protobuf-native typed messaging. Built for production with deterministic fault injection, graceful shutdown, Prometheus metrics, distributed tracing, daemon mode, and cluster abstractions — evolving toward an advanced distributed runtime for AI training and distributed inference. No exceptions, no RTTI, bounded by default.
 
 ## Documentation
 
@@ -33,15 +33,18 @@ make html
 
 Built HTML lands in `docs/manual/_build/html/`.
 
-## Recent Work (June 2026)
+## Recent Work (June–July 2026)
 
-- **Daemon service & CLI decoupling** — ProcessManager with systemd `sd_notify` support, CliServerActor (UDS/TCP socket server), transport-agnostic CliSession, standalone `hpactor-cli` binary, HealthHttpServer, WatchdogActor, SyslogSink
-- **AI accelerator subsystem** — `AcceleratorConfig` with 7 device types (CPU/GPU/NPU/FPGA/DSP/Custom), protobuf wire format, self-registering TOML parser, `ENABLE_AI_ACCELERATORS` build gate
-- **Scheduler reliability hardening** — closed lost-wakeup window on x86_64 (futex-based CV wait), rate-limiter spin loop capping, adaptive worker idle model, real kernel TID display, TimingWheel edge-case fixes
-- **Mailbox thread safety** — prearm race detection and fix, formal validation suite for MPSC correctness properties, ARM64 concurrency documentation
-- **Reliable messaging primitives** — ACK/NACK frame types, `RetryPolicy` with exponential backoff + jitter, `OutboundDeliveryTracker`, `DeliveryReceipt`, `DeliveryPipeline`
-- **Performance benchmark app** — `apps/bench_perf/` with coordinator/worker/collector/hot-actor throughput and latency benchmarks, integrated CLI
-- **Documentation & process** — branch naming convention codified, CLAUDE.md/rules deduplication, new skills for deterministic tests and scheduler thread safety
+- **ActorSystem architecture refactoring (Phases 0–8)** — Monolithic ActorSystem decomposed into runtime components behind an Impl seam: `ActorRuntime`, `MessagingRuntime`, `NetworkRuntime`, `StreamRuntime`, `ObservabilityRuntime`, `ClusterRuntime`. `RuntimeCoordinator` lifecycle state machine with coordinated startup/shutdown. Immutable `RuntimeBlueprint` builder. New `include/hpactor/runtime/` public header directory. Architecture docs reorganized to match source-level organization.
+- **Fixed-disruptor actor mailbox** — Lock-free disruptor-pattern mailbox: `MultiLaneQueue<T>` with dedicated system lane, priority-aware routing, and per-lane depth observability. Bounded ring buffer with backpressure. Formal concurrency correctness rules documented.
+- **Timer plane & batch messaging (MSG-007)** — Sharded timer backend: `TimerPlane` with per-shard hierarchical wheel + slot array, `TimerCommandQueue` (lock-free bounded MPSC), `TimerGroup` bulk cancellation. Batch send/receive protocol: `BatchEntry`, `BatchMsgFrame`, `send_batch()`/`try_send_batch()`.
+- **Streaming protocol (MSG-008)** — Peer-to-peer streaming: `StreamSenderActor`, `StreamReceiverActor`, `StreamConfig`, `StreamHandle`, `open_stream()` routing, `/stream` CLI commands, stream metrics and fault domain.
+- **Akka gap closure (Sprints 1–4)** — Receptionist + ClusterReceptionist, `BehaviorTestKit`, `TestProbe`, `MessageAdapter`. Cluster abstractions (failure model, node state, route invalidation). Sharding (resolver, table, handoff, coordinator) and Singleton (identity, manager, majority/fixed-priority election). Reliable messaging: `OutboundTracker`, delivery stores, auto-ACK/NACK. `DurableBehavior`, `EventSourcedBehavior`, `PassivationManager`. Admin API (OPS-002), DeathPact, PipeTo, per-exception supervision directives, `schedule_to()` cross-actor scheduling, Distributed PubSub Mediator.
+- **Behavior API enhancements** — Fluent builder API, composable combinators (`setup`, `intercept`, `compose`, `on_signal`), FSM DSL with state data/per-state handlers/timeouts/transition hooks, `StashBuffer`, Router subsystem (`PoolRouter`, `GroupRouter`, 4 routing strategies).
+- **Scheduler extreme performance (SCHED-01–07)** — Direct actor pointer in `WorkItem`, bounded MPSC inject ring, `Futex`/`EventCount` worker park, adaptive batch, single-priority fast path, adaptive time-based backoff with OS calibration, EDF queue wire-up.
+- **Memory optimization (MEM-001–07)** — Segregated free lists with coalescing, per-region strategies, super carrier + huge page support, message inlining (constexpr trait, inline payload in `TypedMessage`), NUMA-aware memory manager.
+- **CAF benchmark suite** — New `apps/bench_caf/` with 3-phase suite: actor creation and mailbox throughput, parameter sweeps (ring, pipeline, zipf, bursty distributions with skew metrics), distributed ping/pong scenario, automated performance report generator.
+- **CLI & HTTP API standardization** — Host interfaces (`ICliCommandHost`, `ISystemCliHost`, `ILifecycleCliHost`), `CliClientActor` (remote CLI as DaemonActor), proto-based `CliProtoServerActor` and HTTP-based `CliHttpServerActor`, RESTful HTTP API with OpenAPI 3.0 spec, `JsonBuilder`.
 
 ## Quick Start
 
@@ -110,6 +113,9 @@ AbstractActor (interface base)
 └── LocalActor (has ActorContext)
     ├── EventBasedActor (cooperative, behavior-based, coroutine-powered)
     │   ├── StatefulActor<T> (explicit state)
+    │   ├── ProtoStatefulActor<T> (protobuf-native + explicit state)
+    │   ├── StreamSenderActor (outbound stream peer)
+    │   ├── StreamReceiverActor (inbound stream peer)
     │   └── DenseComputingActor (dedicated pool dispatch)
     ├── TypedEventBasedActor<Signatures...> (statically typed)
     ├── BlockingActor (thread-based, blocking receive)
@@ -118,22 +124,27 @@ AbstractActor (interface base)
         ├── PollingActor (CPU affinity, poll budget)
         ├── ExternalMsgGatewayActor (named route table)
         │   └── HTTPGatewayActor (HTTP ingress)
-        └── CliActor (interactive CLI)
+        ├── CliActor (interactive CLI)
+        ├── CliClientActor (remote CLI client)
+        ├── CliProtoServerActor (protobuf CLI server)
+        └── CliHttpServerActor (HTTP CLI server)
 ```
 
 ### Subsystem Overview
 
 | Subsystem | Key Components |
 |-----------|---------------|
-| **Scheduling** | `HybridScheduler` with work-stealing + A2WS, `ChaseLevDeque`, `EDFQueue`, `TimingWheel` (hierarchical O(1) timer), `CoroutineFramePool` |
-| **Mailbox** | `MultiLaneQueue<T>` lock-free multi-lane queue, bounded admission, overflow handlers, backpressure signals, `DedupCache`, dead-letter queue |
-| **Memory** | Two-tier slab allocator (mmap segments → thread-local caches), 8 size classes (32B–4KB), typed regions with pressure limits, hibernation/ZRAM, per-actor tracking |
+| **Runtime** | `ActorRuntime`, `MessagingRuntime`, `NetworkRuntime`, `StreamRuntime`, `ObservabilityRuntime`, `ClusterRuntime`; `RuntimeCoordinator` lifecycle state machine; `RuntimeBlueprint` immutable builder; coordinated startup/shutdown |
+| **Scheduling** | `HybridScheduler` with work-stealing + A2WS, `ChaseLevDeque`, `EDFQueue` (earliest deadline first), `TimingWheel` (hierarchical O(1) timer), `CoroutineFramePool`, adaptive batch, single-priority fast path, Futex/EventCount worker park |
+| **Mailbox** | `MultiLaneQueue<T>` lock-free multi-lane queue with dedicated system lane, priority-aware routing, per-lane depth observability; bounded admission, overflow handlers, backpressure signals, `DedupCache`, dead-letter queue |
+| **Timer** | `TimerPlane` sharded timer backend with per-shard hierarchical wheel + slot array, `TimerCommandQueue` (lock-free bounded MPSC), `TimerGroup` bulk cancellation |
+| **Memory** | Two-tier slab allocator (mmap segments → thread-local caches), 8 size classes (32B–4KB), segregated free lists with coalescing, super carrier + huge page support, message inlining (constexpr trait), NUMA-aware manager, typed regions with pressure limits, hibernation/ZRAM, per-actor tracking |
 | **Networking** | kqueue/epoll event loop, TLS 1.3, connection pooling, UDS, reactor/proactor backends |
 | **Discovery** | Pluggable `IServiceDiscovery` — SWIM gossip, UDP registrar, hybrid, static |
-| **Observability** | OpenMetrics `/metrics` (Prometheus), structured logging with pluggable sinks, W3C distributed tracing (OTLP exporter) |
+| **Observability** | OpenMetrics `/metrics` (Prometheus), structured logging with pluggable sinks, W3C distributed tracing (OTLP exporter), `ObservabilityRuntime`, `ObservabilitySnapshot` |
 | **Config** | TOML topology bootstrapping with templates, imports, AOT binary compilation; self-registering subsystem parsers |
-| **Reliability** | Failure envelopes (23 canonical reasons, 12 subsystem sources), circuit breakers, quarantine, rate limiting, passivation, graceful shutdown, deterministic fault injection (80 sites, 14 domains) |
-| **Supervision** | OneForOne, AllForOne, self-supervising with restart policies; remote child tracking |
+| **Reliability** | Failure envelopes (23 canonical reasons, 12 subsystem sources), circuit breakers, quarantine, rate limiting, passivation, graceful shutdown, deterministic fault injection (80 sites, 14 domains), auto-ACK/NACK, `OutboundTracker`, `DurableBehavior`, `EventSourcedBehavior`, `PassivationManager` |
+| **Supervision** | OneForOne, AllForOne, self-supervising with restart policies; remote child tracking; per-exception supervision directive map |
 
 ### Daemon Mode
 
@@ -151,12 +162,12 @@ HPActor runs as a systemd service (`Type=notify`) with socket-based CLI access, 
 ## Project Structure
 
 ```
-include/hpactor/   — Public headers (actor, cli, config, core, fault, log, mailbox, mem, metrics, net, ref, rpc, sched, supervision, tracing, types)
-src/               — Compiled runtime (hpactor_lib), including subsystem parsers in config/parsers/
-tests/             — 3-tier GTest suite: unit/, integration/, system/
-apps/              — Complex demo apps: order_platform, edgeops_telemetry, bench_perf
+include/hpactor/   — Public headers: actor, adt, ai, cli, cluster, config, core, coroutine, fault, log, mailbox, mem, metrics, msg, net, observability, process, ref, rpc, runtime, sched, supervision, timer, tracing, types (26 directories)
+src/               — Compiled runtime (hpactor_lib), 23 subsystem directories each with per-subsystem CMakeLists.txt
+tests/             — 4-tier GTest suite: unit/ (24 subsystem subdirectories), integration/, system/, architecture/
+apps/              — 8 demo/benchmark apps: bench_caf, bench_perf, bench_saturate, cli_demo, cluster_control_plane, edgeops_telemetry, hpactor_demo, order_platform
 examples/          — Simple API usage examples
-protos/hpactor/    — Protobuf schemas (common, frame, gossip, messages, ai_resource, etc.)
+protos/hpactor/    — Protobuf schemas (common, frame, gossip, messages, ai_resource, cli, registrar, etc.)
 tools/             — toml-compiler (AOT), hpactor-cli (standalone client)
 docs/              — Architecture specs, production reliability designs, developer manual
 third_party/       — Vendored: googletest, llhttp, toml++
@@ -165,8 +176,8 @@ cmake/             — CMake modules
 
 ## Status
 
-**39 GTest binaries, ~1,900 test cases, 271 test source files.** Core runtime is complete: actor lifecycle, all actor types, scheduling, networking, service discovery, remote spawn, RPC, TOML config topology, memory management, metrics, logging, tracing, CLI, failure semantics, mailbox (priority lanes, bounded admission, DLQ), supervision, fault injection, graceful shutdown, daemon service mode, AI accelerator subsystem, reliable messaging primitives, and performance benchmarks.
+**2,358 CTest tests, 408 test source files, 371 public headers, 240 source files.** Core runtime is complete: actor lifecycle, all actor types, scheduling, networking, service discovery, remote spawn, RPC, TOML config topology, memory management, metrics, logging, tracing, CLI, failure semantics, mailbox (priority lanes, bounded admission, DLQ), supervision, fault injection, graceful shutdown, daemon service mode, AI accelerator subsystem, timer plane with sharded wheels, streaming protocol, receptionist and cluster receptionist, distributed pub-sub mediator, cluster sharding and singleton, durable behavior and event sourcing, passivation management, admin API, death pact and pipe-to patterns, per-exception supervision directives, behavior fluent builder and FSM DSL, StashBuffer, router subsystem (pool/group with 4 routing strategies), batch message send/receive, EDF real-time scheduling, NUMA-aware memory allocation with super carriers and huge pages, CLI architecture standardization with proto/HTTP servers, CAF benchmark suite, RESTful HTTP API with OpenAPI 3.0 spec, reliable messaging primitives (ACK/NACK, OutboundTracker, auto-ACK/NACK), and performance benchmarks (perf, saturate, CAF).
 
-**Production reliability in progress:** data/control/operations plane features for 24x7 distributed operation. Delivered foundations include delivery modes, receiver deduplication, structured failure envelopes, bounded mailboxes, multi-lane priority queues, DLQ with CLI replay/export, distributed tracing, circuit breakers, quarantine, rate limiting, ask/timeout, passivation, per-message TTL enforcement, and graceful shutdown. Durable outbox/inbox, ACK/NACK retry completion, cluster control, security, and admin API remain backlog.
+**Production reliability in progress:** data/control/operations plane features for 24x7 distributed operation. Delivered foundations include delivery modes, receiver deduplication, structured failure envelopes, bounded mailboxes, multi-lane priority queues, DLQ with CLI replay/export, distributed tracing, circuit breakers, quarantine, rate limiting, ask/timeout, passivation, per-message TTL enforcement, graceful shutdown, ACK/NACK retry, outbound delivery tracking, durable behavior with event sourcing, and admin API (OPS-002). Durable outbox/inbox, cluster control plane hardening, and security (mTLS) remain backlog.
 
 See the [developer manual](https://skg7on.github.io/HPActor/) for detailed architecture docs, the [production reliability roadmap](docs/architecture/production/production-reliability-plane.md), and the [refined feature-gap backlog](docs/architecture/production/feature-gap-refined-requirement-backlog.md).
