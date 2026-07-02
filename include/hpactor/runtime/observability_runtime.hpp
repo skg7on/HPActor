@@ -55,6 +55,10 @@ struct ObservabilitySnapshot final {
 /// infrastructure.
 class ObservabilityRuntime final {
   public:
+    /// \brief Factory: construct from validated config with no side effects.
+    /// \param[in] config Validated observability configuration.
+    /// \return A fully constructed but not-yet-started runtime, or
+    ///         \c nullptr on allocation failure.
     static std::unique_ptr<ObservabilityRuntime>
     create(const ObservabilityRuntimeConfig& config) noexcept;
 
@@ -115,9 +119,13 @@ class ObservabilityRuntime final {
     void start_background_threads() noexcept;
 
     /// \brief Apply a new tracing configuration (reload).
+    /// \param[in] config The new tracing configuration to apply.
     void apply_tracing_config(const tracing::TraceConfig& config) noexcept;
 
     // ── Observability ────────────────────────────────────────────────────
+
+    /// \brief Immutable snapshot of current observability state.
+    /// \return Snapshot with enabled flags, drop counters, and epoch.
     ObservabilitySnapshot snapshot() const noexcept;
 
   private:

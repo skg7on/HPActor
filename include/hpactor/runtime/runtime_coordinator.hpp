@@ -85,6 +85,8 @@ class RuntimeCoordinator final {
     ~RuntimeCoordinator();
 
     /// \brief Add a startup stage in dependency order.
+    /// \param[in] stage The lifecycle stage to register (name, start action,
+    ///                  rollback action).
     void add_stage(RuntimeLifecycleStage stage);
 
     /// \brief Execute all registered stages in order.

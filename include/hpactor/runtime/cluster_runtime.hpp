@@ -76,8 +76,12 @@ class IClusterRuntime {
     virtual ClusterLegacyViews legacy_views() noexcept = 0;
 };
 
-/// \brief Factory function for creating a cluster runtime.
-/// Returns nullptr when cluster is disabled.
+/// \brief Factory function signature for creating a cluster runtime.
+///
+/// \param[in] deps     Cluster runtime dependencies.
+/// \param[in] reserved  Reserved for future use (pass \c nullptr).
+/// \return A new cluster runtime instance, or \c nullptr when cluster is
+///         disabled.
 using ClusterRuntimeFactory = std::unique_ptr<IClusterRuntime> (*)(
     const ClusterRuntimeDependencies& deps, void* reserved) noexcept;
 

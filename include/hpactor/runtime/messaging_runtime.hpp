@@ -92,20 +92,67 @@ class MessagingRuntime final {
 
     // ── Delivery ──────────────────────────────────────────────────────
 
+    /// \brief Attempt to deliver a message through the full delivery
+    ///        pipeline.
+    ///
+    /// Routes through TTL, dedup, backpressure, DLQ, and bounded-mailbox
+    /// admission. Returns an \c EnqueueResult describing the outcome.
+    ///
+    /// \param[in] target       Destination actor id.
+    /// \param[in] msg          The typed message to deliver.
+    /// \param[in] priority     Priority level (0 = highest).
+    /// \param[in] deadline_ns  Absolute delivery deadline in nanoseconds
+    ///                         (0 = no deadline).
+    /// \param[in] options      Delivery options (mode, flags, trace).
+    /// \return The enqueue result — \c Enqueued, \c Bounced, \c
+    ///         DeadLettered, etc.
     mailbox::EnqueueResult
     try_deliver(ActorId target, TypedMessage msg, uint8_t priority,
                 int64_t deadline_ns, mailbox::DeliveryOptions options);
 
+    /// \brief Deliver a message and return a richer \c DeliveryResult.
+    ///
+    /// Same pipeline as \c try_deliver(), but returns extended metadata
+    /// including the delivery mode applied, TTL outcome, and DLQ index.
+    ///
+    /// \param[in] target       Destination actor id.
+    /// \param[in] msg          The typed message to deliver.
+    /// \param[in] priority     Priority level (0 = highest).
+    /// \param[in] deadline_ns  Absolute delivery deadline in nanoseconds
+    ///                         (0 = no deadline).
+    /// \param[in] options      Delivery options (mode, flags, trace).
+    /// \return The delivery result with extended metadata.
     mailbox::DeliveryResult
     deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority,
                         int64_t deadline_ns, mailbox::DeliveryOptions options);
 
+    /// \brief Fast-path delivery that bypasses the \c DeliveryPipeline.
+    ///
+    /// Enqueues directly to the target mailbox via the local delivery
+    /// engine. No TTL, dedup, backpressure, or DLQ checks are performed.
+    /// Only use when those checks are known unnecessary.
+    ///
+    /// \param[in] target  Destination actor id.
+    /// \param[in] msg     The typed message to deliver.
+    /// \param[in] reason  Classification of why fast delivery is safe.
+    /// \return The enqueue result.
     mailbox::EnqueueResult
     try_deliver_fast(ActorId target, TypedMessage msg, FastDeliveryReason reason);
 
     // ── Reliable control ──────────────────────────────────────────────
 
+    /// \brief Process a reliable ACK received from a remote endpoint.
+    ///
+    /// \param[in] message_id The acknowledged message.
+    /// \param[in] endpoint   The endpoint that sent the ACK.
     void on_reliable_ack(MessageId message_id, EndPoint endpoint) noexcept;
+
+    /// \brief Process a reliable NACK received from a remote endpoint.
+    ///
+    /// \param[in] message_id     The negatively acknowledged message.
+    /// \param[in] endpoint       The endpoint that sent the NACK.
+    /// \param[in] reason_code    Application-defined rejection reason.
+    /// \param[in] retry_after_ms Suggested delay before retry (0 = immediate).
     void on_reliable_nack(MessageId message_id, EndPoint endpoint,
                           uint32_t reason_code, uint32_t retry_after_ms) noexcept;
 
@@ -131,12 +178,25 @@ class MessagingRuntime final {
 
     // ── Accessors (stable addresses) ──────────────────────────────────
 
+    /// \brief Dead-letter queue accessor (stable address).
     mailbox::DeadLetterQueue& dead_letters() noexcept;
+
+    /// \brief Receiver dedup cache accessor (stable address).
     adt::DedupCache& dedup_cache() noexcept;
+
+    /// \brief Outbound delivery receipt tracker accessor (stable address).
     msg::OutboundDeliveryTracker& delivery_receipt_tracker() noexcept;
+
+    /// \brief Mailbox reliable outbound tracker accessor (stable address).
     mailbox::OutboundTracker& mailbox_reliable_tracker() noexcept;
+
+    /// \brief Backpressure coordinator accessor (stable address).
     BackpressureCoordinator& backpressure() noexcept;
+
+    /// \brief Full delivery pipeline accessor (stable address).
     mailbox::DeliveryPipeline& delivery_pipeline() noexcept;
+
+    /// \brief Fast local delivery engine accessor (stable address).
     LocalDeliveryEngine& local_delivery_engine() noexcept;
 
   private:
