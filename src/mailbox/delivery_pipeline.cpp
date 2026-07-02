@@ -443,6 +443,27 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
     auto* mailbox =
         config_.actors ? config_.actors->find_mailbox(target).get() : nullptr;
     if (mailbox == nullptr) {
+        // Fallback: check for Disruptor-mailbox actor.
+        if (config_.actors) {
+            auto fixed_binding = config_.actors->find_fixed_binding(target);
+            if (fixed_binding.has_value() && fixed_binding->valid()) {
+                // Route system messages through the control port.
+                if (is_system_message(msg.type_id())) {
+                    return fixed_binding->control.try_push(
+                        fixed_binding->control.context, std::move(msg));
+                }
+                // Route user-level TypedMessages through the dynamic lane
+                // (Phase 7) when available; fall back to rejection.
+                if (fixed_binding->control.try_push_dynamic) {
+                    return fixed_binding->control.try_push_dynamic(
+                        fixed_binding->control.context, std::move(msg));
+                }
+                EnqueueResult result;
+                result.code = EnqueueResultCode::Rejected;
+                result.target = target;
+                return result;
+            }
+        }
         return reject_missing_actor(target, msg, options, priority, deadline_ns);
     }
 
