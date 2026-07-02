@@ -86,6 +86,28 @@ class DisruptorActorMailboxCore final
     using envelope_type = DisruptorMessageEnvelope<Messages...>;
     using ring_type = adt::DisruptorMpscRing<envelope_type, Capacity>;
 
+    /// \brief Typed callback target — the actor inherits from this to
+    ///        receive system/user messages and work-available signals
+    ///        without \c void* casts.
+    class DispatchTarget {
+      public:
+        virtual ~DispatchTarget() = default;
+
+        /// Handle a system-level TypedMessage.
+        virtual void on_system_message(TypedMessage&& msg) = 0;
+
+        /// Handle a user message while the ring lease is held.
+        virtual void on_user_message(envelope_type& env) = 0;
+
+        /// Called when the mailbox transitions empty-to-non-empty.
+        virtual void on_work_available() = 0;
+    };
+
+    /// \brief Set the dispatch target (called once after spawn).
+    void set_target(DispatchTarget* target) noexcept {
+        target_ = target;
+    }
+
     /// \brief Construct the mailbox core.
     ///
     /// \param[in] actor_id    The owning actor's ID.
@@ -182,8 +204,8 @@ class DisruptorActorMailboxCore final
             }
         }
         if (has_system) {
-            if (dispatch_system_fn_) {
-                dispatch_system_fn_(dispatch_ctx_, std::move(sys_msg));
+            if (target_) {
+                target_->on_system_message(std::move(sys_msg));
             }
             return true;
         }
@@ -211,20 +233,10 @@ class DisruptorActorMailboxCore final
             return false;
         }
         // Lease holds the slot through dispatch; releases on scope exit.
-        if (dispatch_user_fn_) {
-            dispatch_user_fn_(dispatch_ctx_, &lease.value());
+        if (target_) {
+            target_->on_user_message(lease.value());
         }
         return true;
-    }
-
-    /// Set the dispatch callbacks (called once after spawn).
-    void
-    set_dispatch_callbacks(void* ctx,
-                           void (*system_fn)(void*, TypedMessage&&) noexcept,
-                           void (*user_fn)(void*, void* envelope) noexcept) noexcept {
-        dispatch_ctx_ = ctx;
-        dispatch_system_fn_ = system_fn;
-        dispatch_user_fn_ = user_fn;
     }
 
     /// \brief True when neither lane has available messages.
@@ -237,15 +249,6 @@ class DisruptorActorMailboxCore final
     }
 
     // ── Wakeup gate ────────────────────────────────────────────────────────
-
-    /// \brief Set the scheduler notification callback.
-    ///
-    /// Called once after spawn.  The callback is invoked when the
-    /// mailbox transitions from empty to non-empty.
-    void set_signal_callback(void (*fn)(void*), void* ctx) noexcept {
-        signal_fn_ = fn;
-        signal_ctx_ = ctx;
-    }
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -323,8 +326,8 @@ class DisruptorActorMailboxCore final
         if (work_signaled_.compare_exchange_strong(expected, true,
                                                    std::memory_order_acq_rel,
                                                    std::memory_order_acquire)) {
-            if (signal_fn_) {
-                signal_fn_(signal_ctx_);
+            if (target_) {
+                target_->on_work_available();
             }
         }
     }
@@ -363,17 +366,11 @@ class DisruptorActorMailboxCore final
     std::atomic<uint32_t> in_flight_publishers_{0};
     std::atomic<bool> work_signaled_{false};
 
-    // Wakeup callback (set once after spawn).
-    void (*signal_fn_)(void*){nullptr};
-    void* signal_ctx_{nullptr};
+    // Typed dispatch target (set once after spawn).
+    DispatchTarget* target_{nullptr};
 
     // Immutable delivery port (set once after spawn).
     DisruptorMailboxDelivery delivery_;
-
-    // Dispatch callbacks (set once after spawn).
-    void* dispatch_ctx_{nullptr};
-    void (*dispatch_system_fn_)(void*, TypedMessage&&) noexcept {nullptr};
-    void (*dispatch_user_fn_)(void*, void* envelope) noexcept {nullptr};
 };
 
 } // namespace hpactor::mailbox

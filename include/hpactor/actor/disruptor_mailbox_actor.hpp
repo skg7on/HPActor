@@ -77,7 +77,9 @@ template <typename T, typename Fn>
 /// \tparam Capacity Power-of-two ring capacity.
 /// \tparam Messages The closed set of fixed user-message types.
 template <size_t Capacity, mailbox::DisruptorMessage... Messages>
-class DisruptorMailboxActor : public EventBasedActor {
+class DisruptorMailboxActor
+    : public EventBasedActor,
+      public mailbox::DisruptorActorMailboxCore<Capacity, Messages...>::DispatchTarget {
   public:
     using core_type = mailbox::DisruptorActorMailboxCore<Capacity, Messages...>;
     using disruptor_actor_ref_type = DisruptorActorRef<Capacity, Messages...>;
@@ -90,45 +92,39 @@ class DisruptorMailboxActor : public EventBasedActor {
         return mailbox::MailboxKind::Disruptor;
     }
 
+    // ── DispatchTarget implementation ──────────────────────────────────
+
+    void on_system_message(TypedMessage&& msg) override {
+        receive(msg);
+    }
+
+    void on_user_message(typename core_type::envelope_type& env) override {
+        disruptor_behavior_.dispatch(env.message);
+    }
+
+    void on_work_available() override {
+        home_system().get_scheduler()->notify_ready(id(), 0, INT64_MAX);
+    }
+
+    // ── Lifecycle ──────────────────────────────────────────────────────
+
     /// \brief Drain all messages immediately (immediate stop).
     void drain_all_immediate() override {
         if (core_) {
             core_->begin_drain();
-            // Release all user-ring slots without invoking handlers.
             while (!core_->ring().empty()) {
                 auto lease = core_->ring().try_acquire();
-                // Lease releases on scope exit without dispatch.
             }
         }
         EventBasedActor::drain_all_immediate();
     }
 
-    /// \brief Create the fixed mailbox core and return a populated binding.
+    /// \brief Create the disruptor mailbox core and return a handle.
     mailbox::DisruptorMailboxHandle create_disruptor_mailbox() noexcept override {
         auto core = std::make_shared<core_type>(this->id(), this->address());
         core_ = core;
         disruptor_behavior_ = make_disruptor_behavior();
-        core->set_dispatch_callbacks(
-            this,
-            /* system_fn */
-            +[](void* ctx, TypedMessage&& msg) noexcept {
-                auto* self = static_cast<DisruptorMailboxActor*>(ctx);
-                self->receive(msg);
-            },
-            /* user_fn */
-            +[](void* ctx, void* envelope) noexcept {
-                auto* self = static_cast<DisruptorMailboxActor*>(ctx);
-                auto* env =
-                    static_cast<typename core_type::envelope_type*>(envelope);
-                self->disruptor_behavior_.dispatch(env->message);
-            });
-        core->set_signal_callback(
-            +[](void* ctx) noexcept {
-                auto* self = static_cast<DisruptorMailboxActor*>(ctx);
-                self->home_system().get_scheduler()->notify_ready(self->id(), 0,
-                                                                  INT64_MAX);
-            },
-            this);
+        core->set_target(this);
         return core->make_handle();
     }
 
