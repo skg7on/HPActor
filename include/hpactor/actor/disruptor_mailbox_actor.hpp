@@ -103,7 +103,7 @@ class DisruptorMailboxActor
     }
 
     void on_work_available() override {
-        home_system().get_scheduler()->notify_ready(id(), 0, INT64_MAX);
+        home_system().scheduler()->notify_ready(id(), 0, INT64_MAX);
     }
 
     // ── Lifecycle ──────────────────────────────────────────────────────
