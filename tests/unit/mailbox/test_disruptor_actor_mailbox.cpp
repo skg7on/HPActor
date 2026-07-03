@@ -343,5 +343,157 @@ TEST(DisruptorActorMailboxCoreTest, RejectionUpdatesPressureToHard) {
     EXPECT_EQ(core->pressure_state(), MailboxPressureState::HardPressure);
 }
 
+// ── Phase 1: Overflow handler policy tests ─────────────────────────────────
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicyRejectNewestDefault) {
+    // Default config uses RejectNewest — verify full ring rejects.
+    Core core(ActorId{1}, ActorAddress{});
+    for (int i = 0; i < 8; ++i) {
+        core.try_push_user(UserA{static_cast<uint64_t>(i)},
+                           DisruptorEnvelopeMeta{});
+    }
+    auto result = core.try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_FALSE(result.accepted());
+    EXPECT_EQ(result.code, EnqueueResultCode::Rejected);
+    EXPECT_GT(result.retry_after.count(), 0);
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicyDropNewest) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::DropNewest;
+    cfg.capacity.max_messages = 4;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    for (int i = 0; i < 4; ++i) {
+        core->try_push_user(UserA{static_cast<uint64_t>(i)},
+                            DisruptorEnvelopeMeta{});
+    }
+    auto result = core->try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_EQ(result.code, EnqueueResultCode::DroppedNewest);
+    // Verify total_dropped is reflected in snapshot.
+    auto snap = core->build_snapshot();
+    EXPECT_GT(snap.total_dropped, 0u);
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicyDropOldest) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::DropOldest;
+    cfg.capacity.max_messages = 4;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    // Fill with 4 messages.
+    for (int i = 0; i < 4; ++i) {
+        core->try_push_user(UserA{static_cast<uint64_t>(i)},
+                            DisruptorEnvelopeMeta{});
+    }
+    // 5th message triggers DropOldest — oldest should be evicted.
+    auto result = core->try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_EQ(result.code, EnqueueResultCode::Accepted);
+    // Verify drop occurred.
+    auto snap = core->build_snapshot();
+    EXPECT_GT(snap.total_dropped, 0u);
+    EXPECT_EQ(snap.depth, 4u); // Still 4 messages (one evicted, one added).
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicyDeadLetter) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::DeadLetter;
+    cfg.capacity.max_messages = 4;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    for (int i = 0; i < 4; ++i) {
+        core->try_push_user(UserA{static_cast<uint64_t>(i)},
+                            DisruptorEnvelopeMeta{});
+    }
+    auto result = core->try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_EQ(result.code, EnqueueResultCode::ReroutedToDeadLetter);
+    auto snap = core->build_snapshot();
+    EXPECT_GT(snap.total_dead_letters, 0u);
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicySpillToOverflow) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::SpillToOverflowQueue;
+    cfg.capacity.max_messages = 4;
+    cfg.max_overflow_depth = 8;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    for (int i = 0; i < 4; ++i) {
+        core->try_push_user(UserA{static_cast<uint64_t>(i)},
+                            DisruptorEnvelopeMeta{});
+    }
+    auto result = core->try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_EQ(result.code, EnqueueResultCode::ReroutedToOverflow);
+    // Overflow queue should have one entry.
+    auto snap = core->build_snapshot();
+    EXPECT_EQ(snap.overflow_depth, 1u);
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicySignalOnly) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::SignalOnly;
+    cfg.capacity.max_messages = 4;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    for (int i = 0; i < 4; ++i) {
+        core->try_push_user(UserA{static_cast<uint64_t>(i)},
+                            DisruptorEnvelopeMeta{});
+    }
+    auto result = core->try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_FALSE(result.accepted());
+    EXPECT_EQ(result.code, EnqueueResultCode::Rejected);
+    // SignalOnly does NOT drop or dead-letter — only rejects.
+    auto snap = core->build_snapshot();
+    EXPECT_EQ(snap.total_dropped, 0u);
+    EXPECT_EQ(snap.total_dead_letters, 0u);
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowPolicyDropLowestPriority) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::DropLowestPriority;
+    cfg.capacity.max_messages = 4;
+    cfg.priority_aware = true;
+    cfg.priority_levels = 4;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    // Fill ring with high-priority messages (lane 0).
+    for (int i = 0; i < 4; ++i) {
+        DisruptorEnvelopeMeta meta;
+        meta.priority = 0;
+        core->try_push_user(UserA{static_cast<uint64_t>(i)}, meta);
+    }
+    // Now push a message with priority 0 — should evict oldest from lane 0.
+    DisruptorEnvelopeMeta meta;
+    meta.priority = 0;
+    auto result = core->try_push_user(UserA{99}, meta);
+    EXPECT_EQ(result.code, EnqueueResultCode::Accepted);
+    auto snap = core->build_snapshot();
+    EXPECT_GT(snap.total_dropped, 0u);
+}
+
+TEST(DisruptorActorMailboxCoreTest, OverflowHandlerChangedOnReconfigure) {
+    MailboxConfig cfg;
+    cfg.overflow_policy = OverflowPolicy::RejectNewest;
+    cfg.capacity.max_messages = 4;
+    auto core = std::make_shared<Core>(ActorId{1}, ActorAddress{}, cfg, 32);
+
+    // Fill and verify reject.
+    for (int i = 0; i < 4; ++i) {
+        core->try_push_user(UserA{static_cast<uint64_t>(i)},
+                            DisruptorEnvelopeMeta{});
+    }
+    auto r1 = core->try_push_user(UserA{99}, DisruptorEnvelopeMeta{});
+    EXPECT_EQ(r1.code, EnqueueResultCode::Rejected);
+
+    // Reconfigure to DropNewest.
+    MailboxConfig cfg2;
+    cfg2.overflow_policy = OverflowPolicy::DropNewest;
+    cfg2.capacity.max_messages = 4;
+    core->set_config(cfg2);
+
+    auto r2 = core->try_push_user(UserA{100}, DisruptorEnvelopeMeta{});
+    EXPECT_EQ(r2.code, EnqueueResultCode::DroppedNewest);
+}
+
 } // namespace
 } // namespace hpactor::mailbox

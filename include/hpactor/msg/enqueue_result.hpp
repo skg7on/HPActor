@@ -75,10 +75,16 @@ enum class MailboxPressureState : uint8_t {
     Recovering,   ///< Pressure is declining but still above the low watermark.
 };
 
+/// \brief Mailbox backend discriminator for per-actor and system-wide defaults.
+enum class MailboxBackend : uint8_t {
+    VariableMpsc = 0, ///< Variable MPSCActorMailbox (current default).
+    Disruptor = 1,    ///< Fixed-message DisruptorActorMailboxCore.
+};
+
 /// \brief Full mailbox configuration.
 ///
 /// Controls capacity, watermarks, overflow behavior, backpressure signaling,
-/// priority-aware routing, and system-message protection.
+/// priority-aware routing, system-message protection, and backend selection.
 struct MailboxConfig {
     MailboxCapacity capacity;    ///< Hard limits on message count and bytes.
     uint8_t priority_levels = 4; ///< Number of user priority lanes (1–8).
@@ -102,6 +108,16 @@ struct MailboxConfig {
     uint32_t signal_min_interval_ms = 100; ///< Minimum interval between
                                            ///< backpressure signals.
     bool priority_aware = false; ///< Route user messages to per-priority lanes.
+
+    /// Preferred mailbox backend for new actors.
+    /// Set \c HPACTOR_DEFAULT_MAILBOX_BACKEND_IS_DISRUPTOR to flip the default.
+    MailboxBackend default_backend{
+#if HPACTOR_DEFAULT_MAILBOX_BACKEND_IS_DISRUPTOR
+        MailboxBackend::Disruptor
+#else
+        MailboxBackend::VariableMpsc
+#endif
+    };
 };
 
 /// \brief Message priority level for lane routing.

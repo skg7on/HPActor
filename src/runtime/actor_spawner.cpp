@@ -92,13 +92,28 @@ result<Actor> ActorSpawner::adopt(std::shared_ptr<AbstractActor> actor,
     entry.context = actor_ctx;
     entry.mailbox_kind = actor->mailbox_kind();
 
-    if (entry.mailbox_kind == mailbox::MailboxKind::Disruptor) {
+    // If the actor uses the default backend, consult the config's backend
+    // preference. Actors that explicitly override mailbox_kind() to Disruptor
+    // are always honoured. Actors that default to VariableMpsc can be
+    // upgraded to Disruptor via TOML config when they provide a valid binding.
+    if (entry.mailbox_kind == mailbox::MailboxKind::VariableMpsc &&
+        spec.mailbox.default_backend == mailbox::MailboxBackend::Disruptor) {
         auto binding = actor->create_disruptor_mailbox();
-        if (!binding.valid()) {
-            return result<Actor>::make(error(errors::invalid_argument,
-                                             "fixed mailbox binding is invalid"));
+        if (binding.valid()) {
+            entry.mailbox_kind = mailbox::MailboxKind::Disruptor;
+            entry.fixed_mailbox = binding;
         }
-        entry.fixed_mailbox = binding;
+    }
+
+    if (entry.mailbox_kind == mailbox::MailboxKind::Disruptor) {
+        if (!entry.fixed_mailbox.valid()) {
+            auto binding = actor->create_disruptor_mailbox();
+            if (!binding.valid()) {
+                return result<Actor>::make(error(
+                    errors::invalid_argument, "fixed mailbox binding is invalid"));
+            }
+            entry.fixed_mailbox = binding;
+        }
         // entry.mailbox remains nullptr for fixed actors.
     } else {
         auto mailbox_ptr =

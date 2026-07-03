@@ -19,3 +19,4 @@ HPACTOR_MAILBOX_FIELD(protected_system_messages, uint32_t,                      
 HPACTOR_MAILBOX_FIELD(max_overflow_depth,      uint32_t,                            "max_overflow_depth",      0)
 HPACTOR_MAILBOX_FIELD(signal_min_interval_ms,  uint32_t,                            "signal_min_interval_ms",  100)
 HPACTOR_MAILBOX_FIELD(backpressure_mode,       hpactor::mailbox::BackpressureMode,    "backpressure_mode",       hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal)
+HPACTOR_MAILBOX_FIELD(default_backend,         hpactor::mailbox::MailboxBackend,      "backend",                 hpactor::mailbox::MailboxBackend::VariableMpsc)

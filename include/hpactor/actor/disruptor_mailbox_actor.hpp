@@ -99,6 +99,16 @@ class DisruptorMailboxActor
     }
 
     void on_user_message(typename core_type::envelope_type& env) override {
+        // Store reply context for ask/reply correlation.
+        // When the handler calls context()->reply(), these fields enable
+        // the reply to be routed back to the original sender and correlated
+        // with the pending ask via AskManager.
+        if (auto* ctx = context()) {
+            ctx->set_current_sender(env.meta.sender);
+            if (env.meta.ask_message_id != 0) {
+                ctx->set_current_ask_message_id(env.meta.ask_message_id);
+            }
+        }
         disruptor_behavior_.dispatch(env.message);
     }
 

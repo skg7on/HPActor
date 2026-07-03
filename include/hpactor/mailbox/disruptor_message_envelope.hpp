@@ -90,6 +90,10 @@ struct DisruptorSendOptions {
 
     /// Caller-defined flags (reserved, must be 0 in version 1).
     uint32_t flags{0};
+
+    /// If true, the producer may block when the mailbox is full and
+    /// the overflow policy is \c BlockWhenAllowed.
+    bool allow_blocking{false};
 };
 
 // ── Envelope metadata ─────────────────────────────────────────────────────

@@ -18,13 +18,17 @@
 #include <hpactor/adt/reservation_manager.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/mailbox/detail/backpressure_signal_gate.hpp>
+#include <hpactor/mailbox/detail/disruptor_overflow_context.hpp>
+#include <hpactor/mailbox/detail/disruptor_overflow_handler_factory.hpp>
 #include <hpactor/mailbox/detail/pressure_state_machine.hpp>
 #include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/disruptor_message_envelope.hpp>
+#include <hpactor/mailbox/overflow_queue.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -140,6 +144,8 @@ class DisruptorActorMailboxCore final
         } else {
             num_user_lanes_ = 1;
         }
+        overflow_handler_ = detail::make_disruptor_overflow_handler<envelope_type>(
+            config_.overflow_policy);
     }
 
     DisruptorActorMailboxCore(const DisruptorActorMailboxCore&) = delete;
@@ -165,10 +171,35 @@ class DisruptorActorMailboxCore final
             clamped = static_cast<uint32_t>(Capacity);
         }
         config_.capacity.max_messages = clamped;
+        overflow_handler_ = detail::make_disruptor_overflow_handler<envelope_type>(
+            config_.overflow_policy);
+        overflow_queue_.set_max_depth(config_.max_overflow_depth);
     }
 
     [[nodiscard]] const MailboxConfig& config() const noexcept {
         return config_;
+    }
+
+    /// \brief Wire a dead-letter queue for overflow policies that route to DLQ.
+    void set_dlq(DeadLetterQueue* dlq) noexcept {
+        dlq_ = dlq;
+    }
+
+    /// \brief Resize the logical message capacity at runtime.
+    ///
+    /// Adjusts \c config_.capacity.max_messages. The physical ring capacity
+    /// (\c Capacity) is a compile-time constant — this method changes only
+    /// the soft cap enforced by the \c ReservationManager. Values above
+    /// \c Capacity are clamped. Values of 0 are clamped to \c Capacity.
+    ///
+    /// \param[in] new_capacity The desired logical message capacity.
+    /// \return The actual capacity after clamping.
+    [[nodiscard]] uint32_t resize(uint32_t new_capacity) noexcept {
+        if (new_capacity == 0 || new_capacity > static_cast<uint32_t>(Capacity)) {
+            new_capacity = static_cast<uint32_t>(Capacity);
+        }
+        config_.capacity.max_messages = new_capacity;
+        return new_capacity;
     }
 
     /// \brief Current reserved/queued message count.
@@ -260,9 +291,88 @@ class DisruptorActorMailboxCore final
                                                     config_.capacity.max_messages,
                                                     config_.capacity.max_bytes);
         if (reservation != adt::ReservationResult::Reserved) {
-            auto result = make_rejected(FailureReason::MailboxFull, meta);
-            record_reject(result, FailureReason::MailboxFull, meta);
             update_pressure_on_rejection();
+
+            envelope_type overflow_env;
+            overflow_env.message = std::move(message);
+            overflow_env.meta = meta;
+
+            uint32_t cur_depth = depth();
+            uint64_t cur_bytes = reservation_.queued_bytes();
+
+            detail::DisruptorOverflowContext<envelope_type> ctx{
+                overflow_env,
+                reservation_,
+                overflow_queue_,
+                total_rejected_,
+                total_dropped_,
+                total_dead_letters_,
+                config_,
+                actor_id_,
+                cur_depth,
+                cur_bytes,
+                [this]() { return drop_one_oldest_ring(); },
+                [this]() { return drop_one_lowest_priority_ring(); },
+                dlq_,
+                &block_mutex_,
+                &block_cv_};
+
+            auto result = overflow_handler_->handle(ctx, reservation);
+
+            result.pressure_state = pressure_state_.current_state();
+            result.pressure_ratio = pressure_ratio();
+            if (result.retry_after.count() == 0) {
+                auto base =
+                    std::chrono::milliseconds(config_.signal_min_interval_ms);
+                if (result.pressure_state == MailboxPressureState::HardPressure) {
+                    result.retry_after = base * 2;
+                } else if (result.pressure_state == MailboxPressureState::SoftPressure ||
+                           result.pressure_state == MailboxPressureState::Recovering) {
+                    result.retry_after = base;
+                }
+            }
+
+            if (result.code == EnqueueResultCode::DroppedExisting) {
+                // Handler evicted an old message; retry reservation.
+                auto retry_res = reservation_.try_reserve(
+                    envelope_bytes, config_.capacity.max_messages,
+                    config_.capacity.max_bytes);
+                if (retry_res == adt::ReservationResult::Reserved) {
+                    // Re-construct envelope with the original message.
+                    envelope_type retry_env;
+                    retry_env.message = std::move(overflow_env.message);
+                    retry_env.meta = overflow_env.meta;
+
+                    auto& retry_ring = ring_for(retry_env.meta.priority);
+                    auto pub = retry_ring.try_publish(std::move(retry_env));
+                    if (pub.accepted()) {
+                        retry_env.meta.enqueue_sequence = pub.sequence;
+                        record_accept(retry_env.meta);
+                        update_pressure_on_enqueue();
+                        signal_work();
+                        return make_accepted();
+                    }
+                    reservation_.release(envelope_bytes);
+                    auto pub_result =
+                        make_rejected(pub.closed() ? FailureReason::MailboxClosed
+                                                   : FailureReason::MailboxFull,
+                                      retry_env.meta);
+                    record_reject(pub_result,
+                                  pub.closed() ? FailureReason::MailboxClosed
+                                               : FailureReason::MailboxFull,
+                                  retry_env.meta);
+                    update_pressure_on_rejection();
+                    return pub_result;
+                }
+                // Retry reservation also failed — reject.
+                result.code = EnqueueResultCode::Rejected;
+                total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                update_pressure_on_rejection();
+            }
+
+            if (!result.accepted()) {
+                record_reject(result, FailureReason::MailboxFull, overflow_env.meta);
+            }
             return result;
         }
 
@@ -329,6 +439,15 @@ class DisruptorActorMailboxCore final
         return make_accepted();
     }
 
+    /// \brief Push a dynamic TypedMessage bypassing the bounded capacity
+    ///        limit. For critical system messages (DLQ replay, admin commands).
+    EnqueueResult try_push_dynamic_force(TypedMessage msg) noexcept {
+        std::lock_guard<std::mutex> lock{dynamic_mutex_};
+        dynamic_queue_.push_back(std::move(msg));
+        signal_work();
+        return make_accepted();
+    }
+
     // ── Consumer ───────────────────────────────────────────────────────────
 
     /// \brief Consume one message (system-first, then user).
@@ -337,6 +456,9 @@ class DisruptorActorMailboxCore final
     /// Returns true when a message was processed.
     bool consume_one(void* /*actor*/,
                      const sched::ActorExecutionContext& /*ctx*/) noexcept {
+        // Acquire consumer lock to serialize with producer drop operations.
+        lock_consumer();
+
         // System lane first (matching existing mailbox contract).
         TypedMessage sys_msg;
         bool has_system = false;
@@ -349,6 +471,7 @@ class DisruptorActorMailboxCore final
             }
         }
         if (has_system) {
+            unlock_consumer();
             if (target_) {
                 target_->on_system_message(std::move(sys_msg));
             }
@@ -367,6 +490,7 @@ class DisruptorActorMailboxCore final
             }
         }
         if (has_dynamic) {
+            unlock_consumer();
             if (target_) {
                 target_->on_system_message(std::move(dyn_msg));
             }
@@ -384,8 +508,13 @@ class DisruptorActorMailboxCore final
             }
             // Release the logical reservation after successful dispatch.
             reservation_.release(sizeof(envelope_type));
+            drain_overflow();
+            block_cv_.notify_one(); // Wake one blocked producer.
+            unlock_consumer();
             return true;
         }
+
+        unlock_consumer();
 
         // Clear wakeup signal and re-check all lanes to close
         // the lost-wakeup window.
@@ -513,11 +642,20 @@ class DisruptorActorMailboxCore final
         snap.total_dequeued =
             total_accepted_.load(std::memory_order_relaxed) - total_depth;
         snap.total_rejected = total_rejected_.load(std::memory_order_relaxed);
+        snap.total_dropped = total_dropped_.load(std::memory_order_relaxed);
+        snap.total_dead_letters =
+            total_dead_letters_.load(std::memory_order_relaxed);
+        {
+            auto oq_snap = overflow_queue_.snapshot();
+            snap.overflow_depth = oq_snap.depth;
+            snap.overflow_max_depth = oq_snap.max_depth;
+        }
         {
             std::lock_guard<std::mutex> lock{system_mutex_};
             snap.system_lane_depth = static_cast<uint32_t>(system_queue_.size());
         }
         snap.num_user_lanes = num_user_lanes_;
+        snap.overflow_policy = to_string(config_.overflow_policy);
         return snap;
     }
 
@@ -602,6 +740,89 @@ class DisruptorActorMailboxCore final
     }
 
   private:
+    /// \brief Acquire the consumer spin-lock (TAS).
+    void lock_consumer() noexcept {
+        while (consumer_lock_.test_and_set(std::memory_order_acquire)) {
+        }
+    }
+
+    /// \brief Release the consumer spin-lock.
+    void unlock_consumer() noexcept {
+        consumer_lock_.clear(std::memory_order_release);
+    }
+
+    /// \brief Evict the oldest message from the highest-priority non-empty
+    ///        user ring.
+    ///
+    /// \return true if a message was dropped, false if all rings were empty.
+    /// \note Must be called with \c consumer_lock_ held.
+    bool drop_one_oldest_ring() noexcept {
+        // Scan rings from highest to lowest priority, evict from first
+        // non-empty ring.
+        for (uint8_t lane = 0; lane < num_user_lanes_; ++lane) {
+            auto lease = user_rings_[lane].try_acquire();
+            if (lease) {
+                lease.reset(); // release the lease, dropping the message
+                reservation_.release(sizeof(envelope_type));
+                total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// \brief Evict the lowest-priority message from the lowest-priority
+    ///        non-empty user ring.
+    ///
+    /// \return true if a message was dropped, false if all rings were empty.
+    /// \note Must be called with \c consumer_lock_ held.
+    bool drop_one_lowest_priority_ring() noexcept {
+        // Scan rings from lowest to highest priority, evict from first
+        // non-empty ring.
+        for (int lane = num_user_lanes_ - 1; lane >= 0; --lane) {
+            auto lease = user_rings_[static_cast<uint8_t>(lane)].try_acquire();
+            if (lease) {
+                lease.reset(); // release the lease, dropping the message
+                reservation_.release(sizeof(envelope_type));
+                total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// \brief Drain messages from the overflow queue back into the rings.
+    ///
+    /// Only active when overflow_policy is SpillToOverflowQueue. Iterates
+    /// while capacity is available, popping from the overflow queue and
+    /// publishing into the rings.
+    ///
+    /// \note Must be called with \c consumer_lock_ held.
+    void drain_overflow() noexcept {
+        while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
+            envelope_type overflow_env;
+            if (!overflow_queue_.try_pop(overflow_env))
+                break;
+            uint64_t bytes = sizeof(envelope_type);
+            auto reserve_result = reservation_.try_reserve(
+                bytes, config_.capacity.max_messages, config_.capacity.max_bytes);
+            if (reserve_result != adt::ReservationResult::Reserved) {
+                // Push back to overflow queue; drop if push-back fails.
+                if (!overflow_queue_.try_push(std::move(overflow_env))) {
+                    total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                }
+                break;
+            }
+            auto& ring = ring_for(overflow_env.meta.priority);
+            auto pub = ring.try_publish(std::move(overflow_env));
+            if (!pub.accepted()) {
+                reservation_.release(bytes);
+                total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                break;
+            }
+        }
+    }
+
     /// \brief Current monotonic nanosecond timestamp for deadline checks.
     static uint64_t steady_now_ns() noexcept {
         return static_cast<uint64_t>(
@@ -706,10 +927,22 @@ class DisruptorActorMailboxCore final
     std::atomic<bool> accepting_user_{true};
     std::atomic<uint32_t> in_flight_publishers_{0};
     std::atomic<bool> work_signaled_{false};
+    std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT;
+
+    // Overflow handling.
+    std::unique_ptr<detail::IDisruptorOverflowHandler<envelope_type>> overflow_handler_;
+    OverflowQueue<envelope_type> overflow_queue_;
+    DeadLetterQueue* dlq_{nullptr};
+
+    // Producer blocking (BlockWhenAllowed policy).
+    std::mutex block_mutex_;
+    std::condition_variable block_cv_;
 
     // Cumulative counters for observability.
     std::atomic<uint64_t> total_accepted_{0};
     std::atomic<uint64_t> total_rejected_{0};
+    std::atomic<uint64_t> total_dropped_{0};
+    std::atomic<uint64_t> total_dead_letters_{0};
 
     // Typed dispatch target (set once after spawn).
     DispatchTarget* target_{nullptr};
