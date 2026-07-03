@@ -506,6 +506,7 @@ enabled = true
 dispatch_queue_capacity = 65536
 command_queue_capacity = 16384
 completion_queue_capacity = 16384
+max_actor_bindings = 65536
 max_dispatch_per_tick = 256
 max_commands_per_turn = 256
 loop_lag_unready_ms = 5000
@@ -517,7 +518,8 @@ Queue capacities must be powers of two in the inclusive range 64 through
 1,048,576. Per-turn drain budgets must be in the inclusive range 1 through
 4,096 and cannot exceed their queue capacity. `loop_lag_unready_ms` must be
 100 through 60,000. `handler_shutdown_timeout_ms` must be 100 through 300,000.
-Invalid values fail configuration before thread creation.
+`max_actor_bindings` must be 1 through 1,048,576. Invalid values fail
+configuration before thread creation.
 
 Declarative Python actor topology is deferred. Its later design must preserve
 the validated-startup contract: module/class references must be imported and
