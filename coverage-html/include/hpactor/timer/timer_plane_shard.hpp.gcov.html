@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-02 04:32:28</td>
+            <td class="headerValue">2026-07-03 00:45:07</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">37.5&nbsp;%</td>
@@ -147,8 +147,8 @@
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           6 :         return min_deadline_.load(std::memory_order_acquire);</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : </span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          13 :     uint64_t pending_count() const {</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">          26 :         return pending_.load(std::memory_order_relaxed);</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          14 :     uint64_t pending_count() const {</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">          28 :         return pending_.load(std::memory_order_relaxed);</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :     }</span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     uint64_t scheduled_count() const {</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC">           0 :         return scheduled_.load(std::memory_order_relaxed);</span></span>

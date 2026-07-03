@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-02 04:32:28</td>
+            <td class="headerValue">2026-07-03 00:45:07</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -173,79 +173,87 @@
 <span id="L95"><span class="lineNum">      95</span>                 :             :     PassivationQueueFull = 103,      ///&lt; Reactivation buffer exhausted.</span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     SchemaVersionMismatch = 104,     ///&lt; Stored schema has no migration path.</span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : </span>
-<span id="L98"><span class="lineNum">      98</span>                 :             :     // ── Sentinel ────────────────────────────────────────────────</span>
-<span id="L99"><span class="lineNum">      99</span>                 :             :     Unknown = 255, ///&lt; Unclassified failure. Must not be used for new</span>
-<span id="L100"><span class="lineNum">     100</span>                 :             :                    ///&lt; production paths.</span>
-<span id="L101"><span class="lineNum">     101</span>                 :             : };</span>
-<span id="L102"><span class="lineNum">     102</span>                 :             : </span>
-<span id="L103"><span class="lineNum">     103</span>                 :             : /// Which subsystem produced a failure. Combined with FailureReason to</span>
-<span id="L104"><span class="lineNum">     104</span>                 :             : /// disambiguate context (e.g. Timeout from ActorRuntime vs Rpc).</span>
-<span id="L105"><span class="lineNum">     105</span>                 :             : enum class FailureSource : uint8_t {</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             :     ActorRuntime, ///&lt; Actor send/reply/spawn paths.</span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :     Mailbox,      ///&lt; Mailbox admission.</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :     Rpc,          ///&lt; RPC channel.</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             :     Transport,    ///&lt; Network transport (TCP, TLS, frame).</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             :     Discovery,    ///&lt; Service discovery (registrar, gossip).</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     Scheduler,    ///&lt; Scheduling / timer infrastructure.</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     Config,       ///&lt; Config validation / bootstrap.</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     Security,     ///&lt; Authentication / authorization.</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :     DurableStore, ///&lt; Durable state / event store.</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :     Supervision,  ///&lt; Supervision / restart.</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :     Cluster,      ///&lt; Cluster membership / sharding.</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :     Unknown,      ///&lt; Unspecified source.</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             : };</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             : </span>
-<span id="L120"><span class="lineNum">     120</span>                 :             : /// \brief Whether the caller can retry with a reasonable chance of success.</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : ///</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             : /// \param[in] reason The failure reason to check.</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             : /// \return true if the reason represents a transient condition likely to</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             : ///         resolve without application-level intervention.</span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC tlaBgGNC">         159 : constexpr bool retryable(FailureReason reason) noexcept {</span></span>
-<span id="L126"><span class="lineNum">     126</span>      [<span class="tlaGBC" title="Branch 0 was taken 72 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 87 times"> + </span>]:<span class="tlaGNC">         159 :     switch (reason) {</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          72 :         case FailureReason::NoRoute:</span></span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :         case FailureReason::NodeUnavailable:</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :         case FailureReason::ActorNotReady:</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             :         case FailureReason::CircuitOpen:</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :         case FailureReason::MailboxFull:</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :         case FailureReason::OutboundQueueFull:</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :         case FailureReason::MemoryPressure:</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :         case FailureReason::Timeout:</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :         case FailureReason::TransportError:</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :         case FailureReason::Draining:</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :         case FailureReason::ShuttingDown:</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             :         case FailureReason::ResourceExhausted:</span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :         case FailureReason::RemoteUnavailable:</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :         case FailureReason::PassivationDrainTimeout:</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :         case FailureReason::PassivationSnapshotFailed:</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :         case FailureReason::ReactivationFailed:</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :         case FailureReason::PassivationQueueFull:</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             :         case FailureReason::NodeReplaced:</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :         case FailureReason::FencingTokenStale:</span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          72 :             return true;</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case FailureReason::SchemaVersionMismatch:</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :         case FailureReason::NodeQuarantined:</span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC tlaBgGNC">          87 :         default:</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          87 :             return false;</span></span>
-<span id="L152"><span class="lineNum">     152</span>                 :             :     }</span>
-<span id="L153"><span class="lineNum">     153</span>                 :             : }</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             : </span>
-<span id="L155"><span class="lineNum">     155</span>                 :             : /// \brief Human-readable snake_case string for metrics labels, log keys,</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             : ///        and CLI.</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             : ///</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             : /// \param[in] reason The failure reason.</span>
-<span id="L159"><span class="lineNum">     159</span>                 :             : /// \return A null-terminated snake_case string literal (e.g. &quot;no_route&quot;,</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             : ///         &quot;mailbox_full&quot;). Never returns nullptr.</span>
-<span id="L161"><span class="lineNum">     161</span>                 :             : const char* to_string(FailureReason reason) noexcept;</span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :     // ── Disruptor mailbox (110-119) ────────────────────────────</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :     RingFull = 110,             ///&lt; Disruptor ring is at slot capacity.</span>
+<span id="L100"><span class="lineNum">     100</span>                 :             :     RingClosed = 111,           ///&lt; Disruptor ring has been closed.</span>
+<span id="L101"><span class="lineNum">     101</span>                 :             :     FixedMessageTooLarge = 112, ///&lt; Fixed message exceeds ring slot size.</span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :     SystemLaneFull = 113, ///&lt; Disruptor system lane is at protected capacity.</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :     RingCapacityExceeded = 114, ///&lt; Reserved capacity would exceed compile-time</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             :                                 ///&lt; ring limit.</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : </span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :     // ── Sentinel ────────────────────────────────────────────────</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :     Unknown = 255, ///&lt; Unclassified failure. Must not be used for new</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :                    ///&lt; production paths.</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             : };</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             : </span>
+<span id="L111"><span class="lineNum">     111</span>                 :             : /// Which subsystem produced a failure. Combined with FailureReason to</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             : /// disambiguate context (e.g. Timeout from ActorRuntime vs Rpc).</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             : enum class FailureSource : uint8_t {</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     ActorRuntime, ///&lt; Actor send/reply/spawn paths.</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             :     Mailbox,      ///&lt; Mailbox admission.</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     Rpc,          ///&lt; RPC channel.</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     Transport,    ///&lt; Network transport (TCP, TLS, frame).</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     Discovery,    ///&lt; Service discovery (registrar, gossip).</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             :     Scheduler,    ///&lt; Scheduling / timer infrastructure.</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     Config,       ///&lt; Config validation / bootstrap.</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :     Security,     ///&lt; Authentication / authorization.</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :     DurableStore, ///&lt; Durable state / event store.</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :     Supervision,  ///&lt; Supervision / restart.</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     Cluster,      ///&lt; Cluster membership / sharding.</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :     Unknown,      ///&lt; Unspecified source.</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             : };</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             : </span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : /// \brief Whether the caller can retry with a reasonable chance of success.</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : ///</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             : /// \param[in] reason The failure reason to check.</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : /// \return true if the reason represents a transient condition likely to</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             : ///         resolve without application-level intervention.</span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC tlaBgGNC">         159 : constexpr bool retryable(FailureReason reason) noexcept {</span></span>
+<span id="L134"><span class="lineNum">     134</span>      [<span class="tlaGBC" title="Branch 0 was taken 72 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 87 times"> + </span>]:<span class="tlaGNC">         159 :     switch (reason) {</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">          72 :         case FailureReason::NoRoute:</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :         case FailureReason::NodeUnavailable:</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :         case FailureReason::ActorNotReady:</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :         case FailureReason::CircuitOpen:</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :         case FailureReason::MailboxFull:</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :         case FailureReason::OutboundQueueFull:</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :         case FailureReason::MemoryPressure:</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :         case FailureReason::Timeout:</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :         case FailureReason::TransportError:</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :         case FailureReason::Draining:</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :         case FailureReason::ShuttingDown:</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :         case FailureReason::ResourceExhausted:</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :         case FailureReason::RemoteUnavailable:</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :         case FailureReason::PassivationDrainTimeout:</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :         case FailureReason::PassivationSnapshotFailed:</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :         case FailureReason::ReactivationFailed:</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :         case FailureReason::PassivationQueueFull:</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :         case FailureReason::NodeReplaced:</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :         case FailureReason::FencingTokenStale:</span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">          72 :             return true;</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case FailureReason::SchemaVersionMismatch:</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :         case FailureReason::NodeQuarantined:</span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC tlaBgGNC">          87 :         default:</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">          87 :             return false;</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :     }</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             : }</span>
 <span id="L162"><span class="lineNum">     162</span>                 :             : </span>
-<span id="L163"><span class="lineNum">     163</span>                 :             : /// \brief Human-readable snake_case string for the subsystem source.</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             : ///</span>
-<span id="L165"><span class="lineNum">     165</span>                 :             : /// \param[in] source The failure source.</span>
-<span id="L166"><span class="lineNum">     166</span>                 :             : /// \return A null-terminated snake_case string literal (e.g. &quot;actor_runtime&quot;,</span>
-<span id="L167"><span class="lineNum">     167</span>                 :             : ///         &quot;mailbox&quot;). Never returns nullptr.</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             : const char* to_string(FailureSource source) noexcept;</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             : </span>
-<span id="L170"><span class="lineNum">     170</span>                 :             : } // namespace hpactor</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : /// \brief Human-readable snake_case string for metrics labels, log keys,</span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : ///        and CLI.</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             : ///</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             : /// \param[in] reason The failure reason.</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             : /// \return A null-terminated snake_case string literal (e.g. &quot;no_route&quot;,</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             : ///         &quot;mailbox_full&quot;). Never returns nullptr.</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             : const char* to_string(FailureReason reason) noexcept;</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             : </span>
+<span id="L171"><span class="lineNum">     171</span>                 :             : /// \brief Human-readable snake_case string for the subsystem source.</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             : ///</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             : /// \param[in] source The failure source.</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             : /// \return A null-terminated snake_case string literal (e.g. &quot;actor_runtime&quot;,</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             : ///         &quot;mailbox&quot;). Never returns nullptr.</span>
+<span id="L176"><span class="lineNum">     176</span>                 :             : const char* to_string(FailureSource source) noexcept;</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             : </span>
+<span id="L178"><span class="lineNum">     178</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
