@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-03 00:45:07</td>
+            <td class="headerValue">2026-07-03 02:07:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -105,26 +105,26 @@
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">        6791 :     explicit ActorRefCache(size_t max_entries = DefaultMaxEntries)</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        6791 :         : max_entries_(max_entries) {}</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">      126816 :     std::optional&lt;ActorRef&gt; get(ActorId id) {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">      126816 :         auto it = cache_.find(id);</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 387 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 126429 times"> + </span>]:<span class="tlaGNC">      126816 :         if (it == cache_.end()) {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         387 :             return std::nullopt;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">      126821 :     std::optional&lt;ActorRef&gt; get(ActorId id) {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">      126821 :         auto it = cache_.find(id);</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 389 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 126432 times"> + </span>]:<span class="tlaGNC">      126821 :         if (it == cache_.end()) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         389 :             return std::nullopt;</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :         }</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">      126429 :         it-&gt;second.last_access_tick = ++tick_;</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      126429 :         return it-&gt;second.ref;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">      126432 :         it-&gt;second.last_access_tick = ++tick_;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      126432 :         return it-&gt;second.ref;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     }</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         493 :     void put(ActorId id, ActorRef ref) {</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         493 :         auto it = cache_.find(id);</span></span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 491 times"> + </span>]:<span class="tlaGNC">         493 :         if (it != cache_.end()) {</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         495 :     void put(ActorId id, ActorRef ref) {</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         495 :         auto it = cache_.find(id);</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 493 times"> + </span>]:<span class="tlaGNC">         495 :         if (it != cache_.end()) {</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           2 :             it-&gt;second.ref = std::move(ref);</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           2 :             it-&gt;second.last_access_tick = ++tick_;</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           2 :             return;</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :         }</span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 488 times"> + </span>]:<span class="tlaGNC">         491 :         if (cache_.size() &gt;= max_entries_) {</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 490 times"> + </span>]:<span class="tlaGNC">         493 :         if (cache_.size() &gt;= max_entries_) {</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           3 :             evict_lru();</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :         }</span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         491 :         cache_.emplace(id, Entry{std::move(ref), ++tick_});</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         493 :         cache_.emplace(id, Entry{std::move(ref), ++tick_});</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : private:</span>

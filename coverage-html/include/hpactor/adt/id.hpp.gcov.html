@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-03 00:45:07</td>
+            <td class="headerValue">2026-07-03 02:07:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -99,20 +99,20 @@
 <span id="L21"><span class="lineNum">      21</span>                 :             : namespace hpactor {</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : template &lt;typename Tag, typename T = uint64_t&gt; class Id {</span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">      562236 :     T value_{};</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">      561655 :     T value_{};</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : </span>
 <span id="L26"><span class="lineNum">      26</span>                 :             :   public:</span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">    63892424 :     constexpr Id() = default;</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      697480 :     explicit constexpr Id(T v) : value_{v} {}</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">    63894013 :     constexpr Id() = default;</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      695858 :     explicit constexpr Id(T v) : value_{v} {}</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">     1816199 :     [[nodiscard]] constexpr T value() const noexcept {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">     1816199 :         return value_;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">     1792362 :     [[nodiscard]] constexpr T value() const noexcept {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">     1792362 :         return value_;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             :     }</span>
 <span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          47 :     [[nodiscard]] constexpr bool valid() const noexcept {</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          47 :         return value_ != T{};</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
-<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 2015 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 560221 times"> + </span>]:<span class="tlaGNC">      562236 :     friend constexpr bool operator==(Id, Id) = default;</span></span>
+<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 1693 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 559962 times"> + </span>]:<span class="tlaGNC">      561655 :     friend constexpr bool operator==(Id, Id) = default;</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">          92 :     friend constexpr bool operator!=(Id, Id) = default;</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     friend constexpr auto operator&lt;=&gt;(Id, Id) = default;</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : };</span>
@@ -120,8 +120,8 @@
 <span id="L42"><span class="lineNum">      42</span>                 :             : } // namespace hpactor</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : template &lt;typename Tag, typename T&gt; struct std::hash&lt;hpactor::Id&lt;Tag, T&gt;&gt; {</span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      585236 :     std::size_t operator()(hpactor::Id&lt;Tag, T&gt; id) const noexcept {</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      585236 :         return std::hash&lt;T&gt;{}(id.value());</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      584979 :     std::size_t operator()(hpactor::Id&lt;Tag, T&gt; id) const noexcept {</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      584979 :         return std::hash&lt;T&gt;{}(id.value());</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :     }</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : };</span>
         </pre>

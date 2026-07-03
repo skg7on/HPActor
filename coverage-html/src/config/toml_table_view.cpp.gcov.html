@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-03 00:45:07</td>
+            <td class="headerValue">2026-07-03 02:07:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.2&nbsp;%</td>
@@ -214,13 +214,13 @@
 <span id="L135"><span class="lineNum">     135</span>                 :             : }</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
 <span id="L137"><span class="lineNum">     137</span>                 :             : std::string</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">        1286 : TomlTableView::read_string(std::string_view key, std::string_view fallback) const {</span></span>
-<span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1285 times"> + </span>]:<span class="tlaGNC">        1286 :     if (!table_)</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">        1306 : TomlTableView::read_string(std::string_view key, std::string_view fallback) const {</span></span>
+<span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1305 times"> + </span>]:<span class="tlaGNC">        1306 :     if (!table_)</span></span>
 <span id="L140"><span class="lineNum">     140</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :         return std::string{fallback};</span></span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">        1285 :     auto node = static_cast&lt;const toml::table*&gt;(table_)-&gt;get(key);</span></span>
-<span id="L142"><span class="lineNum">     142</span>   [<span class="tlaGBC" title="Branch 0 was taken 687 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 598 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 687 times"> + </span> :<span class="tlaGNC">        1285 :     if (!node || !node-&gt;is_string())</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 598 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 687 times"> + </span>]
-<span id="L143"><span class="lineNum">     143</span>         [<span class="tlaGBC" title="Branch 0 was taken 598 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1196 :         return std::string{fallback};</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">        1305 :     auto node = static_cast&lt;const toml::table*&gt;(table_)-&gt;get(key);</span></span>
+<span id="L142"><span class="lineNum">     142</span>   [<span class="tlaGBC" title="Branch 0 was taken 687 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 618 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 687 times"> + </span> :<span class="tlaGNC">        1305 :     if (!node || !node-&gt;is_string())</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 618 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 687 times"> + </span>]
+<span id="L143"><span class="lineNum">     143</span>         [<span class="tlaGBC" title="Branch 0 was taken 618 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1236 :         return std::string{fallback};</span></span>
 <span id="L144"><span class="lineNum">     144</span>   [<span class="tlaGBC" title="Branch 0 was taken 687 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 687 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        2061 :     return std::string{node-&gt;value&lt;std::string&gt;().value_or(std::string{fallback})};</span></span>
 <span id="L145"><span class="lineNum">     145</span>                 :             : }</span>
 <span id="L146"><span class="lineNum">     146</span>                 :             : </span>

@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">91.9&nbsp;%</td>
+            <td class="headerCovTableEntryHi">91.1&nbsp;%</td>
             <td class="headerCovTableEntry">123</td>
-            <td class="headerCovTableEntry">113</td>
+            <td class="headerCovTableEntry">112</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-03 00:45:07</td>
+            <td class="headerValue">2026-07-03 02:07:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">72.2&nbsp;%</td>
             <td class="headerCovTableEntry">36</td>
-            <td class="headerCovTableEntry">27</td>
+            <td class="headerCovTableEntry">26</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -257,11 +257,11 @@
 <span id="L179"><span class="lineNum">     179</span>                 :             : // ---- Comparison ----</span>
 <span id="L180"><span class="lineNum">     180</span>                 :             : </span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          34 : bool StreamBuffer::operator==(const StreamBuffer&amp; other) const {</span></span>
-<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          34 :     if (size() != other.size())</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           1 :         return false;</span></span>
-<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          33 :     if (size() == 0)</span></span>
+<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span>]:<span class="tlaGNC">          34 :     if (size() != other.size())</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
+<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          34 :     if (size() == 0)</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return true;</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC tlaBgGNC">          33 :     return std::memcmp(data(), other.data(), size()) == 0;</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC tlaBgGNC">          34 :     return std::memcmp(data(), other.data(), size()) == 0;</span></span>
 <span id="L187"><span class="lineNum">     187</span>                 :             : }</span>
 <span id="L188"><span class="lineNum">     188</span>                 :             : </span>
 <span id="L189"><span class="lineNum">     189</span>                 :             : // ---- Private ----</span>
