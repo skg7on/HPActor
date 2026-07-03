@@ -85,7 +85,13 @@ struct DisruptorMailboxDelivery {
 struct DisruptorMailboxControl {
     void* context{nullptr};
 
+    /// Route a system-level TypedMessage (TypeTag < User) into the
+    /// protected system lane.
     EnqueueResult (*try_push)(void*, TypedMessage&&) noexcept {nullptr};
+
+    /// Route a user-level TypedMessage (TypeTag >= User) into the
+    /// dynamic/variable message lane for non-fixed message types.
+    EnqueueResult (*try_push_dynamic)(void*, TypedMessage&&) noexcept {nullptr};
 };
 
 // ── Execution interface ───────────────────────────────────────────────────

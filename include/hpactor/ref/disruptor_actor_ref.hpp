@@ -80,6 +80,27 @@ class DisruptorActorRef final {
         meta.deadline_ns = options.deadline_ns;
         meta.message_id = options.message_id;
         meta.flags = options.flags;
+        meta.priority = 0;
+        return core_->try_push_user(std::forward<Message>(message), meta);
+    }
+
+    /// \brief Send with priority (for use with priority-aware mailboxes).
+    template <typename Message>
+        requires mailbox::detail::one_of_v<std::remove_cvref_t<Message>, Messages...>
+    [[nodiscard]] mailbox::EnqueueResult
+    try_send_priority(Message&& message, uint8_t priority,
+                      mailbox::DisruptorSendOptions options = {}) const noexcept {
+        if (!core_) {
+            mailbox::EnqueueResult result;
+            result.code = mailbox::EnqueueResultCode::Rejected;
+            result.target = address_.id;
+            return result;
+        }
+        mailbox::DisruptorEnvelopeMeta meta;
+        meta.deadline_ns = options.deadline_ns;
+        meta.message_id = options.message_id;
+        meta.flags = options.flags;
+        meta.priority = priority;
         return core_->try_push_user(std::forward<Message>(message), meta);
     }
 

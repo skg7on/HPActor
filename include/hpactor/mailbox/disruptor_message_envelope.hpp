@@ -120,6 +120,19 @@ struct DisruptorEnvelopeMeta {
     /// Reserved flags (must be 0 in version 1).
     uint32_t flags{0};
 
+    /// Priority level for lane routing (0 = highest, up to 7).
+    uint8_t priority{0};
+
+    /// If true, the scheduler places this work item in the EDF queue
+    /// instead of the priority ChaseLev deque.
+    bool schedule_edf{false};
+
+    /// Address to reply to (for ask/request pattern).
+    ActorAddress reply_to{};
+
+    /// Message ID for ask/request correlation.
+    uint64_t ask_message_id{0};
+
     /// True when \c trace contains a valid W3C trace context.
     bool has_trace{false};
 };
