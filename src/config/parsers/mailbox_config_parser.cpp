@@ -103,6 +103,13 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
         out.mailbox.signal_min_interval_ms =
             mt.read_uint32("signal_min_interval_ms", 100);
 
+        // Parse mailbox backend selection.
+        auto backend_str = mt.read_string("backend", "variable_mpsc");
+        if (backend_str == "disruptor") {
+            out.mailbox.default_backend =
+                hpactor::mailbox::MailboxBackend::Disruptor;
+        }
+
         return result<void>::make();
     }
 };
