@@ -25,7 +25,7 @@
 #include "caf_bench_metrics.hpp"
 #include "caf_bench_sampler.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <algorithm>
 #include <chrono>

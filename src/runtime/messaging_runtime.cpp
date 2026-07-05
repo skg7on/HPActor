@@ -14,7 +14,7 @@
 
 #include <hpactor/runtime/messaging_runtime.hpp>
 
-#include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 
 namespace hpactor {
 

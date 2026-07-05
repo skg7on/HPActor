@@ -17,10 +17,10 @@
 #include <apps/edgeops_telemetry/alert_rules.hpp>
 #include <apps/edgeops_telemetry/rollup.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/sched/scheduler.hpp>

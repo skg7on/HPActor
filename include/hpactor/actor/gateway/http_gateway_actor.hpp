@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/external_msg_gateway.hpp>
+#include <hpactor/actor/gateway/external_msg_gateway.hpp>
 #include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_serializer.hpp>

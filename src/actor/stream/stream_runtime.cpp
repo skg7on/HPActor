@@ -1,11 +1,11 @@
 // Copyright 2026 HPActor Contributors
 // (Apache 2.0 license header)
 
-#include <hpactor/actor/stream_runtime.hpp>
+#include <hpactor/actor/stream/stream_runtime.hpp>
 
-#include <hpactor/actor/stream_config.hpp>
-#include <hpactor/actor/stream_handle.hpp>
-#include <hpactor/actor/stream_types.hpp>
+#include <hpactor/actor/stream/stream_config.hpp>
+#include <hpactor/actor/stream/stream_handle.hpp>
+#include <hpactor/actor/stream/stream_types.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/net/inbound_frame_sink.hpp>

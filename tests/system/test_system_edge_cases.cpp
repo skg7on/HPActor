@@ -18,7 +18,7 @@
 // names, max workers, shutdown with pending timers/schedules, double shutdown,
 // and spawn-before-init edge cases.
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 
 #include "scheduler_test_driver.hpp"

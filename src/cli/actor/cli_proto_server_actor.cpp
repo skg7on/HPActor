@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli.pb.h>
 #include <hpactor/cli/actor/cli_proto_server_actor.hpp>
 #include <hpactor/cli/command/cli_session.hpp>
@@ -119,9 +119,9 @@ void CliProtoServerActor::on_daemon_start() {
                     gid = gr->gr_gid;
             }
             if (::chown(config_.uds_listen_path.c_str(), uid, gid) != 0) {
-                std::fprintf(stderr,
-                             "CliProtoServerActor: chown failed on %s: %s\n",
-                             config_.uds_listen_path.c_str(), std::strerror(errno));
+                std::fprintf(
+                    stderr, "CliProtoServerActor: chown failed on %s: %s\n",
+                    config_.uds_listen_path.c_str(), std::strerror(errno));
             }
         }
     }

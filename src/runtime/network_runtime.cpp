@@ -14,7 +14,7 @@
 
 #include <hpactor/runtime/network_runtime.hpp>
 
-#include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 #include <hpactor/net/static_discovery.hpp>
 #include <hpactor/sched/scheduler.hpp>
 

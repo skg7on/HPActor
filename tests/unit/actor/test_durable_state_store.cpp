@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <hpactor/actor/durable/durable_state_store.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
-#include <hpactor/actor/durable_state_store.hpp>
 
 using namespace hpactor;
 

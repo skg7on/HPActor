@@ -22,7 +22,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp> // for Config
+#include <hpactor/actor/system/actor_system.hpp> // for Config
 #include <hpactor/config/reload_report.hpp>
 #include <hpactor/types/types.hpp>
 

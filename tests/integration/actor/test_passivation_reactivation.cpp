@@ -13,15 +13,15 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_route.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/durable/durable_actor.hpp>
+#include <hpactor/actor/durable/durable_state_store.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
-#include <hpactor/actor/durable_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/passivation_config.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
+#include <hpactor/actor/system/actor_route.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <gtest/gtest.h>
 

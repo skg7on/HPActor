@@ -17,12 +17,12 @@
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli.pb.h>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/command/cli_session.hpp>
 #include <hpactor/cli/command/command_node.hpp>
 #include <hpactor/cli/command/command_tree_builder.hpp>
-#include <hpactor/cli/http_handler.hpp>
 #include <hpactor/cli/format/output_formatter.hpp>
+#include <hpactor/cli/http_handler.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>

@@ -18,17 +18,17 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/blocking_actor.hpp>
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/actor/dense_computing_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/external_msg_gateway.hpp>
+#include <hpactor/actor/gateway/external_msg_gateway.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 #include <hpactor/actor/proto_stateful_actor.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/actor/typed_behavior.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>

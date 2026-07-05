@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

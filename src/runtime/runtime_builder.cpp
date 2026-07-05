@@ -14,7 +14,7 @@
 
 #include <hpactor/runtime/runtime_builder.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 namespace hpactor {
 

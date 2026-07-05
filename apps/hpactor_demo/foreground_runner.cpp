@@ -14,7 +14,7 @@
 
 #include "foreground_runner.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/actor/cli_local_actor.hpp>
 #include <hpactor/cli/actor/cli_proto_server_actor.hpp>
 #include <hpactor/cli/config/cli_config.hpp>

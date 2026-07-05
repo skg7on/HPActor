@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/durable/durable_state_store.hpp>
 #include <hpactor/actor/durable/event_sourced_behavior.hpp>
-#include <hpactor/actor/durable_state_store.hpp>
 #include <hpactor/types/types.hpp>
 
 #include "durable_test_helpers.hpp"

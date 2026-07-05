@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>

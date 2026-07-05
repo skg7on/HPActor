@@ -19,7 +19,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/sched/a2ws.hpp>
 #include <hpactor/sched/edf_queue.hpp>

@@ -16,12 +16,12 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_directory.hpp>
-#include <hpactor/actor/actor_system_actors_view.hpp>
-#include <hpactor/actor/actor_system_messaging_view.hpp>
-#include <hpactor/actor/actor_system_network_view.hpp>
-#include <hpactor/actor/actor_system_operations_view.hpp>
-#include <hpactor/actor/ask_manager.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
+#include <hpactor/actor/system/actor_system_actors_view.hpp>
+#include <hpactor/actor/system/actor_system_messaging_view.hpp>
+#include <hpactor/actor/system/actor_system_network_view.hpp>
+#include <hpactor/actor/system/actor_system_operations_view.hpp>
+#include <hpactor/actor/request/ask_manager.hpp>
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
@@ -35,9 +35,9 @@
 #if HPACTOR_ENABLE_AI_ACCELERATORS
 #    include <hpactor/ai/accelerator_config.hpp>
 #endif
-#include <hpactor/actor/stream_config.hpp>
-#include <hpactor/actor/stream_handle.hpp>
-#include <hpactor/actor/stream_registry.hpp>
+#include <hpactor/actor/stream/stream_config.hpp>
+#include <hpactor/actor/stream/stream_handle.hpp>
+#include <hpactor/actor/stream/stream_registry.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>

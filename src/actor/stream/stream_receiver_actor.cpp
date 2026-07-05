@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/stream_receiver_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/actor/stream/stream_receiver_actor.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/frame.hpp>
 

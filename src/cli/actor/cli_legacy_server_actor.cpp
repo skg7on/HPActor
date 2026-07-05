@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/actor/cli_legacy_server_actor.hpp>
 #include <hpactor/cli/command/cli_session.hpp>
 #include <hpactor/cli/command/command_context.hpp>
@@ -100,9 +100,9 @@ void CliLegacyServerActor::on_daemon_start() {
                     gid = gr->gr_gid;
             }
             if (::chown(config_.uds_listen_path.c_str(), uid, gid) != 0) {
-                std::fprintf(stderr,
-                             "CliLegacyServerActor: chown failed on %s: %s\n",
-                             config_.uds_listen_path.c_str(), std::strerror(errno));
+                std::fprintf(
+                    stderr, "CliLegacyServerActor: chown failed on %s: %s\n",
+                    config_.uds_listen_path.c_str(), std::strerror(errno));
             }
         }
     }

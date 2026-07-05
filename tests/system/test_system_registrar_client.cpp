@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/service_discovery.hpp>
 

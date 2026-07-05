@@ -3,9 +3,9 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // ...
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <gtest/gtest.h>
 

@@ -14,8 +14,8 @@
 
 #include <hpactor/sched/actor_execution_engine.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>

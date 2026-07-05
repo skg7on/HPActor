@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>

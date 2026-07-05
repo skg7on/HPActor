@@ -25,7 +25,7 @@
 #include "apps/cli_demo/actors/worker_actor.hpp"
 #include "apps/cli_demo/messages.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <thread>
 #include <vector>

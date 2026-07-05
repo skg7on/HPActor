@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 
 namespace hpactor {
 // AsyncActor is now a type alias for RequestHandle<ActorRef> (defined in

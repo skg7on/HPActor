@@ -16,7 +16,7 @@
 
 #include <cstdint>
 #include <cstring>
-#include <hpactor/actor/stream_types.hpp>
+#include <hpactor/actor/stream/stream_types.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/core/actor_id.hpp>
 #include <hpactor/msg/type_tag.hpp>

@@ -15,9 +15,9 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_ref_cache.hpp>
 #include <hpactor/actor/receptionist/service_key.hpp>
-#include <hpactor/actor/stream_config.hpp>
+#include <hpactor/actor/stream/stream_config.hpp>
+#include <hpactor/actor/system/actor_ref_cache.hpp>
 #include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/proto_type_registry.hpp>

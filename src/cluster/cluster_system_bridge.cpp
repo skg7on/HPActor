@@ -15,7 +15,7 @@
 #include "../runtime/actor_system_impl.hpp"
 #include "cluster_runtime_impl.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 namespace hpactor {
 

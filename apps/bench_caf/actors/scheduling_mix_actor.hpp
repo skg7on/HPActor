@@ -3,9 +3,9 @@
 #pragma once
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include "../caf_bench_config.hpp"
 #include "../messages.hpp"

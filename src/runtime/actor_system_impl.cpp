@@ -18,8 +18,8 @@
 #include <hpactor/runtime/messaging_runtime.hpp>
 #include <hpactor/runtime/runtime_blueprint.hpp>
 
-#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>

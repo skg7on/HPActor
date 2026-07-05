@@ -5,8 +5,8 @@
 
 #include "../support/system_test_fixture.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/actor/cli_http_server_actor.hpp>
 #include <hpactor/cli/config/cli_http_server_config.hpp>
 #include <hpactor/cli/http_handler.hpp>

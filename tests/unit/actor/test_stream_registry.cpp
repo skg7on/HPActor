@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/stream_registry.hpp>
+#include <hpactor/actor/stream/stream_registry.hpp>
 
 #include <gtest/gtest.h>
 

@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/reactor_backend.hpp>
 #include <hpactor/types/types.hpp>

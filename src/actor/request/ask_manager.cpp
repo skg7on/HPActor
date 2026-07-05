@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/ask_manager.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/actor/request/ask_manager.hpp>
 #include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/sched/scheduler_interfaces.hpp>
 

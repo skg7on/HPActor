@@ -15,7 +15,7 @@
 // System test: Multi-Actor Runtime Workflow
 // Validates spawn → send/reply → lifecycle → link/monitor → scheduled delivery
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 
 #include "scheduler_test_driver.hpp"

@@ -14,14 +14,14 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 #include <hpactor/actor/lifecycle/passivation_config.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/quarantine_reason.hpp>
-#include <hpactor/actor/spawn_receiver.hpp>
+#include <hpactor/actor/spawn/spawn_receiver.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>

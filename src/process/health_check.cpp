@@ -15,9 +15,9 @@
 #include <hpactor/process/health_check.hpp>
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_state.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/process/process_config.hpp>
 #include <hpactor/sched/scheduler.hpp>
