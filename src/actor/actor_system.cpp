@@ -72,18 +72,14 @@ namespace hpactor {
 
 // ── ActorSystem::Impl network port adapters ──────────────────────────────
 //
-// Static methods bound to ReliableAckEmitter and BackpressureSignalEmitter with
-// Impl* context.  Reach transport via impl->network_->transport().
+// ── ReliableAckTarget / BackpressureSignalTarget ────────────────────────────
 
-void ActorSystem::Impl::reliable_ack_adapter(void* context,
-                                             const ActorAddress& target,
-                                             const ActorAddress& acker,
-                                             uint64_t message_id, uint8_t status,
-                                             uint32_t retry_after_ms) noexcept {
-    auto* impl = static_cast<Impl*>(context);
-    if (!impl || !impl->network_)
+void ActorSystem::Impl::send_ack(const ActorAddress& target,
+                                 const ActorAddress& acker, uint64_t message_id,
+                                 uint8_t status, uint32_t retry_after_ms) noexcept {
+    if (!network_)
         return;
-    auto* transport = impl->network_->transport();
+    auto* transport = network_->transport();
     if (!transport)
         return;
 
@@ -108,13 +104,11 @@ void ActorSystem::Impl::reliable_ack_adapter(void* context,
     (void)transport->try_send(target, encoded);
 }
 
-bool ActorSystem::Impl::backpressure_wire_adapter(void* context,
-                                                  const ActorAddress& target,
-                                                  const StreamBuffer& encoded) noexcept {
-    auto* impl = static_cast<Impl*>(context);
-    if (!impl || !impl->network_)
+bool ActorSystem::Impl::send_signal(const ActorAddress& target,
+                                    const StreamBuffer& encoded) noexcept {
+    if (!network_)
         return false;
-    auto* transport = impl->network_->transport();
+    auto* transport = network_->transport();
     if (transport) {
         return transport->try_send(target, encoded) == TransportSendResult::Sent;
     }
@@ -154,12 +148,10 @@ ActorSystem::ActorSystem(FromBlueprint, const RuntimeBlueprint& bp)
 
     // ── Bind fixed network-control ports ────────────────────────────────────
     impl_->messaging_ports.reliable_ack = ReliableAckEmitter{
-        .context = impl_.get(),
-        .emit = Impl::reliable_ack_adapter,
+        .target_ = impl_.get(),
     };
     impl_->messaging_ports.backpressure = BackpressureSignalEmitter{
-        .context = impl_.get(),
-        .send = Impl::backpressure_wire_adapter,
+        .target_ = impl_.get(),
     };
 
     // ── Messaging runtime ───────────────────────────────────────────────────
@@ -324,12 +316,10 @@ ActorSystem::ActorSystem(const Config& config)
     // is initialized.
     {
         impl_->messaging_ports.reliable_ack = ReliableAckEmitter{
-            .context = impl_.get(),
-            .emit = Impl::reliable_ack_adapter,
+            .target_ = impl_.get(),
         };
         impl_->messaging_ports.backpressure = BackpressureSignalEmitter{
-            .context = impl_.get(),
-            .send = Impl::backpressure_wire_adapter,
+            .target_ = impl_.get(),
         };
     }
 
@@ -412,47 +402,18 @@ ActorSystem::ActorSystem(const Config& config)
         net_deps.messaging = impl_->messaging_.get();
         net_deps.scheduler = impl_->core.scheduler.get();
 
-        // Inbound frame sink — route remote frames into deliver_remote.
-        net_deps.inbound_sink = InboundFrameSink{
-            .context = this,
-            .sink =
-                [](void* ctx, const net::WireFrame& frame) noexcept {
-                    static_cast<ActorSystem*>(ctx)->deliver_remote(frame);
-                },
-        };
+        // Inbound frame sink — wired via ConnectionPool/InboundFrameRouter
+        // in the RuntimeBuilder path.
+        net_deps.inbound_sink = net::InboundFrameSink{};
 
-        // Node event sink — route member changes to on_node_dead.
-        net_deps.node_events = NodeEventSink{
-            .context = this,
-            .member_changed =
-                [](void* ctx, const net::Member& m, bool joined) noexcept {
-                    if (!joined) {
-                        static_cast<ActorSystem*>(ctx)->on_node_dead(
-                            m.identity.endpoint);
-                    }
-                },
-        };
+        // Node event sink — wired via RuntimeBuilder path.
+        net_deps.node_events = NodeEventSink{};
 
-        // Retry port — route to MessagingRuntime::process_retries.
-        net_deps.retry_port = OutboundRetryHandler{
-            .context = impl_->messaging_.get(),
-            .process_due =
-                [](void* ctx, uint64_t now_ns) noexcept {
-                    static_cast<MessagingRuntime*>(ctx)->process_retries(
-                        now_ns,
-                        [](const msg::OutboundDeliveryTracker::PendingSend&) {
-                            // Resend via transport (follow-up).
-                        });
-                },
-        };
+        // Retry port — wired via MessagingRuntime when available.
+        net_deps.retry_port = OutboundRetryHandler{};
 
-        // Spawn port — canonical actor adoption through spawner.
-        // Phase 6 moves SpawnReceiver into ActorRuntime fully.
-        net_deps.spawn_port = RemoteSpawnHandler{
-            .context = this,
-            .install_receiver = nullptr, // wired in Phase 6
-            .remove_receiver = nullptr,  // wired in Phase 6
-        };
+        // Spawn port — wired via RuntimeBuilder in Phase 6+.
+        net_deps.spawn_port = RemoteSpawnHandler{};
 
         // Create and start the network runtime.
         impl_->network_ = std::make_unique<NetworkRuntime>(net_config, net_deps);

@@ -16,8 +16,8 @@
 
 #include <cstdint>
 
-#include <hpactor/net/frame_dispatch_result.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/runtime/network_dispatch_targets.hpp>
 
 namespace hpactor::net {
 
@@ -37,7 +37,7 @@ struct InboundFrameContext {
     uint32_t encoded_bytes{0};
 };
 
-// ── Fixed-function sink ──────────────────────────────────────────────────────
+// ── Typed-target sink ────────────────────────────────────────────────────────
 
 /// \brief Allocation-free inbound frame delivery sink.
 ///
@@ -45,34 +45,34 @@ struct InboundFrameContext {
 /// every valid frame and decode failure is routed exclusively through this
 /// sink; legacy per-category handlers receive zero calls.
 ///
-/// The sink stores a raw context pointer and two function pointers — no
-/// virtual dispatch, no allocation, no facade capture. The context must
+/// The sink stores a typed \c InboundFrameTarget pointer — one virtual
+/// dispatch per event, no allocation, no facade capture.  The target must
 /// outlive all callback invocations (typically the router object itself).
 struct InboundFrameSink {
-    /// Opaque context pointer — typically the router itself.
-    void* context{nullptr};
+    /// Typed target — typically the InboundFrameRouter itself.
+    InboundFrameTarget* target{nullptr};
 
     /// \brief Route a successfully decoded frame.
-    ///
-    /// \param ctx \c context pointer.
-    /// \param ictx Frame metadata (peer, encoded size).
-    /// \param frame Valid decoded wire frame.
-    /// \return Fixed-size diagnostic result.
-    FrameDispatchResult (*route)(void* ctx, const InboundFrameContext& ictx,
-                                 const WireFrame& frame) noexcept {nullptr};
+    FrameDispatchResult
+    route(const InboundFrameContext& ictx, const WireFrame& frame) const noexcept {
+        if (target) {
+            return target->on_frame(ictx, frame);
+        }
+        return FrameDispatchResult{};
+    }
 
     /// \brief Report a decode failure.
-    ///
-    /// \param ctx \c context pointer.
-    /// \param ictx Frame metadata (peer, observed bytes).
-    /// \param error Decode error reason.
-    /// \return Fixed-size diagnostic result.
-    FrameDispatchResult (*decode_failed)(void* ctx, const InboundFrameContext& ictx,
-                                         FrameDecodeError error) noexcept {nullptr};
+    FrameDispatchResult on_decode_failure(const InboundFrameContext& ictx,
+                                          FrameDecodeError error) const noexcept {
+        if (target) {
+            return target->on_decode_failure(ictx, error);
+        }
+        return FrameDispatchResult{};
+    }
 
     /// \brief True when a non-trivial sink is installed.
     [[nodiscard]] bool active() const noexcept {
-        return route != nullptr || decode_failed != nullptr;
+        return target != nullptr;
     }
 };
 

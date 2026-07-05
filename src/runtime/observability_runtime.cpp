@@ -42,9 +42,9 @@ ObservabilityRuntime::ObservabilityRuntime(const ObservabilityRuntimeConfig& con
     tracing_config_.ring_buffer_capacity = config.tracing_ring_buffer_capacity;
 
     // Ports are self-wired. Their identity never changes.
-    metrics_port_.context = this;
-    log_port_.context = this;
-    trace_port_.context = this;
+    metrics_port_.target = this;
+    log_port_.target = this;
+    trace_port_.target = this;
 }
 
 ObservabilityRuntime::~ObservabilityRuntime() {
@@ -67,19 +67,6 @@ result<void> ObservabilityRuntime::start() noexcept {
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
-
-        // Wire the metrics port to the ring buffer.
-        metrics_port_.emit = [](void* ctx, uint32_t event_type, uint64_t val) noexcept {
-            auto* self = static_cast<ObservabilityRuntime*>(ctx);
-            if (self->metrics_ring_buffer_) {
-                metrics::MetricEvent ev{};
-                ev.event_type = static_cast<metrics::MetricEventType>(event_type);
-                ev.value_hi = static_cast<uint32_t>(val);
-                if (!self->metrics_ring_buffer_->try_push(ev)) {
-                    self->metrics_drops_.fetch_add(1, std::memory_order_relaxed);
-                }
-            }
-        };
     }
 
     // ── Logging ──────────────────────────────────────────────────────────
@@ -91,17 +78,6 @@ result<void> ObservabilityRuntime::start() noexcept {
         // CPU under coverage builds.  Start it later via
         // start_background_threads().
         logger_ = &log_manager_->logger();
-
-        // Wire the log port.
-        log_port_.emit = [](void* ctx, const log::LogEvent& event,
-                            bool /*high_priority*/) noexcept {
-            auto* self = static_cast<ObservabilityRuntime*>(ctx);
-            if (self->logger_) {
-                self->logger_->emit(event);
-            } else {
-                self->log_drops_.fetch_add(1, std::memory_order_relaxed);
-            }
-        };
     }
 
     // ── Tracing ──────────────────────────────────────────────────────────
@@ -109,25 +85,6 @@ result<void> ObservabilityRuntime::start() noexcept {
         trace_manager_ =
             std::make_unique<tracing::TraceManager>(tracing_config_, nullptr);
         // Background exporter thread start deferred — see logging comment.
-
-        // Wire the trace port.
-        trace_port_.record_span =
-            [](void* ctx,
-               const tracing::SpanStart& span) noexcept -> tracing::SpanHandle {
-            auto* self = static_cast<ObservabilityRuntime*>(ctx);
-            if (self->trace_manager_) {
-                return self->trace_manager_->start_span(span);
-            }
-            self->trace_drops_.fetch_add(1, std::memory_order_relaxed);
-            return tracing::SpanHandle{};
-        };
-        trace_port_.finish_span = [](void* ctx, tracing::SpanHandle& handle,
-                                     tracing::SpanStatus status) noexcept {
-            auto* self = static_cast<ObservabilityRuntime*>(ctx);
-            if (self->trace_manager_) {
-                self->trace_manager_->finish_span(handle, status);
-            }
-        };
     }
 
     return result<void>::make();
@@ -144,11 +101,9 @@ result<void> ObservabilityRuntime::stop() noexcept {
 
     // Reset ports to no-op state FIRST so late producers don't access
     // destroyed managers.
-    metrics_port_.emit = nullptr;
-    metrics_port_.emit_event = nullptr;
-    log_port_.emit = nullptr;
-    trace_port_.record_span = nullptr;
-    trace_port_.finish_span = nullptr;
+    metrics_port_.target = nullptr;
+    log_port_.target = nullptr;
+    trace_port_.target = nullptr;
 
     // Stop managers in reverse dependency order.
     if (trace_manager_) {
@@ -188,8 +143,7 @@ void ObservabilityRuntime::apply_tracing_config(const tracing::TraceConfig& conf
             trace_manager_->stop();
             trace_manager_.reset();
         }
-        trace_port_.record_span = nullptr;
-        trace_port_.finish_span = nullptr;
+        trace_port_.target = nullptr;
         return;
     }
 
@@ -202,24 +156,6 @@ void ObservabilityRuntime::apply_tracing_config(const tracing::TraceConfig& conf
     trace_manager_ =
         std::make_unique<tracing::TraceManager>(tracing_config_, nullptr);
     trace_manager_->start();
-
-    // Re-wire the trace port.
-    trace_port_.record_span =
-        [](void* ctx, const tracing::SpanStart& span) noexcept -> tracing::SpanHandle {
-        auto* self = static_cast<ObservabilityRuntime*>(ctx);
-        if (self->trace_manager_) {
-            return self->trace_manager_->start_span(span);
-        }
-        self->trace_drops_.fetch_add(1, std::memory_order_relaxed);
-        return tracing::SpanHandle{};
-    };
-    trace_port_.finish_span = [](void* ctx, tracing::SpanHandle& handle,
-                                 tracing::SpanStatus status) noexcept {
-        auto* self = static_cast<ObservabilityRuntime*>(ctx);
-        if (self->trace_manager_) {
-            self->trace_manager_->finish_span(handle, status);
-        }
-    };
 }
 
 // ── Snapshot ───────────────────────────────────────────────────────────────
@@ -235,6 +171,55 @@ ObservabilitySnapshot ObservabilityRuntime::snapshot() const noexcept {
     snap.trace_drops = trace_drops_.load(std::memory_order_acquire);
     snap.epoch = epoch_.load(std::memory_order_acquire);
     return snap;
+}
+
+// ── MetricsTarget
+// ─────────────────────────────────────────────────────────────
+
+void ObservabilityRuntime::on_metric(uint32_t event_type, uint64_t val) noexcept {
+    if (metrics_ring_buffer_) {
+        metrics::MetricEvent ev{};
+        ev.event_type = static_cast<metrics::MetricEventType>(event_type);
+        ev.value_hi = static_cast<uint32_t>(val);
+        if (!metrics_ring_buffer_->try_push(ev)) {
+            metrics_drops_.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+}
+
+void ObservabilityRuntime::on_metric_event(uint32_t event_type, uint64_t val) noexcept {
+    on_metric(event_type, val);
+}
+
+// ── LogTarget
+// ─────────────────────────────────────────────────────────────────
+
+void ObservabilityRuntime::on_log(const log::LogEvent& event,
+                                  bool /*high_priority*/) noexcept {
+    if (logger_) {
+        logger_->emit(event);
+    } else {
+        log_drops_.fetch_add(1, std::memory_order_relaxed);
+    }
+}
+
+// ── TraceTarget
+// ────────────────────────────────────────────────────────────────
+
+tracing::SpanHandle
+ObservabilityRuntime::on_span_start(const tracing::SpanStart& span) noexcept {
+    if (trace_manager_) {
+        return trace_manager_->start_span(span);
+    }
+    trace_drops_.fetch_add(1, std::memory_order_relaxed);
+    return tracing::SpanHandle{};
+}
+
+void ObservabilityRuntime::on_span_finish(tracing::SpanHandle& handle,
+                                          tracing::SpanStatus status) noexcept {
+    if (trace_manager_) {
+        trace_manager_->finish_span(handle, status);
+    }
 }
 
 } // namespace hpactor

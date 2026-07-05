@@ -22,146 +22,112 @@
 namespace hpactor {
 namespace {
 
-// ── Test fixture ──────────────────────────────────────────────────────────
+// ── Test targets (stub implementations) ────────────────────────────────────
 
-class MessagingNetworkEmittersTest : public ::testing::Test {
-  protected:
-    void SetUp() override {
-        captured_target_ = ActorAddress{};
-        captured_acker_ = ActorAddress{};
-        captured_msg_id_ = 0;
-        captured_status_ = 0;
-        captured_retry_ms_ = 0;
-        captured_encoded_.clear();
-        ack_call_count_ = 0;
-        bp_call_count_ = 0;
+class StubAckTarget : public ReliableAckTarget {
+  public:
+    void send_ack(const ActorAddress& target, const ActorAddress& acker,
+                  uint64_t message_id, uint8_t status,
+                  uint32_t retry_after_ms) noexcept override {
+        captured_target = target;
+        captured_acker = acker;
+        captured_msg_id = message_id;
+        captured_status = status;
+        captured_retry_ms = retry_after_ms;
+        ++call_count;
     }
 
-    // ── ReliableAckEmitter test adapter ─────────────────────────────────
-    static void test_ack_emit(void* context, const ActorAddress& target,
-                              const ActorAddress& acker, uint64_t message_id,
-                              uint8_t status, uint32_t retry_after_ms) noexcept {
-        auto* self = static_cast<MessagingNetworkEmittersTest*>(context);
-        self->captured_target_ = target;
-        self->captured_acker_ = acker;
-        self->captured_msg_id_ = message_id;
-        self->captured_status_ = status;
-        self->captured_retry_ms_ = retry_after_ms;
-        ++self->ack_call_count_;
-    }
+    ActorAddress captured_target{};
+    ActorAddress captured_acker{};
+    uint64_t captured_msg_id{0};
+    uint8_t captured_status{0};
+    uint32_t captured_retry_ms{0};
+    int call_count{0};
+};
 
-    // ── BackpressureSignalEmitter test adapter ────────────────────────────
-    static bool test_bp_send(void* context, const ActorAddress& target,
-                             const StreamBuffer& encoded) noexcept {
-        auto* self = static_cast<MessagingNetworkEmittersTest*>(context);
-        self->captured_target_ = target;
-        self->captured_encoded_ = std::string(encoded.begin(), encoded.end());
-        ++self->bp_call_count_;
+class StubBPSTarget : public BackpressureSignalTarget {
+  public:
+    bool send_signal(const ActorAddress& target,
+                     const StreamBuffer& encoded) noexcept override {
+        captured_target = target;
+        captured_encoded = std::string(encoded.begin(), encoded.end());
+        ++call_count;
         return true;
     }
 
-    ActorAddress captured_target_;
-    ActorAddress captured_acker_;
-    uint64_t captured_msg_id_;
-    uint8_t captured_status_;
-    uint32_t captured_retry_ms_;
-    std::string captured_encoded_;
-    int ack_call_count_;
-    int bp_call_count_;
+    ActorAddress captured_target{};
+    std::string captured_encoded{};
+    int call_count{0};
 };
 
 // ── ReliableAckEmitter tests ─────────────────────────────────────────────────
 
-TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterNullContextIsSafeNoop) {
+TEST(ReliableAckEmitterTest, NullTargetIsSafeNoop) {
     ReliableAckEmitter port;
-    port.context = nullptr;
-    port.emit = test_ack_emit;
-    // operator() should safely return when context is null
+    port.target_ = nullptr;
+    // operator() should safely return when target is null
     port(ActorAddress{}, ActorAddress{}, 42, 0, 0);
-    EXPECT_EQ(ack_call_count_, 0);
 }
 
-TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterNullEmitIsSafeNoop) {
-    ReliableAckEmitter port;
-    port.context = this;
-    port.emit = nullptr;
-    // operator() should safely return when emit is null
-    port(ActorAddress{}, ActorAddress{}, 42, 0, 0);
-    EXPECT_EQ(ack_call_count_, 0);
-}
-
-TEST_F(MessagingNetworkEmittersTest, ReliableAckEmitterForwardsArgumentsExactlyOnce) {
-    ActorAddress target;
-    target.id = ActorId{10};
+TEST(ReliableAckEmitterTest, ForwardsArgumentsExactlyOnce) {
+    StubAckTarget target;
+    ActorAddress tgt;
+    tgt.id = ActorId{10};
     ActorAddress acker;
     acker.id = ActorId{20};
 
     ReliableAckEmitter port;
-    port.context = this;
-    port.emit = test_ack_emit;
-    port(target, acker, 12345, 2, 5000);
+    port.target_ = &target;
+    port(tgt, acker, 12345, 2, 5000);
 
-    EXPECT_EQ(ack_call_count_, 1);
-    EXPECT_EQ(captured_target_.id, ActorId{10});
-    EXPECT_EQ(captured_acker_.id, ActorId{20});
-    EXPECT_EQ(captured_msg_id_, 12345u);
-    EXPECT_EQ(captured_status_, 2u);
-    EXPECT_EQ(captured_retry_ms_, 5000u);
+    EXPECT_EQ(target.call_count, 1);
+    EXPECT_EQ(target.captured_target.id, ActorId{10});
+    EXPECT_EQ(target.captured_acker.id, ActorId{20});
+    EXPECT_EQ(target.captured_msg_id, 12345u);
+    EXPECT_EQ(target.captured_status, 2u);
+    EXPECT_EQ(target.captured_retry_ms, 5000u);
 }
 
 // ── BackpressureSignalEmitter tests
 // ────────────────────────────────────────────
 
-TEST_F(MessagingNetworkEmittersTest,
-       BackpressureSignalEmitterNullContextReturnsFalse) {
+TEST(BackpressureSignalEmitterTest, NullTargetReturnsFalse) {
     BackpressureSignalEmitter port;
-    port.context = nullptr;
-    port.send = test_bp_send;
+    port.target_ = nullptr;
     bool result = port(ActorAddress{}, StreamBuffer{});
     EXPECT_FALSE(result);
-    EXPECT_EQ(bp_call_count_, 0);
 }
 
-TEST_F(MessagingNetworkEmittersTest, BackpressureSignalEmitterNullSendReturnsFalse) {
-    BackpressureSignalEmitter port;
-    port.context = this;
-    port.send = nullptr;
-    bool result = port(ActorAddress{}, StreamBuffer{});
-    EXPECT_FALSE(result);
-    EXPECT_EQ(bp_call_count_, 0);
-}
-
-TEST_F(MessagingNetworkEmittersTest, BackpressureSignalEmitterForwardsExactlyOnce) {
-    ActorAddress target;
-    target.id = ActorId{30};
+TEST(BackpressureSignalEmitterTest, ForwardsExactlyOnce) {
+    StubBPSTarget target;
+    ActorAddress tgt;
+    tgt.id = ActorId{30};
     const char hello[] = "hello";
     auto data = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(hello), 5);
 
     BackpressureSignalEmitter port;
-    port.context = this;
-    port.send = test_bp_send;
-    bool result = port(target, std::move(data));
+    port.target_ = &target;
+    bool result = port(tgt, std::move(data));
 
     EXPECT_TRUE(result);
-    EXPECT_EQ(bp_call_count_, 1);
-    EXPECT_EQ(captured_target_.id, ActorId{30});
-    EXPECT_EQ(captured_encoded_, "hello");
+    EXPECT_EQ(target.call_count, 1);
+    EXPECT_EQ(target.captured_target.id, ActorId{30});
+    EXPECT_EQ(target.captured_encoded, "hello");
 }
 
 // ── MessagingNetworkEmitters aggregate tests ─────────────────────────────────
 
-TEST_F(MessagingNetworkEmittersTest, DefaultPortsAreSafeNoops) {
+TEST(MessagingNetworkEmittersTest, DefaultPortsAreSafeNoops) {
     MessagingNetworkEmitters ports;
-    // Default-constructed ports have null context/emit/send
+    // Default-constructed ports have null targets — safe no-ops
     ports.reliable_ack(ActorAddress{}, ActorAddress{}, 1, 0, 0);
     // Should not crash
     bool result = ports.backpressure(ActorAddress{}, StreamBuffer{});
     EXPECT_FALSE(result);
 }
 
-TEST_F(MessagingNetworkEmittersTest, PortsAreTriviallyCopyable) {
-    // Port structs contain only function pointers and void* — no heap
-    // allocation
+TEST(MessagingNetworkEmittersTest, PortsAreTriviallyCopyable) {
+    // Port structs contain only a raw pointer — no heap allocation
     EXPECT_TRUE(std::is_trivially_copyable_v<ReliableAckEmitter>);
     EXPECT_TRUE(std::is_trivially_copyable_v<BackpressureSignalEmitter>);
     EXPECT_TRUE(std::is_trivially_copyable_v<MessagingNetworkEmitters>);
