@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-05 08:40:32</td>
+            <td class="headerValue">2026-07-05 13:54:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">60.0&nbsp;%</td>
@@ -92,7 +92,7 @@
 <span id="L14"><span class="lineNum">      14</span>                 :             : </span>
 <span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;hpactor/runtime/messaging_runtime.hpp&gt;</span>
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/actor/actor_directory.hpp&gt;</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/actor/system/actor_directory.hpp&gt;</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
@@ -126,11 +126,11 @@
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         821 : MessagingRuntime::~MessagingRuntime() = default;</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : mailbox::EnqueueResult</span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      132824 : MessagingRuntime::try_deliver(ActorId target, TypedMessage msg,</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      132811 : MessagingRuntime::try_deliver(ActorId target, TypedMessage msg,</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :                               uint8_t priority, int64_t deadline_ns,</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :                               mailbox::DeliveryOptions options) {</span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      265648 :     return delivery_pipeline_.try_deliver(target, std::move(msg), priority,</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      132824 :                                           deadline_ns, options);</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      265622 :     return delivery_pipeline_.try_deliver(target, std::move(msg), priority,</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      132811 :                                           deadline_ns, options);</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : }</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : mailbox::DeliveryResult</span>

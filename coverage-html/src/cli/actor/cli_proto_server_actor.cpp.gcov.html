@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-05 08:40:32</td>
+            <td class="headerValue">2026-07-05 13:54:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">28.6&nbsp;%</td>
@@ -79,7 +79,7 @@
 <span id="L1"><span class="lineNum">       1</span>                 :             : // Copyright 2026 HPActor Contributors</span>
 <span id="L2"><span class="lineNum">       2</span>                 :             : // SPDX-License-Identifier: Apache-2.0</span>
 <span id="L3"><span class="lineNum">       3</span>                 :             : </span>
-<span id="L4"><span class="lineNum">       4</span>                 :             : #include &lt;hpactor/actor/actor_system.hpp&gt;</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : #include &lt;hpactor/actor/system/actor_system.hpp&gt;</span>
 <span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;hpactor/cli.pb.h&gt;</span>
 <span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;hpactor/cli/actor/cli_proto_server_actor.hpp&gt;</span>
 <span id="L7"><span class="lineNum">       7</span>                 :             : #include &lt;hpactor/cli/command/cli_session.hpp&gt;</span>
@@ -199,9 +199,9 @@
 <span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaUNC">           0 :                     gid = gr-&gt;gr_gid;</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :             :             }</span>
 <span id="L121"><span class="lineNum">     121</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (::chown(config_.uds_listen_path.c_str(), uid, gid) != 0) {</span></span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC">           0 :                 std::fprintf(stderr,</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :                              &quot;CliProtoServerActor: chown failed on %s: %s\n&quot;,</span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaUNC">           0 :                              config_.uds_listen_path.c_str(), std::strerror(errno));</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC">           0 :                 std::fprintf(</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :                     stderr, &quot;CliProtoServerActor: chown failed on %s: %s\n&quot;,</span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaUNC">           0 :                     config_.uds_listen_path.c_str(), std::strerror(errno));</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :             :             }</span>
 <span id="L126"><span class="lineNum">     126</span>                 :             :         }</span>
 <span id="L127"><span class="lineNum">     127</span>                 :             :     }</span>

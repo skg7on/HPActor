@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-05 08:40:32</td>
+            <td class="headerValue">2026-07-05 13:54:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -113,37 +113,37 @@
 <span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : }</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">      128113 : void Logger::emit(LogLevel level, LogCategory category, ActorId actor_id,</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">      128106 : void Logger::emit(LogLevel level, LogCategory category, ActorId actor_id,</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :                   uint32_t event_id, const char* message, const LogField* fields,</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :                   uint8_t field_count, const char* file, uint32_t line) noexcept {</span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128107 times"> + </span>]:<span class="tlaGNC">      128113 :     if (!buffer_)</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128100 times"> + </span>]:<span class="tlaGNC">      128106 :     if (!buffer_)</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           6 :         return;</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">      128107 :     LogEvent evt{};</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      128107 :     evt.level = level;</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      128107 :     evt.category = category;</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">      128107 :     evt.actor_id = actor_id;</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">      128107 :     evt.event_id = event_id;</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      128107 :     evt.message = message;</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      128107 :     evt.file = file;</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      128107 :     evt.line = line;</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">      128107 :     evt.worker_id = UINT32_MAX;</span></span>
-<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 128106 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">      128107 :     evt.field_count = (field_count &gt; kMaxLogFields) ? kMaxLogFields : field_count;</span></span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 128106 times"> + </span>]:<span class="tlaGNC">      128107 :     if (field_count &gt; kMaxLogFields) {</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">      128100 :     LogEvent evt{};</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      128100 :     evt.level = level;</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      128100 :     evt.category = category;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">      128100 :     evt.actor_id = actor_id;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">      128100 :     evt.event_id = event_id;</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      128100 :     evt.message = message;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">      128100 :     evt.file = file;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      128100 :     evt.line = line;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">      128100 :     evt.worker_id = UINT32_MAX;</span></span>
+<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 128099 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">      128100 :     evt.field_count = (field_count &gt; kMaxLogFields) ? kMaxLogFields : field_count;</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 128099 times"> + </span>]:<span class="tlaGNC">      128100 :     if (field_count &gt; kMaxLogFields) {</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           1 :         fields_dropped_ += field_count - kMaxLogFields;</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     }</span>
-<span id="L57"><span class="lineNum">      57</span>         [<span class="tlaGBC" title="Branch 0 was taken 112556 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128107 times"> + </span>]:<span class="tlaGNC">      240663 :     for (uint8_t i = 0; i &lt; evt.field_count; ++i) {</span></span>
+<span id="L57"><span class="lineNum">      57</span>         [<span class="tlaGBC" title="Branch 0 was taken 112556 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128100 times"> + </span>]:<span class="tlaGNC">      240656 :     for (uint8_t i = 0; i &lt; evt.field_count; ++i) {</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">      112556 :         evt.fields[i] = fields[i];</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     }</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">      128107 :     auto now = std::chrono::system_clock::now();</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">      128107 :     evt.timestamp_ns = static_cast&lt;uint64_t&gt;(</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      128107 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(now.time_since_epoch())</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      128107 :             .count());</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">      128100 :     auto now = std::chrono::system_clock::now();</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">      128100 :     evt.timestamp_ns = static_cast&lt;uint64_t&gt;(</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      128100 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(now.time_since_epoch())</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      128100 :             .count());</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      128107 :     buffer_-&gt;try_push(evt);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      128100 :     buffer_-&gt;try_push(evt);</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
-<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128105 times"> + </span>]:<span class="tlaGNC">      128107 :     if (static_cast&lt;uint8_t&gt;(level) &lt;= static_cast&lt;uint8_t&gt;(flush_on_level_)) {</span></span>
+<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 128098 times"> + </span>]:<span class="tlaGNC">      128100 :     if (static_cast&lt;uint8_t&gt;(level) &lt;= static_cast&lt;uint8_t&gt;(flush_on_level_)) {</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           2 :         nudge();</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : }</span>
@@ -152,8 +152,8 @@
 <span id="L74"><span class="lineNum">      74</span>                 :             : Logger g_noop_logger; // buffer_ is null, all operations are no-ops</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      141173 : Logger&amp; global_logger() noexcept {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      141173 :     return g_noop_logger;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      141138 : Logger&amp; global_logger() noexcept {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      141138 :     return g_noop_logger;</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             : }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :             : } // namespace hpactor::log</span>
