@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">78.3&nbsp;%</td>
+            <td class="headerCovTableEntryLo">74.7&nbsp;%</td>
             <td class="headerCovTableEntry">198</td>
-            <td class="headerCovTableEntry">155</td>
+            <td class="headerCovTableEntry">148</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-03 02:07:17</td>
+            <td class="headerValue">2026-07-05 08:40:32</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">70.8&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">70.2&nbsp;%</td>
+            <td class="headerCovTableEntryLo">67.0&nbsp;%</td>
             <td class="headerCovTableEntry">94</td>
-            <td class="headerCovTableEntry">66</td>
+            <td class="headerCovTableEntry">63</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -179,8 +179,8 @@
 <span id="L101"><span class="lineNum">     101</span>                 :             : </span>
 <span id="L102"><span class="lineNum">     102</span>                 :             : // ── Lifecycle ────────────────────────────────────────────────────────────────</span>
 <span id="L103"><span class="lineNum">     103</span>                 :             : </span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">      571327 : NetworkRuntime::State NetworkRuntime::state() const noexcept {</span></span>
-<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">      571327 :     return impl_-&gt;state_.load(std::memory_order_acquire);</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">      601274 : NetworkRuntime::State NetworkRuntime::state() const noexcept {</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">      601274 :     return impl_-&gt;state_.load(std::memory_order_acquire);</span></span>
 <span id="L106"><span class="lineNum">     106</span>                 :             : }</span>
 <span id="L107"><span class="lineNum">     107</span>                 :             : </span>
 <span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">         108 : result&lt;void&gt; NetworkRuntime::start() noexcept {</span></span>
@@ -242,78 +242,78 @@
 <span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     impl_-&gt;last_stage.store(3, std::memory_order_relaxed);</span></span>
 <span id="L165"><span class="lineNum">     165</span>                 :             : </span>
 <span id="L166"><span class="lineNum">     166</span>                 :             :     // Install the inbound frame sink (Phase 4 contract) before listening.</span>
-<span id="L167"><span class="lineNum">     167</span>         [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">         105 :     if (impl_-&gt;deps.inbound_sink.sink) {</span></span>
-<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">         192 :         impl_-&gt;transport-&gt;set_actor_message_handler(</span></span>
-<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">         192 :             [sink = impl_-&gt;deps.inbound_sink](const net::WireFrame&amp; frame) {</span></span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 sink.sink(sink.context, frame);</span></span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaUNC">           0 :             });</span></span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     }</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             : </span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :     // Install RPC handler.</span>
-<span id="L175"><span class="lineNum">     175</span>         [<span class="tlaGBC" title="Branch 0 was taken 105 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">         105 :     if (impl_-&gt;rpc_channel) {</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">         210 :         impl_-&gt;transport-&gt;set_rpc_handler(</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">         210 :             [rpc = impl_-&gt;rpc_channel.get()](const hpactor::RpcResponseFrame&amp; response) {</span></span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 rpc-&gt;on_response(response);</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaUNC">           0 :             });</span></span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :     }</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             : </span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :     // Install node event callback through the port.</span>
-<span id="L183"><span class="lineNum">     183</span>         [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         105 :     if (impl_-&gt;deps.node_events.member_changed) {</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">         192 :         impl_-&gt;discovery-&gt;on_member_change(</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">         192 :             [port = impl_-&gt;deps.node_events](const net::Member&amp; m, bool joined) {</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 port.member_changed(port.context, m, joined);</span></span>
-<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaUNC">           0 :             });</span></span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :     }</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :             :     // ── Stage 4: Install remote-spawn receiver ────────────────────────────</span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     impl_-&gt;last_stage.store(4, std::memory_order_relaxed);</span></span>
-<span id="L192"><span class="lineNum">     192</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 105 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         105 :     if (impl_-&gt;deps.spawn_port.install_receiver &amp;&amp; impl_-&gt;config.tcp_port &gt; 0) {</span></span>
+<span id="L167"><span class="lineNum">     167</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 105 times"> + </span>]:<span class="tlaGNC">         105 :     if (impl_-&gt;deps.inbound_sink.active()) {</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         impl_-&gt;transport-&gt;set_actor_message_handler(</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaUNC">           0 :             [sink = impl_-&gt;deps.inbound_sink](const net::WireFrame&amp; frame) {</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaUNC">           0 :                 net::InboundFrameContext ictx{};</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaUNC">           0 :                 (void)sink.route(ictx, frame);</span></span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaUNC">           0 :             });</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :     }</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             : </span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     // Install RPC handler.</span>
+<span id="L176"><span class="lineNum">     176</span>         [<span class="tlaGBC" title="Branch 0 was taken 105 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">         105 :     if (impl_-&gt;rpc_channel) {</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">         210 :         impl_-&gt;transport-&gt;set_rpc_handler(</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">         210 :             [rpc = impl_-&gt;rpc_channel.get()](const hpactor::RpcResponseFrame&amp; response) {</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 rpc-&gt;on_response(response);</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaUNC">           0 :             });</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     }</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             : </span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     // Install node event callback through the port.</span>
+<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 105 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         105 :     if (impl_-&gt;deps.node_events.target) {</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         impl_-&gt;discovery-&gt;on_member_change(</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaUNC">           0 :             [port = impl_-&gt;deps.node_events](const net::Member&amp; m, bool joined) {</span></span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaUNC">           0 :                 port.on_member_changed(m, joined);</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaUNC">           0 :             });</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :     }</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             : </span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     // ── Stage 4: Install remote-spawn receiver ────────────────────────────</span>
+<span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     impl_-&gt;last_stage.store(4, std::memory_order_relaxed);</span></span>
+<span id="L193"><span class="lineNum">     193</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 105 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         105 :     if (impl_-&gt;deps.spawn_port.target &amp;&amp; impl_-&gt;config.tcp_port &gt; 0) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 105 times"> + </span>]
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto spawn_result = impl_-&gt;deps.spawn_port.install_receiver(</span></span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaUNC">           0 :             impl_-&gt;deps.spawn_port.context, *impl_-&gt;transport);</span></span>
-<span id="L195"><span class="lineNum">     195</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (spawn_result.is_error()) {</span></span>
-<span id="L196"><span class="lineNum">     196</span>                 :             :             // Rollback: stop discovery, reset transport.</span>
-<span id="L197"><span class="lineNum">     197</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (impl_-&gt;discovery)</span></span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaUNC">           0 :                 impl_-&gt;discovery-&gt;stop();</span></span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaUNC">           0 :             impl_-&gt;transport.reset();</span></span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaUNC">           0 :             impl_-&gt;state_.store(State::Failed, std::memory_order_release);</span></span>
-<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaUNC">           0 :             return result&lt;void&gt;::make(spawn_result.error());</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :             :         }</span>
-<span id="L203"><span class="lineNum">     203</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     }</span></span>
-<span id="L204"><span class="lineNum">     204</span>                 :             : </span>
-<span id="L205"><span class="lineNum">     205</span>                 :             :     // ── Stage 5: Register maintenance timers ──────────────────────────────</span>
-<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     impl_-&gt;last_stage.store(5, std::memory_order_relaxed);</span></span>
-<span id="L207"><span class="lineNum">     207</span>                 :             : </span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     // Cache purge timer.</span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">         210 :     impl_-&gt;cache_purge_timer = impl_-&gt;transport-&gt;loop().run_every(</span></span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         210 :         [this]() {</span></span>
-<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (!impl_-&gt;ingress_open())</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
-<span id="L213"><span class="lineNum">     213</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (impl_-&gt;location_cache)</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaUNC">           0 :                 impl_-&gt;location_cache-&gt;purge_expired();</span></span>
-<span id="L215"><span class="lineNum">     215</span>                 :             :         },</span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC tlaBgGNC">         105 :         static_cast&lt;int&gt;(impl_-&gt;config.cache_purge_ms));</span></span>
-<span id="L217"><span class="lineNum">     217</span>                 :             : </span>
-<span id="L218"><span class="lineNum">     218</span>                 :             :     // Reliable-retry poll timer.</span>
-<span id="L219"><span class="lineNum">     219</span>         [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">         105 :     if (impl_-&gt;deps.retry_port.process_due) {</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         192 :         impl_-&gt;retry_timer = impl_-&gt;transport-&gt;loop().run_every(</span></span>
-<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">          96 :             [this]() {</span></span>
-<span id="L222"><span class="lineNum">     222</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 if (!impl_-&gt;ingress_open()) {</span></span>
-<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaUNC">           0 :                     impl_-&gt;reject_callback();</span></span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaUNC">           0 :                     return;</span></span>
-<span id="L225"><span class="lineNum">     225</span>                 :             :                 }</span>
-<span id="L226"><span class="lineNum">     226</span>                 :             :                 uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaUNC">           0 :                     std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaUNC">           0 :                         std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :                         .count());</span></span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaUNC">           0 :                 impl_-&gt;deps.retry_port.process_due(impl_-&gt;deps.retry_port.context,</span></span>
-<span id="L231"><span class="lineNum">     231</span>                 :             :                                                    now_ns);</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             :         auto spawn_result =</span>
+<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             impl_-&gt;deps.spawn_port.install_receiver(*impl_-&gt;transport);</span></span>
+<span id="L196"><span class="lineNum">     196</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (spawn_result.is_error()) {</span></span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :             // Rollback: stop discovery, reset transport.</span>
+<span id="L198"><span class="lineNum">     198</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (impl_-&gt;discovery)</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaUNC">           0 :                 impl_-&gt;discovery-&gt;stop();</span></span>
+<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaUNC">           0 :             impl_-&gt;transport.reset();</span></span>
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaUNC">           0 :             impl_-&gt;state_.store(State::Failed, std::memory_order_release);</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaUNC">           0 :             return result&lt;void&gt;::make(spawn_result.error());</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :             :         }</span>
+<span id="L204"><span class="lineNum">     204</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     }</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :             : </span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :     // ── Stage 5: Register maintenance timers ──────────────────────────────</span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     impl_-&gt;last_stage.store(5, std::memory_order_relaxed);</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :             : </span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     // Cache purge timer.</span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         210 :     impl_-&gt;cache_purge_timer = impl_-&gt;transport-&gt;loop().run_every(</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         210 :         [this]() {</span></span>
+<span id="L212"><span class="lineNum">     212</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (!impl_-&gt;ingress_open())</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
+<span id="L214"><span class="lineNum">     214</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (impl_-&gt;location_cache)</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaUNC">           0 :                 impl_-&gt;location_cache-&gt;purge_expired();</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :         },</span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC tlaBgGNC">         105 :         static_cast&lt;int&gt;(impl_-&gt;config.cache_purge_ms));</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :             : </span>
+<span id="L219"><span class="lineNum">     219</span>                 :             :     // Reliable-retry poll timer.</span>
+<span id="L220"><span class="lineNum">     220</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 105 times"> + </span>]:<span class="tlaGNC">         105 :     if (impl_-&gt;deps.retry_port.target) {</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         impl_-&gt;retry_timer = impl_-&gt;transport-&gt;loop().run_every(</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaUNC">           0 :             [this]() {</span></span>
+<span id="L223"><span class="lineNum">     223</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (!impl_-&gt;ingress_open()) {</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaUNC">           0 :                     impl_-&gt;reject_callback();</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaUNC">           0 :                     return;</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :             :                 }</span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :                 uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaUNC">           0 :                     std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :                         std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaUNC">           0 :                         .count());</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaUNC">           0 :                 impl_-&gt;deps.retry_port.process_due(now_ns);</span></span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :             },</span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC tlaBgGNC">          96 :             static_cast&lt;int&gt;(impl_-&gt;config.retry_poll_ms));</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaUNC">           0 :             static_cast&lt;int&gt;(impl_-&gt;config.retry_poll_ms));</span></span>
 <span id="L234"><span class="lineNum">     234</span>                 :             :     }</span>
 <span id="L235"><span class="lineNum">     235</span>                 :             : </span>
 <span id="L236"><span class="lineNum">     236</span>                 :             :     // ── Stage 6: Start discovery ──────────────────────────────────────────</span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC">         105 :     impl_-&gt;last_stage.store(6, std::memory_order_relaxed);</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     impl_-&gt;last_stage.store(6, std::memory_order_relaxed);</span></span>
 <span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">         105 :     impl_-&gt;discovery-&gt;start();</span></span>
 <span id="L239"><span class="lineNum">     239</span>                 :             : </span>
 <span id="L240"><span class="lineNum">     240</span>                 :             :     // ── Stage 7: Start listening ──────────────────────────────────────────</span>
@@ -326,10 +326,10 @@
 <span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">         105 :     impl_-&gt;last_stage.store(8, std::memory_order_relaxed);</span></span>
 <span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">         210 :     impl_-&gt;network_thread = std::thread([this]() {</span></span>
 <span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">         105 :         auto&amp; loop = impl_-&gt;transport-&gt;loop();</span></span>
-<span id="L250"><span class="lineNum">     250</span>   [<span class="tlaGBC" title="Branch 0 was taken 139 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 121 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">         365 :         while (impl_-&gt;state_.load(std::memory_order_acquire) != State::Stopping &amp;&amp;</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 121 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 105 times"> + </span>]
-<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">         139 :                loop.wait(100) &gt;= 0) {</span></span>
-<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaGNC">         121 :             loop.process_completions();</span></span>
+<span id="L250"><span class="lineNum">     250</span>   [<span class="tlaGBC" title="Branch 0 was taken 132 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 114 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">         351 :         while (impl_-&gt;state_.load(std::memory_order_acquire) != State::Stopping &amp;&amp;</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 114 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 105 times"> + </span>]
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">         132 :                loop.wait(100) &gt;= 0) {</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaGNC">         114 :             loop.process_completions();</span></span>
 <span id="L253"><span class="lineNum">     253</span>                 :             :         }</span>
 <span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">         105 :     });</span></span>
 <span id="L255"><span class="lineNum">     255</span>                 :             : </span>
@@ -379,8 +379,8 @@
 <span id="L298"><span class="lineNum">     298</span>                 :             :     }</span>
 <span id="L299"><span class="lineNum">     299</span>                 :             : </span>
 <span id="L300"><span class="lineNum">     300</span>                 :             :     // Remove spawn receiver protocol registration.</span>
-<span id="L301"><span class="lineNum">     301</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 110 times"> + </span>]:<span class="tlaGNC">         110 :     if (impl_-&gt;deps.spawn_port.remove_receiver) {</span></span>
-<span id="L302"><span class="lineNum">     302</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         impl_-&gt;deps.spawn_port.remove_receiver(impl_-&gt;deps.spawn_port.context);</span></span>
+<span id="L301"><span class="lineNum">     301</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 110 times"> + </span>]:<span class="tlaGNC">         110 :     if (impl_-&gt;deps.spawn_port.target) {</span></span>
+<span id="L302"><span class="lineNum">     302</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         impl_-&gt;deps.spawn_port.remove_receiver();</span></span>
 <span id="L303"><span class="lineNum">     303</span>                 :             :     }</span>
 <span id="L304"><span class="lineNum">     304</span>                 :             : </span>
 <span id="L305"><span class="lineNum">     305</span>                 :             :     // Stop listening.</span>

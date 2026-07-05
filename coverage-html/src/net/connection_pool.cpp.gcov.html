@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">43.7&nbsp;%</td>
-            <td class="headerCovTableEntry">231</td>
+            <td class="headerCovTableEntryLo">43.9&nbsp;%</td>
+            <td class="headerCovTableEntry">230</td>
             <td class="headerCovTableEntry">101</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-03 02:07:17</td>
+            <td class="headerValue">2026-07-05 08:40:32</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">65.2&nbsp;%</td>
@@ -56,8 +56,8 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">17.2&nbsp;%</td>
-            <td class="headerCovTableEntry">122</td>
+            <td class="headerCovTableEntryLo">17.5&nbsp;%</td>
+            <td class="headerCovTableEntry">120</td>
             <td class="headerCovTableEntry">21</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -305,159 +305,158 @@
 <span id="L222"><span class="lineNum">     222</span>                 :             : </span>
 <span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaUNC">           0 :         auto decoded = try_decode_wireframe(frame_data);</span></span>
 <span id="L224"><span class="lineNum">     224</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (decoded.ok()) {</span></span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaUNC">           0 :             (void)inbound_sink_.route(inbound_sink_.context, ictx, decoded.frame);</span></span>
-<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         } else if (inbound_sink_.decode_failed) {</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaUNC">           0 :             (void)inbound_sink_.decode_failed(inbound_sink_.context, ictx,</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :             :                                               decoded.error);</span>
-<span id="L229"><span class="lineNum">     229</span>                 :             :         }</span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaUNC">           0 :     }</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :             : </span>
-<span id="L233"><span class="lineNum">     233</span>                 :             :     // ── Legacy split-handler path ─────────────────────────────────────────</span>
-<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaUNC">           0 :     WireFrame frame = WireFrame::decode(frame_data);</span></span>
-<span id="L235"><span class="lineNum">     235</span>                 :             : </span>
-<span id="L236"><span class="lineNum">     236</span>                 :             :     // Only Data frames carry RPC/spawn responses; Batch/Ack/Nack/Unknown</span>
-<span id="L237"><span class="lineNum">     237</span>                 :             :     // frames fall through to actor_message_handler_ which has the correct</span>
-<span id="L238"><span class="lineNum">     238</span>                 :             :     // payload_type() dispatch in deliver_remote().</span>
-<span id="L239"><span class="lineNum">     239</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (frame.payload_type() == net::WireFrame::PayloadType::Data) {</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :             :         // Check for RPC response</span>
-<span id="L241"><span class="lineNum">     241</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (frame.pb_envelope.data_frame().flags() &amp; WireFrame::RpcResponse) {</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :             :             // Try to decode as spawn response first</span>
-<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (static_cast&lt;TypeTag&gt;(frame.pb_envelope.data_frame().type_tag()) ==</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :             :                 TypeTag::SpawnResponseTag) {</span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaUNC">           0 :                 ::hpactor::SpawnResponseMessage pb_resp;</span></span>
-<span id="L246"><span class="lineNum">     246</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (pb_resp.ParseFromArray(</span></span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaUNC">           0 :                         frame.pb_envelope.data_frame().payload().data(),</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :             :                         static_cast&lt;int&gt;(</span>
-<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaUNC">           0 :                             frame.pb_envelope.data_frame().payload().size()))) {</span></span>
-<span id="L250"><span class="lineNum">     250</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     if (spawn_handler_) {</span></span>
-<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaUNC">           0 :                         SpawnResponse resp;</span></span>
-<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaUNC">           0 :                         resp.actor_addr = net::from_proto(pb_resp.actor_addr());</span></span>
-<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaUNC">           0 :                         resp.error_code = pb_resp.error_code();</span></span>
-<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaUNC">           0 :                         spawn_handler_(</span></span>
-<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaUNC">           0 :                             frame.pb_envelope.data_frame().message_id(), resp);</span></span>
-<span id="L256"><span class="lineNum">     256</span>                 :<span class="tlaUNC">           0 :                         return;</span></span>
-<span id="L257"><span class="lineNum">     257</span>                 :             :                     }</span>
-<span id="L258"><span class="lineNum">     258</span>                 :             :                 }</span>
-<span id="L259"><span class="lineNum">     259</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             }</span></span>
-<span id="L260"><span class="lineNum">     260</span>                 :             : </span>
-<span id="L261"><span class="lineNum">     261</span>                 :             :             // Fall through to RPC handler</span>
-<span id="L262"><span class="lineNum">     262</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (rpc_handler_) {</span></span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaUNC">           0 :                 RpcResponseFrame response;</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaUNC">           0 :                 response.msg_id =</span></span>
-<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaUNC">           0 :                     MessageId(frame.pb_envelope.data_frame().message_id());</span></span>
-<span id="L266"><span class="lineNum">     266</span>                 :             :                 response.payload =</span>
-<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaUNC">           0 :                     StreamBuffer(frame.pb_envelope.data_frame().payload().begin(),</span></span>
-<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaUNC">           0 :                                  frame.pb_envelope.data_frame().payload().end());</span></span>
-<span id="L269"><span class="lineNum">     269</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (frame.pb_envelope.data_frame().has_trace_context()) {</span></span>
-<span id="L270"><span class="lineNum">     270</span>                 :             :                     auto parsed = net::trace_context_from_proto(</span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaUNC">           0 :                         frame.pb_envelope.data_frame().trace_context(), 256);</span></span>
-<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     if (parsed.has_value()) {</span></span>
-<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaUNC">           0 :                         response.has_trace_context = true;</span></span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaUNC">           0 :                         response.trace_context = parsed.value();</span></span>
-<span id="L275"><span class="lineNum">     275</span>                 :             :                     }</span>
-<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
-<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaUNC">           0 :                 rpc_handler_(response);</span></span>
-<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaUNC">           0 :             }</span></span>
-<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
-<span id="L280"><span class="lineNum">     280</span>                 :             :         }</span>
-<span id="L281"><span class="lineNum">     281</span>                 :             :     } // end PayloadType::Data guard</span>
-<span id="L282"><span class="lineNum">     282</span>                 :             : </span>
-<span id="L283"><span class="lineNum">     283</span>                 :             :     // Route non-RPC Data frames and all other payload types</span>
-<span id="L284"><span class="lineNum">     284</span>                 :             :     // (including Batch/Stream/Ack/Nack) to deliver_remote() for dispatch.</span>
-<span id="L285"><span class="lineNum">     285</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (actor_message_handler_) {</span></span>
-<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaUNC">           0 :         actor_message_handler_(frame);</span></span>
-<span id="L287"><span class="lineNum">     287</span>                 :             :     }</span>
-<span id="L288"><span class="lineNum">     288</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 : }</span></span>
-<span id="L289"><span class="lineNum">     289</span>                 :             : </span>
-<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC tlaBgGNC">           3 : void ConnectionPool::schedule_reconnect() {</span></span>
-<span id="L291"><span class="lineNum">     291</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           3 :     FAULT_INJECT(&quot;hpactor.connection_pool.reconnect.drop&quot;) {</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaUNC">           0 :             (void)inbound_sink_.route(ictx, decoded.frame);</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :             :         } else {</span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaUNC">           0 :             (void)inbound_sink_.on_decode_failure(ictx, decoded.error);</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :             :         }</span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :             : </span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :     // ── Legacy split-handler path ─────────────────────────────────────────</span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaUNC">           0 :     WireFrame frame = WireFrame::decode(frame_data);</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :             : </span>
+<span id="L235"><span class="lineNum">     235</span>                 :             :     // Only Data frames carry RPC/spawn responses; Batch/Ack/Nack/Unknown</span>
+<span id="L236"><span class="lineNum">     236</span>                 :             :     // frames fall through to actor_message_handler_ which has the correct</span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :     // payload_type() dispatch in deliver_remote().</span>
+<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (frame.payload_type() == net::WireFrame::PayloadType::Data) {</span></span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :         // Check for RPC response</span>
+<span id="L240"><span class="lineNum">     240</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (frame.pb_envelope.data_frame().flags() &amp; WireFrame::RpcResponse) {</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :             :             // Try to decode as spawn response first</span>
+<span id="L242"><span class="lineNum">     242</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (static_cast&lt;TypeTag&gt;(frame.pb_envelope.data_frame().type_tag()) ==</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :             :                 TypeTag::SpawnResponseTag) {</span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaUNC">           0 :                 ::hpactor::SpawnResponseMessage pb_resp;</span></span>
+<span id="L245"><span class="lineNum">     245</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (pb_resp.ParseFromArray(</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaUNC">           0 :                         frame.pb_envelope.data_frame().payload().data(),</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :                         static_cast&lt;int&gt;(</span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaUNC">           0 :                             frame.pb_envelope.data_frame().payload().size()))) {</span></span>
+<span id="L249"><span class="lineNum">     249</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     if (spawn_handler_) {</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaUNC">           0 :                         SpawnResponse resp;</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaUNC">           0 :                         resp.actor_addr = net::from_proto(pb_resp.actor_addr());</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaUNC">           0 :                         resp.error_code = pb_resp.error_code();</span></span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaUNC">           0 :                         spawn_handler_(</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaUNC">           0 :                             frame.pb_envelope.data_frame().message_id(), resp);</span></span>
+<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaUNC">           0 :                         return;</span></span>
+<span id="L256"><span class="lineNum">     256</span>                 :             :                     }</span>
+<span id="L257"><span class="lineNum">     257</span>                 :             :                 }</span>
+<span id="L258"><span class="lineNum">     258</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             }</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :             : </span>
+<span id="L260"><span class="lineNum">     260</span>                 :             :             // Fall through to RPC handler</span>
+<span id="L261"><span class="lineNum">     261</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (rpc_handler_) {</span></span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaUNC">           0 :                 RpcResponseFrame response;</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaUNC">           0 :                 response.msg_id =</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaUNC">           0 :                     MessageId(frame.pb_envelope.data_frame().message_id());</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :             :                 response.payload =</span>
+<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaUNC">           0 :                     StreamBuffer(frame.pb_envelope.data_frame().payload().begin(),</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaUNC">           0 :                                  frame.pb_envelope.data_frame().payload().end());</span></span>
+<span id="L268"><span class="lineNum">     268</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (frame.pb_envelope.data_frame().has_trace_context()) {</span></span>
+<span id="L269"><span class="lineNum">     269</span>                 :             :                     auto parsed = net::trace_context_from_proto(</span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaUNC">           0 :                         frame.pb_envelope.data_frame().trace_context(), 256);</span></span>
+<span id="L271"><span class="lineNum">     271</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     if (parsed.has_value()) {</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaUNC">           0 :                         response.has_trace_context = true;</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaUNC">           0 :                         response.trace_context = parsed.value();</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :             :                     }</span>
+<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaUNC">           0 :                 rpc_handler_(response);</span></span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaUNC">           0 :             }</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L279"><span class="lineNum">     279</span>                 :             :         }</span>
+<span id="L280"><span class="lineNum">     280</span>                 :             :     } // end PayloadType::Data guard</span>
+<span id="L281"><span class="lineNum">     281</span>                 :             : </span>
+<span id="L282"><span class="lineNum">     282</span>                 :             :     // Route non-RPC Data frames and all other payload types</span>
+<span id="L283"><span class="lineNum">     283</span>                 :             :     // (including Batch/Stream/Ack/Nack) to deliver_remote() for dispatch.</span>
+<span id="L284"><span class="lineNum">     284</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (actor_message_handler_) {</span></span>
+<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaUNC">           0 :         actor_message_handler_(frame);</span></span>
+<span id="L286"><span class="lineNum">     286</span>                 :             :     }</span>
+<span id="L287"><span class="lineNum">     287</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 : }</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :             : </span>
+<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC tlaBgGNC">           3 : void ConnectionPool::schedule_reconnect() {</span></span>
+<span id="L290"><span class="lineNum">     290</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           3 :     FAULT_INJECT(&quot;hpactor.connection_pool.reconnect.drop&quot;) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 3 times"> + </span>]
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
-<span id="L293"><span class="lineNum">     293</span>                 :             :     }</span>
-<span id="L294"><span class="lineNum">     294</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :     if (shutting_down_.load()) {</span></span>
-<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L296"><span class="lineNum">     296</span>                 :             :     }</span>
-<span id="L297"><span class="lineNum">     297</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           6 :     if (reconnect_attempts_.load() &gt;= config_.max_attempts) {</span></span>
-<span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return; // Exhausted retries</span></span>
-<span id="L299"><span class="lineNum">     299</span>                 :             :     }</span>
-<span id="L300"><span class="lineNum">     300</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           3 :     if (reconnect_scheduled_.load()) {</span></span>
-<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
-<span id="L302"><span class="lineNum">     302</span>                 :             :     }</span>
-<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">           2 :     reconnect_scheduled_.store(true);</span></span>
-<span id="L304"><span class="lineNum">     304</span>                 :             : </span>
-<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">           2 :     auto backoff = config_.initial_backoff;</span></span>
-<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">           2 :     auto attempts = reconnect_attempts_.load();</span></span>
-<span id="L307"><span class="lineNum">     307</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :     for (size_t i = 0; i &lt; attempts; ++i) {</span></span>
-<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         backoff = backoff * 2;</span></span>
-<span id="L309"><span class="lineNum">     309</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (backoff &gt; config_.max_backoff) {</span></span>
-<span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaUNC">           0 :             backoff = config_.max_backoff;</span></span>
-<span id="L311"><span class="lineNum">     311</span>                 :             :         }</span>
-<span id="L312"><span class="lineNum">     312</span>                 :             :     }</span>
-<span id="L313"><span class="lineNum">     313</span>                 :             : </span>
-<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     reconnect_attempts_.fetch_add(1);</span></span>
-<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">           2 :     loop_-&gt;run_after([this]() { reconnect_scheduled_.store(false); },</span></span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">           2 :                      static_cast&lt;int&gt;(backoff.count()));</span></span>
-<span id="L317"><span class="lineNum">     317</span>                 :             : }</span>
-<span id="L318"><span class="lineNum">     318</span>                 :             : </span>
-<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void ConnectionPool::flush_pending() {</span></span>
-<span id="L320"><span class="lineNum">     320</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :     FAULT_INJECT(&quot;hpactor.connection_pool.flush.drop&quot;) {</span></span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :             :     }</span>
+<span id="L293"><span class="lineNum">     293</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :     if (shutting_down_.load()) {</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :             :     }</span>
+<span id="L296"><span class="lineNum">     296</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           6 :     if (reconnect_attempts_.load() &gt;= config_.max_attempts) {</span></span>
+<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return; // Exhausted retries</span></span>
+<span id="L298"><span class="lineNum">     298</span>                 :             :     }</span>
+<span id="L299"><span class="lineNum">     299</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           3 :     if (reconnect_scheduled_.load()) {</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :             :     }</span>
+<span id="L302"><span class="lineNum">     302</span>                 :<span class="tlaGNC">           2 :     reconnect_scheduled_.store(true);</span></span>
+<span id="L303"><span class="lineNum">     303</span>                 :             : </span>
+<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">           2 :     auto backoff = config_.initial_backoff;</span></span>
+<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">           2 :     auto attempts = reconnect_attempts_.load();</span></span>
+<span id="L306"><span class="lineNum">     306</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :     for (size_t i = 0; i &lt; attempts; ++i) {</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         backoff = backoff * 2;</span></span>
+<span id="L308"><span class="lineNum">     308</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (backoff &gt; config_.max_backoff) {</span></span>
+<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaUNC">           0 :             backoff = config_.max_backoff;</span></span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :         }</span>
+<span id="L311"><span class="lineNum">     311</span>                 :             :     }</span>
+<span id="L312"><span class="lineNum">     312</span>                 :             : </span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     reconnect_attempts_.fetch_add(1);</span></span>
+<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaGNC">           2 :     loop_-&gt;run_after([this]() { reconnect_scheduled_.store(false); },</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">           2 :                      static_cast&lt;int&gt;(backoff.count()));</span></span>
+<span id="L316"><span class="lineNum">     316</span>                 :             : }</span>
+<span id="L317"><span class="lineNum">     317</span>                 :             : </span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void ConnectionPool::flush_pending() {</span></span>
+<span id="L319"><span class="lineNum">     319</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :     FAULT_INJECT(&quot;hpactor.connection_pool.flush.drop&quot;) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :             :     }</span>
-<span id="L323"><span class="lineNum">     323</span>                 :             :     while (true) {</span>
-<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaUNC">           0 :         auto msg = outbound_queue_.try_dequeue();</span></span>
-<span id="L325"><span class="lineNum">     325</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!msg.has_value())</span></span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
-<span id="L327"><span class="lineNum">     327</span>                 :             : </span>
-<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaUNC">           0 :         auto conn = get_connection();</span></span>
-<span id="L329"><span class="lineNum">     329</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (conn) {</span></span>
-<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaUNC">           0 :             conn-&gt;send(msg-&gt;data);</span></span>
-<span id="L331"><span class="lineNum">     331</span>                 :             :         } else {</span>
-<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaUNC">           0 :             break; // No connection available, stop draining</span></span>
-<span id="L333"><span class="lineNum">     333</span>                 :             :         }</span>
-<span id="L334"><span class="lineNum">     334</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     }</span></span>
-<span id="L335"><span class="lineNum">     335</span>                 :             : }</span>
-<span id="L336"><span class="lineNum">     336</span>                 :             : </span>
-<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC tlaBgGNC">           1 : void ConnectionPool::add_connection(ConnectionPtr conn) {</span></span>
-<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">           1 :     active_connections_.push_back(conn);</span></span>
-<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">           1 : }</span></span>
-<span id="L341"><span class="lineNum">     341</span>                 :             : </span>
-<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">           1 : void ConnectionPool::prewarm_pool(EndPoint ep,</span></span>
-<span id="L343"><span class="lineNum">     343</span>                 :             :                                   const std::vector&lt;AcceptorInfo&gt;&amp; acceptors) {</span>
-<span id="L344"><span class="lineNum">     344</span>                 :             :     (void)ep; // Pool already bound to remote_endpoint_ from constructor</span>
-<span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">           1 :     acceptors_ = acceptors;</span></span>
-<span id="L347"><span class="lineNum">     347</span>                 :             :     // The actual connection is established asynchronously on first use.</span>
-<span id="L348"><span class="lineNum">     348</span>                 :             :     // This just ensures the pool is ready so the first send() doesn't pay</span>
-<span id="L349"><span class="lineNum">     349</span>                 :             :     // discovery cost.</span>
-<span id="L350"><span class="lineNum">     350</span>                 :<span class="tlaGNC">           1 : }</span></span>
-<span id="L351"><span class="lineNum">     351</span>                 :             : </span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaUNC tlaBgUNC">           0 : ActorId ConnectionPool::pack_endpoint_for_metrics() const {</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :             :     // Pack the endpoint into a uint64_t for metric event transport.</span>
-<span id="L354"><span class="lineNum">     354</span>                 :             :     // For IPv4: upper 32 bits = address, lower 16 bits = port (network byte</span>
-<span id="L355"><span class="lineNum">     355</span>                 :             :     // order). For IPv6: fall back to a hash-based identifier.</span>
-<span id="L356"><span class="lineNum">     356</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;remote_endpoint_)) {</span></span>
-<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaUNC">           0 :         uint64_t packed = (static_cast&lt;uint64_t&gt;(ipv4-&gt;addr) &lt;&lt; 16) | ipv4-&gt;port_nw;</span></span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaUNC">           0 :         return ActorId(packed);</span></span>
-<span id="L359"><span class="lineNum">     359</span>                 :             :     }</span>
-<span id="L360"><span class="lineNum">     360</span>                 :             :     // For IPv6, combine address bytes with port via FNV-1a hash.</span>
-<span id="L361"><span class="lineNum">     361</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (auto* ipv6 = std::get_if&lt;Ipv6Endpoint&gt;(&amp;remote_endpoint_)) {</span></span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaUNC">           0 :         uint64_t hash = 0xcbf29ce484222325ULL; // FNV-1a offset basis</span></span>
-<span id="L363"><span class="lineNum">     363</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (uint8_t byte : ipv6-&gt;addr) {</span></span>
-<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaUNC">           0 :             hash ^= byte;</span></span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaUNC">           0 :             hash *= 0x100000001b3ULL; // FNV-1a prime</span></span>
-<span id="L366"><span class="lineNum">     366</span>                 :             :         }</span>
-<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaUNC">           0 :         hash ^= ipv6-&gt;port_nw;</span></span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaUNC">           0 :         hash *= 0x100000001b3ULL;</span></span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaUNC">           0 :         return ActorId(hash);</span></span>
-<span id="L370"><span class="lineNum">     370</span>                 :             :     }</span>
-<span id="L371"><span class="lineNum">     371</span>                 :<span class="tlaUNC">           0 :     return ActorId(0);</span></span>
-<span id="L372"><span class="lineNum">     372</span>                 :             : }</span>
-<span id="L373"><span class="lineNum">     373</span>                 :             : </span>
-<span id="L374"><span class="lineNum">     374</span>                 :             : } // namespace net</span>
-<span id="L375"><span class="lineNum">     375</span>                 :             : } // namespace hpactor</span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
+<span id="L321"><span class="lineNum">     321</span>                 :             :     }</span>
+<span id="L322"><span class="lineNum">     322</span>                 :             :     while (true) {</span>
+<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaUNC">           0 :         auto msg = outbound_queue_.try_dequeue();</span></span>
+<span id="L324"><span class="lineNum">     324</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!msg.has_value())</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :             : </span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaUNC">           0 :         auto conn = get_connection();</span></span>
+<span id="L328"><span class="lineNum">     328</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (conn) {</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaUNC">           0 :             conn-&gt;send(msg-&gt;data);</span></span>
+<span id="L330"><span class="lineNum">     330</span>                 :             :         } else {</span>
+<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaUNC">           0 :             break; // No connection available, stop draining</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :             :         }</span>
+<span id="L333"><span class="lineNum">     333</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     }</span></span>
+<span id="L334"><span class="lineNum">     334</span>                 :             : }</span>
+<span id="L335"><span class="lineNum">     335</span>                 :             : </span>
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC tlaBgGNC">           1 : void ConnectionPool::add_connection(ConnectionPtr conn) {</span></span>
+<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">           1 :     active_connections_.push_back(conn);</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :             : </span>
+<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">           1 : void ConnectionPool::prewarm_pool(EndPoint ep,</span></span>
+<span id="L342"><span class="lineNum">     342</span>                 :             :                                   const std::vector&lt;AcceptorInfo&gt;&amp; acceptors) {</span>
+<span id="L343"><span class="lineNum">     343</span>                 :             :     (void)ep; // Pool already bound to remote_endpoint_ from constructor</span>
+<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaGNC">           1 :     acceptors_ = acceptors;</span></span>
+<span id="L346"><span class="lineNum">     346</span>                 :             :     // The actual connection is established asynchronously on first use.</span>
+<span id="L347"><span class="lineNum">     347</span>                 :             :     // This just ensures the pool is ready so the first send() doesn't pay</span>
+<span id="L348"><span class="lineNum">     348</span>                 :             :     // discovery cost.</span>
+<span id="L349"><span class="lineNum">     349</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L350"><span class="lineNum">     350</span>                 :             : </span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaUNC tlaBgUNC">           0 : ActorId ConnectionPool::pack_endpoint_for_metrics() const {</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :             :     // Pack the endpoint into a uint64_t for metric event transport.</span>
+<span id="L353"><span class="lineNum">     353</span>                 :             :     // For IPv4: upper 32 bits = address, lower 16 bits = port (network byte</span>
+<span id="L354"><span class="lineNum">     354</span>                 :             :     // order). For IPv6: fall back to a hash-based identifier.</span>
+<span id="L355"><span class="lineNum">     355</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;remote_endpoint_)) {</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaUNC">           0 :         uint64_t packed = (static_cast&lt;uint64_t&gt;(ipv4-&gt;addr) &lt;&lt; 16) | ipv4-&gt;port_nw;</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaUNC">           0 :         return ActorId(packed);</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :             :     }</span>
+<span id="L359"><span class="lineNum">     359</span>                 :             :     // For IPv6, combine address bytes with port via FNV-1a hash.</span>
+<span id="L360"><span class="lineNum">     360</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (auto* ipv6 = std::get_if&lt;Ipv6Endpoint&gt;(&amp;remote_endpoint_)) {</span></span>
+<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaUNC">           0 :         uint64_t hash = 0xcbf29ce484222325ULL; // FNV-1a offset basis</span></span>
+<span id="L362"><span class="lineNum">     362</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (uint8_t byte : ipv6-&gt;addr) {</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaUNC">           0 :             hash ^= byte;</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaUNC">           0 :             hash *= 0x100000001b3ULL; // FNV-1a prime</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :             :         }</span>
+<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaUNC">           0 :         hash ^= ipv6-&gt;port_nw;</span></span>
+<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaUNC">           0 :         hash *= 0x100000001b3ULL;</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaUNC">           0 :         return ActorId(hash);</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :             :     }</span>
+<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaUNC">           0 :     return ActorId(0);</span></span>
+<span id="L371"><span class="lineNum">     371</span>                 :             : }</span>
+<span id="L372"><span class="lineNum">     372</span>                 :             : </span>
+<span id="L373"><span class="lineNum">     373</span>                 :             : } // namespace net</span>
+<span id="L374"><span class="lineNum">     374</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
