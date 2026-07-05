@@ -53,7 +53,9 @@ struct ObservabilitySnapshot final {
 
 /// \brief Cohesive owner of metrics, logging, tracing, and fault injection
 /// infrastructure.
-class ObservabilityRuntime final {
+class ObservabilityRuntime final : public MetricsTarget,
+                                   public LogTarget,
+                                   public TraceTarget {
   public:
     /// \brief Factory: construct from validated config with no side effects.
     /// \param[in] config Validated observability configuration.
@@ -67,6 +69,19 @@ class ObservabilityRuntime final {
     // ── Lifecycle ────────────────────────────────────────────────────────
     result<void> start() noexcept;
     result<void> stop() noexcept;
+
+    // ── MetricsTarget ────────────────────────────────────────────────────
+    void on_metric(uint32_t event_type, uint64_t val) noexcept override;
+    void on_metric_event(uint32_t event_type, uint64_t val) noexcept override;
+
+    // ── LogTarget ────────────────────────────────────────────────────────
+    void on_log(const log::LogEvent& event, bool high_priority) noexcept override;
+
+    // ── TraceTarget ──────────────────────────────────────────────────────
+    tracing::SpanHandle
+    on_span_start(const tracing::SpanStart& span) noexcept override;
+    void on_span_finish(tracing::SpanHandle& handle,
+                        tracing::SpanStatus status) noexcept override;
 
     // ── Stable ports ─────────────────────────────────────────────────────
     const MetricsSink& metrics_sink() const noexcept {

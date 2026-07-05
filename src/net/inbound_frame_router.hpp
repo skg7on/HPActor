@@ -32,7 +32,7 @@ namespace net {
 ///
 /// \note Thread safety: Called from event-loop callback thread(s).
 ///       Internal state is limited to one atomic accepting flag.
-class InboundFrameRouter final {
+class InboundFrameRouter final : public InboundFrameTarget {
   public:
     struct Config {
         uint32_t max_batch_entries{1024};
@@ -52,34 +52,22 @@ class InboundFrameRouter final {
     InboundFrameRouter(const InboundFrameRouter&) = delete;
     InboundFrameRouter& operator=(const InboundFrameRouter&) = delete;
 
+    // ── InboundFrameTarget interface ──
+
     /// \brief Classify and route one valid frame.
-    ///
-    /// The only production entry point for a successfully-decoded
-    /// envelope.  Classification is oneof-first; only a \c Data
-    /// payload reads data flags or data fields.
-    ///
-    /// \return Fixed-size diagnostic suitable for observability and
-    ///         future peer policy.
-    FrameDispatchResult
-    route(const InboundFrameContext& ictx, const WireFrame& frame) noexcept;
+    FrameDispatchResult on_frame(const InboundFrameContext& ictx,
+                                 const WireFrame& frame) noexcept override;
 
     /// \brief Handle a decode failure with the typed error reason.
-    ///
-    /// Does not attempt recovery or resynchronisation — connection
-    /// framing is the caller's responsibility.
     FrameDispatchResult on_decode_failure(const InboundFrameContext& ictx,
-                                          FrameDecodeError error) noexcept;
+                                          FrameDecodeError error) noexcept override;
 
-    /// \brief Return a sink whose context is \c this stable object.
-    ///
-    /// The returned sink contains no \c ActorSystem capture, no
-    /// allocation, and no virtual dispatch.
-    [[nodiscard]] InboundFrameSink inbound_sink() noexcept;
+    /// \brief Return a typed-target sink referencing \c this stable object.
+    [[nodiscard]] InboundFrameSink inbound_sink() noexcept {
+        return InboundFrameSink{this};
+    }
 
     /// \brief Idempotent: stop accepting new frames for shutdown.
-    ///
-    /// After this call \c route() and \c on_decode_failure() return
-    /// \c RuntimeStopping without invoking downstream components.
     void disable() noexcept;
 
   private:

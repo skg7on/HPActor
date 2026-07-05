@@ -129,7 +129,8 @@ struct StreamRuntimeState final {
 
 // ── ActorSystem::Impl ──────────────────────────────────────────────────────
 
-class ActorSystem::Impl final {
+class ActorSystem::Impl final : public ReliableAckTarget,
+                                public BackpressureSignalTarget {
   public:
     Impl(ActorSystem& f, const Config& config);
     /// \brief Construct from a RuntimeBlueprint — construction only, no
@@ -152,7 +153,7 @@ class ActorSystem::Impl final {
     std::unique_ptr<MessagingRuntime> messaging_;
     StreamRuntimeState streams;
     /// \brief Fixed network-control output ports used by messaging.
-    /// Constructed before messaging components; adapters reach transport
+    /// Constructed before messaging components; targets reach transport
     /// via impl->network_->transport().
     MessagingNetworkEmitters messaging_ports;
     /// \brief Phase 5: sole network resource owner.
@@ -171,18 +172,16 @@ class ActorSystem::Impl final {
     // Uses std::optional for deferred initialization.
     std::optional<ActorSpawner> spawner;
 
-    // ── Network port adapters ────────────────────────────────────────────
-    // Static methods that emit reliable ACKs and backpressure signals
-    // through the transport owned by NetworkRuntime.  Bound to
-    // ReliableAckEmitter/BackpressureSignalEmitter with `this` as context.
+    // ── ReliableAckTarget ────────────────────────────────────────────────
 
-    static void
-    reliable_ack_adapter(void* context, const ActorAddress& target,
-                         const ActorAddress& acker, uint64_t message_id,
-                         uint8_t status, uint32_t retry_after_ms) noexcept;
+    void send_ack(const ActorAddress& target, const ActorAddress& acker,
+                  uint64_t message_id, uint8_t status,
+                  uint32_t retry_after_ms) noexcept override;
 
-    static bool backpressure_wire_adapter(void* context, const ActorAddress& target,
-                                          const StreamBuffer& encoded) noexcept;
+    // ── BackpressureSignalTarget ──────────────────────────────────────────
+
+    bool send_signal(const ActorAddress& target,
+                     const StreamBuffer& encoded) noexcept override;
 };
 
 } // namespace hpactor

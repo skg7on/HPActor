@@ -139,7 +139,7 @@ class NetworkRuntime final {
         ActorDirectory* actors{nullptr};
         MessagingRuntime* messaging{nullptr};
         sched::IScheduler* scheduler{nullptr};
-        InboundFrameSink inbound_sink{};
+        net::InboundFrameSink inbound_sink{};
         NodeEventSink node_events{};
         OutboundRetryHandler retry_port{};
         RemoteSpawnHandler spawn_port{};

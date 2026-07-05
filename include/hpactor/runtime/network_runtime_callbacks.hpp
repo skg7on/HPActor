@@ -14,18 +14,12 @@
 
 #pragma once
 
-#include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/types.hpp>
+#include <hpactor/runtime/network_dispatch_targets.hpp>
+#include <hpactor/runtime/observability_dispatch_targets.hpp>
 
 #include <cstdint>
 
 namespace hpactor {
-
-namespace net {
-class Transport;
-struct WireFrame;
-struct Member;
-} // namespace net
 
 /// \brief Fixed-size non-owning sink for node membership events.
 ///
@@ -33,9 +27,14 @@ struct Member;
 /// discovery subscription and must not be destroyed until discovery callbacks
 /// are quiesced (subscription removed + last callback returned).
 struct NodeEventSink {
-    void* context{nullptr};
-    void (*member_changed)(void* ctx, const net::Member& member,
-                           bool joined) noexcept {nullptr};
+    NodeEventTarget* target{nullptr};
+
+    /// \brief Call when a node joins or leaves the cluster.
+    void on_member_changed(const net::Member& member, bool joined) const noexcept {
+        if (target) {
+            target->on_member_changed(member, joined);
+        }
+    }
 };
 
 /// \brief Fixed-size non-owning handler for reliable-retry processing.
@@ -43,8 +42,14 @@ struct NodeEventSink {
 /// Called from the network loop thread at a fixed poll interval.
 /// The target (MessagingRuntime) must outlive NetworkRuntime.
 struct OutboundRetryHandler {
-    void* context{nullptr};
-    void (*process_due)(void* ctx, uint64_t now_ns) noexcept {nullptr};
+    OutboundRetryTarget* target{nullptr};
+
+    /// \brief Process due retries.
+    void process_due(uint64_t now_ns) const noexcept {
+        if (target) {
+            target->process_due(now_ns);
+        }
+    }
 };
 
 /// \brief Fixed-size non-owning handler for remote-spawn receiver
@@ -54,17 +59,25 @@ struct OutboundRetryHandler {
 /// The target (ActorRuntime) owns the spawn receiver actor and its
 /// directory entry; NetworkRuntime owns only the protocol registration.
 struct RemoteSpawnHandler {
-    void* context{nullptr};
+    RemoteSpawnTarget* target{nullptr};
 
     /// \brief Install the remote-spawn receiver actor into the directory
     ///        and register spawn protocol handlers with the transport.
     /// \return The actor address on success, or an error code.
-    result<ActorAddress> (*install_receiver)(void* ctx,
-                                             net::Transport& transport) noexcept {
-        nullptr};
+    result<ActorAddress> install_receiver(net::Transport& transport) const noexcept {
+        if (target) {
+            return target->install_receiver(transport);
+        }
+        return result<ActorAddress>::make(
+            error(errors::actor_not_found, "remote spawn target unavailable"));
+    }
 
     /// \brief Remove the spawn receiver's protocol registration.
-    void (*remove_receiver)(void* ctx) noexcept {nullptr};
+    void remove_receiver() const noexcept {
+        if (target) {
+            target->remove_receiver();
+        }
+    }
 };
 
 /// \brief Fixed-size non-owning telemetry sink for network events.
@@ -72,18 +85,14 @@ struct RemoteSpawnHandler {
 /// May be null when metrics are disabled. Callers check for null
 /// before each call.
 struct NetworkTelemetrySink {
-    void* context{nullptr};
-    void (*emit_event)(void* ctx, uint32_t event_type,
-                       uint64_t val) noexcept {nullptr};
-};
+    MetricsTarget* target{nullptr};
 
-/// \brief Fixed-size non-owning inbound frame sink (Phase 4 contract).
-///
-/// Installed before listening. The target (InboundFrameRouter) must
-/// outlive NetworkRuntime.
-struct InboundFrameSink {
-    void* context{nullptr};
-    void (*sink)(void* ctx, const net::WireFrame& frame) noexcept {nullptr};
+    /// \brief Emit a network metric event.
+    void emit_event(uint32_t event_type, uint64_t val) const noexcept {
+        if (target) {
+            target->on_metric_event(event_type, val);
+        }
+    }
 };
 
 } // namespace hpactor

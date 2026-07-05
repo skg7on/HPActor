@@ -164,10 +164,11 @@ result<void> NetworkRuntime::start() noexcept {
     impl_->last_stage.store(3, std::memory_order_relaxed);
 
     // Install the inbound frame sink (Phase 4 contract) before listening.
-    if (impl_->deps.inbound_sink.sink) {
+    if (impl_->deps.inbound_sink.active()) {
         impl_->transport->set_actor_message_handler(
             [sink = impl_->deps.inbound_sink](const net::WireFrame& frame) {
-                sink.sink(sink.context, frame);
+                net::InboundFrameContext ictx{};
+                (void)sink.route(ictx, frame);
             });
     }
 
@@ -180,18 +181,18 @@ result<void> NetworkRuntime::start() noexcept {
     }
 
     // Install node event callback through the port.
-    if (impl_->deps.node_events.member_changed) {
+    if (impl_->deps.node_events.target) {
         impl_->discovery->on_member_change(
             [port = impl_->deps.node_events](const net::Member& m, bool joined) {
-                port.member_changed(port.context, m, joined);
+                port.on_member_changed(m, joined);
             });
     }
 
     // ── Stage 4: Install remote-spawn receiver ────────────────────────────
     impl_->last_stage.store(4, std::memory_order_relaxed);
-    if (impl_->deps.spawn_port.install_receiver && impl_->config.tcp_port > 0) {
-        auto spawn_result = impl_->deps.spawn_port.install_receiver(
-            impl_->deps.spawn_port.context, *impl_->transport);
+    if (impl_->deps.spawn_port.target && impl_->config.tcp_port > 0) {
+        auto spawn_result =
+            impl_->deps.spawn_port.install_receiver(*impl_->transport);
         if (spawn_result.is_error()) {
             // Rollback: stop discovery, reset transport.
             if (impl_->discovery)
@@ -216,7 +217,7 @@ result<void> NetworkRuntime::start() noexcept {
         static_cast<int>(impl_->config.cache_purge_ms));
 
     // Reliable-retry poll timer.
-    if (impl_->deps.retry_port.process_due) {
+    if (impl_->deps.retry_port.target) {
         impl_->retry_timer = impl_->transport->loop().run_every(
             [this]() {
                 if (!impl_->ingress_open()) {
@@ -227,8 +228,7 @@ result<void> NetworkRuntime::start() noexcept {
                     std::chrono::duration_cast<std::chrono::nanoseconds>(
                         std::chrono::steady_clock::now().time_since_epoch())
                         .count());
-                impl_->deps.retry_port.process_due(impl_->deps.retry_port.context,
-                                                   now_ns);
+                impl_->deps.retry_port.process_due(now_ns);
             },
             static_cast<int>(impl_->config.retry_poll_ms));
     }
@@ -298,8 +298,8 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
     }
 
     // Remove spawn receiver protocol registration.
-    if (impl_->deps.spawn_port.remove_receiver) {
-        impl_->deps.spawn_port.remove_receiver(impl_->deps.spawn_port.context);
+    if (impl_->deps.spawn_port.target) {
+        impl_->deps.spawn_port.remove_receiver();
     }
 
     // Stop listening.

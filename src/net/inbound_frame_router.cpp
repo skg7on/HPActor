@@ -36,22 +36,6 @@ InboundFrameRouter::InboundFrameRouter(Dependencies dependencies, Config config)
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
-InboundFrameSink InboundFrameRouter::inbound_sink() noexcept {
-    InboundFrameSink sink{};
-    sink.context = this;
-    sink.route = [](void* ctx, const InboundFrameContext& ictx,
-                    const WireFrame& frame) noexcept -> FrameDispatchResult {
-        auto* self = static_cast<InboundFrameRouter*>(ctx);
-        return self->route(ictx, frame);
-    };
-    sink.decode_failed = [](void* ctx, const InboundFrameContext& ictx,
-                            FrameDecodeError error) noexcept -> FrameDispatchResult {
-        auto* self = static_cast<InboundFrameRouter*>(ctx);
-        return self->on_decode_failure(ictx, error);
-    };
-    return sink;
-}
-
 void InboundFrameRouter::disable() noexcept {
     accepting_.store(false, std::memory_order_release);
 }
@@ -63,8 +47,8 @@ InboundFrameRouter::on_decode_failure(const InboundFrameContext& /*ictx*/,
                        WireFrame::PayloadType::Unknown);
 }
 
-FrameDispatchResult InboundFrameRouter::route(const InboundFrameContext& ictx,
-                                              const WireFrame& frame) noexcept {
+FrameDispatchResult InboundFrameRouter::on_frame(const InboundFrameContext& ictx,
+                                                 const WireFrame& frame) noexcept {
     if (!accepting_.load(std::memory_order_acquire)) {
         return make_result(FrameDispatchCode::RuntimeStopping,
                            frame.payload_type());

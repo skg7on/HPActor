@@ -222,10 +222,9 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
 
         auto decoded = try_decode_wireframe(frame_data);
         if (decoded.ok()) {
-            (void)inbound_sink_.route(inbound_sink_.context, ictx, decoded.frame);
-        } else if (inbound_sink_.decode_failed) {
-            (void)inbound_sink_.decode_failed(inbound_sink_.context, ictx,
-                                              decoded.error);
+            (void)inbound_sink_.route(ictx, decoded.frame);
+        } else {
+            (void)inbound_sink_.on_decode_failure(ictx, decoded.error);
         }
         return;
     }

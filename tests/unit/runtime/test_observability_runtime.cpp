@@ -24,28 +24,74 @@
 
 // ── Stable telemetry ports ─────────────────────────────────────────────────
 
+#include <hpactor/log/log_event.hpp> // for LogEvent
 #include <hpactor/runtime/observability_sinks.hpp>
-#include <hpactor/tracing/span.hpp> // for SpanHandle
+#include <hpactor/tracing/span.hpp> // for SpanHandle, SpanStatus
+
+// ── Test targets (stub implementations) ────────────────────────────────────
+
+namespace {
+
+class StubMetricsTarget : public hpactor::MetricsTarget {
+  public:
+    void on_metric(uint32_t, uint64_t) noexcept override {
+        ++emit_count;
+    }
+    void on_metric_event(uint32_t, uint64_t) noexcept override {
+        ++emit_event_count;
+    }
+
+    int emit_count{0};
+    int emit_event_count{0};
+};
+
+class StubLogTarget : public hpactor::LogTarget {
+  public:
+    void on_log(const hpactor::log::LogEvent&, bool) noexcept override {
+        ++emit_count;
+    }
+
+    int emit_count{0};
+};
+
+class StubTraceTarget : public hpactor::TraceTarget {
+  public:
+    hpactor::tracing::SpanHandle
+    on_span_start(const hpactor::tracing::SpanStart&) noexcept override {
+        ++span_start_count;
+        return hpactor::tracing::SpanHandle{};
+    }
+    void on_span_finish(hpactor::tracing::SpanHandle&,
+                        hpactor::tracing::SpanStatus) noexcept override {
+        ++span_finish_count;
+    }
+
+    int span_start_count{0};
+    int span_finish_count{0};
+};
+
+} // namespace
+
+// ── MetricsSink ─────────────────────────────────────────────────────────
 
 TEST(MetricsSinkTest, DefaultConstructedIsNoop) {
     hpactor::MetricsSink port;
-    EXPECT_EQ(port.context, nullptr);
-    EXPECT_EQ(port.emit, nullptr);
+    EXPECT_EQ(port.target, nullptr);
+    // Calling emit on a null target is a safe no-op.
+    port.emit(1, 42);
+    port.emit_event(1, 42);
 }
 
 TEST(MetricsSinkTest, WiredPortDeliversEvent) {
-    std::atomic<uint32_t> event_count{0};
-
+    StubMetricsTarget target;
     hpactor::MetricsSink port;
-    port.context = &event_count;
-    port.emit = [](void* ctx, uint32_t /*event_type*/, uint64_t /*val*/) noexcept {
-        auto* c = static_cast<std::atomic<uint32_t>*>(ctx);
-        c->fetch_add(1);
-    };
+    port.target = &target;
 
-    EXPECT_NE(port.emit, nullptr);
-    port.emit(&event_count, 1, 42);
-    EXPECT_EQ(event_count.load(), 1u);
+    port.emit(1, 42);
+    EXPECT_EQ(target.emit_count, 1);
+
+    port.emit_event(1, 42);
+    EXPECT_EQ(target.emit_event_count, 1);
 }
 
 TEST(MetricsSinkTest, PortIdentityIsStable) {
@@ -58,22 +104,17 @@ TEST(MetricsSinkTest, PortIdentityIsStable) {
 
 TEST(LogSinkTest, DefaultConstructedIsNoop) {
     hpactor::LogSink port;
-    EXPECT_EQ(port.context, nullptr);
-    EXPECT_EQ(port.emit, nullptr);
+    EXPECT_EQ(port.target, nullptr);
 }
 
-TEST(LogSinkTest, WiredPortHasEmitCallback) {
-    std::atomic<uint32_t> log_count{0};
-
+TEST(LogSinkTest, WiredPortDeliversToTarget) {
+    StubLogTarget target;
     hpactor::LogSink port;
-    port.context = &log_count;
-    port.emit = [](void* ctx, const hpactor::log::LogEvent& /*event*/,
-                   bool /*high_priority*/) noexcept {
-        auto* c = static_cast<std::atomic<uint32_t>*>(ctx);
-        c->fetch_add(1);
-    };
+    port.target = &target;
 
-    EXPECT_NE(port.emit, nullptr);
+    hpactor::log::LogEvent event{};
+    port.emit(event, false);
+    EXPECT_EQ(target.emit_count, 1);
 }
 
 TEST(LogSinkTest, PortIdentityIsStable) {
@@ -86,17 +127,20 @@ TEST(LogSinkTest, PortIdentityIsStable) {
 
 TEST(TraceSinkTest, DefaultConstructedIsNoop) {
     hpactor::TraceSink port;
-    EXPECT_EQ(port.context, nullptr);
-    EXPECT_EQ(port.record_span, nullptr);
+    EXPECT_EQ(port.target, nullptr);
 }
 
-TEST(TraceSinkTest, WiredPortHasRecordSpanCallback) {
+TEST(TraceSinkTest, WiredPortDeliversToTarget) {
+    StubTraceTarget target;
     hpactor::TraceSink port;
-    port.record_span = [](void* /*ctx*/,
-                          const hpactor::tracing::SpanStart& /*span*/) noexcept {
-        return hpactor::tracing::SpanHandle{};
-    };
-    EXPECT_NE(port.record_span, nullptr);
+    port.target = &target;
+
+    hpactor::tracing::SpanStart start{};
+    auto handle = port.record_span(start);
+    EXPECT_EQ(target.span_start_count, 1);
+
+    port.finish_span(handle, hpactor::tracing::SpanStatus::kOk);
+    EXPECT_EQ(target.span_finish_count, 1);
 }
 
 TEST(TraceSinkTest, PortIdentityIsStable) {
