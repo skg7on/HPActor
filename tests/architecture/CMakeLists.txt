@@ -13,7 +13,7 @@ set(_forbidden "Config config_" "EndPoint endpoint_" "Clock clock_" "ActorDirect
 add_test(
     NAME ActorSystemFacadeIsPointerOnly
     COMMAND ${CMAKE_COMMAND}
-        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/actor/actor_system.hpp
+        -DINPUT_FILE=${CMAKE_SOURCE_DIR}/include/hpactor/actor/system/actor_system.hpp
         "-DFORBIDDEN=${_forbidden}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
@@ -100,8 +100,8 @@ set(_phase4_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_phase4_sources
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.hpp
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.cpp
-    ${CMAKE_SOURCE_DIR}/include/hpactor/actor/stream_runtime.hpp
-    ${CMAKE_SOURCE_DIR}/src/actor/stream_runtime.cpp)
+    ${CMAKE_SOURCE_DIR}/include/hpactor/actor/stream/stream_runtime.hpp
+    ${CMAKE_SOURCE_DIR}/src/actor/stream/stream_runtime.cpp)
 foreach(_file IN LISTS _phase4_sources)
     add_test(
         NAME Phase4.NoFacadeCapture.${_file}
@@ -272,7 +272,7 @@ endforeach()
 set(_phase7_no_void_cluster "unique_ptr<void" "cluster_cleanup_fn")
 set(_phase7_cluster_sources
     ${CMAKE_SOURCE_DIR}/src/runtime/actor_system_impl.hpp
-    ${CMAKE_SOURCE_DIR}/src/actor/actor_system.cpp)
+    ${CMAKE_SOURCE_DIR}/src/actor/system/actor_system.cpp)
 foreach(_file IN LISTS _phase7_cluster_sources)
     add_test(
         NAME Phase7.NoVoidCluster.${_file}
