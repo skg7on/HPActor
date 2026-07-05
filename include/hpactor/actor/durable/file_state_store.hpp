@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/durable_state_store.hpp>
+#include <hpactor/actor/durable/durable_state_store.hpp>
 
 #include <mutex>
 #include <string>

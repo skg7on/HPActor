@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 #include <cstdio>
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/metrics/metrics_aggregator.hpp>
 #include <hpactor/msg/delivery_result.hpp>

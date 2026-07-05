@@ -10,8 +10,8 @@
 #include "../support/scheduler_test_driver.hpp"
 #include "../support/system_test_fixture.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <hpactor/msg/request_timeout.hpp>

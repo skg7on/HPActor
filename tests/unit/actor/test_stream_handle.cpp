@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/stream_handle.hpp>
-#include <hpactor/actor/stream_types.hpp>
+#include <hpactor/actor/stream/stream_handle.hpp>
+#include <hpactor/actor/stream/stream_types.hpp>
 #include <hpactor/core/actor_id.hpp>
 
 using namespace hpactor;

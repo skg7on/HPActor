@@ -23,9 +23,9 @@
 /// Tests marked with "RED-GOAL" will change behavior when Phase 6 is
 /// complete — they document gaps that Phase 6 will close.
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 

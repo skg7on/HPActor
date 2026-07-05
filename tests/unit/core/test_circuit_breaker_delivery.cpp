@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/circuit_breaker.hpp>
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 
 #include <chrono>

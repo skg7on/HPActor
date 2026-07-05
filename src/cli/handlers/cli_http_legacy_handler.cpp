@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cli_http_handler_helpers.hpp"
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli.pb.h>
 #include <hpactor/cli/actor/cli_http_server_actor.hpp>

@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/types/types.hpp>
 

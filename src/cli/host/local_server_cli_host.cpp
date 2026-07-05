@@ -3,7 +3,7 @@
 
 #include <hpactor/cli/host/local_server_cli_host.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/command/command_node.hpp>
 #include <hpactor/cli/command/command_registry.hpp>
 #include <hpactor/cli/command/command_tree_builder.hpp>

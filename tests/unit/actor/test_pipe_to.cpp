@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/pipe_to.hpp>
+#include <hpactor/actor/request/pipe_to.hpp>
 
 namespace hpactor {
 

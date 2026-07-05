@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/command/command_registry.hpp>
 #include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/fault/fault_controller.hpp>

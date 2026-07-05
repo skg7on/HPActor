@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/actor_route.hpp>
 #include <hpactor/actor/lifecycle/passivation_config.hpp>
+#include <hpactor/actor/system/actor_route.hpp>
 
 using namespace hpactor;
 

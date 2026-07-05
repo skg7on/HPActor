@@ -17,7 +17,7 @@
 #include "actor_system_impl.hpp"
 #include <hpactor/runtime/observability_runtime.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/sched/scheduler.hpp>
 

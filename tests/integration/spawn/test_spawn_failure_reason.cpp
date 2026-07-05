@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 #include <hpactor/msg/failure_reason.hpp>
 
 // spawn_errors -> FailureReason mapping

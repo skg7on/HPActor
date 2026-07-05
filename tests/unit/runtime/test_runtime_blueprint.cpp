@@ -56,7 +56,7 @@ TEST(RuntimeBlueprintTest, IsImmutableAfterConstruction) {
 
 // ── Builder: from_config ────────────────────────────────────────────────────
 
-#include <hpactor/actor/actor_system.hpp> // for Config
+#include <hpactor/actor/system/actor_system.hpp> // for Config
 #include <hpactor/runtime/runtime_blueprint_builder.hpp>
 
 TEST(RuntimeBlueprintBuilderTest, FromConfigProducesNonZeroFingerprint) {

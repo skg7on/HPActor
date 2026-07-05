@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/actor_type_registry.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
 
 namespace hpactor {
 

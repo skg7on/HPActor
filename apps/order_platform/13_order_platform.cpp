@@ -127,14 +127,14 @@
 #include <apps/order_platform/messages.hpp>
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/http_gateway_actor.hpp>
+#include <hpactor/actor/gateway/http_gateway_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>

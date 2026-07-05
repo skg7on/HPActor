@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/process/process_config.hpp>
 #include <hpactor/process/process_manager.hpp>
 

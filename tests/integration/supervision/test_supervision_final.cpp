@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/lifecycle/circuit_breaker.hpp>
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_proxy.hpp>

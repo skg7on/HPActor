@@ -13,11 +13,11 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/stream_config.hpp>
-#include <hpactor/actor/stream_handle.hpp>
-#include <hpactor/actor/stream_types.hpp>
+#include <hpactor/actor/stream/stream_config.hpp>
+#include <hpactor/actor/stream/stream_handle.hpp>
+#include <hpactor/actor/stream/stream_types.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 
 #include <vector>

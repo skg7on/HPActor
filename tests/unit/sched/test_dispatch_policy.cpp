@@ -18,11 +18,11 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/actor/dense_computing_actor.hpp>
 #include <hpactor/actor/polling_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 using namespace hpactor;

@@ -16,8 +16,8 @@
 
 #include <cstdint>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/stream_config.hpp>
-#include <hpactor/actor/stream_types.hpp>
+#include <hpactor/actor/stream/stream_config.hpp>
+#include <hpactor/actor/stream/stream_types.hpp>
 #include <hpactor/core/actor_id.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/ref/actor_address.hpp>

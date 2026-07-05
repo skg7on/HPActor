@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 
 namespace hpactor {
 

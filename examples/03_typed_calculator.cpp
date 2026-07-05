@@ -31,7 +31,7 @@
 // =============================================================================
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

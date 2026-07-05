@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>

@@ -16,7 +16,7 @@
 // Validates full-stack timer scheduling, delivery, and graceful shutdown
 // with pending timers.
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <gtest/gtest.h>
 

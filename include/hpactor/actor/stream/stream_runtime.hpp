@@ -8,9 +8,9 @@
 #include <optional>
 #include <unordered_map>
 
-#include <hpactor/actor/stream_config.hpp>
-#include <hpactor/actor/stream_handle.hpp>
-#include <hpactor/actor/stream_snapshot.hpp>
+#include <hpactor/actor/stream/stream_config.hpp>
+#include <hpactor/actor/stream/stream_handle.hpp>
+#include <hpactor/actor/stream/stream_snapshot.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/inbound_frame_sink.hpp>
 #include <hpactor/types/types.hpp>

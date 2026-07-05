@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/actor/cli_proto_server_actor.hpp>
 #include <hpactor/cli/config/cli_proto_server_config.hpp>
 

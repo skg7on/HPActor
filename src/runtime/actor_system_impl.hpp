@@ -21,13 +21,13 @@
 #include <hpactor/runtime/network_runtime.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
 
-#include <hpactor/actor/actor_directory.hpp>
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/actor_type_registry.hpp>
-#include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
-#include <hpactor/actor/stream_registry.hpp>
+#include <hpactor/actor/request/ask_manager.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
+#include <hpactor/actor/stream/stream_registry.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/config/cli_config.hpp>
 #include <hpactor/fault/fault_controller.hpp>

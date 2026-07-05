@@ -14,7 +14,7 @@
 
 #include <hpactor/runtime/runtime_blueprint_builder.hpp>
 
-#include <hpactor/actor/actor_system.hpp> // for Config
+#include <hpactor/actor/system/actor_system.hpp> // for Config
 
 #include <cstring>
 

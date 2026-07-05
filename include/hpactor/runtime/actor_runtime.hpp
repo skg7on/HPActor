@@ -7,9 +7,9 @@
 
 #include <hpactor/runtime/actor_spawner.hpp>
 
-#include <hpactor/actor/actor_directory.hpp>
-#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <memory>

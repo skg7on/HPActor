@@ -14,7 +14,7 @@
 
 #include <hpactor/cli/admin/admin_api_actor.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <sstream>
 

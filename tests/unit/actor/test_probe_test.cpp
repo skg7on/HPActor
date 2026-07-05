@@ -14,7 +14,7 @@
 
 #include <hpactor/actor/testing/test_probe.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/proto_type_registry.hpp>
 
 #include <gtest/gtest.h>

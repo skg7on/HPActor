@@ -23,9 +23,9 @@
 
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/actor_state.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <scheduler_test_driver.hpp>

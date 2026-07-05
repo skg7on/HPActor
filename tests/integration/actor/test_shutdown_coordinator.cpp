@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/drain_policy.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 
 #include <chrono>

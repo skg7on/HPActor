@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/actor/cli_client_actor.hpp>
 #include <hpactor/cli/actor/cli_legacy_server_actor.hpp>
 #include <hpactor/cli/actor/cli_proto_server_actor.hpp>

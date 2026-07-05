@@ -18,9 +18,9 @@
 #include "caf_bench_metrics.hpp"
 #include "messages.hpp"
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <atomic>
 #include <chrono>

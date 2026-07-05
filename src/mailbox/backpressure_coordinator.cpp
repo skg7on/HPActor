@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // Licensed under the Apache License, Version 2.0
 
-#include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/system/actor_directory.hpp>
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
 #include <hpactor/net/tcp_transport.hpp>

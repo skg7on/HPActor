@@ -54,7 +54,7 @@
 //     endpoint: 127.0.0.1:17001
 // =============================================================================
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/registrar_serialization.hpp>
 

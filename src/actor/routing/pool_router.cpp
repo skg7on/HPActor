@@ -16,7 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 

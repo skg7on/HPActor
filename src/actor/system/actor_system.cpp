@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/actor_system.hpp>
-#include <hpactor/actor/actor_type_registry.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
 
-#include "../runtime/actor_system_impl.hpp"
-#include <hpactor/actor/ask_manager.hpp>
+#include "../../runtime/actor_system_impl.hpp"
+#include <hpactor/actor/request/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/http_gateway_actor.hpp>
+#include <hpactor/actor/gateway/http_gateway_actor.hpp>
 #include <hpactor/actor/lifecycle/passivation_config.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/actor/spawn_receiver.hpp>
-#include <hpactor/actor/stream_receiver_actor.hpp>
-#include <hpactor/actor/stream_sender_actor.hpp>
-#include <hpactor/actor/stream_types.hpp>
+#include <hpactor/actor/spawn/spawn_receiver.hpp>
+#include <hpactor/actor/stream/stream_receiver_actor.hpp>
+#include <hpactor/actor/stream/stream_sender_actor.hpp>
+#include <hpactor/actor/stream/stream_types.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/fault/fault_macros.hpp>
@@ -51,7 +51,7 @@
 #include <thread>
 
 #include <hpactor/actor/receptionist/receptionist.hpp>
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 #include <hpactor/cli/actor/cli_local_actor.hpp>
 #include <hpactor/log/log_manager.hpp>
 #include <hpactor/log/logger.hpp>

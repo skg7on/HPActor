@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 #include <hpactor/ref/actor_ref.hpp>

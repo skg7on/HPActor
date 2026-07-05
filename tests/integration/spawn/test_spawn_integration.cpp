@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
 #include <hpactor/msg/frame.hpp>

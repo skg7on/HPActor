@@ -34,14 +34,14 @@
 #include <apps/cluster_control_plane/messages.hpp>
 #include <apps/cluster_control_plane/scenario.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/durable/durable_behavior.hpp>
+#include <hpactor/actor/durable/durable_state_store.hpp>
 #include <hpactor/actor/durable/event_sourced_behavior.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
-#include <hpactor/actor/durable_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cluster/cluster_failure_model.hpp>
 #include <hpactor/cluster/cluster_node_identity.hpp>
 #include <hpactor/cluster/cluster_node_state.hpp>

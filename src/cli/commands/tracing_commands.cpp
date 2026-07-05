@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/cli/command/command_registry.hpp>
 #include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/tracing/trace_config.hpp>

@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <hpactor/actor/actor_type_registry.hpp>
+#include <hpactor/actor/spawn/actor_type_registry.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/spawn.hpp>
+#include <hpactor/actor/spawn/spawn.hpp>
 #include <hpactor/msg/frame.hpp>
 
 namespace hpactor {

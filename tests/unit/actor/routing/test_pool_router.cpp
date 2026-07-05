@@ -14,9 +14,9 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/routing/pool_router.hpp>
 #include <hpactor/actor/routing/routing_logic.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_ref.hpp>
