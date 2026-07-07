@@ -46,6 +46,10 @@ TEST(PythonContractsTest, ConfigRejectsInvalidBounds) {
     cfg.max_commands_per_turn = cfg.command_queue_capacity + 1;
     EXPECT_EQ(cfg.validate(), python::PythonConfigError::DrainBudget);
     cfg = {};
+    cfg.dispatch_queue_capacity = 64;
+    cfg.max_dispatch_per_tick = 128; // within [1,4096] but > queue capacity
+    EXPECT_EQ(cfg.validate(), python::PythonConfigError::DrainBudget);
+    cfg = {};
     cfg.max_actor_bindings = 0;
     EXPECT_EQ(cfg.validate(), python::PythonConfigError::ActorBindingCapacity);
     cfg = {};
