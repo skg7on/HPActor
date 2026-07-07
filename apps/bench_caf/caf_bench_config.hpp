@@ -84,6 +84,7 @@ struct CafBenchConfig {
     uint32_t mailbox_capacity = 4096;
     uint64_t seed = 1;
     uint32_t sample_rss_ms = 50;
+    bool scheduler_start_paused = false;
     std::string output_path;
 };
 

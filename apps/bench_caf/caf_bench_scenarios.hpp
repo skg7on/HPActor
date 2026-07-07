@@ -85,6 +85,7 @@ inline Config make_bench_actor_config(const CafBenchConfig& cfg) {
     runtime.enable_receptionist = false;
     runtime.cli.enabled = false;
     runtime.tracing.enabled = false;
+    runtime.scheduler_start_paused = cfg.scheduler_start_paused;
     return runtime;
 }
 
@@ -1086,11 +1087,26 @@ run_distributed_ping_trial(const CafBenchConfig& cfg, uint32_t trial_index) {
 
     uint64_t expected_pongs =
         static_cast<uint64_t>(kActorsPerNode) * kActorsPerNode * kPingsPerTarget;
-    auto deadline =
-        std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
-    while (counters.pongs_received.load(std::memory_order_acquire) < expected_pongs &&
-           std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+    if (cfg.scheduler_start_paused) {
+        // Deterministic drain — no wall-clock dependency.  Each
+        // run_one_ready() call processes one ready actor item.
+        // This eliminates the CI flakiness that occurs when
+        // coverage-instrumented builds are too slow for the
+        // wall-clock deadline.
+        auto* sched = system.scheduler();
+        while (counters.pongs_received.load(std::memory_order_acquire) <
+                   expected_pongs &&
+               sched->run_one_ready()) {
+        }
+    } else {
+        auto deadline =
+            std::chrono::steady_clock::now() + deadline_for_preset(cfg.preset);
+        while (counters.pongs_received.load(std::memory_order_acquire) <
+                   expected_pongs &&
+               std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
 
     auto shutdown = system.shutdown();

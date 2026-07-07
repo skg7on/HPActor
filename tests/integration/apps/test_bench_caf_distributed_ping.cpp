@@ -12,6 +12,11 @@ TEST(DistributedPing, LoopbackSmokeCompletes) {
     bench_caf::CafBenchConfig cfg;
     cfg.scenario = bench_caf::ScenarioKind::DistributedPing;
     cfg.preset = bench_caf::PresetKind::Smoke;
+    // Use deterministic scheduler control instead of wall-clock
+    // polling.  This eliminates the CI-only flakiness observed in
+    // coverage-instrumented builds where message processing is
+    // too slow for the wall-clock deadline.
+    cfg.scheduler_start_paused = true;
 
     auto metrics = bench_caf::run_distributed_ping_trial(cfg, 1);
     EXPECT_TRUE(metrics.completed);
