@@ -82,6 +82,11 @@ TEST(FailureReasonTest, ToStringFailureSource) {
                                                                       "x");
     EXPECT_STREQ(hpactor::to_string(hpactor::FailureSource::Unknown), "unknow"
                                                                       "n");
+    EXPECT_STREQ(hpactor::to_string(hpactor::FailureSource::LanguageBinding),
+                 "lang"
+                 "uage"
+                 "_bin"
+                 "ding");
 }
 
 // ── EnqueueResultCode -> FailureReason mapping ──────────────────────
