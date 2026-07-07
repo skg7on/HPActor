@@ -22,4 +22,7 @@ target_include_directories(hpactor_python_native PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(hpactor_python_native PUBLIC hpactor_lib)
 target_compile_options(hpactor_python_native PRIVATE -fno-exceptions -fno-rtti)
-target_sources(hpactor_python_native PRIVATE src/native_notifier.cpp)
+target_sources(hpactor_python_native PRIVATE
+    src/native_notifier.cpp
+    src/python_gateway_actor.cpp
+    src/python_gateway_wake_adapter.cpp)

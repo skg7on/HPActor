@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/python/python_bridge_types.hpp>
+
 #include <cstddef>
 
 namespace hpactor::python {
@@ -40,6 +42,45 @@ struct GatewayWakePort final {
     /// \return true if both \ref context and \ref wake are non-null.
     [[nodiscard]] explicit operator bool() const noexcept {
         return context != nullptr && wake != nullptr;
+    }
+};
+
+/// \brief Result of a single command execution on the fixed executor port.
+///
+/// The executor returns this to indicate whether a completion should be
+/// emitted back to the Python interpreter thread.
+struct PythonCommandExecution final {
+    /// When true, \ref completion is valid and will be pushed to the
+    /// completion queue.
+    bool emit_completion{false};
+
+    /// The completion record to push when \ref emit_completion is true.
+    PythonCompletion completion;
+};
+
+/// \brief Fixed function-pointer port for executing Python commands.
+///
+/// Uses a raw function pointer and opaque context pointer instead of
+/// std::function to avoid exception-throwing paths and heap allocations
+/// in the hot path.
+struct PythonCommandExecutorPort final {
+    /// Opaque context passed as the first argument to \ref execute.
+    void* context{nullptr};
+
+    /// \brief Execute a command from the Python interpreter.
+    ///
+    /// \param[in] ctx The opaque \ref context pointer.
+    /// \param[in] command The command to execute.
+    /// \return A \c PythonCommandExecution describing whether a completion
+    ///         should be emitted.
+    PythonCommandExecution (*execute)(void* ctx,
+                                      const PythonCommand& command) noexcept {nullptr};
+
+    /// \brief Check whether this port holds a valid executor.
+    ///
+    /// \return true if both \ref context and \ref execute are non-null.
+    [[nodiscard]] explicit operator bool() const noexcept {
+        return context != nullptr && execute != nullptr;
     }
 };
 
