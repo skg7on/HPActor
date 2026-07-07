@@ -328,3 +328,11 @@ TEST(MpscRingBufferTest, DynamicDrainUpTo) {
     EXPECT_EQ(count, 3);
     EXPECT_TRUE(rb.empty());
 }
+
+// Test 13: dynamic, drain_up_to(0) consumes nothing and preserves buffer
+TEST(MpscRingBufferTest, DynamicDrainUpToZeroConsumesNothing) {
+    adt::DynamicMpscRingBuffer<TestPayload> rb(8);
+    ASSERT_TRUE(rb.try_push(TestPayload{7}));
+    EXPECT_EQ(rb.drain_up_to(0, [](const TestPayload&) {}), 0u);
+    EXPECT_EQ(rb.size(), 1u);
+}
