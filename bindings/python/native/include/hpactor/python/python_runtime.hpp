@@ -302,9 +302,6 @@ class PythonRuntime final {
     void
     release_actor(ActorId actor_id, uint64_t generation, bool was_bound) noexcept;
 
-    /// \brief Transition to a new state, returning the previous state.
-    PythonRuntimeState transition_state(PythonRuntimeState target) noexcept;
-
     PythonRuntimeConfig config_;
 
     std::unique_ptr<PythonRuntimeQueues> queues_;
