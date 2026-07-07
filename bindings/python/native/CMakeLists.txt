@@ -13,6 +13,7 @@
 # limitations under the License.
 
 add_library(hpactor_python_native STATIC
+    src/python_bridge_actor.cpp
     src/python_runtime_config.cpp
     src/python_runtime_queues.cpp
     src/python_runtime.cpp)
