@@ -14,7 +14,8 @@
 
 add_library(hpactor_python_native STATIC
     src/python_runtime_config.cpp
-    src/python_runtime_queues.cpp)
+    src/python_runtime_queues.cpp
+    src/python_runtime.cpp)
 set_target_properties(hpactor_python_native PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hpactor_python_native PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
