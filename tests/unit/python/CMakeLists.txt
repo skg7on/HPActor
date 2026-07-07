@@ -1,4 +1,5 @@
 add_executable(test_unit_python_binding
+    test_native_notifier.cpp
     test_python_contracts.cpp
     test_python_runtime_queues.cpp)
 target_link_libraries(test_unit_python_binding PRIVATE
