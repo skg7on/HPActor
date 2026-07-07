@@ -495,6 +495,9 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
     }
     meta.schedule_edf = options.schedule_edf;
 
+    msg.set_delivery_priority(meta.priority);
+    msg.set_delivery_flags(meta.flags);
+
     const auto bp_mode = mailbox->config().backpressure_mode;
     const bool sender_is_remote = meta.sender.endpoint != config_.endpoint &&
                                   meta.sender.id != ActorId{0};
