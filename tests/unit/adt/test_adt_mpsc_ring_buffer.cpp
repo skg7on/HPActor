@@ -265,3 +265,66 @@ TEST(MpscRingBufferTest, PerSlotPublishStress) {
     EXPECT_EQ(total_consumed.load(), total_pushed.load());
     EXPECT_TRUE(rb.empty());
 }
+
+// Test 11: compile-time, drain_up_to bounded (max_items < available) and
+// unlimited (max_items > available)
+TEST(MpscRingBufferTest, CompileTimeDrainUpTo) {
+    adt::MpscRingBuffer<TestPayload, 16> rb;
+    // Push 8 items
+    for (int i = 0; i < 8; ++i) {
+        TestPayload p{i};
+        EXPECT_TRUE(rb.try_push(p));
+    }
+    EXPECT_EQ(rb.size(), 8);
+
+    // Bounded: drain only 5 of 8
+    int count = 0;
+    size_t drained = rb.drain_up_to(5, [&](const TestPayload& e) {
+        EXPECT_EQ(e.value, count);
+        count++;
+    });
+    EXPECT_EQ(drained, 5);
+    EXPECT_EQ(count, 5);
+    EXPECT_EQ(rb.size(), 3);
+
+    // Unlimited: drain remaining (3 items, but request 10)
+    count = 0;
+    drained = rb.drain_up_to(10, [&](const TestPayload& e) {
+        EXPECT_EQ(e.value, 5 + count);
+        count++;
+    });
+    EXPECT_EQ(drained, 3);
+    EXPECT_EQ(count, 3);
+    EXPECT_TRUE(rb.empty());
+}
+
+// Test 12: dynamic, drain_up_to bounded and unlimited
+TEST(MpscRingBufferTest, DynamicDrainUpTo) {
+    adt::DynamicMpscRingBuffer<TestPayload> rb(16);
+    // Push 8 items
+    for (int i = 0; i < 8; ++i) {
+        TestPayload p{i};
+        EXPECT_TRUE(rb.try_push(p));
+    }
+    EXPECT_EQ(rb.size(), 8);
+
+    // Bounded: drain only 5 of 8
+    int count = 0;
+    size_t drained = rb.drain_up_to(5, [&](const TestPayload& e) {
+        EXPECT_EQ(e.value, count);
+        count++;
+    });
+    EXPECT_EQ(drained, 5);
+    EXPECT_EQ(count, 5);
+    EXPECT_EQ(rb.size(), 3);
+
+    // Unlimited: drain remaining (3 items, but request 10)
+    count = 0;
+    drained = rb.drain_up_to(10, [&](const TestPayload& e) {
+        EXPECT_EQ(e.value, 5 + count);
+        count++;
+    });
+    EXPECT_EQ(drained, 3);
+    EXPECT_EQ(count, 3);
+    EXPECT_TRUE(rb.empty());
+}
