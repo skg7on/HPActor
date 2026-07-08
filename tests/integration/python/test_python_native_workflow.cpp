@@ -24,6 +24,7 @@
 #include <hpactor/python/python_bridge_actor.hpp>
 #include <hpactor/python/python_gateway_actor.hpp>
 #include <hpactor/python/python_gateway_wake_adapter.hpp>
+#include <hpactor/python/python_reliability.hpp>
 #include <hpactor/python/python_runtime.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
@@ -77,8 +78,10 @@ TEST(PythonNativeWorkflowTest, PreservesOrderIdentityAndDrainAdmission) {
 
     auto lease = runtime->reserve_actor();
     ASSERT_TRUE(lease.has_value());
-    auto bridge =
-        system.spawn<python::PythonBridgeActor>(*runtime, std::move(*lease));
+    python::PythonReliabilityController reliability;
+    auto bridge = system.spawn<python::PythonBridgeActor>(
+        *runtime, std::move(*lease), reliability,
+        python::PythonSupervisionConfig{});
     auto* bridge_actor =
         static_cast<python::PythonBridgeActor*>(bridge.get().get());
     ASSERT_NE(bridge_actor, nullptr);

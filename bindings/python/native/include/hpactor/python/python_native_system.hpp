@@ -16,6 +16,7 @@
 
 #include <hpactor/python/python_bridge_types.hpp>
 #include <hpactor/python/python_ports.hpp>
+#include <hpactor/python/python_reliability.hpp>
 #include <hpactor/python/python_runtime.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
@@ -166,6 +167,7 @@ class PythonNativeSystem final {
     std::unique_ptr<PythonRuntime> runtime_;
     std::unique_ptr<PythonCommandRouter> router_;
     std::unique_ptr<PythonGatewayWakeAdapter> wake_adapter_;
+    PythonReliabilityController reliability_;
     Actor application_bridge_;
     Actor gateway_;
     std::unordered_map<std::string, ActorAddress> name_registry_;

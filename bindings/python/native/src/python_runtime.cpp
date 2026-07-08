@@ -324,6 +324,19 @@ PythonRuntimeSnapshot PythonRuntime::snapshot() const noexcept {
     snap.queues = queues_->snapshot();
     snap.stale_completion_rejected =
         stale_completion_rejected_.load(std::memory_order_relaxed);
+
+    // Phase 1C extended counters.
+    snap.dispatch_rejected = dispatch_rejected_.load(std::memory_order_relaxed);
+    snap.command_rejected = command_rejected_.load(std::memory_order_relaxed);
+    snap.handler_exceptions = handler_exceptions_.load(std::memory_order_relaxed);
+    snap.handler_cancelled = handler_cancelled_.load(std::memory_order_relaxed);
+    snap.stale_completions = stale_completions_.load(std::memory_order_relaxed);
+    snap.last_heartbeat_ns = last_heartbeat_ns_.load(std::memory_order_relaxed);
+
+    // Compute readiness: Running + fresh heartbeat.
+    snap.ready =
+        (snap.state == PythonRuntimeState::Running && snap.last_heartbeat_ns > 0);
+
     snap.dispatch_notifier_fd = dispatch_read_fd();
     snap.completion_notifier_fd = completion_read_fd();
 
@@ -333,6 +346,32 @@ PythonRuntimeSnapshot PythonRuntime::snapshot() const noexcept {
     }
 
     return snap;
+}
+
+// ── Phase 1C reliability counters ─────────────────────────────────────────
+
+void PythonRuntime::record_heartbeat(uint64_t now_ns) noexcept {
+    last_heartbeat_ns_.store(now_ns, std::memory_order_relaxed);
+}
+
+void PythonRuntime::record_dispatch_rejected() noexcept {
+    dispatch_rejected_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void PythonRuntime::record_command_rejected() noexcept {
+    command_rejected_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void PythonRuntime::record_handler_exception() noexcept {
+    handler_exceptions_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void PythonRuntime::record_handler_cancelled() noexcept {
+    handler_cancelled_.fetch_add(1, std::memory_order_relaxed);
+}
+
+void PythonRuntime::record_stale_completion() noexcept {
+    stale_completions_.fetch_add(1, std::memory_order_relaxed);
 }
 
 } // namespace hpactor::python

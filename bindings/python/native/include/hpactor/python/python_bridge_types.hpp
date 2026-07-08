@@ -28,6 +28,40 @@
 
 namespace hpactor::python {
 
+/// \brief Kinds of dispatch records sent from native bridge or system to the
+///        Python actor runtime.
+enum class PythonDispatchKind : uint8_t {
+    Message = 0,     ///< A user message from another actor.
+    LinkedExit = 1,  ///< A linked actor has exited.
+    MonitorDown = 2, ///< A monitored actor has terminated.
+    Restart = 3,     ///< Actor is being restarted (new generation).
+};
+
+/// \brief Bounded failure metadata for Python actors.
+struct PythonFailureMetadata final {
+    FailureReason reason{FailureReason::Unknown};
+    FailureSource source{FailureSource::LanguageBinding};
+    uint32_t error_code{0};
+    std::string exception_type;
+    std::string detail;
+    std::string traceback;
+};
+
+/// \brief Point-in-time snapshot of a Python actor for CLI inspection.
+struct PythonActorSnapshot final {
+    ActorAddress actor{};
+    uint64_t generation{0};
+    uint64_t last_sequence{0};
+    uint64_t handled{0};
+    uint64_t failures{0};
+    uint64_t restarts{0};
+    uint64_t cancellations{0};
+    uint32_t pending_turns{0};
+    bool active_turn{false};
+    bool quarantined{false};
+    std::string actor_type;
+};
+
 /// \brief Kinds of commands that the Python interpreter thread can send to the
 ///        native bridge actor.
 enum class PythonCommandKind : uint8_t {
@@ -64,6 +98,7 @@ enum class PythonCompletionKind : uint8_t {
 
 /// \brief Envelope dispatched to a Python-bound actor for handling.
 struct PythonDispatchEnvelope final {
+    PythonDispatchKind kind{PythonDispatchKind::Message};
     ActorAddress actor;
     uint64_t generation{0};
     TypeTag type_tag{TypeTag::Invalid};
@@ -78,6 +113,8 @@ struct PythonDispatchEnvelope final {
     uint32_t flags{0};
     bool ack_requested{false};
     uint64_t sequence{0};
+    // Bounded failure metadata for non-message dispatch kinds.
+    PythonFailureMetadata failure;
 };
 
 /// \brief Command sent from the Python interpreter thread to the native bridge

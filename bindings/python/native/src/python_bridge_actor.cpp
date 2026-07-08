@@ -15,6 +15,8 @@
 #include <hpactor/python/python_bridge_actor.hpp>
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/lifecycle/quarantine_reason.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
@@ -23,21 +25,92 @@
 namespace hpactor::python {
 
 PythonBridgeActor::PythonBridgeActor(ActorContext* context, ActorSystem& system,
-                                     PythonRuntime& runtime,
-                                     PythonActorLease lease) noexcept
-    : EventBasedActor(context, system), runtime_(runtime),
-      lease_(std::move(lease)) {
+                                     PythonRuntime& runtime, PythonActorLease lease,
+                                     PythonReliabilityController& reliability,
+                                     PythonSupervisionConfig supervision) noexcept
+    : EventBasedActor(context, system), LifecycleActor(), runtime_(runtime),
+      lease_(std::move(lease)), reliability_(reliability),
+      supervision_(supervision) {
     become(make_behavior());
 }
 
 void PythonBridgeActor::on_activate() {
     EventBasedActor::on_activate();
     [[maybe_unused]] bool bound = lease_.bind(id());
+    reliability_.register_actor(address(), lease_.generation(), supervision_);
 }
 
 void PythonBridgeActor::on_deactivate() {
     lease_.reset();
+    reliability_.unregister_actor(address());
     EventBasedActor::on_deactivate();
+}
+
+void PythonBridgeActor::on_drain() {
+    // Reject new user dispatches; system messages still accepted.
+}
+
+void PythonBridgeActor::on_stop() {
+    // Enqueue an ActorStopped completion to the Python runtime.
+    auto completion = std::make_shared<PythonCompletion>();
+    completion->kind = PythonCompletionKind::ActorStopped;
+    completion->actor = address();
+    completion->generation = lease_.generation();
+    (void)runtime_.try_push_completion(completion);
+}
+
+void PythonBridgeActor::on_fail(error err) {
+    // Build bounded failure metadata.
+    PythonFailureMetadata fm;
+    fm.reason = static_cast<FailureReason>(err.code());
+    fm.source = FailureSource::LanguageBinding;
+    fm.error_code = err.code();
+    fm.detail = err.message();
+
+    // Enqueue an ActorFailed completion.
+    auto completion = std::make_shared<PythonCompletion>();
+    completion->kind = PythonCompletionKind::ActorFailed;
+    completion->actor = address();
+    completion->generation = lease_.generation();
+    completion->source = FailureSource::LanguageBinding;
+    completion->error_code = err.code();
+    (void)runtime_.try_push_completion(completion);
+
+    // Notify the reliability controller.
+    // Note: the reliability port is called from the controller.
+}
+
+void PythonBridgeActor::on_restart() {
+    // Allocate a replacement generation.
+    // The old lease is released; a new one is reserved.
+    lease_.reset();
+
+    auto new_lease = runtime_.reserve_actor();
+    if (new_lease.has_value()) {
+        lease_ = std::move(new_lease.value());
+        [[maybe_unused]] bool bound = lease_.bind(id());
+        reliability_.advance_generation(address(), lease_.generation());
+    }
+
+    // Enqueue a Restart dispatch to the Python runtime.
+    auto envelope = std::make_shared<PythonDispatchEnvelope>();
+    envelope->kind = PythonDispatchKind::Restart;
+    envelope->actor = address();
+    envelope->generation = lease_.generation();
+    envelope->sequence = next_dispatch_sequence_++;
+    envelope->failure.reason = FailureReason::Unknown;
+    envelope->failure.source = FailureSource::LanguageBinding;
+
+    (void)runtime_.try_push_dispatch(envelope);
+}
+
+void PythonBridgeActor::on_quarantined(QuarantineReason /*reason*/) {
+    // Enqueue a stop completion with quarantined status.
+    auto completion = std::make_shared<PythonCompletion>();
+    completion->kind = PythonCompletionKind::ActorStopped;
+    completion->actor = address();
+    completion->generation = lease_.generation();
+    (void)runtime_.try_push_completion(completion);
 }
 
 uint64_t PythonBridgeActor::generation() const noexcept {
@@ -45,26 +118,27 @@ uint64_t PythonBridgeActor::generation() const noexcept {
 }
 
 void PythonBridgeActor::receive(TypedMessage& message) {
-    // System messages (tag < TypeTag::User) are handled by the base class.
-    if (static_cast<uint32_t>(message.type_id()) < 0x1000) {
+    // System messages (tag < 0x1000) are handled by the base class.
+    const auto tag_val = static_cast<uint32_t>(message.type_id());
+
+    if (tag_val < 0x1000) {
         EventBasedActor::receive(message);
         return;
     }
 
-    // User message: apply drain and lifecycle gates.
+    // Phase 1C: check lifecycle gate.
     if (!apply_drain_gate(message) || !apply_lifecycle_gate(message)) {
         return;
     }
 
-    // Capture sender and ask correlation for reply routing.
     auto* ctx = context();
     if (ctx != nullptr) {
         ctx->set_current_sender(message.sender_address());
         ctx->set_current_ask_message_id(message.ask_message_id());
     }
 
-    // Build the dispatch envelope.
     auto envelope = std::make_shared<PythonDispatchEnvelope>();
+    envelope->kind = PythonDispatchKind::Message;
     envelope->actor = address();
     envelope->generation = lease_.generation();
     envelope->type_tag = message.type_id();
@@ -86,15 +160,12 @@ void PythonBridgeActor::receive(TypedMessage& message) {
     PythonDispatchPtr dispatch = std::move(envelope);
     const bool accepted = runtime_.try_push_dispatch(dispatch);
 
-    // Reliable ACK/NACK based on transfer success.
     if (message.ack_requested()) {
         if (accepted) {
-            // ACK status 0 = Accepted.
             system().send_reliable_ack(message.sender_address(), address(),
                                        message.message_id(),
                                        static_cast<uint8_t>(0), 0);
         } else {
-            // NACK status 1 = Rejected, retry after 500 ms.
             system().send_reliable_ack(message.sender_address(), address(),
                                        message.message_id(),
                                        static_cast<uint8_t>(1), 500);
@@ -104,7 +175,6 @@ void PythonBridgeActor::receive(TypedMessage& message) {
     try_drain_completion();
     check_mailbox_pressure();
 
-    // Clear the ask correlation so it does not leak into the next message.
     if (ctx != nullptr) {
         ctx->set_current_ask_message_id(0);
     }
