@@ -111,18 +111,19 @@ enum class FailureReason : uint8_t {
 /// Which subsystem produced a failure. Combined with FailureReason to
 /// disambiguate context (e.g. Timeout from ActorRuntime vs Rpc).
 enum class FailureSource : uint8_t {
-    ActorRuntime, ///< Actor send/reply/spawn paths.
-    Mailbox,      ///< Mailbox admission.
-    Rpc,          ///< RPC channel.
-    Transport,    ///< Network transport (TCP, TLS, frame).
-    Discovery,    ///< Service discovery (registrar, gossip).
-    Scheduler,    ///< Scheduling / timer infrastructure.
-    Config,       ///< Config validation / bootstrap.
-    Security,     ///< Authentication / authorization.
-    DurableStore, ///< Durable state / event store.
-    Supervision,  ///< Supervision / restart.
-    Cluster,      ///< Cluster membership / sharding.
-    Unknown,      ///< Unspecified source.
+    ActorRuntime = 0,     ///< Actor send/reply/spawn paths.
+    Mailbox = 1,          ///< Mailbox admission.
+    Rpc = 2,              ///< RPC channel.
+    Transport = 3,        ///< Network transport (TCP, TLS, frame).
+    Discovery = 4,        ///< Service discovery (registrar, gossip).
+    Scheduler = 5,        ///< Scheduling / timer infrastructure.
+    Config = 6,           ///< Config validation / bootstrap.
+    Security = 7,         ///< Authentication / authorization.
+    DurableStore = 8,     ///< Durable state / event store.
+    Supervision = 9,      ///< Supervision / restart.
+    Cluster = 10,         ///< Cluster membership / sharding.
+    Unknown = 11,         ///< Unspecified source.
+    LanguageBinding = 12, ///< Language binding bridge (Python, JVM, etc.).
 };
 
 /// \brief Whether the caller can retry with a reasonable chance of success.

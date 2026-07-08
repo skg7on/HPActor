@@ -68,7 +68,9 @@ class TypedMessage {
           has_trace_context_(other.has_trace_context_),
           deadline_ns_(other.deadline_ns_),
           ask_message_id_(other.ask_message_id_),
-          ack_requested_(other.ack_requested_), message_id_(other.message_id_) {
+          ack_requested_(other.ack_requested_), message_id_(other.message_id_),
+          delivery_priority_(other.delivery_priority_),
+          delivery_flags_(other.delivery_flags_) {
         if (other.is_inline_) {
             std::memcpy(inline_payload_, other.inline_payload_, other.inline_size_);
             other.is_inline_ = false;
@@ -98,6 +100,8 @@ class TypedMessage {
         ask_message_id_ = other.ask_message_id_;
         ack_requested_ = other.ack_requested_;
         message_id_ = other.message_id_;
+        delivery_priority_ = other.delivery_priority_;
+        delivery_flags_ = other.delivery_flags_;
         return *this;
     }
 
@@ -244,6 +248,29 @@ class TypedMessage {
         ack_requested_ = v;
     }
 
+    /// \brief Delivery priority assigned by the pipeline at admission time.
+    ///
+    /// Stamped from \c MailboxEnvelopeMeta::priority before mailbox push.
+    /// 0 is the highest priority; higher values are lower priority.
+    [[nodiscard]] uint8_t delivery_priority() const noexcept {
+        return delivery_priority_;
+    }
+    void set_delivery_priority(uint8_t value) noexcept {
+        delivery_priority_ = value;
+    }
+
+    /// \brief Delivery flags stamped by the pipeline at admission time.
+    ///
+    /// Stamped from \c MailboxEnvelopeMeta::flags before mailbox push.
+    /// Carries frame-level flags such as NoDrop for downstream consumers
+    /// (e.g. PythonBridgeActor).
+    [[nodiscard]] uint32_t delivery_flags() const noexcept {
+        return delivery_flags_;
+    }
+    void set_delivery_flags(uint32_t value) noexcept {
+        delivery_flags_ = value;
+    }
+
     /// \brief Sender-assigned message identifier for reliable messaging.
     ///
     /// Set from \c ActorMsgFrame.message_id in \c deliver_remote(). Zero
@@ -313,6 +340,8 @@ class TypedMessage {
     uint64_t ask_message_id_ = 0;
     bool ack_requested_ = false;
     uint64_t message_id_ = 0;
+    uint8_t delivery_priority_{0};
+    uint32_t delivery_flags_{0};
 };
 
 } // namespace hpactor

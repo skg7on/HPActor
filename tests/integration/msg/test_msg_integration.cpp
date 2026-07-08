@@ -2,8 +2,10 @@
 // Licensed under the Apache License, Version 2.0
 
 #include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
+#include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/msg/delivery_mode.hpp>
 #include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/msg/message_id.hpp>
@@ -12,6 +14,8 @@
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
+
+#include <scheduler_test_driver.hpp>
 
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
@@ -453,6 +457,78 @@ TEST(MessageIntegrationTest, TypeTagMakeSubsystemTag) {
     auto val = static_cast<uint32_t>(tag);
     EXPECT_GE(val, 0x80u);
     EXPECT_LE(val, 0xFFu);
+}
+
+// ============================================================================
+// Delivery metadata preservation
+// ============================================================================
+
+TEST(MessageIntegrationTest, TypedMessageDeliveryMetadataSurvivesMove) {
+    TypedMessage original(TypeTag::User, StreamBuffer{1, 2, 3});
+    original.set_delivery_priority(3);
+    original.set_delivery_flags(0xA5A50001u);
+
+    TypedMessage moved(std::move(original));
+    EXPECT_EQ(moved.delivery_priority(), 3u);
+    EXPECT_EQ(moved.delivery_flags(), 0xA5A50001u);
+
+    TypedMessage assigned;
+    assigned = std::move(moved);
+    EXPECT_EQ(assigned.delivery_priority(), 3u);
+    EXPECT_EQ(assigned.delivery_flags(), 0xA5A50001u);
+}
+
+namespace {
+struct DeliveryMetadataObservation {
+    std::atomic<uint8_t> priority{0};
+    std::atomic<uint32_t> flags{0};
+};
+
+class DeliveryMetadataProbe final : public EventBasedActor {
+  public:
+    DeliveryMetadataProbe(ActorContext* ctx, ActorSystem& sys,
+                          DeliveryMetadataObservation& observation)
+        : EventBasedActor(ctx, sys), observation_(observation) {
+        become(make_behavior());
+    }
+
+  protected:
+    Behavior make_behavior() override {
+        return Behavior([this](TypedMessage& msg) {
+            observation_.priority.store(msg.delivery_priority(),
+                                        std::memory_order_release);
+            observation_.flags.store(msg.delivery_flags(),
+                                     std::memory_order_release);
+        });
+    }
+
+  private:
+    DeliveryMetadataObservation& observation_;
+};
+} // namespace
+
+TEST(MessageIntegrationTest, DeliveryPipelineStampsPriorityAndFlags) {
+    Config cfg;
+    cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 1;
+    cfg.scheduler_start_paused = true;
+    ActorSystem system(cfg);
+    DeliveryMetadataObservation observation;
+    auto actor = system.spawn<DeliveryMetadataProbe>(observation);
+
+    test::SchedulerTestDriver driver(system);
+
+    mailbox::DeliveryOptions options;
+    options.flags = 0x00000040u;
+    auto result = system.try_deliver_local(
+        actor.id(), TypedMessage(TypeTag::User, StreamBuffer{9}), 2, INT64_MAX,
+        options);
+    ASSERT_TRUE(result.accepted());
+    ASSERT_TRUE(driver.drain_until([&] {
+        return observation.flags.load(std::memory_order_acquire) != 0;
+    }));
+    EXPECT_EQ(observation.priority.load(std::memory_order_acquire), 2u);
+    EXPECT_EQ(observation.flags.load(std::memory_order_acquire), 0x40u);
 }
 
 } // anonymous namespace

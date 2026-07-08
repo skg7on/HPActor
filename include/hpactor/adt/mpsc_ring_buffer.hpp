@@ -82,11 +82,17 @@ template <typename T, size_t Capacity = 65536> class MpscRingBuffer {
     }
 
     // Drain all published elements. Must be called from a single consumer
-    // thread.
+    // thread. Delegates to drain_up_to.
     template <typename Fn> size_t drain(Fn&& callback) {
+        return drain_up_to(static_cast<size_t>(-1), std::forward<Fn>(callback));
+    }
+
+    // Drain up to max_items published elements. Must be called from a single
+    // consumer thread.
+    template <typename Fn> size_t drain_up_to(size_t max_items, Fn&& callback) {
         uint64_t r = read_cursor_.load(std::memory_order_relaxed);
         size_t count = 0;
-        for (;;) {
+        while (count < max_items) {
             uint64_t slot = r & mask_;
             // Slot is ready when its sequence number equals r + 1.
             // The acquire load synchronizes with the producer's release store,
@@ -177,10 +183,18 @@ template <typename T> class DynamicMpscRingBuffer {
         return true;
     }
 
+    // Drain all published elements. Must be called from a single consumer
+    // thread. Delegates to drain_up_to.
     template <typename Fn> size_t drain(Fn&& callback) {
+        return drain_up_to(static_cast<size_t>(-1), std::forward<Fn>(callback));
+    }
+
+    // Drain up to max_items published elements. Must be called from a single
+    // consumer thread.
+    template <typename Fn> size_t drain_up_to(size_t max_items, Fn&& callback) {
         uint64_t r = read_cursor_.load(std::memory_order_relaxed);
         size_t count = 0;
-        for (;;) {
+        while (count < max_items) {
             uint64_t slot = r & mask_;
             if (seq_[slot].load(std::memory_order_acquire) != (r + 1)) {
                 break;

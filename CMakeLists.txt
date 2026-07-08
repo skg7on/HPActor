@@ -35,6 +35,7 @@ option(ENABLE_AI_ACCELERATORS "Enable AI accelerator resource plane (CPU/mock ba
 option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20 is available" OFF)
 option(ENABLE_FIXED_DISRUPTOR_MAILBOX
        "Enable experimental fixed-message Disruptor actor mailbox" OFF)
+option(ENABLE_PYTHON_BINDINGS "Build the native Python binding foundation" OFF)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -93,6 +94,10 @@ configure_file(
 # Subdirectories
 # =============================================================================
 add_subdirectory(src)
+
+if(ENABLE_PYTHON_BINDINGS)
+    add_subdirectory(bindings/python/native)
+endif()
 
 # AOT compiler — depends on hpactor_lib, so must come after src/
 add_subdirectory(tools/toml-compiler)

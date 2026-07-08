@@ -129,6 +129,8 @@ const char* to_string(FailureSource source) noexcept {
             return "cluster";
         case FailureSource::Unknown:
             return "unknown";
+        case FailureSource::LanguageBinding:
+            return "language_binding";
     }
     return "unknown";
 }

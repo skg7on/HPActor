@@ -291,3 +291,41 @@ add_test(
         "-DFORBIDDEN=std::function"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake
 )
+
+# ── Python Binding architecture fitness ───────────────────────────────────
+
+file(GLOB_RECURSE _python_native_files CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/bindings/python/native/include/*.hpp
+    ${CMAKE_SOURCE_DIR}/bindings/python/native/src/*.cpp)
+set(_python_native_forbidden
+    "Python.h" "PyObject" "dynamic_cast" "typeid" "throw "
+    "try {" "catch (" "std::function")
+foreach(_file IN LISTS _python_native_files)
+    string(MAKE_C_IDENTIFIER "${_file}" _python_test_suffix)
+    add_test(
+        NAME PythonBindingArchitecture.NoPythonOrRtti.${_python_test_suffix}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_python_native_forbidden}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
+endforeach()
+
+file(GLOB_RECURSE _python_forbidden_core_files CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/include/hpactor/adt/*.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/actor/*.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/sched/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/actor/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/actor/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/sched/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/sched/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/runtime/*.hpp)
+foreach(_file IN LISTS _python_forbidden_core_files)
+    string(MAKE_C_IDENTIFIER "${_file}" _python_core_test_suffix)
+    add_test(
+        NAME PythonBindingArchitecture.NoPythonInCore.${_python_core_test_suffix}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=#include <Python.h>;#include \"Python.h\""
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
+endforeach()
