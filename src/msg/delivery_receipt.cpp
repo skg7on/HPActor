@@ -54,6 +54,10 @@ void DeliveryReceipt::on_complete(std::function<void(mailbox::DeliveryResult)> c
     if (!state_)
         return;
     std::unique_lock<std::mutex> lk(state_->mtx);
+    // Reject when a fixed port is already installed.
+    if (state_->fixed_port_set) {
+        return;
+    }
     if (state_->result.has_value()) {
         auto result = *state_->result;
         lk.unlock();
@@ -64,22 +68,49 @@ void DeliveryReceipt::on_complete(std::function<void(mailbox::DeliveryResult)> c
     }
 }
 
+bool DeliveryReceipt::on_complete(CompletionPort<mailbox::DeliveryResult> port) {
+    if (!state_)
+        return false;
+    std::unique_lock<std::mutex> lk(state_->mtx);
+    // Reject when either form of callback is already installed.
+    if (state_->fixed_port_set || state_->callback) {
+        return false;
+    }
+    if (state_->result.has_value()) {
+        auto result = *state_->result;
+        lk.unlock();
+        if (port)
+            port(result);
+        return true;
+    }
+    state_->fixed_port = std::move(port);
+    state_->fixed_port_set = true;
+    return true;
+}
+
 void DeliveryReceipt::cancel() {
     if (!state_)
         return;
-    std::unique_lock<std::mutex> lk(state_->mtx);
-    if (state_->result.has_value()) {
-        return;
+    CompletionPort<mailbox::DeliveryResult> port;
+    std::function<void(mailbox::DeliveryResult)> cb;
+    {
+        std::unique_lock<std::mutex> lk(state_->mtx);
+        if (state_->result.has_value()) {
+            return;
+        }
+        mailbox::DeliveryResult cancelled;
+        cancelled.status = mailbox::DeliveryStatus::Cancelled;
+        cancelled.message_id = state_->msg_id;
+        state_->result = cancelled;
+        cb = std::move(state_->callback);
+        port = std::move(state_->fixed_port);
+        state_->fixed_port_set = false;
     }
-    mailbox::DeliveryResult cancelled;
-    cancelled.status = mailbox::DeliveryStatus::Cancelled;
-    cancelled.message_id = state_->msg_id;
-    state_->result = cancelled;
-    auto cb = std::move(state_->callback);
-    lk.unlock();
     state_->cv.notify_all();
+    if (port)
+        port(*state_->result);
     if (cb)
-        cb(cancelled);
+        cb(*state_->result);
 }
 
 MessageId DeliveryReceipt::message_id() const noexcept {
@@ -90,14 +121,21 @@ MessageId DeliveryReceipt::message_id() const noexcept {
 }
 
 void DeliveryReceipt::SharedState::resolve(mailbox::DeliveryResult r) {
-    std::unique_lock<std::mutex> lk(mtx);
-    if (result.has_value())
-        return;
-    msg_id = r.message_id;
-    result = std::move(r);
-    auto cb = std::move(callback);
-    lk.unlock();
+    CompletionPort<mailbox::DeliveryResult> port;
+    std::function<void(mailbox::DeliveryResult)> cb;
+    {
+        std::unique_lock<std::mutex> lk(mtx);
+        if (result.has_value())
+            return;
+        msg_id = r.message_id;
+        result = std::move(r);
+        cb = std::move(callback);
+        port = std::move(fixed_port);
+        fixed_port_set = false;
+    }
     cv.notify_all();
+    if (port)
+        port(*result);
     if (cb)
         cb(*result);
 }

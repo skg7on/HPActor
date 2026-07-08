@@ -14,6 +14,7 @@
 
 #include <future>
 #include <gtest/gtest.h>
+#include <hpactor/msg/completion_port.hpp>
 #include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -22,6 +23,21 @@
 using namespace hpactor;
 using namespace hpactor::msg;
 using namespace hpactor::mailbox;
+
+namespace {
+
+template <typename T> struct CompletionProbe {
+    size_t calls{0};
+    std::optional<T> value;
+
+    static void complete(void* context, T value) noexcept {
+        auto* self = static_cast<CompletionProbe*>(context);
+        ++self->calls;
+        self->value.emplace(std::move(value));
+    }
+};
+
+} // namespace
 
 TEST(DeliveryReceiptTest, DefaultConstructedNotReady) {
     DeliveryReceipt receipt;
@@ -115,4 +131,56 @@ TEST(DeliveryReceiptTest, CancelOnAlreadyResolvedIsNoop) {
     receipt.cancel();
     EXPECT_TRUE(receipt.ready());
     EXPECT_EQ(receipt.get().status, DeliveryStatus::Accepted);
+}
+
+TEST(DeliveryReceiptTest, FixedPortFiresForAlreadyResolvedReceipt) {
+    DeliveryResult delivered;
+    delivered.status = DeliveryStatus::Accepted;
+    DeliveryReceipt receipt(delivered);
+    CompletionProbe<DeliveryResult> probe;
+
+    ASSERT_TRUE(receipt.on_complete(CompletionPort<DeliveryResult>{
+        &probe, &CompletionProbe<DeliveryResult>::complete, nullptr}));
+    EXPECT_EQ(probe.calls, 1u);
+    ASSERT_TRUE(probe.value.has_value());
+    EXPECT_EQ(probe.value->status, DeliveryStatus::Accepted);
+}
+
+TEST(DeliveryReceiptTest, FixedPortCompletesExactlyOnce) {
+    auto state = std::make_shared<DeliveryReceipt::SharedState>();
+    DeliveryReceipt receipt(std::move(state));
+    CompletionProbe<DeliveryResult> probe;
+
+    ASSERT_TRUE(receipt.on_complete(CompletionPort<DeliveryResult>{
+        &probe, &CompletionProbe<DeliveryResult>::complete, nullptr}));
+    EXPECT_FALSE(receipt.on_complete(CompletionPort<DeliveryResult>{
+        &probe, &CompletionProbe<DeliveryResult>::complete, nullptr}));
+
+    DeliveryResult dr;
+    dr.status = DeliveryStatus::Accepted;
+    receipt.cancel(); // resolve via cancel
+    EXPECT_EQ(probe.calls, 1u);
+}
+
+TEST(DeliveryReceiptTest, FixedPortRejectsWhenStdFunctionAlreadySet) {
+    auto state = std::make_shared<DeliveryReceipt::SharedState>();
+    DeliveryReceipt receipt(std::move(state));
+    receipt.on_complete([](DeliveryResult) {});
+
+    CompletionProbe<DeliveryResult> probe;
+    EXPECT_FALSE(receipt.on_complete(CompletionPort<DeliveryResult>{
+        &probe, &CompletionProbe<DeliveryResult>::complete, nullptr}));
+    EXPECT_EQ(probe.calls, 0u);
+}
+
+TEST(DeliveryReceiptTest, StdFunctionRejectedWhenFixedPortAlreadySet) {
+    auto state = std::make_shared<DeliveryReceipt::SharedState>();
+    DeliveryReceipt receipt(std::move(state));
+    CompletionProbe<DeliveryResult> probe;
+    ASSERT_TRUE(receipt.on_complete(CompletionPort<DeliveryResult>{
+        &probe, &CompletionProbe<DeliveryResult>::complete, nullptr}));
+
+    bool called = false;
+    receipt.on_complete([&](DeliveryResult) { called = true; });
+    EXPECT_FALSE(called);
 }
