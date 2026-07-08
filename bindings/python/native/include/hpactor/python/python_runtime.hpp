@@ -60,6 +60,32 @@ struct PythonRuntimeSnapshot final {
     /// Cumulative count of completions rejected due to stale generation.
     uint64_t stale_completion_rejected{0};
 
+    // ── Phase 1C extended fields ───────────────────────────────────────────
+
+    /// Cumulative dispatch rejections (queue full).
+    uint64_t dispatch_rejected{0};
+
+    /// Cumulative command rejections (queue full).
+    uint64_t command_rejected{0};
+
+    /// Cumulative unhandled handler exceptions.
+    uint64_t handler_exceptions{0};
+
+    /// Cumulative cancelled handlers.
+    uint64_t handler_cancelled{0};
+
+    /// Cumulative stale completions (all sources).
+    uint64_t stale_completions{0};
+
+    /// Monotonic timestamp of last heartbeat (ns), 0 if never.
+    uint64_t last_heartbeat_ns{0};
+
+    /// Computed event loop lag (ns) at snapshot time.
+    uint64_t loop_lag_ns{0};
+
+    /// true when state is Running and heartbeat is fresh.
+    bool ready{false};
+
     /// Read-end file descriptor of the dispatch notifier, or -1 if closed.
     int dispatch_notifier_fd{-1};
 
@@ -290,6 +316,28 @@ class PythonRuntime final {
     /// \return A PythonRuntimeSnapshot with current values.
     [[nodiscard]] PythonRuntimeSnapshot snapshot() const noexcept;
 
+    // ── Phase 1C reliability counters ──────────────────────────────────────
+
+    /// \brief Record a heartbeat from the Python event loop.
+    ///
+    /// \param[in] now_ns Monotonic timestamp in nanoseconds.
+    void record_heartbeat(uint64_t now_ns) noexcept;
+
+    /// \brief Increment the dispatch-rejected counter.
+    void record_dispatch_rejected() noexcept;
+
+    /// \brief Increment the command-rejected counter.
+    void record_command_rejected() noexcept;
+
+    /// \brief Increment the handler-exception counter.
+    void record_handler_exception() noexcept;
+
+    /// \brief Increment the handler-cancelled counter.
+    void record_handler_cancelled() noexcept;
+
+    /// \brief Increment the stale-completion counter.
+    void record_stale_completion() noexcept;
+
   private:
     friend class PythonActorLease;
 
@@ -316,6 +364,14 @@ class PythonRuntime final {
     size_t actor_reservation_count_{0};
     std::atomic<uint64_t> actor_generation_counter_{0};
     std::atomic<uint64_t> stale_completion_rejected_{0};
+
+    // Phase 1C reliability counters (relaxed).
+    std::atomic<uint64_t> dispatch_rejected_{0};
+    std::atomic<uint64_t> command_rejected_{0};
+    std::atomic<uint64_t> handler_exceptions_{0};
+    std::atomic<uint64_t> handler_cancelled_{0};
+    std::atomic<uint64_t> stale_completions_{0};
+    std::atomic<uint64_t> last_heartbeat_ns_{0};
 
     std::atomic<PythonRuntimeState> state_{PythonRuntimeState::Created};
     std::atomic<bool> admission_open_{true};

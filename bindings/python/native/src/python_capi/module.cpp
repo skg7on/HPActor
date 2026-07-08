@@ -14,6 +14,10 @@ static struct PyModuleDef hpactor_module = {
     "HPActor native Python binding (limited API)",
     -1,
     hpactor_methods,
+    nullptr, // m_slots
+    nullptr, // m_traverse
+    nullptr, // m_clear
+    nullptr, // m_free
 };
 
 PyMODINIT_FUNC PyInit__hpactor(void) {

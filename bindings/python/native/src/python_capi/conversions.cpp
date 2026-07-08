@@ -12,10 +12,11 @@ bool parse_config(PyObject* dict, PythonRuntimeConfig& out) noexcept {
     // Accept subset of known keys; missing keys keep defaults.
     // Stub: accept the default config for now.
     (void)dict;
+    (void)out;
     return true;
 }
 
-PyObject* address_to_tuple(const ActorAddress& addr) {
+PyObject* address_to_tuple(const ActorAddress& /*addr*/) {
     // Stub: return an empty tuple for now.
     return PyTuple_New(0);
 }

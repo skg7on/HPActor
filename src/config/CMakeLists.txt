@@ -6,6 +6,7 @@ target_sources(hpactor_lib PRIVATE
     actor_factory_registry.cpp
     binary_loader.cpp
     binary_serializer.cpp
+    python_binding_config.cpp
     toml_parser.cpp
     toml_parser_registry.cpp
     toml_table_view.cpp
@@ -18,6 +19,7 @@ target_sources(hpactor_lib PRIVATE
     parsers/metrics_config_parser.cpp
     parsers/passivation_config_parser.cpp
     parsers/process_config_parser.cpp
+    parsers/python_binding_config_parser.cpp
     parsers/quarantine_parser.cpp
     parsers/shutdown_config_parser.cpp
     parsers/system_core_config_parser.cpp

@@ -334,6 +334,26 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-07-05-python-binding-phase1b-actor-api.md`.
 
+**Python Binding Phase 1C Reliability and Operations** ✅ Complete (2026-07-08)
+- `config::PythonBindingConfig` — dependency-free validated config for `[system.python]` TOML table (10 fields with power-of-two capacities, drain budgets, loop lag, shutdown timeout). Self-registering parser at `kOrder=105` via `TomlSystemParserRegistration`.
+- `PythonDispatchKind` enum (Message=0, LinkedExit=1, MonitorDown=2, Restart=3) and bounded `PythonFailureMetadata` (FailureReason, FailureSource::LanguageBinding, error_code, exception_type, detail, traceback).
+- `PythonActorSnapshot` — point-in-time CLI-inspectable state (generation, handled, failures, restarts, cancellations, pending_turns, active_turn, quarantined, actor_type).
+- `PythonRuntime` heartbeat and counter API: `record_heartbeat(now_ns)`, `record_dispatch_rejected()`, `record_command_rejected()`, `record_handler_exception()`, `record_handler_cancelled()`, `record_stale_completion()`. `PythonRuntimeSnapshot` extended with `dispatch_rejected`, `command_rejected`, `handler_exceptions`, `handler_cancelled`, `stale_completions`, `last_heartbeat_ns`, `loop_lag_ns`, `ready`.
+- `PythonReliabilityController` — bounded table keyed by ActorId with generation, `PythonSupervisionConfig` (max_restarts, restart_window_ms, quarantine_on_exhaustion), restart budget window tracking. Returns `PythonFailureDirective` (Restart/Stop/Escalate/Quarantine). Fixed `PythonReliabilityPort` function-pointer callbacks.
+- `PythonBridgeActor` now inherits both `EventBasedActor` and `LifecycleActor` with `as_lifecycle()` override and full lifecycle hooks: `on_drain()`, `on_stop()`, `on_deactivate()`, `on_fail(error)`, `on_restart()`, `on_quarantined(QuarantineReason)`. Restart allocates replacement generation through `PythonRuntime::reserve_actor()`, enqueues `PythonDispatchKind::Restart` dispatch.
+- `PythonObservability` — stub surface for 11 metric families, bounded structured logs, and `begin_handler_span`/`finish_handler_span` span token API.
+- `PythonInspectionService` — bounded asynchronous inspection with `inspect()`/`complete()`/`cancel_all()`; `PythonInspectResult` with detail_json bounded at 16 KiB.
+- `PythonRuntimeHealthCheck` — snapshot-only readiness check returning Healthy when Running with fresh heartbeat; queue pressure alone does not make the node unready.
+- `PythonShutdownAdapter` — 10-step shutdown coordinator with `handler_shutdown_timeout_ms`, `python_objects_quiesced` flag for late-callback fencing.
+- `PythonDispatchEnvelope` extended with `PythonDispatchKind kind` and bounded `PythonFailureMetadata failure` for non-message dispatch records.
+- `PythonNativeSystem` updated with `PythonReliabilityController reliability_` member; spawn calls pass `PythonSupervisionConfig`.
+- Build: `python_binding_config.cpp` and `parsers/python_binding_config_parser.cpp` added to `hpactor_lib`; `python_reliability.cpp`, `python_observability.cpp`, `python_inspection.cpp`, `python_health_check.cpp` added to `hpactor_python_native`.
+- CAPI build fixes: `PyModuleDef` m_slots initializer, `PyType_GetSlot` for tp_free, `reinterpret_cast` for type slots, forward-declaration-based `python_health_check.hpp` and `python_shutdown_adapter.hpp`.
+- Tests: `test_python_binding_config.cpp` (19 tests: config defaults, validation bounds, append-only enum values, Phase 1C contract invariants). All 206 Python binding tests pass (up from 183).
+- The Phase 1C bridge is a build-tree development surface. ABI3 wheel production, platform repair, clean-environment installation, release documentation, and supported distribution begin in Phase 1D; the developer manual's "no official bindings" limitation remains accurate.
+- Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-05-python-binding-phase1c-reliability-operations.md`.
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,

@@ -22,6 +22,7 @@
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/python/python_bridge_actor.hpp>
+#include <hpactor/python/python_reliability.hpp>
 #include <hpactor/python/python_runtime.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
@@ -57,8 +58,10 @@ TEST(PythonBridgeActorTest, TransfersCompleteEnvelopeOnActorTurn) {
     ActorSystem system(cfg);
     test::SchedulerTestDriver driver(system);
 
-    auto bridge =
-        system.spawn<python::PythonBridgeActor>(*runtime, std::move(*lease));
+    python::PythonReliabilityController reliability;
+    auto bridge = system.spawn<python::PythonBridgeActor>(
+        *runtime, std::move(*lease), reliability,
+        python::PythonSupervisionConfig{});
 
     TypedMessage message(TypeTag::User, StreamBuffer{1, 2, 3});
     message.set_sender_address(

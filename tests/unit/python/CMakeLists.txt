@@ -1,5 +1,6 @@
 add_executable(test_unit_python_binding
     test_native_notifier.cpp
+    test_python_binding_config.cpp
     test_python_bridge_actor.cpp
     test_python_command_proto.cpp
     test_python_contracts.cpp

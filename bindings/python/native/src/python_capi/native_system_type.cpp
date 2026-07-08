@@ -2,6 +2,7 @@
 #define Py_LIMITED_API 0x030B0000
 #include "native_system_type.hpp"
 #include "conversions.hpp"
+#include <hpactor/actor/system/actor_system.hpp>
 #include <new>
 
 namespace hpactor::python::capi {
@@ -14,7 +15,12 @@ static void native_system_dealloc(PyObject* self) {
         delete ns->native;
         ns->native = nullptr;
     }
-    Py_TYPE(self)->tp_free(self);
+    // Use the heap-type's free slot via the limited API.
+    auto* free_func =
+        reinterpret_cast<freefunc>(PyType_GetSlot(Py_TYPE(self), Py_tp_free));
+    if (free_func) {
+        free_func(self);
+    }
 }
 
 // ── NativeSystem.__init__ ────────────────────────────────────────────────
@@ -121,15 +127,15 @@ static PyGetSetDef native_system_getset[] = {
      "Read-end fd for the dispatch notifier.", nullptr},
     {"completion_fd", native_system_completion_fd, nullptr,
      "Read-end fd for the completion notifier.", nullptr},
-    {nullptr} // sentinel
+    {nullptr, nullptr, nullptr, nullptr, nullptr} // sentinel
 };
 
 // ── Type spec ────────────────────────────────────────────────────────────
 static PyType_Slot native_system_slots[] = {
-    {Py_tp_dealloc, (void*)native_system_dealloc},
-    {Py_tp_init, (void*)native_system_init},
-    {Py_tp_methods, (void*)native_system_methods},
-    {Py_tp_getset, (void*)native_system_getset},
+    {Py_tp_dealloc, reinterpret_cast<void*>(native_system_dealloc)},
+    {Py_tp_init, reinterpret_cast<void*>(native_system_init)},
+    {Py_tp_methods, reinterpret_cast<void*>(native_system_methods)},
+    {Py_tp_getset, reinterpret_cast<void*>(native_system_getset)},
     {0, nullptr}};
 
 static PyType_Spec native_system_spec = {
@@ -141,11 +147,13 @@ static PyType_Spec native_system_spec = {
 };
 
 PyTypeObject* init_native_system_type(PyObject* module) noexcept {
-    auto* type = (PyTypeObject*)PyType_FromSpec(&native_system_spec);
+    auto* type =
+        reinterpret_cast<PyTypeObject*>(PyType_FromSpec(&native_system_spec));
     if (!type)
         return nullptr;
-    if (PyModule_AddObject(module, "NativeSystem", (PyObject*)type) < 0) {
-        Py_DECREF(type);
+    if (PyModule_AddObject(module, "NativeSystem",
+                           reinterpret_cast<PyObject*>(type)) < 0) {
+        Py_DECREF(reinterpret_cast<PyObject*>(type));
         return nullptr;
     }
     return type;

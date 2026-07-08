@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/cli/config/cli_config.hpp>
+#include <hpactor/config/python_binding_config.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
@@ -202,6 +203,8 @@ struct SystemDef {
     hpactor::net::EndpointCircuitBreakerConfig transport_circuit_breaker;
     /// \brief Process configuration (mode, pidfile, stdio, working directory).
     process::ProcessConfig process;
+    /// \brief Python language binding configuration.
+    config::PythonBindingConfig python;
 };
 
 /// \brief The complete, validated, topologically sorted topology model.

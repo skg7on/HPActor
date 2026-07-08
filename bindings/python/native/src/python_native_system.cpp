@@ -87,8 +87,8 @@ result<void> PythonNativeSystem::start() noexcept {
         return result<void>::make(
             error(errors::mailbox_full, "no actor leases available"));
     }
-    application_bridge_ =
-        system_->spawn<PythonBridgeActor>(*runtime_, std::move(*lease_opt));
+    application_bridge_ = system_->spawn<PythonBridgeActor>(
+        *runtime_, std::move(*lease_opt), reliability_, PythonSupervisionConfig{});
     if (!application_bridge_) {
         return result<void>::make(
             error(errors::unknown, "failed to spawn application bridge"));
@@ -138,8 +138,8 @@ result<PythonSpawnedActor> PythonNativeSystem::spawn_bridge() noexcept {
     }
 
     auto gen = lease_opt->generation();
-    auto bridge =
-        system_->spawn<PythonBridgeActor>(*runtime_, std::move(*lease_opt));
+    auto bridge = system_->spawn<PythonBridgeActor>(
+        *runtime_, std::move(*lease_opt), reliability_, PythonSupervisionConfig{});
     if (!bridge) {
         return result<PythonSpawnedActor>::make(
             error(errors::unknown, "spawn failed"));
