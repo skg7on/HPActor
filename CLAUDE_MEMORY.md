@@ -315,6 +315,25 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-07-03-python-binding-phase1a.md`.
 
+**Python Binding Phase 1B Actor API** ✅ Complete (2026-07-08)
+- `CompletionPort<T>` — fixed function-pointer + context + keepalive completion port for move-only values; no `std::function`, no exceptions. Headers in `include/hpactor/msg/completion_port.hpp`.
+- `RequestHandle<T>::on_complete(CompletionPort)` and `DeliveryReceipt::on_complete(CompletionPort)` — exactly-once, mutex-safe fixed-port completions. Both forms reject double registration.
+- `python_binding_internal.proto` — process-local `PbPythonActorCommand` (23 fields) and `PbPythonActorFailed` (7 fields). Codec versioned with bounded-field validation (payload ≤ 16 MiB, detail ≤ 16 KiB, name ≤ 255 bytes).
+- `PythonCommand`/`PythonCompletion` extended with Phase 1B fields: `reply_to`, `message_id`, `ask_message_id`, `schedule_handle`, `detail`, `actor_name`, `delivery_mode`, `no_drop`, `emit_backpressure`, `FailureSource`, `error_code`, `delivery_status`, `retry_after_ns`.
+- `PythonCommandKind::CancelAsk` appended; `PythonCompletionKind::ScheduleResult`/`ActorStopped`/`ActorFailed` added.
+- `PythonCommandCodec` — deterministic protobuf encode/decode with validation of version, command kind, tag range (0x1000..0x00FFFFFF), and bounded fields.
+- Protected tags `0xF0`–`0xF3` rejected from ordinary and batch remote ingress in `InboundFrameRouter` (`is_python_binding_control_tag()` helper, `FrameDispatchCode::InvalidControlPayload`).
+- `PythonCommandRouter` — converts queue commands to protected F1/F2 system-lane messages and delivers to the originating bridge actor. Installed as the gateway's `PythonCommandExecutorPort`. Validates origin ActorId and generation before delivery.
+- `ActorContext::ask_raw(TypeTag)` — typed overload for request-response with explicit `TypeTag`, stamps generated ask message ID.
+- `PythonNativeSystem` — value-only ownership facade (owns `ActorSystem`, `PythonRuntime`, `PythonCommandRouter`, gateway wake adapter, application bridge). Lifecycle: `create` → `start` → (use) → `begin_draining` → `stop`. Methods: `spawn_bridge`, `stop_bridge`, `register_name`, `resolve_name`, `application_origin`, `submit`, `dispatch_read_fd`, `completion_read_fd`, `drain_dispatch`, `drain_completions`, `snapshot`.
+- `_hpactor` CPython limited-API extension scaffold — `Py_LIMITED_API=0x030B0000`, heap type `NativeSystem` wrapping `PythonNativeSystem*`. Methods: `start`, `stop`, `application_origin`, `dispatch_fd`, `completion_fd`. Python.h confined to `bindings/python/native/src/python_capi/`.
+- Pure-Python `hpactor` package: `_address` (frozen dataclasses), `_errors` (9 typed exceptions), `_delivery` (6 enums + `DeliveryOptions`/`DeliveryResult`/`DeliveryReceipt`), `_messages` (freezeable `MessageRegistry` with deterministic serialization), `_behavior` (immutable validated handler tables), `_actor` (`@actor` decorator + lifecycle hooks), `_context` (handler-scoped `ActorContext`), `_runtime` (bounded `_DispatchCoordinator`, `_ActorRunner` with per-actor FIFO, `_TokenRegistry`, dedicated `_RuntimeThread`), `_system` (`ActorSystem` async context manager with `spawn`/`send`/`ask`).
+- Tests: 7 C++ unit test files (command codec round-trip, tag detection, ask_raw overload signature, plus existing Phase 1A tests); 4 Python unit test files (address/delivery, registry, behavior/actor, actor system) — 22 Python tests + 12+ C++ tests passing. 183 architecture checks passing.
+- Key invariants: native queues/callbacks/facades never store Python objects. `Python.h`/`PyObject` confined to `python_capi/` directory. CAPI files contain no RTTI/exceptions/`std::function`. No RTTI/exceptions in any native binding production code.
+- The Phase 1B API is a build-tree development surface. ABI3 wheel production, repair, installation docs, and supported distribution begin in Phase 1D; the developer manual's "no official bindings" limitation remains accurate.
+- Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-05-python-binding-phase1b-actor-api.md`.
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,

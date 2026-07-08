@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/msg/completion_port.hpp>
 #include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -48,12 +49,14 @@ class DeliveryReceipt {
         std::condition_variable cv;
         std::optional<mailbox::DeliveryResult> result;
         std::function<void(mailbox::DeliveryResult)> callback;
+        CompletionPort<mailbox::DeliveryResult> fixed_port;
+        bool fixed_port_set{false};
         MessageId msg_id{};
 
         /// \brief Resolve the state with a final result.
         ///
         /// No-op if already resolved. Notifies waiters and invokes the
-        /// callback if set.
+        /// callback or fixed port if set.
         ///
         /// \param[in] r The final delivery result.
         void resolve(mailbox::DeliveryResult r);
@@ -99,8 +102,24 @@ class DeliveryReceipt {
     /// on the calling thread. Otherwise, it fires on whichever thread calls
     /// \c SharedState::resolve().
     ///
+    /// Rejected (returns silently) when a fixed completion port is already
+    /// installed.
+    ///
     /// \param[in] callback The callback to invoke. Must not block.
     void on_complete(std::function<void(mailbox::DeliveryResult)> callback);
+
+    /// \brief Register a fixed function-pointer completion port.
+    ///
+    /// If the receipt is already resolved, the port fires synchronously on
+    /// the calling thread. Otherwise, the port fires exactly once on the
+    /// thread that calls \c SharedState::resolve() or \c cancel().
+    ///
+    /// Rejected (returns \c false) when a \c std::function callback or
+    /// another fixed port is already installed.
+    ///
+    /// \param[in] port The completion port to register.
+    /// \return true if the port was installed or immediately invoked.
+    [[nodiscard]] bool on_complete(CompletionPort<mailbox::DeliveryResult> port);
 
     /// \brief Cancel tracking. The runtime stops retrying.
     ///
@@ -114,16 +133,16 @@ class DeliveryReceipt {
     ///         if the receipt is default-constructed (invalid).
     [[nodiscard]] MessageId message_id() const noexcept;
 
-  private:
-    friend class OutboundDeliveryTracker;
-
     /// \brief Construct from a pre-existing shared state.
     ///
-    /// Used by \c OutboundDeliveryTracker to create receipts linked to
-    /// its internal state.
+    /// Used by \c OutboundDeliveryTracker and tests to create receipts
+    /// linked to a pre-existing shared state.
     ///
     /// \param[in] state The shared state to link to.
     explicit DeliveryReceipt(std::shared_ptr<SharedState> state);
+
+  private:
+    friend class OutboundDeliveryTracker;
 
     std::shared_ptr<SharedState> state_;
 };

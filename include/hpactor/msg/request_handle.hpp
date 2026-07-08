@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/msg/completion_port.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -57,6 +58,8 @@ template <typename T> class RequestHandle {
         std::chrono::steady_clock::time_point deadline{
             std::chrono::steady_clock::time_point::max()};
         MessageId msg_id{};
+        CompletionPort<result<T>> fixed_completion;
+        bool completion_consumed{false};
         std::mutex mutex;
         std::condition_variable cv;
     };
@@ -130,12 +133,20 @@ template <typename T> class RequestHandle {
         if (state_->ready.load(std::memory_order_acquire)) {
             return; // Already resolved — no-op
         }
+        CompletionPort<result<T>> port;
         {
             std::lock_guard<std::mutex> lock(state_->mutex);
+            if (state_->cancelled) {
+                return;
+            }
             state_->cancelled = true;
+            port = std::move(state_->fixed_completion);
         }
         state_->ready.store(true, std::memory_order_release);
         state_->cv.notify_all();
+        if (port) {
+            port(result<T>::make(error(errors::cancelled, "request cancelled")));
+        }
     }
 
     /// \brief The message_id used for this request (for tracing correlation).
@@ -152,16 +163,58 @@ template <typename T> class RequestHandle {
         return state_->deadline;
     }
 
+    /// \brief Register a fixed function-pointer completion port.
+    ///
+    /// If the handle is already resolved, the port is invoked immediately
+    /// on the calling thread and the method returns \c true. Otherwise the
+    /// port is stored and invoked exactly once when the handle is resolved
+    /// or cancelled. Returns \c false if a callback was already installed
+    /// or the result was already consumed.
+    ///
+    /// \param[in] port The completion port to register.
+    /// \return true if the port was installed or immediately invoked.
+    [[nodiscard]] bool on_complete(CompletionPort<result<T>> port) {
+        std::unique_lock<std::mutex> lock(state_->mutex);
+        if (state_->completion_consumed) {
+            return false;
+        }
+        if (state_->inner.has_value() || state_->cancelled) {
+            // Already resolved — invoke immediately outside the mutex.
+            auto inner = std::move(*state_->inner);
+            bool was_cancelled = state_->cancelled;
+            state_->completion_consumed = true;
+            lock.unlock();
+            result<T> r =
+                was_cancelled
+                    ? result<T>::make(error(errors::cancelled, "request cancelled"))
+                    : std::move(inner);
+            port(std::move(r));
+            return true;
+        }
+        // Store for later invocation.
+        state_->fixed_completion = std::move(port);
+        state_->completion_consumed = true;
+        return true;
+    }
+
     // ── Internal (called by AskManager / RpcChannel) ────────────────────
 
     /// \brief Resolve the handle with a successful result.
     void resolve(result<T> value) {
+        CompletionPort<result<T>> port;
         {
             std::lock_guard<std::mutex> lock(state_->mutex);
+            if (state_->inner.has_value() || state_->cancelled) {
+                return; // already resolved
+            }
             state_->inner = std::move(value);
+            port = std::move(state_->fixed_completion);
         }
         state_->ready.store(true, std::memory_order_release);
         state_->cv.notify_all();
+        if (port) {
+            port(std::move(*state_->inner));
+        }
     }
 
     /// \brief Resolve the handle with an error.

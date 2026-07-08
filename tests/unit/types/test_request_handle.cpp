@@ -13,11 +13,23 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <hpactor/msg/completion_port.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <thread>
 
 namespace hpactor {
 namespace {
+
+template <typename T> struct CompletionProbe {
+    size_t calls{0};
+    std::optional<T> value;
+
+    static void complete(void* context, T value) noexcept {
+        auto* self = static_cast<CompletionProbe*>(context);
+        ++self->calls;
+        self->value.emplace(std::move(value));
+    }
+};
 
 TEST(RequestHandleTest, DefaultConstructionIsNotReady) {
     RequestHandle<StreamBuffer> h;
@@ -106,6 +118,57 @@ TEST(RequestHandleTest, MessageIdIsPreserved) {
     MessageId mid(42);
     RequestHandle<StreamBuffer> h(std::chrono::steady_clock::time_point::max(), mid);
     EXPECT_EQ(h.message_id().value(), 42u);
+}
+
+TEST(RequestHandleTest, FixedPortCompletesExactlyOnce) {
+    RequestHandle<StreamBuffer> handle;
+    CompletionProbe<result<StreamBuffer>> probe;
+    ASSERT_TRUE(handle.on_complete(CompletionPort<result<StreamBuffer>>{
+        &probe, &CompletionProbe<result<StreamBuffer>>::complete, nullptr}));
+
+    StreamBuffer buf;
+    buf.append(reinterpret_cast<const uint8_t*>("abc"), 3);
+    handle.resolve(result<StreamBuffer>::make(std::move(buf)));
+    EXPECT_EQ(probe.calls, 1u);
+    ASSERT_TRUE(probe.value.has_value());
+    ASSERT_TRUE(probe.value->ok());
+    EXPECT_EQ(probe.value->value().size(), 3u);
+    // Second registration must be rejected.
+    EXPECT_FALSE(handle.on_complete(CompletionPort<result<StreamBuffer>>{
+        &probe, &CompletionProbe<result<StreamBuffer>>::complete, nullptr}));
+}
+
+TEST(RequestHandleTest, FixedPortFiresForAlreadyResolvedHandle) {
+    RequestHandle<StreamBuffer> handle;
+    StreamBuffer buf;
+    buf.append(reinterpret_cast<const uint8_t*>("xyz"), 3);
+    handle.resolve(result<StreamBuffer>::make(std::move(buf)));
+
+    CompletionProbe<result<StreamBuffer>> probe;
+    ASSERT_TRUE(handle.on_complete(CompletionPort<result<StreamBuffer>>{
+        &probe, &CompletionProbe<result<StreamBuffer>>::complete, nullptr}));
+    EXPECT_EQ(probe.calls, 1u);
+    ASSERT_TRUE(probe.value.has_value());
+    ASSERT_TRUE(probe.value->ok());
+    EXPECT_EQ(probe.value->value().size(), 3u);
+}
+
+TEST(RequestHandleTest, FixedPortDoesNotRunUnderMutex) {
+    // Verify that the fixed-port callback does not run while the state mutex
+    // is held: if it did, re-entering on_complete would deadlock or fail.
+    RequestHandle<StreamBuffer> handle;
+    CompletionProbe<result<StreamBuffer>> probe;
+    ASSERT_TRUE(handle.on_complete(CompletionPort<result<StreamBuffer>>{
+        &probe, &CompletionProbe<result<StreamBuffer>>::complete, nullptr}));
+    // Resolve from another thread — the callback must complete without
+    // blocking.
+    std::thread t([&]() {
+        StreamBuffer buf;
+        buf.append(reinterpret_cast<const uint8_t*>("t"), 1);
+        handle.resolve(result<StreamBuffer>::make(std::move(buf)));
+    });
+    t.join();
+    EXPECT_EQ(probe.calls, 1u);
 }
 
 } // namespace

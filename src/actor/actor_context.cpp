@@ -523,6 +523,36 @@ ActorContext::ask_raw(const ActorAddress& target,
     return h;
 }
 
+RequestHandle<StreamBuffer>
+ActorContext::ask_raw(const ActorAddress& target, TypeTag request_type,
+                      const StreamBuffer& encoded_request, RequestTimeout timeout) {
+    if (!system_) {
+        RequestHandle<StreamBuffer> h;
+        h.resolve_error(error(errors::unknown, "no system"));
+        return h;
+    }
+
+    ActorRef ref = resolve(target);
+
+    if (ref.is_local()) {
+        ActorId requester_id = owner_ ? owner_.address().id : ActorId{0};
+        auto reg = system_->ask_manager()->register_ask(
+            requester_id, target, timeout, system_->config().default_ask_timeout_ms);
+
+        TypedMessage msg(request_type, encoded_request);
+        msg.set_ask_message_id(reg.msg_id.value());
+        send(target, std::move(msg));
+
+        return std::move(reg.handle);
+    }
+
+    // Remote: not yet bridged through ask(); return error handle
+    RequestHandle<StreamBuffer> h2;
+    h2.resolve_error(error(errors::unknown, "remote ask not yet supported via "
+                                            "ask_raw"));
+    return h2;
+}
+
 RpcFuture<StreamBuffer>
 ActorContext::http_get(const std::string& url, std::vector<net::HttpHeader> headers) {
     return system_->http_client().get(url, std::move(headers));

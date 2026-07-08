@@ -1,6 +1,7 @@
 add_executable(test_unit_actor
     test_disruptor_mailbox_actor.cpp
     test_abstract_actor.cpp
+    test_actor_context_ask_raw.cpp
     test_behavior_builder.cpp
     test_behavior_combinators.cpp
     test_behavior_fsm.cpp
