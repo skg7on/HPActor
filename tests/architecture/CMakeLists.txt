@@ -294,9 +294,12 @@ add_test(
 
 # ── Python Binding architecture fitness ───────────────────────────────────
 
+# Non-CAPI native files: must NOT contain Python.h, PyObject, RTTI, exceptions,
+# or std::function.
 file(GLOB_RECURSE _python_native_files CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/bindings/python/native/include/*.hpp
     ${CMAKE_SOURCE_DIR}/bindings/python/native/src/*.cpp)
+list(FILTER _python_native_files EXCLUDE REGEX "src/python_capi/")
 set(_python_native_forbidden
     "Python.h" "PyObject" "dynamic_cast" "typeid" "throw "
     "try {" "catch (" "std::function")
@@ -307,6 +310,23 @@ foreach(_file IN LISTS _python_native_files)
         COMMAND ${CMAKE_COMMAND}
             -DINPUT_FILE=${_file}
             "-DFORBIDDEN=${_python_native_forbidden}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
+endforeach()
+
+# CAPI files: allowed to contain Python.h and PyObject, but must NOT contain
+# RTTI or exceptions.
+file(GLOB_RECURSE _python_capi_files CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/bindings/python/native/src/python_capi/*.cpp
+    ${CMAKE_SOURCE_DIR}/bindings/python/native/src/python_capi/*.hpp)
+set(_python_capi_forbidden
+    "dynamic_cast" "typeid" "throw " "try {" "catch (" "std::function")
+foreach(_file IN LISTS _python_capi_files)
+    string(MAKE_C_IDENTIFIER "${_file}" _python_capi_test_suffix)
+    add_test(
+        NAME PythonBindingArchitecture.NoRttiInCapi.${_python_capi_test_suffix}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_python_capi_forbidden}"
             -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
 endforeach()
 
