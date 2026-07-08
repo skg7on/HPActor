@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-08 09:15:49</td>
+            <td class="headerValue">2026-07-08 11:32:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">48.7&nbsp;%</td>
@@ -593,7 +593,7 @@
 <span id="L514"><span class="lineNum">     514</span>                 :             :                     }</span>
 <span id="L515"><span class="lineNum">     515</span>                 :<span class="tlaGNC">         384 :                     return ids;</span></span>
 <span id="L516"><span class="lineNum">     516</span>                 :<span class="tlaGNC">         384 :                 },</span></span>
-<span id="L517"><span class="lineNum">     517</span>                 :<span class="tlaGNC">       12916 :             .get_actor = [this](ActorId id) { return get_actor(id); },</span></span>
+<span id="L517"><span class="lineNum">     517</span>                 :<span class="tlaGNC">       12911 :             .get_actor = [this](ActorId id) { return get_actor(id); },</span></span>
 <span id="L518"><span class="lineNum">     518</span>                 :<span class="tlaGNC">         799 :             .get_mailbox_raw = [this](ActorId id) -&gt; void* {</span></span>
 <span id="L519"><span class="lineNum">     519</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 auto mailbox = impl_-&gt;actors.directory.find_mailbox(id);</span></span>
 <span id="L520"><span class="lineNum">     520</span>                 :<span class="tlaUNC">           0 :                 return static_cast&lt;void*&gt;(mailbox.get());</span></span>
@@ -761,18 +761,18 @@
 <span id="L680"><span class="lineNum">     680</span>                 :<span class="tlaUNC">           0 :     return ActorTypeDef{};</span></span>
 <span id="L681"><span class="lineNum">     681</span>                 :             : }</span>
 <span id="L682"><span class="lineNum">     682</span>                 :             : </span>
-<span id="L683"><span class="lineNum">     683</span>                 :<span class="tlaGNC tlaBgGNC">       34564 : std::shared_ptr&lt;AbstractActor&gt; ActorSystem::get_actor(ActorId id) {</span></span>
-<span id="L684"><span class="lineNum">     684</span>                 :<span class="tlaGNC">       34564 :     auto entry = impl_-&gt;actors.directory.find(id);</span></span>
-<span id="L685"><span class="lineNum">     685</span>         [<span class="tlaGBC" title="Branch 0 was taken 34548 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 16 times"> + </span>]:<span class="tlaGNC">       34564 :     if (entry.has_value()) {</span></span>
-<span id="L686"><span class="lineNum">     686</span>                 :<span class="tlaGNC">       34548 :         return entry-&gt;instance;</span></span>
+<span id="L683"><span class="lineNum">     683</span>                 :<span class="tlaGNC tlaBgGNC">       34818 : std::shared_ptr&lt;AbstractActor&gt; ActorSystem::get_actor(ActorId id) {</span></span>
+<span id="L684"><span class="lineNum">     684</span>                 :<span class="tlaGNC">       34818 :     auto entry = impl_-&gt;actors.directory.find(id);</span></span>
+<span id="L685"><span class="lineNum">     685</span>         [<span class="tlaGBC" title="Branch 0 was taken 34802 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 16 times"> + </span>]:<span class="tlaGNC">       34818 :     if (entry.has_value()) {</span></span>
+<span id="L686"><span class="lineNum">     686</span>                 :<span class="tlaGNC">       34802 :         return entry-&gt;instance;</span></span>
 <span id="L687"><span class="lineNum">     687</span>                 :             :     }</span>
 <span id="L688"><span class="lineNum">     688</span>                 :<span class="tlaGNC">          16 :     return nullptr;</span></span>
-<span id="L689"><span class="lineNum">     689</span>                 :<span class="tlaGNC">       34564 : }</span></span>
+<span id="L689"><span class="lineNum">     689</span>                 :<span class="tlaGNC">       34818 : }</span></span>
 <span id="L690"><span class="lineNum">     690</span>                 :             : </span>
-<span id="L691"><span class="lineNum">     691</span>                 :<span class="tlaGNC">      133276 : mailbox::MPSCActorMailbox&lt;TypedMessage&gt;* ActorSystem::get_mailbox(ActorId id) {</span></span>
-<span id="L692"><span class="lineNum">     692</span>                 :<span class="tlaGNC">      133276 :     auto mailbox = impl_-&gt;actors.directory.find_mailbox(id);</span></span>
-<span id="L693"><span class="lineNum">     693</span>                 :<span class="tlaGNC">      133276 :     return mailbox.get();</span></span>
-<span id="L694"><span class="lineNum">     694</span>                 :<span class="tlaGNC">      133276 : }</span></span>
+<span id="L691"><span class="lineNum">     691</span>                 :<span class="tlaGNC">      133253 : mailbox::MPSCActorMailbox&lt;TypedMessage&gt;* ActorSystem::get_mailbox(ActorId id) {</span></span>
+<span id="L692"><span class="lineNum">     692</span>                 :<span class="tlaGNC">      133253 :     auto mailbox = impl_-&gt;actors.directory.find_mailbox(id);</span></span>
+<span id="L693"><span class="lineNum">     693</span>                 :<span class="tlaGNC">      133253 :     return mailbox.get();</span></span>
+<span id="L694"><span class="lineNum">     694</span>                 :<span class="tlaGNC">      133253 : }</span></span>
 <span id="L695"><span class="lineNum">     695</span>                 :             : </span>
 <span id="L696"><span class="lineNum">     696</span>                 :             : std::optional&lt;mailbox::DisruptorMailboxHandle&gt;</span>
 <span id="L697"><span class="lineNum">     697</span>                 :<span class="tlaUNC tlaBgUNC">           0 : ActorSystem::get_fixed_binding(ActorId id) {</span></span>
@@ -871,8 +871,8 @@
 <span id="L790"><span class="lineNum">     790</span>                 :<span class="tlaGNC">           1 :     return *impl_-&gt;rpc_channel_;</span></span>
 <span id="L791"><span class="lineNum">     791</span>                 :             : }</span>
 <span id="L792"><span class="lineNum">     792</span>                 :             : </span>
-<span id="L793"><span class="lineNum">     793</span>                 :<span class="tlaGNC">      259568 : tracing::TraceManager* ActorSystem::trace_manager() noexcept {</span></span>
-<span id="L794"><span class="lineNum">     794</span>                 :<span class="tlaGNC">      259568 :     return impl_-&gt;observability_-&gt;trace_manager();</span></span>
+<span id="L793"><span class="lineNum">     793</span>                 :<span class="tlaGNC">      259543 : tracing::TraceManager* ActorSystem::trace_manager() noexcept {</span></span>
+<span id="L794"><span class="lineNum">     794</span>                 :<span class="tlaGNC">      259543 :     return impl_-&gt;observability_-&gt;trace_manager();</span></span>
 <span id="L795"><span class="lineNum">     795</span>                 :             : }</span>
 <span id="L796"><span class="lineNum">     796</span>                 :             : </span>
 <span id="L797"><span class="lineNum">     797</span>                 :<span class="tlaUNC tlaBgUNC">           0 : const tracing::TraceManager* ActorSystem::trace_manager() const noexcept {</span></span>
@@ -948,8 +948,8 @@
 <span id="L867"><span class="lineNum">     867</span>                 :<span class="tlaUNC">           0 :     return impl_-&gt;core.proto_registry;</span></span>
 <span id="L868"><span class="lineNum">     868</span>                 :             : }</span>
 <span id="L869"><span class="lineNum">     869</span>                 :             : </span>
-<span id="L870"><span class="lineNum">     870</span>                 :<span class="tlaGNC tlaBgGNC">         414 : EndPoint ActorSystem::endpoint() const {</span></span>
-<span id="L871"><span class="lineNum">     871</span>                 :<span class="tlaGNC">         414 :     return impl_-&gt;core.endpoint;</span></span>
+<span id="L870"><span class="lineNum">     870</span>                 :<span class="tlaGNC tlaBgGNC">         412 : EndPoint ActorSystem::endpoint() const {</span></span>
+<span id="L871"><span class="lineNum">     871</span>                 :<span class="tlaGNC">         412 :     return impl_-&gt;core.endpoint;</span></span>
 <span id="L872"><span class="lineNum">     872</span>                 :             : }</span>
 <span id="L873"><span class="lineNum">     873</span>                 :             : </span>
 <span id="L874"><span class="lineNum">     874</span>                 :<span class="tlaGNC">          76 : bool ActorSystem::is_running() const {</span></span>
@@ -965,12 +965,12 @@
 <span id="L884"><span class="lineNum">     884</span>                 :<span class="tlaGNC">           3 :     return impl_-&gt;core.config;</span></span>
 <span id="L885"><span class="lineNum">     885</span>                 :             : }</span>
 <span id="L886"><span class="lineNum">     886</span>                 :             : </span>
-<span id="L887"><span class="lineNum">     887</span>                 :<span class="tlaGNC">         316 : sched::IScheduler* ActorSystem::scheduler() {</span></span>
-<span id="L888"><span class="lineNum">     888</span>                 :<span class="tlaGNC">         316 :     return impl_-&gt;core.scheduler.get();</span></span>
+<span id="L887"><span class="lineNum">     887</span>                 :<span class="tlaGNC">         309 : sched::IScheduler* ActorSystem::scheduler() {</span></span>
+<span id="L888"><span class="lineNum">     888</span>                 :<span class="tlaGNC">         309 :     return impl_-&gt;core.scheduler.get();</span></span>
 <span id="L889"><span class="lineNum">     889</span>                 :             : }</span>
 <span id="L890"><span class="lineNum">     890</span>                 :             : </span>
-<span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaGNC">      133245 : bool ActorSystem::use_coroutines() const {</span></span>
-<span id="L892"><span class="lineNum">     892</span>                 :<span class="tlaGNC">      133245 :     return impl_-&gt;core.config.use_coroutines;</span></span>
+<span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaGNC">      133222 : bool ActorSystem::use_coroutines() const {</span></span>
+<span id="L892"><span class="lineNum">     892</span>                 :<span class="tlaGNC">      133222 :     return impl_-&gt;core.config.use_coroutines;</span></span>
 <span id="L893"><span class="lineNum">     893</span>                 :             : }</span>
 <span id="L894"><span class="lineNum">     894</span>                 :             : </span>
 <span id="L895"><span class="lineNum">     895</span>                 :<span class="tlaGNC">          25 : AskManager* ActorSystem::ask_manager() {</span></span>
@@ -1066,11 +1066,11 @@
 <span id="L985"><span class="lineNum">     985</span>                 :             : // ── Delivery pipeline (delegates to MessagingRuntime) ────────────────────────</span>
 <span id="L986"><span class="lineNum">     986</span>                 :             : </span>
 <span id="L987"><span class="lineNum">     987</span>                 :             : mailbox::EnqueueResult</span>
-<span id="L988"><span class="lineNum">     988</span>                 :<span class="tlaGNC">      126984 : ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,</span></span>
+<span id="L988"><span class="lineNum">     988</span>                 :<span class="tlaGNC">      126977 : ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,</span></span>
 <span id="L989"><span class="lineNum">     989</span>                 :             :                                uint8_t priority, int64_t deadline_ns,</span>
 <span id="L990"><span class="lineNum">     990</span>                 :             :                                mailbox::DeliveryOptions options) {</span>
-<span id="L991"><span class="lineNum">     991</span>                 :<span class="tlaGNC">      253968 :     return impl_-&gt;messaging_-&gt;try_deliver(target, std::move(msg), priority,</span></span>
-<span id="L992"><span class="lineNum">     992</span>                 :<span class="tlaGNC">      126984 :                                           deadline_ns, options);</span></span>
+<span id="L991"><span class="lineNum">     991</span>                 :<span class="tlaGNC">      253954 :     return impl_-&gt;messaging_-&gt;try_deliver(target, std::move(msg), priority,</span></span>
+<span id="L992"><span class="lineNum">     992</span>                 :<span class="tlaGNC">      126977 :                                           deadline_ns, options);</span></span>
 <span id="L993"><span class="lineNum">     993</span>                 :             : }</span>
 <span id="L994"><span class="lineNum">     994</span>                 :             : </span>
 <span id="L995"><span class="lineNum">     995</span>                 :             : mailbox::DeliveryResult</span>
@@ -1087,9 +1087,9 @@
 <span id="L1006"><span class="lineNum">    1006</span>                 :<span class="tlaGNC">          52 :         target, std::move(msg), FastDeliveryReason::CompatibilityExplicit);</span></span>
 <span id="L1007"><span class="lineNum">    1007</span>                 :             : }</span>
 <span id="L1008"><span class="lineNum">    1008</span>                 :             : </span>
-<span id="L1009"><span class="lineNum">    1009</span>                 :<span class="tlaGNC">        5829 : void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {</span></span>
-<span id="L1010"><span class="lineNum">    1010</span>                 :<span class="tlaGNC">        5829 :     (void)impl_-&gt;messaging_-&gt;try_deliver(target, std::move(msg), 0, INT64_MAX, {});</span></span>
-<span id="L1011"><span class="lineNum">    1011</span>                 :<span class="tlaGNC">        5829 : }</span></span>
+<span id="L1009"><span class="lineNum">    1009</span>                 :<span class="tlaGNC">        5822 : void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {</span></span>
+<span id="L1010"><span class="lineNum">    1010</span>                 :<span class="tlaGNC">        5822 :     (void)impl_-&gt;messaging_-&gt;try_deliver(target, std::move(msg), 0, INT64_MAX, {});</span></span>
+<span id="L1011"><span class="lineNum">    1011</span>                 :<span class="tlaGNC">        5822 : }</span></span>
 <span id="L1012"><span class="lineNum">    1012</span>                 :             : </span>
 <span id="L1013"><span class="lineNum">    1013</span>                 :<span class="tlaGNC">           2 : void ActorSystem::record_actor_timeout(ActorId target) {</span></span>
 <span id="L1014"><span class="lineNum">    1014</span>                 :<span class="tlaGNC">           2 :     auto actor_ptr = get_actor(target);</span></span>

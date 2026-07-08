@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-08 09:15:49</td>
+            <td class="headerValue">2026-07-08 11:32:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">70.4&nbsp;%</td>
@@ -141,8 +141,8 @@
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC tlaBgGNC">        6789 :     virtual ~AbstractActor() = default;</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     /// \brief Globally-unique actor identifier assigned at spawn.</span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      167825 :     ActorId id() const {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      167825 :         return id_;</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      167794 :     ActorId id() const {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      167794 :         return id_;</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     }</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     /// \brief Pointer to the actor's \c ActorId for consumers that need</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     ///        an address without copying.</span>
@@ -154,12 +154,12 @@
 <span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">        6637 :         return type_;</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     }</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     /// \brief Full network-addressable identity.</span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">      261709 :     ActorAddress address() const {</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      261709 :         return address_;</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">      261688 :     ActorAddress address() const {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      261688 :         return address_;</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     }</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     /// \brief Owning \c ActorSystem reference.</span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      395214 :     ActorSystem&amp; system() {</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">      395214 :         return system_;</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      395182 :     ActorSystem&amp; system() {</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">      395182 :         return system_;</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     }</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     const ActorSystem&amp; system() const {</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :         return system_;</span>
@@ -206,15 +206,15 @@
 <span id="L128"><span class="lineNum">     128</span>                 :             :     virtual void receive(TypedMessage&amp; msg) = 0;</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : </span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     /// \brief RTTI-free query for \c EventBasedActor subclasses.</span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">          10 :     virtual bool is_event_based_actor() const {</span></span>
-<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">          10 :         return false;</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">           9 :     virtual bool is_event_based_actor() const {</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           9 :         return false;</span></span>
 <span id="L133"><span class="lineNum">     133</span>                 :             :     }</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             : </span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// \brief RTTI-free downcast to the \c LifecycleActor mixin.</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             :     ///</span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :     /// Returns \c nullptr for actors that do not opt into lifecycle management.</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">      414934 :     virtual LifecycleActor* as_lifecycle() {</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">      414934 :         return nullptr;</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">      414889 :     virtual LifecycleActor* as_lifecycle() {</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">      414889 :         return nullptr;</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :     }</span>
 <span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">          10 :     virtual const LifecycleActor* as_lifecycle() const {</span></span>
 <span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">          10 :         return nullptr;</span></span>
@@ -279,8 +279,8 @@
 <span id="L201"><span class="lineNum">     201</span>                 :             :     /// Default is \c VariableMpsc. Fixed-mailbox actors override to</span>
 <span id="L202"><span class="lineNum">     202</span>                 :             :     /// \c Disruptor so the scheduler and delivery engine can</span>
 <span id="L203"><span class="lineNum">     203</span>                 :             :     /// select the correct backend without RTTI.</span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">      139930 :     [[nodiscard]] virtual mailbox::MailboxKind mailbox_kind() const noexcept {</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">      139930 :         return mailbox::MailboxKind::VariableMpsc;</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">      139907 :     [[nodiscard]] virtual mailbox::MailboxKind mailbox_kind() const noexcept {</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">      139907 :         return mailbox::MailboxKind::VariableMpsc;</span></span>
 <span id="L206"><span class="lineNum">     206</span>                 :             :     }</span>
 <span id="L207"><span class="lineNum">     207</span>                 :             : </span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :     /// \brief Create the fixed mailbox binding for this actor.</span>

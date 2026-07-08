@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-08 09:15:49</td>
+            <td class="headerValue">2026-07-08 11:32:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">97.3&nbsp;%</td>
-            <td class="headerCovTableEntry">37</td>
-            <td class="headerCovTableEntry">36</td>
+            <td class="headerCovTableEntryHi">97.4&nbsp;%</td>
+            <td class="headerCovTableEntry">39</td>
+            <td class="headerCovTableEntry">38</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -184,13 +184,13 @@
 <span id="L106"><span class="lineNum">     106</span>                 :             : template &lt;typename ParserT&gt; class TomlSystemParserRegistration {</span>
 <span id="L107"><span class="lineNum">     107</span>                 :             :   public:</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :     /// \brief Registers the parser factory with the singleton registry.</span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">       49028 :     TomlSystemParserRegistration() {</span></span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">       49028 :         registered_ = TomlParserRegistry::instance().add_system_parser(</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">       52518 :     TomlSystemParserRegistration() {</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">       52518 :         registered_ = TomlParserRegistry::instance().add_system_parser(</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :             ParserT::kName, ParserT::kOrder,</span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">       50427 :             []() -&gt; std::unique_ptr&lt;ITomlSystemConfigParser&gt; {</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        1399 :                 return std::make_unique&lt;ParserT&gt;();</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">       54011 :             []() -&gt; std::unique_ptr&lt;ITomlSystemConfigParser&gt; {</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        1493 :                 return std::make_unique&lt;ParserT&gt;();</span></span>
 <span id="L114"><span class="lineNum">     114</span>                 :             :             });</span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">       49028 :     }</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">       52518 :     }</span></span>
 <span id="L116"><span class="lineNum">     116</span>                 :             : </span>
 <span id="L117"><span class="lineNum">     117</span>                 :             :     /// \brief Whether registration succeeded.</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :     ///</span>

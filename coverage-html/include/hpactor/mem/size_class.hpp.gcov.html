@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-08 09:15:49</td>
+            <td class="headerValue">2026-07-08 11:32:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -122,9 +122,9 @@
 <span id="L44"><span class="lineNum">      44</span>                 :             : ///</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : /// \param[in] sc The size class.</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : /// \return Total bytes occupied by one aligned block of this class.</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC tlaBgGNC">      535856 : constexpr size_t block_size(SizeClass sc) noexcept {</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">      535856 :     size_t raw = size_for_class(sc) + kAllocOverhead;</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      535856 :     return (raw + kAllocAlignment - 1) &amp; ~(kAllocAlignment - 1);</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC tlaBgGNC">      532928 : constexpr size_t block_size(SizeClass sc) noexcept {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">      532928 :     size_t raw = size_for_class(sc) + kAllocOverhead;</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">      532928 :     return (raw + kAllocAlignment - 1) &amp; ~(kAllocAlignment - 1);</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : /// \brief Return the user-payload size given a total block size.</span>
