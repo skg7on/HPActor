@@ -16,7 +16,7 @@
 
 #include <scheduler_test_driver.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/python/python_gateway_actor.hpp>
 #include <hpactor/python/python_gateway_wake_adapter.hpp>
 #include <hpactor/python/python_runtime.hpp>

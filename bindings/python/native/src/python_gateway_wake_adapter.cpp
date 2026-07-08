@@ -14,7 +14,7 @@
 
 #include <hpactor/python/python_gateway_wake_adapter.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
 namespace hpactor::python {

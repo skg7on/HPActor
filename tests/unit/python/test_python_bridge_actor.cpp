@@ -16,7 +16,7 @@
 
 #include <scheduler_test_driver.hpp>
 
-#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/type_tag.hpp>
