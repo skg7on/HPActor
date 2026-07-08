@@ -465,6 +465,22 @@ class ActorContext {
     ask_raw(const ActorAddress& target, const StreamBuffer& encoded_request,
             RequestTimeout timeout = RequestTimeout::use_default());
 
+    /// \brief Send a typed request and get a handle for the response.
+    ///
+    /// Creates a \c TypedMessage with the given \c TypeTag and payload,
+    /// stamps the generated ask message ID, and uses the existing ask
+    /// manager. The returned handle resolves with the response payload.
+    ///
+    /// \param[in] target        Destination actor address.
+    /// \param[in] request_type  The TypeTag for the request message.
+    /// \param[in] encoded_request Pre-serialized request payload.
+    /// \param[in] timeout       Per-request timeout (default: system config).
+    /// \return RequestHandle that resolves with the response or error.
+    RequestHandle<StreamBuffer>
+    ask_raw(const ActorAddress& target, TypeTag request_type,
+            const StreamBuffer& encoded_request,
+            RequestTimeout timeout = RequestTimeout::use_default());
+
     // ── HTTP egress ───────────────────────────────────────────────────────
 
     /// \brief Async HTTP GET to an external service.
