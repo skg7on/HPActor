@@ -28,6 +28,10 @@ constexpr bool has_flag(uint32_t flags, uint32_t bit) noexcept {
     return (flags & bit) != 0;
 }
 
+constexpr bool is_python_binding_control_tag(uint32_t tag) noexcept {
+    return tag >= 0xF0u && tag <= 0xF3u;
+}
+
 } // namespace
 
 InboundFrameRouter::InboundFrameRouter(Dependencies dependencies, Config config) noexcept
@@ -228,6 +232,14 @@ InboundFrameRouter::route_batch(const InboundFrameContext& /*ictx*/,
     for (int i = 0; i < entry_count; ++i) {
         const auto& entry = batch.entries(i);
 
+        // Reject Python binding protected control tags in batch entries.
+        if (is_python_binding_control_tag(entry.type_tag())) {
+            auto r = make_result(FrameDispatchCode::InvalidControlPayload,
+                                 WireFrame::PayloadType::Batch);
+            r.detail_code = entry.type_tag();
+            return r;
+        }
+
         // Reconstruct per-entry TypedMessage
         StreamBuffer payload(entry.payload().begin(), entry.payload().end());
         auto type_tag = static_cast<TypeTag>(entry.type_tag());
@@ -280,6 +292,15 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
                                           const ActorMsgFrame& data) noexcept {
     StreamBuffer payload(data.payload().begin(), data.payload().end());
     auto type_tag = static_cast<TypeTag>(data.type_tag());
+
+    // Reject Python binding protected control tags from remote ingress.
+    if (is_python_binding_control_tag(static_cast<uint32_t>(type_tag))) {
+        auto r = make_result(FrameDispatchCode::InvalidControlPayload,
+                             WireFrame::PayloadType::Data);
+        r.detail_code = static_cast<uint32_t>(type_tag);
+        return r;
+    }
+
     TypedMessage msg(type_tag, std::move(payload));
 
     msg.set_sender_address(from_proto(data.sender()));

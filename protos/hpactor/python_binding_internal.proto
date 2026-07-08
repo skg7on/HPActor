@@ -1,0 +1,94 @@
+// Copyright 2026 HPActor Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// protos/hpactor/python_binding_internal.proto
+//
+// Process-local protobuf contracts for the Python language binding bridge.
+// THESE MESSAGES MUST NEVER ENTER AN HPACTOR WIRE FRAME OR LEAVE THE PROCESS.
+// They carry Python-actor commands, failures, and completions between the
+// CPython extension thread and the native gateway/bridge actors.
+
+syntax = "proto3";
+
+package hpactor.python.internal;
+
+import "hpactor/common.proto";
+
+/// \brief Kinds of commands the Python interpreter can enqueue for a native
+///        bridge actor.
+enum PythonCommandKind {
+  SEND            = 0;
+  REPLY           = 1;
+  REPLY_ERROR     = 2;
+  ASK             = 3;
+  SPAWN           = 4;
+  SCHEDULE        = 5;
+  CANCEL_SCHEDULE = 6;
+  LINK            = 7;
+  UNLINK          = 8;
+  MONITOR         = 9;
+  DEMONITOR       = 10;
+  STOP            = 11;
+  PASSIVATE       = 12;
+  ACTOR_FAILED    = 13;
+  INSPECT         = 14;
+  CANCEL_ASK      = 15;
+}
+
+/// \brief Local-only command record that the gateway router converts to a
+///        protected kPythonActorCommandTag envelope and delivers to the
+///        originating bridge actor.
+///
+/// All numeric fields use unsigned types with a zero default so that omitted
+/// optional fields are well-behaved for deterministic serialization.
+message PbPythonActorCommand {
+  uint32  version         = 1;
+  PythonCommandKind kind  = 2;
+  uint64  token           = 3;
+  uint64  sequence        = 4;
+  uint64  generation      = 5;
+  hpactor.PbActorAddress origin        = 6;
+  hpactor.PbActorAddress target        = 7;
+  hpactor.PbActorAddress reply_to      = 8;
+  uint32  type_tag        = 9;
+  bytes   payload         = 10;
+  uint64  message_id      = 11;
+  uint64  ask_message_id  = 12;
+  uint32  priority        = 13;
+  sint64  deadline_ns     = 14;
+  uint32  flags           = 15;
+  uint64  delay_ns        = 16;
+  uint64  schedule_handle = 17;
+  uint32  error_code      = 18;
+  string  detail          = 19;
+  string  actor_name      = 20;
+  uint32  delivery_mode   = 21;
+  bool    no_drop         = 22;
+  bool    emit_backpressure = 23;
+}
+
+/// \brief Bounded actor-failure metadata pushed by an unhandled Python
+///        exception.  Carried in a protected kPythonActorFailedTag envelope.
+///
+/// Fields are bounded by the codec: exception_type ≤ 255 bytes,
+/// message ≤ 4 KiB, traceback ≤ 16 KiB.
+message PbPythonActorFailed {
+  uint32  version         = 1;
+  hpactor.PbActorAddress actor = 2;
+  uint64  generation      = 3;
+  string  exception_type  = 4;
+  string  message         = 5;
+  string  traceback       = 6;
+  uint64  sequence        = 7;
+}
