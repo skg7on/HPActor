@@ -24,8 +24,8 @@ namespace hpactor::python {
 ///        commands are available on the command queue.
 ///
 /// Uses a raw function pointer and opaque context pointer instead of
-/// std::function to avoid exception-throwing paths and heap allocations in the
-/// hot path.
+/// type-erased callable wrappers to avoid exception-throwing paths and heap
+/// allocations in the hot path.
 struct GatewayWakePort final {
     /// Opaque context passed as the first argument to \ref wake.
     void* context{nullptr};
@@ -61,8 +61,8 @@ struct PythonCommandExecution final {
 /// \brief Fixed function-pointer port for executing Python commands.
 ///
 /// Uses a raw function pointer and opaque context pointer instead of
-/// std::function to avoid exception-throwing paths and heap allocations
-/// in the hot path.
+/// type-erased callable wrappers to avoid exception-throwing paths and heap
+/// allocations in the hot path.
 struct PythonCommandExecutorPort final {
     /// Opaque context passed as the first argument to \ref execute.
     void* context{nullptr};

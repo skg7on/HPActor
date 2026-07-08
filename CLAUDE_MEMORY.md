@@ -300,6 +300,21 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   ActorExecutionDependencies), network-enabled blueprint path (needs full
   transport config), topology actor deployment transaction (separately reported).
 
+**Python Binding Phase 1A Native Foundation** ✅ Complete (2026-07-07)
+- `hpactor_python_native` CMake library — built only when `ENABLE_PYTHON_BINDINGS=ON`; depends on `hpactor_lib` only; no CPython link.
+- `PythonRuntimeQueues` — three independent bounded lock-free MPSC rings (dispatch, command, completion) with explicit capacity, rejection accounting, `drain_up_to()` with callback, and `DRAIN_UP_TO_MAX` budget guard; base class `MpscRingBuffer<T>` shared with metrics/logging subsystems.
+- `NativeNotifier` — non-blocking eventfd (Linux) / pipe (macOS) notifier, each owning a read/write fd pair; write-side closed at shutdown, no blocking or thread primitives.
+- `PythonRuntime` — lifecycle state machine (Created→Running→Draining→Stopping→Stopped/Failed); owns three queues + two notifiers; `PythonActorLease` with monotonic generation; admission controlled by state; dispatch depth and rejection counters on `PythonRuntimeSnapshot`.
+- `PythonBridgeActor` — `EventBasedActor` subclass bound via `PythonActorLease`; converts `TypedMessage` envelopes to `PythonDispatchEnvelope` with full metadata (sender, message_id, priority, deadline, trace); reliable messages ACK/NACK on transfer; dispatch queue acts as the Python event-loop's inbox.
+- `PythonGatewayActor` — budgeted command executor with per-turn `max_commands_per_turn` limit; self-wakes via `kPythonWakeupTag` system tag re-queue when commands remain; fixed function-pointer `PythonCommandExecutorPort` executes commands with completions pushed to the completion queue.
+- `PythonGatewayWakeAdapter` — bridges the runtime's `GatewayWakePort` callback (called from Python thread) to the gateway actor via `deliver_with_result()`.
+- `PythonPorts` — `GatewayWakePort`, `PythonCommandExecutorPort`, `PythonCommandExecution` — all fixed-size function-pointer ports (no `std::function`, no exceptions).
+- Tests: 7 unit test files (contracts, queues, runtime, notifier, bridge, gateway, stress), 1 integration test (end-to-end native workflow), architecture fitness checks (no Python.h/PyObject/RTTI/exceptions in binding files; no Python.h in core).
+- No public Python actor API or distributable wheel exists yet; the manual's
+  language-binding limitation remains accurate until Phase 1D.
+- Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-03-python-binding-phase1a.md`.
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,

@@ -16,7 +16,7 @@ limitations under the License.
 
 # Python Language Binding Design
 
-**Status:** Approved design
+**Status:** Approved design; Phase 1A native foundation implemented
 
 **Date:** 2026-07-03
 
