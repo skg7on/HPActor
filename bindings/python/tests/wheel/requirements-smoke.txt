@@ -1,0 +1,2 @@
+# HPActor wheel smoke test runtime dependencies
+protobuf>=7.35.0,<8
