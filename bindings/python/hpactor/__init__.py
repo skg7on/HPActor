@@ -27,6 +27,7 @@ from ._errors import (
 )
 from ._messages import MessageRegistry
 from ._system import ActorSystem
+from ._version import __version__
 
 __all__ = [
     "Actor",
@@ -54,4 +55,5 @@ __all__ = [
     "SerializationError",
     "SystemClosedError",
     "actor",
+    "__version__",
 ]

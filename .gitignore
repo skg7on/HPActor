@@ -26,3 +26,11 @@ Testing/
 .superpowers
 build_asan/
 build_dbg/
+
+# Python packaging artifacts
+dist/
+wheelhouse/
+bindings/python/.venv/
+bindings/python/build/
+*.egg-info/
+bindings/python/wheel-audit*.json
