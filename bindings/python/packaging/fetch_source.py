@@ -53,16 +53,15 @@ def fetch_source(url: str, sha256: str, cache_dir: Path) -> Path:
         # Corrupted — delete and re-fetch
         cached.unlink()
 
-    # Fetch
+    # Fetch.  Redirects are allowed — SHA-256 verification (below)
+    # is the integrity guarantee regardless of where the bits came from.
+    # GitHub releases redirect to release-assets.githubusercontent.com
+    # and archive links redirect to codeload.github.com.
     print(f"Fetching {url} ...", file=sys.stderr)
     with urlopen(url) as resp:
-        # Refuse redirects to different hosts
         final_url = resp.geturl()
-        if urlparse(final_url).hostname != parsed.hostname:
-            raise RuntimeError(
-                f"Refusing redirect from {parsed.hostname} to "
-                f"{urlparse(final_url).hostname}"
-            )
+        if final_url != url:
+            print(f"  Redirected to {final_url}", file=sys.stderr)
         with tempfile.NamedTemporaryFile(dir=str(cache_dir), delete=False) as tmp:
             shutil.copyfileobj(resp, tmp)
             tmp_path = Path(tmp.name)
