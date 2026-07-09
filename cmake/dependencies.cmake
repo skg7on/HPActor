@@ -8,19 +8,46 @@
 
 # ---- Protobuf + Abseil -----------------------------------------------------
 
-find_package(Protobuf REQUIRED)
+if(HPACTOR_PYTHON_WHEEL_BUILD AND DEFINED HPACTOR_WHEEL_DEPS_PREFIX)
+  # Wheel builds use checksum-locked dependencies from a hermetic prefix.
+  # Suppress system-wide search to prevent accidental linkage against
+  # incompatible system packages.
+  list(PREPEND CMAKE_PREFIX_PATH "${HPACTOR_WHEEL_DEPS_PREFIX}")
+  set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH OFF)
 
-execute_process(COMMAND ${Protobuf_PROTOC_EXECUTABLE} --version
-    OUTPUT_VARIABLE HPACTOR_PROTOC_VERSION_OUTPUT
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-string(REGEX MATCH "[0-9]+\\.[0-9]+" HPACTOR_PROTOC_VERSION "${HPACTOR_PROTOC_VERSION_OUTPUT}")
-if(HPACTOR_PROTOC_VERSION VERSION_GREATER_EQUAL "22.0")
-    find_package(absl REQUIRED)
-    set(HPACTOR_PROTO_ABSL_LIBS absl::log_internal_check_op)
-    set(HPACTOR_ABSL_LIBS absl::log absl::log_internal_check_op)
+  find_package(Protobuf 35.0 EXACT REQUIRED)
+
+  execute_process(COMMAND ${Protobuf_PROTOC_EXECUTABLE} --version
+      OUTPUT_VARIABLE HPACTOR_PROTOC_VERSION_OUTPUT
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT HPACTOR_PROTOC_VERSION_OUTPUT MATCHES "35\\.0")
+    message(FATAL_ERROR
+      "protoc version mismatch: expected 35.0, got ${HPACTOR_PROTOC_VERSION_OUTPUT}")
+  endif()
+
+  find_package(OpenSSL REQUIRED)
+
+  # Abseil is provided by protobuf 35.0 as a bundled dependency
+  find_package(absl REQUIRED)
+  set(HPACTOR_PROTO_ABSL_LIBS absl::log_internal_check_op)
+  set(HPACTOR_ABSL_LIBS absl::log absl::log_internal_check_op)
+
+  set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH ON)
 else()
-    set(HPACTOR_PROTO_ABSL_LIBS "")
-    set(HPACTOR_ABSL_LIBS "")
+  find_package(Protobuf REQUIRED)
+
+  execute_process(COMMAND ${Protobuf_PROTOC_EXECUTABLE} --version
+      OUTPUT_VARIABLE HPACTOR_PROTOC_VERSION_OUTPUT
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX MATCH "[0-9]+\\.[0-9]+" HPACTOR_PROTOC_VERSION "${HPACTOR_PROTOC_VERSION_OUTPUT}")
+  if(HPACTOR_PROTOC_VERSION VERSION_GREATER_EQUAL "22.0")
+      find_package(absl REQUIRED)
+      set(HPACTOR_PROTO_ABSL_LIBS absl::log_internal_check_op)
+      set(HPACTOR_ABSL_LIBS absl::log absl::log_internal_check_op)
+  else()
+      set(HPACTOR_PROTO_ABSL_LIBS "")
+      set(HPACTOR_ABSL_LIBS "")
+  endif()
 endif()
 
 # ---- vendored libraries ----------------------------------------------------
