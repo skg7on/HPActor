@@ -354,6 +354,22 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-07-05-python-binding-phase1c-reliability-operations.md`.
 
+**Python Binding Phase 1D Packaging and Release** ✅ Complete (2026-07-09)
+- Package distribution: `hpactor` on PyPI with version 0.1.0, `pyproject.toml` using scikit-build-core + setuptools-scm, `protobuf>=7.35.0,<8` dependency, `cp311-abi3` wheel tag.
+- ABI3 wheel build: `HPACTOR_PYTHON_WHEEL_BUILD` CMake option, `Development.SABIModule` stable ABI, hidden visibility, `cmake/python_wheel_install.cmake` install rules with `_hpactor` in `hpactor/` and private libs in `hpactor/.libs/` with relative RPATH.
+- Hermetic dependencies: checksum-locked `native-deps.lock.json` (OpenSSL 3.5.5, Abseil 20260107.1, protobuf 35.0), `fetch_source.py` with SHA-256 verification, `build_native_deps.py` for platform-correct static builds, `HPACTOR_WHEEL_DEPS_PREFIX` CMake integration.
+- Wheel repair and audit: `verify_wheel.py` with metadata/content/binary policy checks, `dependency-policy.json` defining required/forbidden libraries and architecture constraints.
+- Clean-environment wheel smoke: 5 test files (import quiescence, metadata, echo, reliability, typing), `run_clean_smoke.py` orchestrator for isolated venv testing.
+- CI matrix: `python-wheels.yml` with 4-platform native builds (manylinux_2_28 x86_64/aarch64, macosx_12_0 x86_64/arm64), cross-minor CPython 3.11–3.14 smoke, acceptance gate.
+- Documentation: 7-page Python manual (installation, first actor, message passing, lifecycle, operations, deployment, API reference), 4 executable examples (echo, request_response, supervision, operations).
+- Performance: `bench_actor_runtime.py` for throughput/latency measurement, `compare_python_binding_perf.py` with runner-fingerprint check and 20% regression threshold.
+- Trusted publishing: `python-publish.yml` with OIDC trusted publishing via PyPI/TestPyPI protected environments, `RELEASING.md` with yank recovery procedure.
+- Manual limitations updated: Language Bindings section reflects alpha Python support; Java, Go, Rust, etc. remain unsupported.
+- Tests: 52 new packaging/wheel/publish tests (17 metadata + 8 CMake layout + 12 lock manifest + 8 wheel policy + 6 CI matrix + 8 docs/examples + 5 perf + 9 publish = 73 packaging tests total).
+- Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-05-python-binding-phase1d-packaging-release.md`.
+- Remaining: Phase 1E declarative topology (TOML-defined Python actors, validated behavior discovery, mixed C++/Python startup).
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,
