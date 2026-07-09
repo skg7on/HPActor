@@ -36,6 +36,7 @@ option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20
 option(ENABLE_FIXED_DISRUPTOR_MAILBOX
        "Enable experimental fixed-message Disruptor actor mailbox" OFF)
 option(ENABLE_PYTHON_BINDINGS "Build the native Python binding foundation" OFF)
+option(HPACTOR_PYTHON_WHEEL_BUILD "Enable Python ABI3 wheel build layout" OFF)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -97,6 +98,12 @@ add_subdirectory(src)
 
 if(ENABLE_PYTHON_BINDINGS)
     add_subdirectory(bindings/python/native)
+endif()
+
+# ── Python wheel install layout ───────────────────────────────────────────
+
+if(HPACTOR_PYTHON_WHEEL_BUILD)
+    include(cmake/python_wheel_install.cmake)
 endif()
 
 # AOT compiler — depends on hpactor_lib, so must come after src/

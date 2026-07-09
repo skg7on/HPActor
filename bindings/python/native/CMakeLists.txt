@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-find_package(Python3 COMPONENTS Development)
+if(HPACTOR_PYTHON_WHEEL_BUILD)
+  if(CMAKE_VERSION VERSION_LESS 3.26)
+    message(FATAL_ERROR
+      "Python ABI3 wheel builds require CMake 3.26 or newer")
+  endif()
+  find_package(Python3 3.11 REQUIRED
+    COMPONENTS Interpreter Development.SABIModule)
+else()
+  find_package(Python3 COMPONENTS Development)
+endif()
 
 add_library(hpactor_python_native STATIC
     src/python_bridge_actor.cpp
@@ -44,12 +53,21 @@ if(Python3_FOUND OR Python3_Development_FOUND)
       ${PYTHON_CAPI_DIR}/module.cpp
       ${PYTHON_CAPI_DIR}/native_system_type.cpp
       ${PYTHON_CAPI_DIR}/conversions.cpp)
-  set_target_properties(_hpactor PROPERTIES PREFIX "")
+  set_target_properties(_hpactor PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "_hpactor"
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON)
   target_compile_definitions(_hpactor PRIVATE Py_LIMITED_API=0x030B0000)
   target_include_directories(_hpactor PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/include
       ${Python3_INCLUDE_DIRS})
-  target_link_libraries(_hpactor PRIVATE hpactor_python_native hpactor_lib
-      hpactor_proto Python3::Python)
+  if(HPACTOR_PYTHON_WHEEL_BUILD)
+    target_link_libraries(_hpactor PRIVATE hpactor_python_native hpactor_lib
+        hpactor_proto Python3::SABIModule)
+  else()
+    target_link_libraries(_hpactor PRIVATE hpactor_python_native hpactor_lib
+        hpactor_proto Python3::Python)
+  endif()
   target_compile_options(_hpactor PRIVATE -fno-exceptions -fno-rtti)
 endif()
