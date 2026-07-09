@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HPActor Python Binding Performance Result",
+  "type": "object",
+  "required": ["version", "platform", "architecture", "cpu_model",
+               "logical_cpus", "wheel_sha256", "scenarios"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "hpactor package version under test"
+    },
+    "platform": {
+      "type": "string",
+      "description": "OS name (Linux, Darwin)"
+    },
+    "architecture": {
+      "type": "string",
+      "enum": ["x86_64", "arm64", "aarch64"]
+    },
+    "cpu_model": {
+      "type": "string",
+      "description": "CPU model string"
+    },
+    "logical_cpus": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "wheel_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "runner_fingerprint": {
+      "type": "string",
+      "description": "Composite key: platform + architecture + cpu_model"
+    },
+    "scenarios": {
+      "type": "object",
+      "required": ["throughput", "dispatch_wait_ns", "handler_latency_ns",
+                   "ask_p50_ns", "ask_p95_ns", "ask_p99_ns"],
+      "properties": {
+        "throughput": {
+          "type": "object",
+          "required": ["value", "unit", "samples", "warmup", "runs"],
+          "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "const": "ops/sec"},
+            "samples": {"type": "integer"},
+            "warmup": {"type": "integer"},
+            "runs": {"type": "integer", "minimum": 5}
+          }
+        },
+        "dispatch_wait_ns": {
+          "type": "object",
+          "required": ["value", "unit", "samples"],
+          "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "const": "ns"},
+            "samples": {"type": "integer"}
+          }
+        },
+        "handler_latency_ns": {
+          "type": "object",
+          "required": ["value", "unit", "samples"],
+          "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "const": "ns"},
+            "samples": {"type": "integer"}
+          }
+        },
+        "ask_p50_ns": {
+          "type": "object",
+          "required": ["value", "unit", "samples"],
+          "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "const": "ns"},
+            "samples": {"type": "integer"}
+          }
+        },
+        "ask_p95_ns": {
+          "type": "object",
+          "required": ["value", "unit", "samples"],
+          "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "const": "ns"},
+            "samples": {"type": "integer"}
+          }
+        },
+        "ask_p99_ns": {
+          "type": "object",
+          "required": ["value", "unit", "samples"],
+          "properties": {
+            "value": {"type": "number"},
+            "unit": {"type": "string", "const": "ns"},
+            "samples": {"type": "integer"}
+          }
+        }
+      }
+    }
+  }
+}
