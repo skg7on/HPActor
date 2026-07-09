@@ -2,14 +2,14 @@
   "openssl": {
     "version": "3.5.5",
     "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.5/openssl-3.5.5.tar.gz",
-    "sha256": "1bfb42db18c62f7bd8fd8dbf1a1c10999fc01fdc70f1bfe1a94602ae08eef32b",
+    "sha256": "b28c91532a8b65a1f983b4c28b7488174e4a01008e29ce8e69bd789f28bc2a89",
     "license": "Apache-2.0",
     "source_dir": "openssl-3.5.5"
   },
   "abseil": {
     "version": "20260107.1",
     "url": "https://github.com/abseil/abseil-cpp/archive/refs/tags/20260107.1.tar.gz",
-    "sha256": "3dba011bff767d027db68562d032cfee098e7ae9bf3766e57a60ca22a7124d0c",
+    "sha256": "4314e2a7cbac89cac25a2f2322870f343d81579756ceff7f431803c2c9090195",
     "license": "Apache-2.0",
     "source_dir": "abseil-cpp-20260107.1"
   },
