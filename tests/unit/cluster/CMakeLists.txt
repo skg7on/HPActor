@@ -14,6 +14,7 @@ add_executable(test_unit_cluster
     sharding/test_shard_coordinator.cpp
     sharding/test_shard_coordinator_actor.cpp
     singleton/test_leadership_lease.cpp
+    singleton/test_leadership_status.cpp
     singleton/test_singleton_identity.cpp
     singleton/test_singleton_election.cpp
     singleton/test_majority_based_election.cpp

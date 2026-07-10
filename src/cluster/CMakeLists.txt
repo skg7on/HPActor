@@ -19,6 +19,7 @@ add_library(hpactor_cluster STATIC
     singleton/fixed_priority_election.cpp
     singleton/singleton_manager.cpp
     singleton/leadership_lease.cpp
+    singleton/leadership_status.cpp
     singleton/singleton_manager_actor.cpp
     sharding/shard_coordinator_actor.cpp
     pubsub/pubsub_mediator_core.cpp
