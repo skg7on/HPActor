@@ -354,6 +354,20 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Design spec: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-07-05-python-binding-phase1c-reliability-operations.md`.
 
+**Python Binding pybind11 Backend** ✅ Complete (2026-07-10)
+- Replaced raw CPython limited C API (`bindings/python/native/src/python_capi/`) with pybind11 backbone (`bindings/python/native/src/python_pybind11/`).
+- **pybind11:** v2.13.6 vendored under `third_party/pybind11/include/` (36 header files, SHA256 verified).
+- **ABI3:** deferred — `Py_LIMITED_API` / `PYBIND11_USE_LIMITED_API` not enabled; pybind11 2.13.6 has incomplete limited-API guards. Full Python API used for now; ABI3 compliance to be verified by `abi3audit` follow-up.
+- **Exception boundary:** `python_pybind11/` TUs compile with `-fexceptions -frtti`; all other binding TUs remain `-fno-exceptions -fno-rtti`. Architecture scans updated to exclude `python_pybind11/` from the strict no-exception/RTTI check and add a pybind11-specific scan (forbids `dynamic_cast` and `std::function` only).
+- **`NativeSystemObject`:** noexcept wrapper around `PythonNativeSystem*` with `guard()` template that catches `pybind11::error_already_set` and converts to sentinel values. Exposes all 23 methods: lifecycle (start/stop/drain), actor management (spawn/stop/resolve), messaging (submit/drain_dispatch/drain_completions), observability (snapshot/fds), topology stubs (Phase 1E).
+- **Wire format:** dict-based dispatch/completion/command (named keys), replacing positional tuples.
+- **Python package:** unchanged — 10 pure-Python modules require zero changes.
+- **Tests:** 1 pybind11 availability test + 6 NativeSystemObject tests (construction, lifecycle, origin, drain, snapshot, guard error conversion). All 42 existing C++ tests pass. 209/209 CTest PythonBinding tests pass (zero regressions).
+- Design spec: `docs/superpowers/specs/2026-07-10-pybind11-backend-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-10-pybind11-backend-implementation.md`.
+- Phase 1D plan refined: `docs/superpowers/plans/2026-07-05-python-binding-phase1d-packaging-release.md` (pybind11 vendoring, `pybind11_add_module`, exception boundary, binary audit updates).
+- Umbrella spec updated: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md` (Section 1, Section 20).
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,
