@@ -16,6 +16,7 @@
 #include <hpactor/cluster/sharding/rendezvous_hash.hpp>
 #include <hpactor/cluster/sharding/shard_coordinator_actor.hpp>
 #include <hpactor/cluster/sharding/static_placement.hpp>
+#include <hpactor/cluster/singleton/leadership_lease.hpp>
 
 namespace hpactor::cluster::sharding {
 
@@ -48,6 +49,31 @@ TEST(ShardCoordinatorActorTest, GetShardOwner) {
     actor.register_actor(LogicalActorId{"order-1"}, "node-1");
     ShardId shard = ShardResolver::resolve(LogicalActorId{"order-1"}, 16);
     EXPECT_EQ(actor.get_shard_owner(shard), "node-1");
+}
+
+TEST(ShardCoordinatorActorTokenTest, RebalanceWithValidTokenSucceeds) {
+    auto strategy = std::make_unique<StaticPlacement>();
+    ShardCoordinatorActor actor(16, std::move(strategy));
+
+    singleton::LeadershipLease lease;
+    lease.singleton_name = "shard-coordinator";
+    lease.owner_node_id = "node-a";
+    lease.fencing_token = 42;
+    actor.on_lease_update(lease);
+
+    EXPECT_TRUE(actor.rebalance_with_token({"node-a", "node-b"}, 42));
+}
+
+TEST(ShardCoordinatorActorTokenTest, RebalanceWithStaleTokenReturnsFalse) {
+    auto strategy = std::make_unique<StaticPlacement>();
+    ShardCoordinatorActor actor(16, std::move(strategy));
+
+    singleton::LeadershipLease lease;
+    lease.singleton_name = "shard-coordinator";
+    lease.fencing_token = 42;
+    actor.on_lease_update(lease);
+
+    EXPECT_FALSE(actor.rebalance_with_token({"node-a"}, 10));
 }
 
 } // namespace hpactor::cluster::sharding

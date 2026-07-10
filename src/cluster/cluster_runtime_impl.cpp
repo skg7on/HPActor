@@ -16,6 +16,8 @@
 
 #include <hpactor/cluster/cluster_failure_model.hpp>
 #include <hpactor/cluster/route_invalidation.hpp>
+#include <hpactor/cluster/singleton/etcd_leadership_backend.hpp>
+#include <hpactor/cluster/singleton/leadership_backend_adapter.hpp>
 #include <hpactor/cluster/singleton/oldest_node_election.hpp>
 #include <hpactor/cluster/singleton/singleton_identity.hpp>
 #include <hpactor/cluster/singleton/singleton_manager_actor.hpp>
@@ -50,10 +52,26 @@ result<void> ClusterRuntimeImpl::start() noexcept {
 
     failure_model_ = std::make_unique<cluster::ClusterFailureModel>();
     route_invalidation_ = std::make_unique<cluster::RouteInvalidation>();
-    // For now, use mode="local" default (OldestNodeElection). Phase 2 etcd
-    // backend will read [system.cluster.leadership] TOML and select between
-    // OldestNodeElection, LeadershipBackendAdapter, or FakeLeadershipBackend.
-    auto election = std::make_unique<cluster::singleton::OldestNodeElection>();
+
+    // Phase 2: config-driven election strategy from [system.cluster.leadership]
+    std::unique_ptr<cluster::singleton::ISingletonElection> election;
+    if (leadership_mode_ == "external" && leadership_backend_ == "etcd") {
+        cluster::singleton::EtcdLeadershipBackend::Config etcd_cfg;
+        etcd_cfg.endpoints = etcd_endpoints_;
+        etcd_cfg.key_prefix = etcd_key_prefix_;
+        etcd_cfg.request_timeout =
+            std::chrono::milliseconds(etcd_request_timeout_ms_);
+        auto backend = std::make_unique<cluster::singleton::EtcdLeadershipBackend>(
+            std::move(etcd_cfg));
+        // Note: backend must outlive the adapter. Store in impl.
+        etcd_backend_ = std::move(backend);
+        auto adapter =
+            std::make_unique<cluster::singleton::LeadershipBackendAdapter>(
+                node_id_, etcd_backend_.get());
+        election = std::move(adapter);
+    } else {
+        election = std::make_unique<cluster::singleton::OldestNodeElection>();
+    }
     singleton_manager_ =
         std::make_unique<cluster::singleton::SingletonManagerActor>(
             node_id_, std::move(election));
@@ -87,6 +105,7 @@ result<void> ClusterRuntimeImpl::stop(const ClusterStopRequest& req) noexcept {
 
     // Destroy in reverse dependency order.
     singleton_manager_.reset();
+    etcd_backend_.reset();
     route_invalidation_.reset();
     failure_model_.reset();
 

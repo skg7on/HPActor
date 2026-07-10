@@ -17,8 +17,10 @@
 #include <hpactor/runtime/cluster_runtime.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace hpactor {
 
@@ -27,6 +29,7 @@ class ClusterFailureModel;
 class RouteInvalidation;
 } // namespace cluster
 namespace cluster::singleton {
+class ILeadershipBackend;
 class SingletonManagerActor;
 } // namespace cluster::singleton
 
@@ -49,8 +52,19 @@ class ClusterRuntimeImpl final : public IClusterRuntime {
     std::atomic<bool> started_{false};
     std::atomic<uint64_t> epoch_{0};
 
+    // ── Leadership election configuration ─────────────────────────────
+    std::string leadership_mode_{"local"}; // "local" | "external" | "disabled"
+    std::string leadership_backend_{"etcd"}; // "etcd" | "consul" | "raft"
+    std::vector<std::string> etcd_endpoints_;
+    std::string etcd_key_prefix_{"/hpactor"};
+    uint32_t etcd_request_timeout_ms_{1000};
+    std::string etcd_tls_ca_file_;
+    std::string etcd_tls_cert_file_;
+    std::string etcd_tls_key_file_;
+
     std::unique_ptr<cluster::ClusterFailureModel> failure_model_;
     std::unique_ptr<cluster::RouteInvalidation> route_invalidation_;
+    std::unique_ptr<cluster::singleton::ILeadershipBackend> etcd_backend_;
     std::unique_ptr<cluster::singleton::SingletonManagerActor> singleton_manager_;
 };
 

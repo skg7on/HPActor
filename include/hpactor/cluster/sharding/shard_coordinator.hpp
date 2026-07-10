@@ -17,9 +17,11 @@
 #include <hpactor/cluster/sharding/placement_strategy.hpp>
 #include <hpactor/cluster/sharding/shard_table.hpp>
 #include <hpactor/cluster/sharding/shard_types.hpp>
+#include <hpactor/cluster/singleton/leadership_lease.hpp>
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -63,11 +65,27 @@ class ShardCoordinatorCore {
     /// \brief Access the shard table for inspection.
     const ShardTable& shard_table() const;
 
+    // ── Leadership token validation (CLU-003 integration) ──────────
+
+    /// \brief Set the active leadership lease for token validation.
+    void set_active_lease(const singleton::LeadershipLease& lease);
+
+    /// \brief Clear the active lease, rejecting all subsequent tokens.
+    void clear_active_lease();
+
+    /// \brief Validate a fencing token against the active lease.
+    ///
+    /// \return true if the token matches the active lease for the given
+    ///         singleton name.
+    [[nodiscard]] bool
+    validate_token(uint64_t fencing_token, std::string_view singleton_name) const;
+
   private:
     uint32_t total_shards_;
     std::unique_ptr<IPlacementStrategy> strategy_;
     ShardTable shard_table_;
     std::unordered_set<std::string> registered_actors_;
+    std::optional<singleton::LeadershipLease> active_lease_;
     mutable std::mutex mutex_;
 };
 

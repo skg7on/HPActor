@@ -15,6 +15,9 @@
 #include <hpactor/config/toml_config_parser.hpp>
 #include <hpactor/config/toml_parser_registry.hpp>
 
+#include <string>
+#include <vector>
+
 namespace hpactor::config {
 namespace {
 
@@ -58,6 +61,23 @@ class ClusterLeadershipConfigParser final : public ITomlSystemConfigParser {
         leadership.read_uint32("step_down_grace_ms", 1000);
         // Whether to fail closed when backend is unavailable
         leadership.read_bool("fail_closed_on_backend_unavailable", true);
+
+        // Parse [system.cluster.leadership.etcd] subsection
+        auto etcd_section = leadership.table("etcd");
+        if (etcd_section.valid()) {
+            etcd_section.read_string("key_prefix", "/hpactor");
+            etcd_section.read_uint32("request_timeout_ms", 1000);
+            etcd_section.read_string("tls_ca_file", "");
+            etcd_section.read_string("tls_cert_file", "");
+            etcd_section.read_string("tls_key_file", "");
+            // etcd endpoints is a string array
+            etcd_section.for_each_string_array("endpoints",
+                                               [](std::string_view /*endpoint*/) {
+                                                   // Parsed for validation;
+                                                   // stored via SystemDef for
+                                                   // runtime
+                                               });
+        }
 
         return result<void>::make();
     }

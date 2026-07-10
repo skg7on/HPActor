@@ -91,4 +91,27 @@ const ShardTable& ShardCoordinatorCore::shard_table() const {
     return shard_table_;
 }
 
+// ── Leadership token validation ───────────────────────────────────────────
+
+void ShardCoordinatorCore::set_active_lease(const singleton::LeadershipLease& lease) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    active_lease_ = lease;
+}
+
+void ShardCoordinatorCore::clear_active_lease() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    active_lease_.reset();
+}
+
+bool ShardCoordinatorCore::validate_token(uint64_t fencing_token,
+                                          std::string_view singleton_name) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!active_lease_.has_value())
+        return false;
+    if (singleton_name != "shard-coordinator")
+        return false;
+    return fencing_token == active_lease_->fencing_token &&
+           active_lease_->singleton_name == singleton_name;
+}
+
 } // namespace hpactor::cluster::sharding
