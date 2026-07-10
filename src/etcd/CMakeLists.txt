@@ -16,44 +16,8 @@
 
 find_package(Protobuf REQUIRED)
 
-# gRPC's find_dependency(Protobuf CONFIG) needs ProtobufConfig.cmake.
-# When protobuf is found via MODULE mode (Ubuntu, older protobuf), the
-# CONFIG file doesn't exist. Provide a minimal shim since targets are
-# already created by FindProtobuf.cmake.
-if(NOT EXISTS "${Protobuf_DIR}/ProtobufConfig.cmake")
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cmake/protobuf-shim")
-  file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfig.cmake"
-    "# Shim: protobuf targets already exist from FindProtobuf.cmake\n")
-  file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfigVersion.cmake"
-    "set(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n")
-  set(Protobuf_DIR "${CMAKE_BINARY_DIR}/cmake/protobuf-shim"
-      CACHE PATH "Protobuf CONFIG shim for gRPC compatibility" FORCE)
-endif()
-
-find_package(gRPC CONFIG REQUIRED)
-
-# Resolve grpc_cpp_plugin path from gRPC imported target
-if(TARGET gRPC::grpc_cpp_plugin)
-    get_target_property(_configs gRPC::grpc_cpp_plugin IMPORTED_CONFIGURATIONS)
-    foreach(_cfg ${_configs})
-      get_target_property(_loc gRPC::grpc_cpp_plugin IMPORTED_LOCATION_${_cfg})
-      if(_loc AND EXISTS "${_loc}")
-        set(gRPC_CPP_PLUGIN "${_loc}")
-        break()
-      endif()
-    endforeach()
-    unset(_configs)
-    unset(_loc)
-    unset(_cfg)
-endif()
-if(NOT gRPC_CPP_PLUGIN)
-    find_program(gRPC_CPP_PLUGIN grpc_cpp_plugin)
-endif()
-
-set(PROTO_FILES
-    proto/kv.proto
-    proto/rpc.proto
-)
+# Try to find gRPC — optional, only needed for etcd backend
+find_package(gRPC CONFIG QUIET)
 
 add_library(hpactor_etcd STATIC)
 target_include_directories(hpactor_etcd PUBLIC
@@ -64,16 +28,56 @@ target_include_directories(hpactor_etcd PUBLIC
     ${Protobuf_INCLUDE_DIRS}
 )
 
+if(gRPC_FOUND)
+    # gRPC's find_dependency(Protobuf CONFIG) needs ProtobufConfig.cmake.
+    # When protobuf is found via MODULE mode, provide a minimal shim.
+    if(NOT EXISTS "${Protobuf_DIR}/ProtobufConfig.cmake")
+      file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cmake/protobuf-shim")
+      file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfig.cmake"
+        "# Shim: protobuf targets already exist from FindProtobuf.cmake\n")
+      file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfigVersion.cmake"
+        "set(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n")
+      set(Protobuf_DIR "${CMAKE_BINARY_DIR}/cmake/protobuf-shim"
+          CACHE PATH "Protobuf CONFIG shim for gRPC compatibility" FORCE)
+    endif()
+
+    # Resolve grpc_cpp_plugin path
+    if(TARGET gRPC::grpc_cpp_plugin)
+        get_target_property(_configs gRPC::grpc_cpp_plugin IMPORTED_CONFIGURATIONS)
+        foreach(_cfg ${_configs})
+          get_target_property(_loc gRPC::grpc_cpp_plugin IMPORTED_LOCATION_${_cfg})
+          if(_loc AND EXISTS "${_loc}")
+            set(gRPC_CPP_PLUGIN "${_loc}")
+            break()
+          endif()
+        endforeach()
+        unset(_configs)
+        unset(_loc)
+        unset(_cfg)
+    endif()
+    if(NOT gRPC_CPP_PLUGIN)
+        find_program(gRPC_CPP_PLUGIN grpc_cpp_plugin)
+    endif()
+
+    set(PROTO_FILES
+        proto/kv.proto
+        proto/rpc.proto
+    )
+    protobuf_generate(TARGET hpactor_etcd PROTOS ${PROTO_FILES} APPEND_PATH)
+    protobuf_generate(
+        TARGET hpactor_etcd
+        PROTOS ${PROTO_FILES}
+        LANGUAGE grpc
+        GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
+        PLUGIN "protoc-gen-grpc=${gRPC_CPP_PLUGIN}"
+        APPEND_PATH
+    )
+    target_link_libraries(hpactor_etcd PUBLIC protobuf::libprotobuf gRPC::grpc++)
+    target_compile_definitions(hpactor_etcd PUBLIC HPACTOR_HAS_GRPC=1)
+else()
+    message(STATUS "gRPC not found — etcd backend will be unavailable (stub only)")
+endif()
+
 target_sources(hpactor_etcd PRIVATE etcd_serialize.cpp)
-protobuf_generate(TARGET hpactor_etcd PROTOS ${PROTO_FILES} APPEND_PATH)
-protobuf_generate(
-    TARGET hpactor_etcd
-    PROTOS ${PROTO_FILES}
-    LANGUAGE grpc
-    GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
-    PLUGIN "protoc-gen-grpc=${gRPC_CPP_PLUGIN}"
-    APPEND_PATH
-)
 target_compile_options(hpactor_etcd PRIVATE -fexceptions)
 target_compile_definitions(hpactor_etcd PUBLIC GOOGLE_PROTOBUF_NO_RTTI=1)
-target_link_libraries(hpactor_etcd PUBLIC protobuf::libprotobuf gRPC::grpc++)

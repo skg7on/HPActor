@@ -55,6 +55,7 @@ result<void> ClusterRuntimeImpl::start() noexcept {
 
     // Phase 2: config-driven election strategy from [system.cluster.leadership]
     std::unique_ptr<cluster::singleton::ISingletonElection> election;
+#ifdef HPACTOR_HAS_GRPC
     if (leadership_mode_ == "external" && leadership_backend_ == "etcd") {
         cluster::singleton::EtcdLeadershipBackend::Config etcd_cfg;
         etcd_cfg.endpoints = etcd_endpoints_;
@@ -69,7 +70,9 @@ result<void> ClusterRuntimeImpl::start() noexcept {
             std::make_unique<cluster::singleton::LeadershipBackendAdapter>(
                 node_id_, etcd_backend_.get());
         election = std::move(adapter);
-    } else {
+    } else
+#endif
+    {
         election = std::make_unique<cluster::singleton::OldestNodeElection>();
     }
     singleton_manager_ =
