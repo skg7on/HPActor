@@ -27,8 +27,7 @@ bool operator<(const LeadershipLease& a, const LeadershipLease& b) noexcept {
 
 bool operator==(const LeadershipLease& a, const LeadershipLease& b) noexcept {
     return a.cluster_id == b.cluster_id && a.singleton_name == b.singleton_name &&
-           a.fencing_token == b.fencing_token &&
-           a.owner_node_id == b.owner_node_id;
+           a.fencing_token == b.fencing_token;
 }
 
 bool operator!=(const LeadershipLease& a, const LeadershipLease& b) noexcept {
