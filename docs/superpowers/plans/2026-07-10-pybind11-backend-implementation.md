@@ -1,7 +1,7 @@
 # Python Binding pybind11 Backend — Implementation Plan
 
 **Date:** 2026-07-10
-**Status:** Plan
+**Status:** Tasks 1, 2, 4 implemented; Tasks 3, 5, 6, 7, 8 complete; ABI3 deferred
 **Depends on:** Phases 1A, 1B, 1C implemented
 **Design spec:** `docs/superpowers/specs/2026-07-10-pybind11-backend-design.md`
 
@@ -928,21 +928,38 @@ git diff --check
 
 ## Plan Completion Checklist
 
-- [ ] Task 1: pybind11 dependency added, CMake target builds `_hpactor`
-- [ ] Task 2: `NativeSystemObject` with sealed noexcept boundary
-- [ ] Task 3: Type casters and dict-based wire format
-- [ ] Task 4: Module definition wires C++ ↔ Python boundary
-- [ ] Task 5: Python package updated for dict-based format
-- [ ] Task 6: Architecture fitness checks updated
-- [ ] Task 7: Full integration — 206 Python tests + all C++ tests pass
-- [ ] Task 8: Project memory and design spec status updated
-- [ ] `ENABLE_PYTHON_BINDINGS=OFF` — no regression
-- [ ] Architecture scans pass with updated allowlists
-- [ ] `abi3audit --strict` passes on built `_hpactor`
-- [ ] Linux TSAN — clean
-- [ ] Debug Python + reference leak check — clean
-- [ ] `git diff --check` — clean
-- [ ] `python_capi/` directory removed
-- [ ] No pybind11 headers outside `python_pybind11/`
-- [ ] No `Python.h` / `PyObject` outside `python_pybind11/`
-- [ ] All public Python APIs unchanged (`hpactor.__all__` identical)
+- [x] Task 1: pybind11 vendored (v2.13.6, 36 headers + SHA256), availability test (1/1 pass)
+- [x] Task 2: `NativeSystemObject` with sealed noexcept boundary (6/6 tests pass)
+- [x] Task 3: Type casters and dict-based wire format — absorbed into Task 2
+- [x] Task 4: `PYBIND11_MODULE(_hpactor)` with 23 bound methods; CMake builds from `python_pybind11/`
+- [x] Task 5: Python package — zero changes needed (self-contained fake system for tests)
+- [x] Task 6: Architecture scans updated (exclusion + pybind11-specific scan); `python_capi/` removed
+- [x] Task 7: Full integration — 209/209 CTest PythonBinding tests pass
+- [x] Task 8: `CLAUDE_MEMORY.md` updated; umbrella spec Section 1 and 20 updated
+- [x] `ENABLE_PYTHON_BINDINGS=OFF` — no regression (CMake guard unchanged)
+- [x] Architecture scans pass (196/196 including 3 new pybind11 checks)
+- [ ] `abi3audit --strict` passes on built `_hpactor` — DEFERRED (pybind11 2.13.6 incomplete limited-API guards)
+- [ ] Linux TSAN — clean (deferred to CI)
+- [ ] Debug Python + reference leak check — clean (deferred to CI)
+- [x] `git diff --check` — clean
+- [x] `python_capi/` directory removed (5 files deleted)
+- [x] No pybind11 headers outside `python_pybind11/`
+- [x] No `Python.h` / `PyObject` outside `python_pybind11/`
+- [x] All public Python APIs unchanged (`hpactor.__all__` identical)
+
+### Implementation notes (July 2026)
+
+- **ABI3 deferred:** `Py_LIMITED_API` / `PYBIND11_USE_LIMITED_API` not enabled.
+  pybind11 2.13.6 references `PyMethod_Check`, `PyInstanceMethod_Check`,
+  `PyMethod_GET_FUNCTION`, `PyInstanceMethod_GET_FUNCTION` without
+  `Py_LIMITED_API` guards. Full Python API used. ABI3 compliance to be
+  verified by `abi3audit` as a Phase 1D follow-up.
+
+- **RTTI required:** pybind11 headers need `typeid` for type casting.
+  `_hpactor` TUs compile with `-frtti -fexceptions`. Architecture scans
+  updated to allow `typeid`, `throw`, `try`, `catch` in `python_pybind11/`
+  while still forbidding `dynamic_cast` and `std::function`.
+
+- **Test infrastructure:** Separate `gtest_rtti` + `gtest_main_rtti` libraries
+  built with `-frtti -fexceptions` for pybind11 tests. Main GTest remains
+  `-fno-rtti` for all other tests.
