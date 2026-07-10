@@ -13,7 +13,12 @@ FakeLeadershipBackend::try_acquire(const LeadershipAttempt& attempt) {
         return LeadershipResult::unavailable();
 
     auto it = leases_.find(attempt.singleton_name);
-    if (it != leases_.end() && it->second.owned) {
+    if (it == leases_.end()) {
+        // No pre-configured entry for this singleton — not acquirable
+        return {LeadershipStatusCode::NotOwner, std::nullopt, std::nullopt};
+    }
+
+    if (it->second.owned) {
         // Already owned — check if it's us
         if (it->second.lease.owner_node_id == attempt.self_node_id) {
             // Idempotent — return existing lease
@@ -26,7 +31,7 @@ FakeLeadershipBackend::try_acquire(const LeadershipAttempt& attempt) {
                                                it->second.lease);
     }
 
-    // Grant new lease
+    // Entry exists but not owned — acquire and grant new lease
     LeadershipLease lease;
     lease.cluster_id = "fake";
     lease.singleton_name = attempt.singleton_name;
@@ -36,10 +41,8 @@ FakeLeadershipBackend::try_acquire(const LeadershipAttempt& attempt) {
     lease.backend_revision = lease.fencing_token;
     lease.lease_deadline = Clock::now() + attempt.lease_ttl;
 
-    StoredLease stored;
-    stored.lease = lease;
-    stored.owned = true;
-    leases_[attempt.singleton_name] = stored;
+    it->second.lease = lease;
+    it->second.owned = true;
 
     return LeadershipResult::granted(lease);
 }

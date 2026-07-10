@@ -22,6 +22,7 @@ add_executable(test_unit_cluster
     singleton/test_singleton_manager.cpp
     singleton/test_singleton_manager_actor.cpp
     singleton/test_fake_leadership_backend.cpp
+    singleton/test_leadership_backend_adapter.cpp
     pubsub/test_pubsub_mediator_core.cpp
     pubsub/test_pubsub_mediator_actor.cpp
     receptionist/test_cluster_receptionist_core.cpp
