@@ -53,10 +53,9 @@ class WheelCiMatrixTest(unittest.TestCase):
             for row in matrix
         }
         expected = {
-            ("ubuntu-24.04", "x86_64", "manylinux_2_28_x86_64"),
-            ("ubuntu-24.04-arm", "aarch64", "manylinux_2_28_aarch64"),
-            ("macos-15-intel", "x86_64", "macosx_12_0_x86_64"),
-            ("macos-14", "arm64", "macosx_12_0_arm64"),
+            ("ubuntu-26.04", "x86_64", "manylinux_2_28_x86_64"),
+            ("ubuntu-26.04-arm", "aarch64", "manylinux_2_28_aarch64"),
+            ("macos-15", "arm64", "macosx_12_0_arm64"),
         }
         self.assertEqual(targets, expected)
 

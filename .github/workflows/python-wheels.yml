@@ -33,16 +33,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-26.04
             arch: x86_64
             platform: manylinux_2_28_x86_64
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-26.04-arm
             arch: aarch64
             platform: manylinux_2_28_aarch64
-          - os: macos-15-intel
-            arch: x86_64
-            platform: macosx_12_0_x86_64
-          - os: macos-14
+          - os: macos-15
             arch: arm64
             platform: macosx_12_0_arm64
 
@@ -89,7 +86,6 @@ jobs:
           python3 -m pip install auditwheel
           auditwheel repair --plat "${{ matrix.platform }}" \
             --wheel-dir wheelhouse wheelhouse/hpactor-*.whl
-          # Replace raw wheel with repaired one
           rm wheelhouse/hpactor-*cp311-*.whl 2>/dev/null || true
           mv wheelhouse/hpactor-*manylinux*.whl wheelhouse/ 2>/dev/null || true
 
@@ -137,28 +133,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner-os: ubuntu-24.04
+          - runner-os: ubuntu-26.04
             python: "3.11"
             wheel-artifact: wheel-manylinux_2_28_x86_64-x86_64
-          - runner-os: ubuntu-24.04
+          - runner-os: ubuntu-26.04
             python: "3.12"
             wheel-artifact: wheel-manylinux_2_28_x86_64-x86_64
-          - runner-os: ubuntu-24.04
+          - runner-os: ubuntu-26.04
             python: "3.13"
             wheel-artifact: wheel-manylinux_2_28_x86_64-x86_64
-          - runner-os: ubuntu-24.04
+          - runner-os: ubuntu-26.04
             python: "3.14"
             wheel-artifact: wheel-manylinux_2_28_x86_64-x86_64
-          - runner-os: macos-14
+          - runner-os: macos-15
             python: "3.11"
             wheel-artifact: wheel-macosx_12_0_arm64-arm64
-          - runner-os: macos-14
+          - runner-os: macos-15
             python: "3.12"
             wheel-artifact: wheel-macosx_12_0_arm64-arm64
-          - runner-os: macos-14
+          - runner-os: macos-15
             python: "3.13"
             wheel-artifact: wheel-macosx_12_0_arm64-arm64
-          - runner-os: macos-14
+          - runner-os: macos-15
             python: "3.14"
             wheel-artifact: wheel-macosx_12_0_arm64-arm64
 
@@ -185,7 +181,7 @@ jobs:
   wheel-acceptance:
     name: Accept wheel set
     needs: [build-wheels, smoke-test]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: always()
 
     steps:
@@ -195,12 +191,12 @@ jobs:
           path: all-wheels
           merge-multiple: true
 
-      - name: Verify four distinct platform wheels
+      - name: Verify three distinct platform wheels
         run: |
           whls=$(ls all-wheels/hpactor-*.whl 2>/dev/null | wc -l)
           echo "Wheel count: $whls"
-          test "$whls" -eq 4 || {
-            echo "Expected 4 wheels, found $whls"
+          test "$whls" -eq 3 || {
+            echo "Expected 3 wheels, found $whls"
             exit 1
           }
 

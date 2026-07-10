@@ -360,7 +360,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Hermetic dependencies: checksum-locked `native-deps.lock.json` (OpenSSL 3.5.5, Abseil 20260107.1, protobuf 35.0), `fetch_source.py` with SHA-256 verification, `build_native_deps.py` for platform-correct static builds, `HPACTOR_WHEEL_DEPS_PREFIX` CMake integration.
 - Wheel repair and audit: `verify_wheel.py` with metadata/content/binary policy checks, `dependency-policy.json` defining required/forbidden libraries and architecture constraints.
 - Clean-environment wheel smoke: 5 test files (import quiescence, metadata, echo, reliability, typing), `run_clean_smoke.py` orchestrator for isolated venv testing.
-- CI matrix: `python-wheels.yml` with 4-platform native builds (manylinux_2_28 x86_64/aarch64, macosx_12_0 x86_64/arm64), cross-minor CPython 3.11–3.14 smoke, acceptance gate.
+- CI matrix: `python-wheels.yml` with 3-platform native builds (manylinux_2_28 x86_64/aarch64 on ubuntu-26.04, macosx_12_0 arm64 on macos-15), cross-minor CPython 3.11–3.14 smoke, acceptance gate. macOS x86_64 dropped — no Intel macOS GitHub runner exists.
 - Documentation: 7-page Python manual (installation, first actor, message passing, lifecycle, operations, deployment, API reference), 4 executable examples (echo, request_response, supervision, operations).
 - Performance: `bench_actor_runtime.py` for throughput/latency measurement, `compare_python_binding_perf.py` with runner-fingerprint check and 20% regression threshold.
 - Trusted publishing: `python-publish.yml` with OIDC trusted publishing via PyPI/TestPyPI protected environments, `RELEASING.md` with yank recovery procedure.

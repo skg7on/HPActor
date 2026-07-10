@@ -7,7 +7,6 @@ supported target.
 ## Baseline files
 
 - `macosx_12_0_arm64.json` — macOS ARM64 baseline
-- `macosx_12_0_x86_64.json` — macOS x86_64 baseline
 - `manylinux_2_28_x86_64.json` — Linux x86_64 baseline
 - `manylinux_2_28_aarch64.json` — Linux ARM64 baseline
 

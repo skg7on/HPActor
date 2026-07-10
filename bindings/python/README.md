@@ -8,7 +8,6 @@ Asyncio-first Python language binding for the HPActor actor runtime.
 |----------|-------------|-----------|
 | Linux (manylinux_2_28) | x86_64 | `manylinux_2_28_x86_64` |
 | Linux (manylinux_2_28) | ARM64 | `manylinux_2_28_aarch64` |
-| macOS 12.0+ | x86_64 | `macosx_12_0_x86_64` |
 | macOS 12.0+ | ARM64 | `macosx_12_0_arm64` |
 
 ## Requirements

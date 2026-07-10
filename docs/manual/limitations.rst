@@ -180,7 +180,7 @@ Python (Alpha)
 ^^^^^^^^^^^^^^
 
 HPActor provides an official alpha Python binding for CPython 3.11 and newer
-on manylinux_2_28 x86_64/ARM64 and macOS 12.0 x86_64/ARM64.  The binding uses
+on manylinux_2_28 x86_64/ARM64 and macOS 12.0 ARM64.  The binding uses
 generated protobuf messages with explicit ``TypeTag`` values for deterministic
 serialization.  Python actors run on a dedicated asyncio event-loop thread;
 the C++ scheduler and network threads never call Python or acquire the GIL.

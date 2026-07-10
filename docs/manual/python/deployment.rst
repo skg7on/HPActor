@@ -34,7 +34,6 @@ Supported Platforms
 |----------|-----------|
 | Linux manylinux_2_28 x86_64 | Yes |
 | Linux manylinux_2_28 aarch64 | Yes |
-| macOS 12.0 x86_64 | Yes |
 | macOS 12.0 arm64 | Yes |
 | Windows | No |
 | musllinux | No |
