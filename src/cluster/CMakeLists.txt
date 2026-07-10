@@ -23,13 +23,14 @@ add_library(hpactor_cluster STATIC
     singleton/fake_leadership_backend.cpp
     singleton/leadership_backend_adapter.cpp
     singleton/singleton_manager_actor.cpp
+    singleton/etcd_leadership_backend.cpp
     sharding/shard_coordinator_actor.cpp
     pubsub/pubsub_mediator_core.cpp
     pubsub/pubsub_mediator_actor.cpp
     receptionist/cluster_receptionist_core.cpp
     receptionist/cluster_receptionist_actor.cpp
 )
-target_link_libraries(hpactor_cluster PUBLIC hpactor)
+target_link_libraries(hpactor_cluster PUBLIC hpactor hpactor_etcd)
 target_include_directories(hpactor_cluster PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
