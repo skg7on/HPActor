@@ -15,6 +15,21 @@
 # =============================================================================
 
 find_package(Protobuf REQUIRED)
+
+# gRPC's find_dependency(Protobuf CONFIG) needs ProtobufConfig.cmake.
+# When protobuf is found via MODULE mode (Ubuntu, older protobuf), the
+# CONFIG file doesn't exist. Provide a minimal shim since targets are
+# already created by FindProtobuf.cmake.
+if(NOT EXISTS "${Protobuf_DIR}/ProtobufConfig.cmake")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cmake/protobuf-shim")
+  file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfig.cmake"
+    "# Shim: protobuf targets already exist from FindProtobuf.cmake\n")
+  file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfigVersion.cmake"
+    "set(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n")
+  set(Protobuf_DIR "${CMAKE_BINARY_DIR}/cmake/protobuf-shim"
+      CACHE PATH "Protobuf CONFIG shim for gRPC compatibility" FORCE)
+endif()
+
 find_package(gRPC CONFIG REQUIRED)
 
 # Resolve grpc_cpp_plugin path from gRPC imported target

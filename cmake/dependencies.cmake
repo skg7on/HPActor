@@ -8,8 +8,7 @@
 
 # ---- Protobuf + Abseil -----------------------------------------------------
 
-set(protobuf_MODULE_COMPATIBLE ON CACHE BOOL "CMake built-in FindProtobuf.cmake module compatible" FORCE)
-find_package(Protobuf CONFIG REQUIRED)
+find_package(Protobuf REQUIRED)
 
 execute_process(COMMAND ${Protobuf_PROTOC_EXECUTABLE} --version
     OUTPUT_VARIABLE HPACTOR_PROTOC_VERSION_OUTPUT
