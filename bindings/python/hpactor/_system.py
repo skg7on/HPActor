@@ -165,44 +165,75 @@ class ActorSystem:
         assert self._native is not None
         assert self._thread is not None
 
-        # Step 2: spawn_bridge on the runtime thread
-        fut = self._thread.submit(self._native.spawn_bridge)
-        addr_tuple, generation = await asyncio.wrap_future(fut)
+        addr_tuple = None
+        addr = None
+        runner = None
+        try:
+            # Step 2: spawn_bridge on the runtime thread
+            fut = self._thread.submit(self._native.spawn_bridge)
+            addr_tuple, generation = await asyncio.wrap_future(fut)
 
-        # Step 3: construct Python actor
-        instance = actor_class(*args, **kwargs)
-        instance._bind(self._registry)
+            # Step 3: construct Python actor
+            instance = actor_class(*args, **kwargs)
+            instance._bind(self._registry)
 
-        # Step 4-5: create runner and install
-        addr = ActorAddress(
-            family=addr_tuple[0], packed_address=addr_tuple[1],
-            port=addr_tuple[2], actor_type=addr_tuple[3],
-            actor_id=addr_tuple[4], incarnation=addr_tuple[5],
-        )
-        ref = ActorRef(address=addr, name=name, generation=generation)
-        runner = _ActorRunner(instance, ref, self._registry)
+            # Step 4-5: create runner and install
+            addr = ActorAddress(
+                family=addr_tuple[0], packed_address=addr_tuple[1],
+                port=addr_tuple[2], actor_type=addr_tuple[3],
+                actor_id=addr_tuple[4], incarnation=addr_tuple[5],
+            )
+            ref = ActorRef(address=addr, name=name, generation=generation)
+            runner = _ActorRunner(instance, ref, self._registry)
 
-        def _install() -> None:
-            self._thread.coordinator.install(runner)  # type: ignore[union-attr]
-            self._runners[addr.actor_id] = runner
-            self._refs[name] = ref
+            def _install() -> None:
+                self._thread.coordinator.install(runner)  # type: ignore[union-attr]
+                self._runners[addr.actor_id] = runner
+                self._refs[name] = ref
 
-        fut = self._thread.submit(_install)
-        if fut is not None:
-            await asyncio.wrap_future(fut)
+            fut = self._thread.submit(_install)
+            if fut is not None:
+                await asyncio.wrap_future(fut)
 
-        # Step 6: register name
-        fut = self._thread.submit(
-            self._native.register_name, name, addr_tuple)
-        if fut is not None:
-            await asyncio.wrap_future(fut)
+            # Step 6: register name
+            fut = self._thread.submit(
+                self._native.register_name, name, addr_tuple)
+            if fut is not None:
+                await asyncio.wrap_future(fut)
 
-        # Step 7: on_start()
-        fut = self._thread.submit(instance.on_start())
-        if fut is not None:
-            await asyncio.wrap_future(fut)
+            # Step 7: on_start()
+            fut = self._thread.submit(instance.on_start())
+            if fut is not None:
+                await asyncio.wrap_future(fut)
 
-        return ref
+            return ref
+        except Exception:
+            # Compensating cleanup on failure
+            if addr_tuple is not None:
+                try:
+                    stop_fut = self._thread.submit(
+                        self._native.stop_bridge, addr_tuple)
+                    if stop_fut is not None and hasattr(stop_fut, 'result'):
+                        await asyncio.wrap_future(stop_fut)
+                except Exception:
+                    pass
+            if addr is not None:
+                if addr.actor_id in self._runners:
+                    del self._runners[addr.actor_id]
+                if name in self._refs:
+                    del self._refs[name]
+            if runner is not None:
+                def _uninstall() -> None:
+                    if runner in getattr(
+                            self._thread.coordinator, '_runners', []):
+                        self._thread.coordinator._runners.remove(runner)  # type: ignore[union-attr]
+                try:
+                    un_fut = self._thread.submit(_uninstall)
+                    if un_fut is not None and hasattr(un_fut, 'result'):
+                        await asyncio.wrap_future(un_fut)
+                except Exception:
+                    pass
+            raise
 
     # ── Send / Ask ────────────────────────────────────────────────────────
 

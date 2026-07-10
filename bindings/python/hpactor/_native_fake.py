@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple  # noqa: F401
 
 from ._native_protocol import (
     AddressTuple,
@@ -25,6 +25,7 @@ class FakeNativeSystem:
     def __init__(self):
         self._started = False
         self._next_id = 1
+        self._names: Dict[str, AddressTuple] = {}
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
@@ -48,10 +49,11 @@ class FakeNativeSystem:
         return True
 
     def register_name(self, name: str, address: AddressTuple) -> bool:
+        self._names[name] = address
         return True
 
     def resolve_name(self, name: str) -> Optional[AddressTuple]:
-        return None
+        return self._names.get(name)
 
     # ── Message passing ──────────────────────────────────────────────
 

@@ -328,15 +328,20 @@ NativeSystemObject::tuple_to_address(py::tuple tup) noexcept {
             std::memcpy(addr.data(), packed_str.data(), 16);
             endpoint = hpactor::Ipv6Endpoint{
                 addr, hpactor::net_to_host_u16(static_cast<uint16_t>(port))};
-        } else {
+        } else if (family == 0 && packed_str.empty()) {
             // family 0 (local) — use default loopback endpoint
             endpoint = hpactor::Ipv4Endpoint{
                 0x7F000001, hpactor::net_to_host_u16(static_cast<uint16_t>(port))};
+        } else {
+            return std::nullopt;
         }
 
         return hpactor::ActorAddress(endpoint, hpactor::ActorType{actor_type},
                                      hpactor::ActorId{actor_id}, incarnation);
     } catch (const py::error_already_set&) {
+        PyErr_Clear();
+        return std::nullopt;
+    } catch (const py::cast_error&) {
         PyErr_Clear();
         return std::nullopt;
     }

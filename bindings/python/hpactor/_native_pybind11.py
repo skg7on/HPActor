@@ -56,7 +56,9 @@ class Pybind11NativeSystem:
     # ── Actor management ─────────────────────────────────────────────
 
     def spawn_bridge(self) -> Tuple[AddressTuple, int]:
-        assert self._ns is not None
+        if self._ns is None:
+            raise RuntimeError(
+                "Pybind11NativeSystem.spawn_bridge() called before start()")
         result = self._ns.spawn_bridge()
         addr_tup, generation = result
         return (

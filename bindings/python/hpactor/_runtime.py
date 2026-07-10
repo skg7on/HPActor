@@ -386,23 +386,38 @@ class _RuntimeThread:
         """Called by asyncio when the native dispatch fd is readable."""
         if self._native is None:
             return
-        max_batch = self._coordinator._capacity
-        dispatches = self._native.drain_dispatch(max_batch)
-        for d in dispatches:
-            self._coordinator.enqueue(d)
-        if dispatches:
-            self._coordinator.schedule_next()
+        try:
+            max_batch = self._coordinator._capacity
+            dispatches = self._native.drain_dispatch(max_batch)
+            for d in dispatches:
+                self._coordinator.enqueue(d)
+            if dispatches:
+                self._coordinator.schedule_next()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            # Remove reader on persistent failure to avoid spinning
+            if (self._loop is not None and self._native is not None and
+                    self._native.dispatch_fd >= 0):
+                self._loop.remove_reader(self._native.dispatch_fd)
 
     def _on_completion_readable(self) -> None:
         """Called by asyncio when the native completion fd is readable."""
         if self._native is None:
             return
-        max_batch = self._coordinator._capacity
-        completions = self._native.drain_completions(max_batch)
-        for c in completions:
-            token = c.get("token", 0)
-            if token and token in self._tokens._tokens:
-                self._tokens.resolve(token, c)
+        try:
+            max_batch = self._coordinator._capacity
+            completions = self._native.drain_completions(max_batch)
+            for c in completions:
+                token = c.get("token", 0)
+                if token and token in self._tokens._tokens:
+                    self._tokens.resolve(token, c)
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            if (self._loop is not None and self._native is not None and
+                    self._native.completion_fd >= 0):
+                self._loop.remove_reader(self._native.completion_fd)
 
     def submit(self, coro: Any) -> Any:
         """Submit a coroutine or callable to the runtime loop (thread-safe)."""

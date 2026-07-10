@@ -97,6 +97,39 @@ class NativeSystemObject {
                 return;
             } else if constexpr (std::is_same_v<Ret, bool>) {
                 return false;
+            } else if constexpr (std::is_same_v<Ret, pybind11::object> ||
+                                 std::is_same_v<Ret, pybind11::list> ||
+                                 std::is_same_v<Ret, pybind11::dict> ||
+                                 std::is_same_v<Ret, pybind11::tuple>) {
+                return pybind11::none();
+            } else {
+                return Ret{};
+            }
+        } catch (pybind11::builtin_exception& e) {
+            PyErr_SetString(PyExc_RuntimeError, e.what());
+            if constexpr (std::is_void_v<Ret>) {
+                return;
+            } else if constexpr (std::is_same_v<Ret, bool>) {
+                return false;
+            } else if constexpr (std::is_same_v<Ret, pybind11::object> ||
+                                 std::is_same_v<Ret, pybind11::list> ||
+                                 std::is_same_v<Ret, pybind11::dict> ||
+                                 std::is_same_v<Ret, pybind11::tuple>) {
+                return pybind11::none();
+            } else {
+                return Ret{};
+            }
+        } catch (const std::exception& e) {
+            PyErr_SetString(PyExc_RuntimeError, e.what());
+            if constexpr (std::is_void_v<Ret>) {
+                return;
+            } else if constexpr (std::is_same_v<Ret, bool>) {
+                return false;
+            } else if constexpr (std::is_same_v<Ret, pybind11::object> ||
+                                 std::is_same_v<Ret, pybind11::list> ||
+                                 std::is_same_v<Ret, pybind11::dict> ||
+                                 std::is_same_v<Ret, pybind11::tuple>) {
+                return pybind11::none();
             } else {
                 return Ret{};
             }
