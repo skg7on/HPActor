@@ -6,20 +6,23 @@
 
 **Architecture:** A root pyproject.toml uses scikit-build-core to drive the existing CMake project and installs hpactor._hpactor plus its private native runtime libraries into one wheel. cibuildwheel builds one cp311-abi3 wheel per supported platform/architecture, auditwheel or delocate repairs it, abi3audit and a dependency-closure checker validate it, and separate clean environments test the same artifact across supported CPython minors. Publishing is isolated behind a tag/version gate, four-platform acceptance, GitHub environments, and PyPI trusted publishing.
 
-**Tech Stack:** CPython 3.11 Stable ABI, Py_LIMITED_API=0x030B0000, pyproject.toml, scikit-build-core, setuptools-scm, CMake/Ninja, cibuildwheel, auditwheel, delocate, abi3audit, build, twine, GitHub Actions, PyPI trusted publishing, Sphinx, protobuf 7.35.x Python runtime, protobuf 35.0 C++ runtime, Abseil 20260107.1, and OpenSSL 3.5.5 LTS.
+**Tech Stack:** CPython 3.11 Stable ABI, pybind11 ≥ 2.12.0 (vendored, header-only, `PYBIND11_USE_LIMITED_API=1`), `Py_LIMITED_API=0x030B0000`, pyproject.toml, scikit-build-core, setuptools-scm, CMake/Ninja, cibuildwheel, auditwheel, delocate, abi3audit, build, twine, GitHub Actions, PyPI trusted publishing, Sphinx, protobuf 7.35.x Python runtime, protobuf 35.0 C++ runtime, Abseil 20260107.1, and OpenSSL 3.5.5 LTS.
 
 ## Global Constraints
 
 - Phases 1A, 1B, and 1C must be implemented and passing before Phase 1D begins.
 - Distribution name is hpactor; import package is hpactor; native module is hpactor._hpactor.
 - Python requires CPython 3.11 or newer. PyPy, free-threaded CPython, Windows, musllinux, iOS, Android, and WebAssembly are outside Phase 1D.
-- Every compiled wheel uses Python tag cp311 and ABI tag abi3, produced from Py_LIMITED_API=0x030B0000 and CMake Development.SABIModule.
+- Every compiled wheel uses Python tag cp311 and ABI tag abi3, produced from Py_LIMITED_API=0x030B0000, PYBIND11_USE_LIMITED_API=1, and pybind11_add_module (which uses Development.SABIModule internally).
+- pybind11 ≥ 2.12.0 headers are vendored under third_party/pybind11/include/. No network access is required during wheel or source builds. The vendored headers are verified by SHA256 checksum in the dependency lock manifest.
 - Supported wheel targets are manylinux_2_28_x86_64, manylinux_2_28_aarch64, macosx_12_0_x86_64, and macosx_12_0_arm64. Universal2 is not produced.
 - Linux wheels build in official manylinux_2_28 containers on native x86_64 and ARM64 runners. No cross-architecture wheel is accepted without a native smoke test.
 - macOS wheels build and test on native Intel and Apple Silicon runners with MACOSX_DEPLOYMENT_TARGET=12.0.
 - Runtime Python dependency is protobuf>=7.35.0,<8. The minimum and newest available version below 8 are both tested.
 - Wheel-native C++ dependency versions are protobuf 35.0, Abseil 20260107.1, and OpenSSL 3.5.5. They are source-built from a checksum-locked manifest with position-independent code and no shared dependency on a developer machine.
 - C++ protobuf generated code and libprotobuf use the exact same protobuf release. No C++ protobuf ABI skew is permitted.
+- pybind11 translation units are compiled with -fexceptions (sealed noexcept boundary); all other binding TUs remain -fno-exceptions. The pybind11 exception allowlist is enforced by architecture scans in the wheel build.
+- The pybind11 vendored headers are the only pybind11 files consumed. pybind11 is never fetched at build time, linked as a shared library, or installed as a system dependency.
 - Wheel repair must leave no unresolved HPActor, protobuf, Abseil, OpenSSL, or non-policy C++ runtime dependency.
 - Importing hpactor or hpactor._hpactor performs no thread creation, actor-system construction, network initialization, or file-descriptor registration.
 - Runtime threads begin only when ActorSystem starts and are joined before ActorSystem context exit returns.
@@ -48,6 +51,9 @@
 - Modify: src/CMakeLists.txt
 - Modify: bindings/python/native/CMakeLists.txt
 - Create: cmake/python_wheel_install.cmake
+- Create: third_party/pybind11/include/ (vendored pybind11 ≥ 2.12.0 headers)
+- Create: third_party/pybind11/LICENSE
+- Create: third_party/pybind11/pybind11-sha256.txt
 - Modify: .gitignore
 
 ### Hermetic dependencies and binary audit
@@ -217,6 +223,9 @@ sdist.include = [
   "protos/**",
   "third_party/llhttp/**",
   "third_party/linenoise/**",
+  "third_party/pybind11/include/**",
+  "third_party/pybind11/LICENSE",
+  "third_party/pybind11/pybind11-sha256.txt",
   "bindings/python/**",
   "LICENSE",
 ]
@@ -344,9 +353,9 @@ cmake --install build/python-layout \
 
 Expected: the component or correct hpactor wheel layout does not exist.
 
-- [ ] **Step 3: Enforce the Stable ABI CMake path**
+- [ ] **Step 3: Enforce the Stable ABI CMake path with vendored pybind11**
 
-Add HPACTOR_PYTHON_WHEEL_BUILD default OFF. When enabled:
+Add `HPACTOR_PYTHON_WHEEL_BUILD` default OFF. When enabled:
 
 ~~~cmake
 if(CMAKE_VERSION VERSION_LESS 3.26)
@@ -355,9 +364,47 @@ if(CMAKE_VERSION VERSION_LESS 3.26)
 endif()
 find_package(Python 3.11 REQUIRED
   COMPONENTS Interpreter Development.SABIModule)
+
+# Use vendored pybind11 headers (no FetchContent — no network at build time)
+add_subdirectory(third_party/pybind11 ${CMAKE_BINARY_DIR}/pybind11 EXCLUDE_FROM_ALL)
 ~~~
 
-In the binding CMake file use Python_add_library with USE_SABI 3.11 and define Py_LIMITED_API=0x030B0000. Set OUTPUT_NAME _hpactor, CXX_VISIBILITY_PRESET hidden, VISIBILITY_INLINES_HIDDEN ON, PREFIX "", and prohibit exceptions/RTTI. Fail configuration if SKBUILD_SABI_COMPONENT is empty during a wheel build.
+In `bindings/python/native/CMakeLists.txt`, use `pybind11_add_module` instead of raw `Python_add_library`:
+
+~~~cmake
+pybind11_add_module(_hpactor MODULE
+    src/python_pybind11/module.cpp
+    src/python_pybind11/native_system.cpp
+)
+target_compile_definitions(_hpactor PRIVATE
+    Py_LIMITED_API=0x030B0000
+    PYBIND11_USE_LIMITED_API=1
+)
+target_compile_options(_hpactor PRIVATE
+    -fexceptions          # pybind11 TUs only — sealed noexcept boundary
+    -fno-rtti
+)
+target_link_libraries(_hpactor PRIVATE
+    hpactor_python_native
+    hpactor_lib
+)
+set_target_properties(_hpactor PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "_hpactor"
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+)
+~~~
+
+`pybind11_add_module` internally uses `Python_add_library` with the
+`Development.SABIModule` component when `PYBIND11_USE_LIMITED_API` is
+defined. The vendored headers are the sole pybind11 source — no
+`FetchContent`, `find_package(pybind11)`, or system pybind11 is used.
+
+Fail configuration if `SKBUILD_SABI_COMPONENT` is empty during a wheel build.
+Verify that `-fexceptions` is applied only to `src/python_pybind11/` TUs;
+all other binding TUs (bridge, runtime, queues, notifier, reliability,
+observability, health, shutdown) remain `-fno-exceptions`.
 
 - [ ] **Step 4: Create the private shared-library install layout**
 
@@ -416,8 +463,9 @@ git commit -m "build: install Python ABI3 wheel layout"
 - Modify: cmake/dependencies.cmake
 
 **Interfaces:**
-- Consumes: OpenSSL 3.5.5, Abseil 20260107.1, protobuf 35.0 source releases, CMake/Ninja, platform compilers, and HPACTOR_WHEEL_DEPS_PREFIX.
+- Consumes: OpenSSL 3.5.5, Abseil 20260107.1, protobuf 35.0 source releases, vendored pybind11 ≥ 2.12.0 headers (third_party/pybind11/), CMake/Ninja, platform compilers, and HPACTOR_WHEEL_DEPS_PREFIX.
 - Produces: a verified per-platform prefix containing PIC static OpenSSL/Abseil/protobuf libraries and matching protoc, with no network access after source fetch.
+- **pybind11 is vendored, not source-built.** The headers in `third_party/pybind11/include/` are the only pybind11 files consumed. A SHA256 checksum file (`third_party/pybind11/pybind11-sha256.txt`) records the expected hash of every vendored header, verified by a CI check before wheel builds. pybind11 is never fetched at build time.
 
 - [ ] **Step 1: Write failing lock and offline-rebuild tests**
 
@@ -533,6 +581,7 @@ git commit -m "build: lock Python wheel native dependencies"
 **Interfaces:**
 - Consumes: raw scikit-build-core wheel, auditwheel, delocate, abi3audit, wheel ZIP metadata, platform binary inspection tools, and private HPActor libraries.
 - Produces: repaired policy-tagged wheel, ABI3 proof, exact content manifest, dependency report, and a hard failure for unresolved or forbidden libraries.
+- **pybind11 is header-only** — it contributes no binary dependency to audit. The `abi3audit --strict` pass on `_hpactor` already proves no non-stable-ABI symbols, including any hypothetical pybind11 runtime symbols. The `pybind11` name is added to the forbidden-unresolved-prefixes list in `dependency-policy.json` so a pybind11 `.so`/`.dylib` link would be caught.
 
 - [ ] **Step 1: Write failing wheel-content and policy tests**
 
@@ -573,7 +622,7 @@ Expected: repair/audit reports and strict dependency policy are absent or fail.
 dependency-policy.json contains:
 
 - required private libraries: hpactor_lib and hpactor_proto;
-- forbidden unresolved prefixes: hpactor, protobuf, absl, ssl, crypto;
+- forbidden unresolved prefixes: hpactor, protobuf, absl, ssl, crypto, pybind11;
 - allowed Linux policy libraries copied from the manylinux_2_28 policy at tool install time;
 - allowed macOS system roots: /usr/lib and /System/Library/Frameworks;
 - forbidden absolute roots: checkout, build, dependency prefix, /opt/homebrew, /usr/local, and runner tool cache;
@@ -1239,15 +1288,19 @@ git commit -m "docs: record Python wheel release status"
 ## Plan Completion Checklist
 
 - [ ] Phases 1A, 1B, and 1C are implemented and passing before Phase 1D begins.
+- [ ] pybind11 ≥ 2.12.0 headers are vendored under `third_party/pybind11/include/` with a SHA256 checksum file.
+- [ ] `third_party/pybind11/include/` is in sdist includes; pybind11 is never fetched at build time.
 - [ ] pyproject.toml defines hpactor, Python >=3.11, protobuf>=7.35.0,<8, dynamic versioning, and wheel.py-api=cp311.
 - [ ] hpactor.__version__, tag, project, wheel, sdist, and release versions match.
-- [ ] _hpactor builds with Development.SABIModule, Py_LIMITED_API=0x030B0000, and cp311-abi3 tags.
+- [ ] _hpactor builds with pybind11_add_module, Py_LIMITED_API=0x030B0000, PYBIND11_USE_LIMITED_API=1, and cp311-abi3 tags.
+- [ ] pybind11 TUs compile with -fexceptions; all other binding TUs remain -fno-exceptions. Architecture scans enforce the boundary.
 - [ ] Wheel import starts no thread, runtime, network resource, or notifier.
-- [ ] Wheel staging contains one native module, py.typed, license/metadata, and required private runtime libraries only.
+- [ ] Wheel staging contains one native module, py.typed, license/metadata, and required private runtime libraries only. No pybind11 headers (they are compile-time only).
 - [ ] OpenSSL 3.5.5, Abseil 20260107.1, and protobuf 35.0 sources are checksum locked and built for the target.
+- [ ] Vendored pybind11 header SHA256 checksum passes verification before wheel builds.
 - [ ] C++ protoc/generated/runtime protobuf versions match exactly.
 - [ ] auditwheel/delocate repair succeeds and abi3audit --strict passes.
-- [ ] No unresolved HPActor, protobuf, Abseil, OpenSSL, or forbidden C++ runtime dependency remains.
+- [ ] No unresolved HPActor, protobuf, Abseil, OpenSSL, pybind11, or forbidden C++ runtime dependency remains.
 - [ ] Linux wheels are manylinux_2_28 x86_64 and aarch64 and pass on native runners.
 - [ ] macOS wheels are separate macosx_12_0 x86_64 and arm64 and pass on native runners.
 - [ ] The same repaired wheel passes clean installs on CPython 3.11, 3.12, 3.13, and 3.14 for each platform.
@@ -1267,4 +1320,4 @@ git commit -m "docs: record Python wheel release status"
 
 ## Execution Handoff
 
-Plan complete. Execute only after the Phase 1A, Phase 1B, and Phase 1C acceptance checklists pass. Use superpowers:subagent-driven-development for one fresh implementer and review gate per task, or superpowers:executing-plans for inline batches with review checkpoints.
+Plan complete. Execute only after the Phase 1A, Phase 1B (pybind11 backend), and Phase 1C acceptance checklists pass. The pybind11 backend migration (design spec `2026-07-10-pybind11-backend-design.md`, implementation plan `2026-07-10-pybind11-backend-implementation.md`) replaces the Phase 1B raw C API layer. The vendored pybind11 headers in `third_party/pybind11/include/` must be committed before Phase 1D wheel builds begin. Use superpowers:subagent-driven-development for one fresh implementer and review gate per task, or superpowers:executing-plans for inline batches with review checkpoints.
