@@ -20,6 +20,7 @@ add_executable(test_unit_cluster
     singleton/test_majority_based_election.cpp
     singleton/test_fixed_priority_election.cpp
     singleton/test_singleton_manager.cpp
+    singleton/test_singleton_manager_leader.cpp
     singleton/test_singleton_manager_actor.cpp
     singleton/test_fake_leadership_backend.cpp
     singleton/test_leadership_backend_adapter.cpp
