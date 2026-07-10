@@ -9,11 +9,21 @@
 # ---- Protobuf + Abseil -----------------------------------------------------
 
 if(HPACTOR_PYTHON_WHEEL_BUILD AND DEFINED HPACTOR_WHEEL_DEPS_PREFIX)
+  # Resolve relative paths against CMAKE_SOURCE_DIR (cibuildwheel runs
+  # CMake from a build subdirectory, so relative -D values must be
+  # anchored to the project root).
+  if(NOT IS_ABSOLUTE "${HPACTOR_WHEEL_DEPS_PREFIX}")
+    get_filename_component(HPACTOR_WHEEL_DEPS_PREFIX
+      "${CMAKE_SOURCE_DIR}/${HPACTOR_WHEEL_DEPS_PREFIX}" ABSOLUTE)
+  endif()
+  message(STATUS "Python wheel deps prefix: ${HPACTOR_WHEEL_DEPS_PREFIX}")
+
   # Wheel builds use checksum-locked dependencies from a hermetic prefix.
-  # Suppress system-wide search to prevent accidental linkage against
-  # incompatible system packages.
-  list(PREPEND CMAKE_PREFIX_PATH "${HPACTOR_WHEEL_DEPS_PREFIX}")
-  set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH OFF)
+  # CMake-standard hint variables ensure packages are found from the
+  # prefix without having to disable system search paths globally.
+  set(Protobuf_ROOT "${HPACTOR_WHEEL_DEPS_PREFIX}")
+  set(absl_ROOT "${HPACTOR_WHEEL_DEPS_PREFIX}")
+  set(OPENSSL_ROOT_DIR "${HPACTOR_WHEEL_DEPS_PREFIX}")
 
   find_package(Protobuf 35.0 EXACT REQUIRED)
 
@@ -31,8 +41,6 @@ if(HPACTOR_PYTHON_WHEEL_BUILD AND DEFINED HPACTOR_WHEEL_DEPS_PREFIX)
   find_package(absl REQUIRED)
   set(HPACTOR_PROTO_ABSL_LIBS absl::log_internal_check_op)
   set(HPACTOR_ABSL_LIBS absl::log absl::log_internal_check_op)
-
-  set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH ON)
 else()
   find_package(Protobuf REQUIRED)
 

@@ -62,9 +62,9 @@ jobs:
       - name: Build native dependencies
         run: |
           python3 bindings/python/packaging/build_native_deps.py \
-            --prefix "${{ github.workspace }}/build/wheel-deps/prefix" \
-            --cache "${{ github.workspace }}/build/wheel-deps/cache" \
-            --build-dir "${{ github.workspace }}/build/wheel-deps/build" \
+            --prefix build/wheel-deps/prefix \
+            --cache build/wheel-deps/cache \
+            --build-dir build/wheel-deps/build \
             --jobs "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 
       - name: Build wheels
@@ -74,7 +74,7 @@ jobs:
           CIBW_BEFORE_BUILD: ""
           CMAKE_ARGS: >-
             -DHPACTOR_PYTHON_WHEEL_BUILD=ON
-            -DHPACTOR_WHEEL_DEPS_PREFIX=${{ github.workspace }}/build/wheel-deps/prefix
+            -DHPACTOR_WHEEL_DEPS_PREFIX=build/wheel-deps/prefix
             -DENABLE_TESTS=OFF
             -DENABLE_EXAMPLES=OFF
             -DENABLE_APPS=OFF
