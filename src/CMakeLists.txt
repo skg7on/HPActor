@@ -102,3 +102,7 @@ add_library(hpactor ALIAS hpactor_lib)
 # ---- cluster subsystem (failure model, partitioning, route invalidation) ----
 
 add_subdirectory(cluster)
+
+# ---- etcd v3 vendored protos and gRPC codegen ---------------------------
+
+add_subdirectory(etcd)
