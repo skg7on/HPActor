@@ -49,32 +49,22 @@ class CommandKind(IntEnum):
     CANCEL_ASK = 15
 
 
-class _NativeBackend:
-    """Duck-typed protocol that both FakeNativeSystem and Pybind11NativeSystem
-    satisfy.
-
-    Not an ABC — structural subtyping for zero-overhead dispatch.  Each
-    concrete backend implements the full set of methods.
-    """
-
-    def start(self) -> None: ...  # pragma: no cover
-    def stop(self) -> None: ...  # pragma: no cover
-    def begin_draining(self) -> None: ...  # pragma: no cover
-
-    def spawn_bridge(self) -> Tuple[AddressTuple, int]: ...  # pragma: no cover
-    def stop_bridge(self, address: AddressTuple) -> bool: ...  # pragma: no cover
-    def register_name(self, name: str, address: AddressTuple) -> bool: ...  # pragma: no cover
-    def resolve_name(self, name: str) -> Optional[AddressTuple]: ...  # pragma: no cover
-
-    def submit(self, command: CommandDict) -> bool: ...  # pragma: no cover
-    def drain_dispatch(self, max_items: int) -> List[DispatchDict]: ...  # pragma: no cover
-    def drain_completions(self, max_items: int) -> List[CompletionDict]: ...  # pragma: no cover
-
-    def snapshot(self) -> Dict[str, Any]: ...  # pragma: no cover
-
-    @property
-    def dispatch_fd(self) -> int: ...  # pragma: no cover
-    @property
-    def completion_fd(self) -> int: ...  # pragma: no cover
-
-    def application_origin(self) -> AddressTuple: ...  # pragma: no cover
+# ── Backend protocol (duck-typed, not an ABC) ───────────────────────────
+#
+# Both FakeNativeSystem and Pybind11NativeSystem satisfy this structural
+# interface:
+#
+#   start() -> None
+#   stop() -> None
+#   begin_draining() -> None
+#   spawn_bridge() -> Tuple[AddressTuple, int]
+#   stop_bridge(address: AddressTuple) -> bool
+#   register_name(name: str, address: AddressTuple) -> bool
+#   resolve_name(name: str) -> Optional[AddressTuple]
+#   submit(command: CommandDict) -> bool
+#   drain_dispatch(max_items: int) -> List[DispatchDict]
+#   drain_completions(max_items: int) -> List[CompletionDict]
+#   snapshot() -> Dict[str, Any]
+#   dispatch_fd: int (property)
+#   completion_fd: int (property)
+#   application_origin() -> AddressTuple

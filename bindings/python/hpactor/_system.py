@@ -222,15 +222,13 @@ class ActorSystem:
                     del self._runners[addr.actor_id]
                 if name in self._refs:
                     del self._refs[name]
-            if runner is not None:
-                def _uninstall() -> None:
-                    if runner in getattr(
-                            self._thread.coordinator, '_runners', []):
-                        self._thread.coordinator._runners.remove(runner)  # type: ignore[union-attr]
+            if runner is not None and not runner.stopped:
+                # Stop the runner if it was installed; coordinator
+                # will clean up its internal tracking on stop_once().
                 try:
-                    un_fut = self._thread.submit(_uninstall)
-                    if un_fut is not None and hasattr(un_fut, 'result'):
-                        await asyncio.wrap_future(un_fut)
+                    stop_fut = self._thread.submit(runner.stop_once())
+                    if stop_fut is not None and hasattr(stop_fut, 'result'):
+                        await asyncio.wrap_future(stop_fut)
                 except Exception:
                     pass
             raise

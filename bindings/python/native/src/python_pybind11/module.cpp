@@ -19,7 +19,10 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(_hpactor, m) {
-    m.attr("PY_LIMITED_API") = py::int_(0); // full API; ABI3 to follow
+    // 0 = full Python C API in use (not limited API).
+    // ABI3 wheels via Py_LIMITED_API=0x030B0000 are deferred until
+    // pybind11 limited-API support matures (see implementation plan).
+    m.attr("PY_LIMITED_API") = py::int_(0);
     m.doc() = "HPActor native runtime";
 
     py::class_<NativeSystemObject>(m, "NativeSystem")
@@ -51,6 +54,5 @@ PYBIND11_MODULE(_hpactor, m) {
              &NativeSystemObject::complete_topology_actor, py::arg("outcome"))
         .def("record_topology_preflight",
              &NativeSystemObject::record_topology_preflight, py::arg("preflight"))
-        .def("last_topology_error", &NativeSystemObject::last_topology_error)
-        .def("resolve_name", &NativeSystemObject::resolve_name, py::arg("name"));
+        .def("last_topology_error", &NativeSystemObject::last_topology_error);
 }

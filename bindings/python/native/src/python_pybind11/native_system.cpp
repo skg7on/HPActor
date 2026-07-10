@@ -17,27 +17,34 @@ namespace py = pybind11;
 hpactor::python::PythonRuntimeConfig
 NativeSystemObject::dict_to_runtime_config(py::dict cfg) {
     hpactor::python::PythonRuntimeConfig rt;
-    if (cfg.contains("dispatch_queue_capacity"))
-        rt.dispatch_queue_capacity =
-            cfg["dispatch_queue_capacity"].cast<uint32_t>();
-    if (cfg.contains("command_queue_capacity"))
-        rt.command_queue_capacity = cfg["command_queue_capacity"].cast<uint32_t>();
-    if (cfg.contains("completion_queue_capacity"))
-        rt.completion_queue_capacity =
-            cfg["completion_queue_capacity"].cast<uint32_t>();
-    if (cfg.contains("max_actor_bindings"))
-        rt.max_actor_bindings = cfg["max_actor_bindings"].cast<uint32_t>();
-    if (cfg.contains("max_dispatch_per_tick"))
-        rt.max_dispatch_per_tick = cfg["max_dispatch_per_tick"].cast<uint32_t>();
-    if (cfg.contains("max_commands_per_turn"))
-        rt.max_commands_per_turn = cfg["max_commands_per_turn"].cast<uint32_t>();
-    if (cfg.contains("loop_lag_unready_ms"))
-        rt.loop_lag_unready_ms = cfg["loop_lag_unready_ms"].cast<uint32_t>();
-    if (cfg.contains("handler_shutdown_timeout_ms"))
-        rt.handler_shutdown_timeout_ms =
-            cfg["handler_shutdown_timeout_ms"].cast<uint32_t>();
-    if (cfg.contains("trace_handler_spans"))
-        rt.trace_handler_spans = cfg["trace_handler_spans"].cast<bool>();
+    try {
+        if (cfg.contains("dispatch_queue_capacity"))
+            rt.dispatch_queue_capacity =
+                cfg["dispatch_queue_capacity"].cast<uint32_t>();
+        if (cfg.contains("command_queue_capacity"))
+            rt.command_queue_capacity =
+                cfg["command_queue_capacity"].cast<uint32_t>();
+        if (cfg.contains("completion_queue_capacity"))
+            rt.completion_queue_capacity =
+                cfg["completion_queue_capacity"].cast<uint32_t>();
+        if (cfg.contains("max_actor_bindings"))
+            rt.max_actor_bindings = cfg["max_actor_bindings"].cast<uint32_t>();
+        if (cfg.contains("max_dispatch_per_tick"))
+            rt.max_dispatch_per_tick =
+                cfg["max_dispatch_per_tick"].cast<uint32_t>();
+        if (cfg.contains("max_commands_per_turn"))
+            rt.max_commands_per_turn =
+                cfg["max_commands_per_turn"].cast<uint32_t>();
+        if (cfg.contains("loop_lag_unready_ms"))
+            rt.loop_lag_unready_ms = cfg["loop_lag_unready_ms"].cast<uint32_t>();
+        if (cfg.contains("handler_shutdown_timeout_ms"))
+            rt.handler_shutdown_timeout_ms =
+                cfg["handler_shutdown_timeout_ms"].cast<uint32_t>();
+        if (cfg.contains("trace_handler_spans"))
+            rt.trace_handler_spans = cfg["trace_handler_spans"].cast<bool>();
+    } catch (const py::cast_error& e) {
+        throw py::type_error(std::string("invalid config value type: ") + e.what());
+    }
     return rt;
 }
 

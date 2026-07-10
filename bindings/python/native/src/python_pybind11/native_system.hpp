@@ -84,9 +84,15 @@ class NativeSystemObject {
   private:
     /// \brief Sealed noexcept boundary.
     ///
-    /// Executes \p f inside a try/catch for pybind11::error_already_set.
-    /// On exception, restores the Python error state and returns the
-    /// appropriate sentinel for the return type.
+    /// Executes \p f inside a try/catch.  Catches in order:
+    /// 1. error_already_set — Python error already set; restore it.
+    /// 2. builtin_exception — pybind11 wrapper around Python error; set
+    ///    RuntimeError and restore.
+    /// 3. std::exception — unexpected C++ exception; set RuntimeError
+    ///    with what() message (last-resort safety net).
+    ///
+    /// On exception, returns the appropriate sentinel for the return type:
+    /// py::none() for object-like types, false for bool, empty for void.
     template <typename F> auto guard(F&& f) noexcept -> decltype(f()) {
         using Ret = decltype(f());
         try {
