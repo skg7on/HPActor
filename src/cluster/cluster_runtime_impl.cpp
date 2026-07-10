@@ -50,8 +50,13 @@ result<void> ClusterRuntimeImpl::start() noexcept {
 
     failure_model_ = std::make_unique<cluster::ClusterFailureModel>();
     route_invalidation_ = std::make_unique<cluster::RouteInvalidation>();
-    singleton_manager_ = std::make_unique<cluster::singleton::SingletonManagerActor>(
-        node_id_, std::make_unique<cluster::singleton::OldestNodeElection>());
+    // For now, use mode="local" default (OldestNodeElection). Phase 2 etcd
+    // backend will read [system.cluster.leadership] TOML and select between
+    // OldestNodeElection, LeadershipBackendAdapter, or FakeLeadershipBackend.
+    auto election = std::make_unique<cluster::singleton::OldestNodeElection>();
+    singleton_manager_ =
+        std::make_unique<cluster::singleton::SingletonManagerActor>(
+            node_id_, std::move(election));
 
     singleton_manager_->register_singleton(
         cluster::singleton::SingletonIdentity{"shard-coordinator", 0});
