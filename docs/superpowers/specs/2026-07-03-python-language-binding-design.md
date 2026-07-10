@@ -39,10 +39,15 @@ the current implementation: application HTTP gateway routes, health, metrics,
 and CLI over UDS/TCP. It does not represent backlog-only authenticated admin or
 wire-negotiation behavior as implemented.
 
-The native extension uses the CPython limited C API, explicit status returns,
-and ABI3 packaging. It does not use nanobind or pybind11 because the repository
-permits exceptions in only three existing translation units and otherwise
-requires exception-free and RTTI-free C++.
+The native extension uses pybind11 with the CPython limited API
+(`PYBIND11_USE_LIMITED_API`, `Py_LIMITED_API=0x030B0000`) and ABI3 packaging.
+Pybind11 translation units are granted a narrow exception allowlist (matching
+the existing pattern for `toml_parser.cpp`) with a sealed noexcept boundary that
+prevents C++ exceptions from crossing into the native bridge. Nanobind remains
+rejected for the same reason the original raw-C-API design was chosen — the
+repository requires exception-free and RTTI-free C++ outside explicit allowlist
+targets. See the [pybind11 backend design](2026-07-10-pybind11-backend-design.md)
+for the exception-boundary and ABI3 rationale.
 
 ## 2. Current Runtime Baseline
 
@@ -770,7 +775,19 @@ for a separate design.
 
 ### Nanobind or pybind11
 
-Both offer productive C++ wrappers, but their normal binding model relies on
-C++ exception support. The repository's exception allowlist excludes binding
-translation units. A narrow CPython limited-API module preserves the stronger
-project-wide contract and avoids wrapper ABI coupling.
+**Pybind11 (selected — July 2026 revision).** Pybind11 is now the chosen backend
+for the CPython extension layer, replacing the original raw CPython limited C API.
+The earlier concern about C++ exception support is addressed by a sealed noexcept
+boundary: `pybind11::error_already_set` is caught inside `python_pybind11/`
+translation units and converted to error codes before crossing into the
+exception-free native bridge. The pybind11 TUs are added to the repository's
+exception allowlist (matching the `toml_parser.cpp` pattern), and `-fno-rtti`
+is preserved on all binding TUs. ABI3 compatibility is maintained via
+`PYBIND11_USE_LIMITED_API` and `Py_LIMITED_API=0x030B0000`. Details are in the
+[pybind11 backend design](2026-07-10-pybind11-backend-design.md).
+
+**Nanobind (rejected).** Nanobind offers a modern, efficient binding experience
+but its exception model has the same fundamental conflict with the repository's
+`-fno-exceptions` policy. Unlike pybind11, nanobind does not support a
+`PYBIND11_EXCEPTION_DISABLED`-equivalent mode, making a sealed noexcept boundary
+impractical. Nanobind is therefore rejected.
