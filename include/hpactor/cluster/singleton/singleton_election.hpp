@@ -16,9 +16,11 @@
 
 #include <hpactor/cluster/singleton/singleton_identity.hpp>
 
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 
 namespace hpactor::cluster::singleton {
 
@@ -37,6 +39,17 @@ class ISingletonElection {
 
     /// \brief Notify the election strategy that a peer is down.
     virtual void on_peer_down(const std::string& node_id) = 0;
+
+    /// \brief Get the fencing token for a singleton owned by this node.
+    ///
+    /// Returns the backend-issued token when backed by an ILeadershipBackend.
+    /// Default returns 0 — callers fall back to local increment.
+    ///
+    /// \param[in] singleton_name The singleton to query.
+    /// \return The current fencing token, or 0 if not backend-managed.
+    virtual uint64_t get_fencing_token(std::string_view /*singleton_name*/) const {
+        return 0;
+    }
 };
 
 } // namespace hpactor::cluster::singleton
