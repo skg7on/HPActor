@@ -44,8 +44,12 @@ add_library(hpactor_etcd STATIC)
 target_include_directories(hpactor_etcd PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
     ${Protobuf_INCLUDE_DIRS}
 )
+
+target_sources(hpactor_etcd PRIVATE etcd_serialize.cpp)
 protobuf_generate(TARGET hpactor_etcd PROTOS ${PROTO_FILES} APPEND_PATH)
 protobuf_generate(
     TARGET hpactor_etcd

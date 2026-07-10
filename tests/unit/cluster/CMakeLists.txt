@@ -24,10 +24,12 @@ add_executable(test_unit_cluster
     singleton/test_singleton_manager_actor.cpp
     singleton/test_fake_leadership_backend.cpp
     singleton/test_leadership_backend_adapter.cpp
+    singleton/test_etcd_serialize.cpp
+    singleton/test_etcd_leadership_backend.cpp
     pubsub/test_pubsub_mediator_core.cpp
     pubsub/test_pubsub_mediator_actor.cpp
     receptionist/test_cluster_receptionist_core.cpp
     receptionist/test_cluster_receptionist_actor.cpp
 )
-target_link_libraries(test_unit_cluster hpactor hpactor_proto hpactor_cluster pthread hpactor_test_support GTest::gtest_main)
+target_link_libraries(test_unit_cluster hpactor hpactor_proto hpactor_cluster hpactor_etcd pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_cluster)
