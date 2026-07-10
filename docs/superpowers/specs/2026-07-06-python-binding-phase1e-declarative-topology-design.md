@@ -18,9 +18,10 @@ limitations under the License.
 
 **Status:** Approved design
 
-**Date:** 2026-07-06
+**Date:** 2026-07-06 (updated 2026-07-10 for pybind11 backend and native integration)
 
-**Depends on:** Python binding Phases 1A through 1D and the runtime blueprint,
+**Depends on:** Python binding Phases 1A–1C (implemented), Phase 1D (packaging),
+pybind11 backend, native integration design, and the runtime blueprint,
 coordinator, actor-spawner, TOML parser-registry, and topology foundations
 
 ## 1. Summary
@@ -319,10 +320,12 @@ provider collisions, and configured capacity. It performs no imports, thread
 creation, listener startup, actor spawn, name registration, or runtime config
 mutation.
 
-The CPython limited-API wrapper converts Python specs to immutable tuples of
-strings and string dictionaries. It does not retain a `PyObject*` in
-`PreparedTopology`, `PythonNativeSystem`, an actor provider, a queue, or a
-runtime coordinator stage.
+The pybind11-based `NativeSystemObject` wrapper (see the [pybind11 backend
+design](2026-07-10-pybind11-backend-design.md)) exposes topology preparation
+through the `_hpactor.NativeSystem` type. Python specs are converted to
+immutable tuples of strings and string dictionaries. No `PyObject*` or borrowed
+Python reference is retained in `PreparedTopology`, `PythonNativeSystem`, an
+actor provider, a queue, or a runtime coordinator stage.
 
 ### 7.2 Python factory manifest
 
@@ -346,6 +349,12 @@ argument fingerprint.
 
 Tokens are scoped to one `PythonNativeSystem` generation. They are never reused
 within that generation and are invalid after rollback or shutdown.
+
+The imperative `spawn()` flow — `spawn_bridge()` → construct actor → install
+runner → `register_name()` → `on_start()` fence — is defined in the [native
+integration design](2026-07-10-python-native-integration-design.md). The
+topology provider reuses this same flow at scale, adding allowlisted import
+preflight and transactional commit/rollback.
 
 ### 7.3 Configured actor provider seam
 

@@ -16,7 +16,7 @@ limitations under the License.
 
 # Python Language Binding Design
 
-**Status:** Approved design; Phase 1A native foundation implemented
+**Status:** Approved design; Phases 1A, 1B, 1C implemented; pybind11 backend active; native integration designed
 
 **Date:** 2026-07-03
 
@@ -198,16 +198,23 @@ cross-thread Python callbacks.
 
 ### 6.1 Native extension target
 
-`bindings/python/native/` builds `_hpactor` as a separate module linked to
-`hpactor_lib`.
+`bindings/python/native/` builds `_hpactor` as a separate module via pybind11,
+linked to `hpactor_lib`.
 
-- It uses `Py_LIMITED_API` for CPython 3.11 ABI3 compatibility.
-- It compiles without exceptions and without RTTI.
-- It uses explicit C API error checks and `PyErr_Set*` at Python entry points.
-- CPython headers do not appear in `hpactor_lib`, public HPActor headers,
-  scheduler code, mailbox code, or transport code.
-- C++ failures cross the module boundary as explicit result values; Python
-  wrapper code maps selected results to Python exceptions.
+- The `python_pybind11/` translation units compile with `-fexceptions -frtti`
+  (sealed noexcept boundary); all other bridge TUs remain `-fno-exceptions
+  -fno-rtti`.
+- pybind11 ≥ 2.12.0 headers are vendored under `third_party/pybind11/include/`.
+- `Py_LIMITED_API` / `PYBIND11_USE_LIMITED_API` are deferred — pybind11 2.13.6
+  has incomplete limited-API guards. ABI3 compliance to be verified by
+  `abi3audit` as a Phase 1D follow-up.
+- `Python.h` and `pybind11/` headers do not appear in `hpactor_lib`, public
+  HPActor headers, scheduler code, mailbox code, or transport code.
+- C++ failures cross the module boundary as explicit result values; the
+  `NativeSystemObject::guard()` template catches `pybind11::error_already_set`
+  and converts it to error sentinels.
+- See the [pybind11 backend design](2026-07-10-pybind11-backend-design.md) for
+  the full exception-boundary and compilation model.
 
 ### 6.2 `PythonRuntime`
 
@@ -258,6 +265,19 @@ requeues itself through `ActorReadyGate` rather than looping indefinitely.
 - explicit exception types;
 - asyncio marshalling and token-to-future registries;
 - type annotations and `py.typed` metadata.
+
+The package supports two execution modes via an internal `_NativeProtocol` seam:
+
+- **Fake mode** (`use_native=False`, default): self-contained in-process
+  simulation for fast unit tests. Uses `_DispatchCoordinator` with synthetic
+  addresses and local dispatch/completion emulation.
+- **Real mode** (`use_native=True`): wires the Python actor API to the native
+  `_hpactor` module. The asyncio event loop registers fd readers on the native
+  dispatch and completion notifiers; `spawn()` creates real `PythonBridgeActor`
+  instances; `send()` submits commands through the native bridge.
+
+See the [native integration design](2026-07-10-python-native-integration-design.md)
+for the full dual-mode architecture.
 
 ## 7. Python Programming Interface
 
@@ -713,44 +733,44 @@ The in-process binding is ready when all of the following are proven:
 
 ## 19. Delivery Phases
 
-### Phase 1A: Native bridge foundation
+### Phase 1A: Native bridge foundation ✅ Complete (PR #432)
 
-Build value envelopes, bounded queues, notifiers, runtime lifecycle, gateway,
-bridge actor, native snapshots, and architecture tests.
+Value envelopes, bounded queues, notifiers, runtime lifecycle, gateway, bridge
+actor, native snapshots, and architecture tests.
 
-### Phase 1B: Python actor API
+### Phase 1B: Python actor API ✅ Complete (PR #433)
 
-Add protobuf registry, actor/behavior API, imperative spawn, send/reply/ask,
-delivery receipts, scheduling, lifecycle hooks, and Python tests.
+Protobuf registry, actor/behavior API, imperative spawn, send/reply/ask,
+delivery receipts, scheduling, lifecycle hooks, and Python tests. Extension
+layer migrated to pybind11 backend (July 2026).
 
-### Phase 1C: Reliability and operations
+### Phase 1C: Reliability and operations ✅ Complete (PR #434)
 
-Add supervision/restart, link/monitor, overflow/DLQ integration, tracing,
-metrics, logs, CLI, health/readiness, stress tests, and shutdown hardening.
+Supervision/restart, link/monitor, overflow/DLQ integration, tracing, metrics,
+logs, CLI, health/readiness, stress tests, and shutdown hardening.
 
-### Phase 1D: Packaging
+### Phase 1D: Packaging — Plan complete, not started
 
-Add ABI3 wheel builds, platform repair, clean-environment smoke tests,
-documentation, and examples mirroring the developer manual.
+ABI3 wheel builds, platform repair, clean-environment smoke tests,
+documentation, and examples. Plan refined for pybind11 vendoring and
+`pybind11_add_module` build integration.
 
-### Phase 1E: Declarative topology follow-up
+### Phase 1E: Declarative topology — Design and plan complete, not started
 
-Design and implement validated module/class discovery and Python actor factory
-registration for TOML topology without weakening startup rollback.
+Validated module/class discovery and Python actor factory registration for TOML
+topology without weakening startup rollback.
 
-### Phase 2: External SDK
+### Phase 2: External SDK — Design and plan complete, not started
 
-Add supported HTTP, health, metrics, and CLI clients. Native remote-node
-participation remains gated on security and protocol negotiation.
+HTTP, health, metrics, and CLI clients. Native remote-node participation gated
+on security and protocol negotiation.
 
 ### Planning boundary
 
-This document is the umbrella architecture requested for both in-process and
-external Python use. Implementation is deliberately split into independently
-reviewable plans. The first detailed implementation plan covers Phase 1A only.
-Phases 1B through 1E each receive a separate plan after their predecessor is
-verified. Phase 2 is an independent deliverable and requires its own focused
-specification and plan before code changes.
+This document is the umbrella architecture. Implementation is split into
+independently reviewable plans. Phases 1A through 1C are implemented.
+Phase 1D (packaging), 1E (topology), and 2 (external SDK) have complete
+designs and implementation plans.
 
 ## 20. Alternatives Rejected
 
