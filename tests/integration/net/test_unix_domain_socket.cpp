@@ -133,11 +133,12 @@ TEST_F(UnixDomainSocketTest, TcpAcceptorClose) {
 
 TEST_F(UnixDomainSocketTest, UdsFallbackInvalidPath) {
     EventLoop loop;
+    loop.run();
     auto remote_ep = Ipv4Endpoint{htonl(0x7F000001), htons(19996)};
 
     TlsConfig tls_config;
     PoolConfig pool_config;
-    TcpTransport transport(remote_ep, tls_config, pool_config, nullptr);
+    TcpTransport transport(remote_ep, tls_config, pool_config, &loop, nullptr);
 
     auto conn = transport.connect_unix_domain(remote_ep, "/nonexistent/"
                                                          "path.sock");
@@ -146,12 +147,13 @@ TEST_F(UnixDomainSocketTest, UdsFallbackInvalidPath) {
 
 TEST_F(UnixDomainSocketTest, UdsFallbackWhenUdsUnavailable) {
     EventLoop loop;
+    loop.run();
     auto remote_ep = Ipv4Endpoint{htonl(0x7F000001), htons(19997)};
 
     TlsConfig tls_config;
     PoolConfig pool_config;
 
-    TcpTransport transport(remote_ep, tls_config, pool_config, nullptr);
+    TcpTransport transport(remote_ep, tls_config, pool_config, &loop, nullptr);
 
     auto conn = transport.connect(remote_ep);
     EXPECT_EQ(conn, nullptr);

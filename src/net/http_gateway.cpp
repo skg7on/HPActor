@@ -131,7 +131,16 @@ RouteRegistry::match(HttpMethod method, const std::string& path,
 // HTTPGateway Implementation
 // =============================================================================
 
-HTTPGateway::HTTPGateway() = default;
+HTTPGateway::HTTPGateway() : own_loop_(std::make_unique<EventLoop>()) {
+    loop_ = own_loop_.get();
+}
+
+HTTPGateway::HTTPGateway(EventLoop* loop) : loop_(loop) {
+    if (!loop_) {
+        own_loop_ = std::make_unique<EventLoop>();
+        loop_ = own_loop_.get();
+    }
+}
 
 HTTPGateway::~HTTPGateway() {
     stop();
@@ -141,9 +150,12 @@ bool HTTPGateway::listen(uint16_t port, const std::string& bind_host) {
     bind_host_ = bind_host;
     port_ = port;
 
-    loop_.run();
+    // If we own the event loop, start it now.
+    if (own_loop_ && !loop_->is_running()) {
+        loop_->run();
+    }
 
-    acceptor_ = std::make_unique<TcpAcceptor>(&loop_);
+    acceptor_ = std::make_unique<TcpAcceptor>(loop_);
     acceptor_->set_accept_handler([this](int client_fd, EndPoint remote_endpoint) {
         on_accept(client_fd, remote_endpoint);
     });
@@ -166,7 +178,10 @@ void HTTPGateway::stop() {
     if (acceptor_) {
         acceptor_->close();
     }
-    loop_.stop();
+    // Only stop the event loop if we own it.
+    if (own_loop_) {
+        loop_->stop();
+    }
 }
 
 bool HTTPGateway::is_listening() const {
@@ -178,8 +193,8 @@ uint16_t HTTPGateway::port() const {
 }
 
 void HTTPGateway::run_once() {
-    loop_.wait(100);
-    loop_.process_completions();
+    loop_->wait(100);
+    loop_->process_completions();
 }
 
 void HTTPGateway::set_request_handler(RequestHandler handler) {
@@ -224,7 +239,7 @@ void HTTPGateway::on_accept(int client_fd, EndPoint remote_endpoint) {
     }
 
     auto conn = HTTPConnection::create(client_fd, LocalEndpoint, remote_endpoint,
-                                       &loop_, HTTPConnectionMode::Server);
+                                       loop_, HTTPConnectionMode::Server);
 
     conn->set_request_handler([this](HTTPConnection* c, HttpRequest&& req) {
         if (request_handler_) {

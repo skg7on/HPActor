@@ -35,8 +35,9 @@ namespace net {
 // -----------------------------------------------------------------------------
 
 TcpTransport::TcpTransport(EndPoint endpoint, const TlsConfig& tls_config,
-                           const PoolConfig& pool_config, NodeRegistry* registry)
-    : endpoint_(endpoint), acceptor_(&loop_),
+                           const PoolConfig& pool_config, EventLoop* loop,
+                           NodeRegistry* registry)
+    : endpoint_(endpoint), loop_(loop), acceptor_(loop),
       tls_context_(TlsContext::from_config(tls_config)),
       pool_config_(pool_config), registry_(registry) {
     // Ensure UDS directory exists
@@ -52,7 +53,7 @@ TcpTransport::TcpTransport(EndPoint endpoint, const TlsConfig& tls_config,
             }
         }
     };
-    loop_.set_completion_callback(completion_callback_);
+    loop_->set_completion_callback(completion_callback_);
 }
 
 TcpTransport::~TcpTransport() {
@@ -70,7 +71,7 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
         return it->second;
     }
     auto pool =
-        std::make_shared<ConnectionPool>(remote_endpoint, pool_config_, &loop_);
+        std::make_shared<ConnectionPool>(remote_endpoint, pool_config_, loop_);
     pools_[remote_endpoint] = pool;
     // Set RPC handler if one has been registered
     if (rpc_handler_) {
@@ -146,7 +147,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     // deferred until the non-blocking connect completes.
     if (use_tls) {
         auto tls_conn = TlsConnection::create_client(endpoint_, remote_endpoint,
-                                                     &tls_context_, &loop_);
+                                                     &tls_context_, loop_);
         tls_conn->set_fd(fd);
         tls_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
@@ -159,7 +160,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         conn = tls_conn;
     } else {
         auto plain_conn = WireFrameConnection::create_connecting_client(
-            fd, endpoint_, remote_endpoint, &loop_);
+            fd, endpoint_, remote_endpoint, loop_);
         plain_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
@@ -245,7 +246,7 @@ ConnectionPtr TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     // UDS connections always use WireFrameConnection.
     auto pool = get_or_create_pool(remote_endpoint);
     auto plain_conn = WireFrameConnection::create_connecting_client(
-        fd, endpoint_, remote_endpoint, &loop_);
+        fd, endpoint_, remote_endpoint, loop_);
     plain_conn->set_ready_handler(
         [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
     plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
@@ -272,26 +273,21 @@ ConnectionPtr TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
 }
 
 bool TcpTransport::complete_connect(int fd, bool use_tls) {
-    // Ensure event loop backend is started
-    if (!loop_.is_running()) {
-        loop_.run();
-    }
-
     // Shared flag to coordinate between write_handler and timeout —
     // whichever fires first wins; the other becomes a no-op.
     auto done = std::make_shared<bool>(false);
 
     // Register for Write events — the fd becomes writable when the
     // non-blocking TCP handshake completes (success or error).
-    loop_.add_fd(fd, EventLoop::Event::Write);
+    loop_->add_fd(fd, EventLoop::Event::Write);
 
-    loop_.set_write_handler(fd, [this, fd, use_tls, done](int event_fd) {
+    loop_->set_write_handler(fd, [this, fd, use_tls, done](int event_fd) {
         (void)event_fd;
         if (*done)
             return;
         *done = true;
 
-        loop_.clear_write_handler(fd);
+        loop_->clear_write_handler(fd);
 
         int so_error = 0;
         socklen_t len = sizeof(so_error);
@@ -321,13 +317,13 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
 
     // Timeout via event loop timer — fires after 5s if the connect
     // hasn't completed.
-    loop_.run_after(
+    loop_->run_after(
         [this, fd, done]() {
             if (*done)
                 return;
             *done = true;
 
-            loop_.clear_write_handler(fd);
+            loop_->clear_write_handler(fd);
 
             auto it = connections_.find(fd);
             if (it != connections_.end() &&
@@ -340,8 +336,8 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
     // Wait for the write handler or timeout to fire.  The fd becomes
     // writable when the TCP handshake completes (success or error).
     while (!*done) {
-        loop_.process_completions();
-        loop_.wait(100);
+        loop_->process_completions();
+        loop_->wait(100);
     }
 
     // Return true only if the connection reached Connected state.
@@ -449,7 +445,7 @@ void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
         auto tls_conn = TlsConnection::create_server(
-            client_fd, endpoint_, remote_endpoint, &tls_context_, &loop_);
+            client_fd, endpoint_, remote_endpoint, &tls_context_, loop_);
         tls_conn->set_frame_handler([pool](StreamBuffer data) {
             pool->on_frame_received(std::move(data));
         });
@@ -459,7 +455,7 @@ void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {
         conn = tls_conn;
     } else {
         auto plain_conn = WireFrameConnection::create_as_server(
-            client_fd, endpoint_, remote_endpoint, &loop_);
+            client_fd, endpoint_, remote_endpoint, loop_);
         plain_conn->set_frame_handler([pool](StreamBuffer data) {
             pool->on_frame_received(std::move(data));
         });

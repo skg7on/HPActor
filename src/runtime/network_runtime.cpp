@@ -34,7 +34,9 @@ struct NetworkRuntime::Impl {
     std::atomic<State> state_{State::Constructed};
     std::atomic<bool> ingress_open_{false};
 
-    // Owned resources
+    // Owned resources — EventLoop is the single authoritative control-plane
+    // event loop for all network I/O (transport, discovery, HTTP, timers).
+    net::EventLoop loop_;
     std::unique_ptr<net::TcpTransport> transport;
     std::shared_ptr<net::UdpRegistrar> registrar;
     std::shared_ptr<net::IServiceDiscovery> discovery;
@@ -127,10 +129,15 @@ result<void> NetworkRuntime::start() noexcept {
 
     impl_->state_.store(State::Starting, std::memory_order_release);
 
-    // ── Stage 1: Construct transport and obtain its authoritative loop ─────
+    // ── Stage 0: Start the authoritative event loop ──────────────────────
+    impl_->last_stage.store(0, std::memory_order_relaxed);
+    impl_->loop_.run();
+
+    // ── Stage 1: Construct transport with the shared loop ─────────────────
     impl_->last_stage.store(1, std::memory_order_relaxed);
     impl_->transport = std::make_unique<net::TcpTransport>(
-        impl_->config.endpoint, impl_->config.tls, impl_->config.pool, nullptr);
+        impl_->config.endpoint, impl_->config.tls, impl_->config.pool,
+        &impl_->loop_, nullptr);
 
     // ── Stage 2: Construct location cache, discovery, RPC, HTTP ────────────
     impl_->last_stage.store(2, std::memory_order_relaxed);
@@ -139,9 +146,8 @@ result<void> NetworkRuntime::start() noexcept {
     if (impl_->config.service_discovery) {
         impl_->discovery = impl_->config.service_discovery;
     } else if (impl_->config.registrar.udp_port > 0) {
-        auto reg = std::make_shared<net::UdpRegistrar>(impl_->config.registrar,
-                                                       impl_->config.endpoint,
-                                                       &impl_->transport->loop());
+        auto reg = std::make_shared<net::UdpRegistrar>(
+            impl_->config.registrar, impl_->config.endpoint, &impl_->loop_);
         impl_->discovery = reg;
         impl_->registrar = reg;
     } else {
@@ -156,8 +162,7 @@ result<void> NetworkRuntime::start() noexcept {
                                      impl_->config.ask_max_retries);
 
     if (impl_->config.enable_http_client) {
-        impl_->http_client =
-            std::make_unique<net::HttpClient>(&impl_->transport->loop());
+        impl_->http_client = std::make_unique<net::HttpClient>(&impl_->loop_);
     }
 
     // ── Stage 3: Install callbacks ────────────────────────────────────────
@@ -207,7 +212,7 @@ result<void> NetworkRuntime::start() noexcept {
     impl_->last_stage.store(5, std::memory_order_relaxed);
 
     // Cache purge timer.
-    impl_->cache_purge_timer = impl_->transport->loop().run_every(
+    impl_->cache_purge_timer = impl_->loop_.run_every(
         [this]() {
             if (!impl_->ingress_open())
                 return;
@@ -218,7 +223,7 @@ result<void> NetworkRuntime::start() noexcept {
 
     // Reliable-retry poll timer.
     if (impl_->deps.retry_port.target) {
-        impl_->retry_timer = impl_->transport->loop().run_every(
+        impl_->retry_timer = impl_->loop_.run_every(
             [this]() {
                 if (!impl_->ingress_open()) {
                     impl_->reject_callback();
@@ -246,10 +251,9 @@ result<void> NetworkRuntime::start() noexcept {
     // ── Stage 8: Launch loop thread ───────────────────────────────────────
     impl_->last_stage.store(8, std::memory_order_relaxed);
     impl_->network_thread = std::thread([this]() {
-        auto& loop = impl_->transport->loop();
         while (impl_->state_.load(std::memory_order_acquire) != State::Stopping &&
-               loop.wait(100) >= 0) {
-            loop.process_completions();
+               impl_->loop_.wait(100) >= 0) {
+            impl_->loop_.process_completions();
         }
     });
 
@@ -287,10 +291,8 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
 
     // ── Teardown in reverse startup order ────────────────────────────────
 
-    // Stop the event loop to signal the thread to exit.
-    if (impl_->transport) {
-        impl_->transport->loop().stop();
-    }
+    // Stop the authoritative event loop to signal the network thread to exit.
+    impl_->loop_.stop();
 
     // Join the network thread.
     if (impl_->network_thread.joinable()) {
@@ -334,9 +336,9 @@ result<void> NetworkRuntime::stop(StopMode mode) noexcept {
 // ── Compatibility Accessors ──────────────────────────────────────────────────
 
 net::EventLoop* NetworkRuntime::event_loop() noexcept {
-    if (!impl_->config.enabled || !impl_->transport)
+    if (!impl_->config.enabled)
         return nullptr;
-    return &impl_->transport->loop();
+    return &impl_->loop_;
 }
 
 net::TcpTransport* NetworkRuntime::transport() noexcept {
