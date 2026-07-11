@@ -50,9 +50,11 @@ jobs:
 
       - name: Verify sdist contents
         run: |
+          SDIST=$(ls dist/hpactor-*.tar.gz 2>/dev/null | head -1)
+          test -n "$SDIST" || { echo "No sdist found"; exit 1; }
           python -c "
-          import tarfile, sys
-          with tarfile.open('dist/hpactor-*.tar.gz', 'r:gz') as tf:
+          import tarfile
+          with tarfile.open('$SDIST', 'r:gz') as tf:
               names = {m.name for m in tf.getmembers()}
           required = ['pyproject.toml', 'CMakeLists.txt',
                       'bindings/python/hpactor/__init__.py']
