@@ -16,6 +16,20 @@
 
 find_package(Protobuf REQUIRED)
 
+# gRPC's find_dependency(Protobuf CONFIG) needs ProtobufConfig.cmake.
+# When protobuf is found via MODULE mode, provide a minimal shim.
+# This must be created BEFORE find_package(gRPC CONFIG) so gRPC can
+# resolve its Protobuf dependency.
+if(NOT EXISTS "${Protobuf_DIR}/ProtobufConfig.cmake")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cmake/protobuf-shim")
+  file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfig.cmake"
+    "# Shim: protobuf targets already exist from FindProtobuf.cmake\n")
+  file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfigVersion.cmake"
+    "set(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n")
+  set(Protobuf_DIR "${CMAKE_BINARY_DIR}/cmake/protobuf-shim"
+      CACHE PATH "Protobuf CONFIG shim for gRPC compatibility" FORCE)
+endif()
+
 # Try to find gRPC — optional, only needed for etcd backend
 find_package(gRPC CONFIG QUIET)
 
@@ -29,17 +43,6 @@ target_include_directories(hpactor_etcd PUBLIC
 )
 
 if(gRPC_FOUND)
-    # gRPC's find_dependency(Protobuf CONFIG) needs ProtobufConfig.cmake.
-    # When protobuf is found via MODULE mode, provide a minimal shim.
-    if(NOT EXISTS "${Protobuf_DIR}/ProtobufConfig.cmake")
-      file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/cmake/protobuf-shim")
-      file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfig.cmake"
-        "# Shim: protobuf targets already exist from FindProtobuf.cmake\n")
-      file(WRITE "${CMAKE_BINARY_DIR}/cmake/protobuf-shim/ProtobufConfigVersion.cmake"
-        "set(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n")
-      set(Protobuf_DIR "${CMAKE_BINARY_DIR}/cmake/protobuf-shim"
-          CACHE PATH "Protobuf CONFIG shim for gRPC compatibility" FORCE)
-    endif()
 
     # Resolve grpc_cpp_plugin path
     if(TARGET gRPC::grpc_cpp_plugin)

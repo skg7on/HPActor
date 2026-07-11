@@ -53,6 +53,8 @@ class ShardCoordinatorActor {
         return core_.get_shard_owner(shard);
     }
 
+    // DEPRECATED: Use rebalance_with_token() for production.
+    // This method is kept for tests and internal use only.
     void rebalance(const std::vector<std::string>& alive_nodes) {
         core_.rebalance(alive_nodes);
     }

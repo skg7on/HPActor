@@ -40,18 +40,20 @@ TEST(EtcdLeadershipBackendTest, CurrentOwnerReturnsNotOwnerWhenKeyAbsent) {
     EXPECT_EQ(result.status, LeadershipStatusCode::NotOwner);
 }
 
-TEST(EtcdLeadershipBackendTest, TryAcquireTimesOutWhenEtcdUnreachable) {
+// The stub implementation uses std::promise/std::future with a configurable
+// timeout. Since no gRPC server is connected, the promise is never resolved,
+// and the wait always times out. This test verifies the stub's bounded-blocking
+// contract with a minimal timeout.
+TEST(EtcdLeadershipBackendTest, TryAcquireReturnsTimedOutOnStub) {
     EtcdLeadershipBackend::Config cfg;
-    cfg.endpoints = {"https://192.0.2.1:2379"}; // TEST-NET-1, unreachable
-    cfg.request_timeout = std::chrono::milliseconds(100);
+    cfg.endpoints = {"https://localhost:2379"};
+    cfg.request_timeout = std::chrono::milliseconds(1);
     EtcdLeadershipBackend backend(cfg);
 
     LeadershipAttempt attempt{"test-singleton", "node-a", 0, 10s};
     auto result = backend.try_acquire(attempt);
-    // Should time out or report backend unavailable
-    bool expected = result.status == LeadershipStatusCode::TimedOut ||
-                    result.status == LeadershipStatusCode::BackendUnavailable;
-    EXPECT_TRUE(expected) << "Got status: " << static_cast<int>(result.status);
+    // The stub never resolves the promise, so it always times out
+    EXPECT_EQ(result.status, LeadershipStatusCode::TimedOut);
 }
 
 } // namespace hpactor::cluster::singleton

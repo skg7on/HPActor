@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// DESIGN NOTE: This backend uses bounded blocking (std::promise/std::future
+// with configurable timeout). This is intentional for the initial
+// implementation — the gRPC callbacks resolve promises on dedicated
+// completion queue threads. Public methods block for at most
+// cfg.request_timeout. Production hardening should move to fully async
+// callbacks posting LeadershipResult messages to actor mailboxes.
+
 #include <hpactor/cluster/singleton/etcd_leadership_backend.hpp>
 #include <hpactor/cluster/singleton/leadership_lease.hpp>
 #include <hpactor/cluster/singleton/leadership_status.hpp>
@@ -82,14 +89,14 @@ LeadershipResult EtcdLeadershipBackend::renew(const LeadershipLease& /*lease*/) 
     // 2. KeepAlive heartbeat sends (bidirectional stream)
     // 3. Txn: verify owner key still points to this node + token
     // 4. Return renewed lease with updated revision as new fencing_token
-    return LeadershipResult::timed_out(); // stub
+    return LeadershipResult::unavailable(); // stub — backend not connected
 }
 
 LeadershipResult EtcdLeadershipBackend::release(const LeadershipLease& /*lease*/) {
     // 1. Txn: delete owner key only if value matches local identity + token
     // 2. Revoke lease
     // 3. Cancel KeepAlive and Watch streams
-    return LeadershipResult::timed_out(); // stub
+    return LeadershipResult::unavailable(); // stub — backend not connected
 }
 
 LeadershipResult

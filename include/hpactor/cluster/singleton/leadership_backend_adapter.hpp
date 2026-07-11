@@ -17,6 +17,7 @@
 #include <hpactor/cluster/singleton/leadership_backend.hpp>
 #include <hpactor/cluster/singleton/singleton_election.hpp>
 
+#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -34,7 +35,9 @@ class LeadershipBackendAdapter : public ISingletonElection {
   public:
     /// \param[in] self_node_id This node's identity.
     /// \param[in] backend The leadership backend (owned by caller).
-    LeadershipBackendAdapter(std::string self_node_id, ILeadershipBackend* backend);
+    /// \param[in] lease_ttl Lease TTL for leadership attempts.
+    LeadershipBackendAdapter(std::string self_node_id, ILeadershipBackend* backend,
+                             Clock::duration lease_ttl = std::chrono::seconds(10));
 
     std::optional<std::string>
     elect(const SingletonIdentity& id,
@@ -48,6 +51,8 @@ class LeadershipBackendAdapter : public ISingletonElection {
   private:
     std::string self_node_id_;
     ILeadershipBackend* backend_;
+    Clock::duration lease_ttl_{std::chrono::seconds(10)};
+    mutable std::mutex mutex_;
     std::unordered_map<std::string, LeadershipLease> leases_;
 };
 

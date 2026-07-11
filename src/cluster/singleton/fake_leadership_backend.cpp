@@ -53,6 +53,7 @@ FakeLeadershipBackend::try_acquire(const LeadershipAttempt& attempt) {
     lease.lease_deadline = Clock::now() + attempt.lease_ttl;
 
     it->second.lease = lease;
+    it->second.original_ttl = attempt.lease_ttl;
     it->second.owned = true;
 
     return LeadershipResult::granted(lease);
@@ -72,11 +73,10 @@ LeadershipResult FakeLeadershipBackend::renew(const LeadershipLease& lease) {
         return LeadershipResult::lost();
     }
 
-    // Bump token and extend deadline
+    // Bump token and extend deadline using the original TTL
     it->second.lease.fencing_token = next_token_++;
     it->second.lease.backend_revision = it->second.lease.fencing_token;
-    it->second.lease.lease_deadline =
-        Clock::now() + (lease.lease_deadline - Clock::now()); // same TTL
+    it->second.lease.lease_deadline = Clock::now() + it->second.original_ttl;
     return LeadershipResult::renewed(it->second.lease);
 }
 
@@ -121,6 +121,7 @@ void FakeLeadershipBackend::force_grant(const std::string& singleton_name,
                                         Clock::duration ttl) {
     std::lock_guard<std::mutex> lock(mutex_);
     LeadershipLease lease;
+    lease.cluster_id = "fake";
     lease.singleton_name = singleton_name;
     lease.owner_node_id = owner_node_id;
     lease.fencing_token = next_token_++;
@@ -128,6 +129,7 @@ void FakeLeadershipBackend::force_grant(const std::string& singleton_name,
     StoredLease stored;
     stored.lease = lease;
     stored.owned = true;
+    stored.original_ttl = ttl;
     leases_[singleton_name] = stored;
 }
 

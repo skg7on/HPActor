@@ -19,12 +19,44 @@
 
 namespace hpactor::etcd {
 
+namespace {
+
+/// \brief Escape a string for safe JSON embedding.
+static std::string json_escape(std::string_view s) {
+    std::string out;
+    out.reserve(s.size() + 2);
+    for (char c : s) {
+        switch (c) {
+            case '"':
+                out += "\\\"";
+                break;
+            case '\\':
+                out += "\\\\";
+                break;
+            case '\n':
+                out += "\\n";
+                break;
+            case '\r':
+                out += "\\r";
+                break;
+            case '\t':
+                out += "\\t";
+                break;
+            default:
+                out += c;
+        }
+    }
+    return out;
+}
+
+} // namespace
+
 std::string serialize_lease(const cluster::singleton::LeadershipLease& lease) {
     std::ostringstream os;
     os << "{";
-    os << "\"cluster_id\":\"" << lease.cluster_id << "\",";
-    os << "\"singleton_name\":\"" << lease.singleton_name << "\",";
-    os << "\"owner_node_id\":\"" << lease.owner_node_id << "\",";
+    os << "\"cluster_id\":\"" << json_escape(lease.cluster_id) << "\",";
+    os << "\"singleton_name\":\"" << json_escape(lease.singleton_name) << "\",";
+    os << "\"owner_node_id\":\"" << json_escape(lease.owner_node_id) << "\",";
     os << "\"owner_incarnation\":" << lease.owner_incarnation << ",";
     os << "\"owner_process_start_id\":" << lease.owner_process_start_id << ",";
     os << "\"membership_epoch\":" << lease.membership_epoch << ",";
@@ -67,7 +99,11 @@ deserialize_lease(std::string_view data) {
         auto end = data.find_first_of(",}", pos);
         if (end == std::string_view::npos)
             return 0;
-        return std::stoull(std::string(data.substr(pos, end - pos)));
+        try {
+            return std::stoull(std::string(data.substr(pos, end - pos)));
+        } catch (...) {
+            return 0;
+        }
     };
 
     lease.cluster_id = extract_str("cluster_id");

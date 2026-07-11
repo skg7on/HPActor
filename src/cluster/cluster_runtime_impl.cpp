@@ -37,7 +37,7 @@ create_cluster_runtime(const ClusterRuntimeDependencies& deps,
 
 ClusterRuntimeImpl::ClusterRuntimeImpl(const ClusterRuntimeDependencies& deps,
                                        void* /*reserved*/) noexcept
-    : node_id_(deps.node_id) {}
+    : node_id_(deps.node_id), deps_(deps) {}
 
 ClusterRuntimeImpl::~ClusterRuntimeImpl() = default;
 
@@ -56,12 +56,12 @@ result<void> ClusterRuntimeImpl::start() noexcept {
     // Phase 2: config-driven election strategy from [system.cluster.leadership]
     std::unique_ptr<cluster::singleton::ISingletonElection> election;
 #ifdef HPACTOR_HAS_GRPC
-    if (leadership_mode_ == "external" && leadership_backend_ == "etcd") {
+    if (deps_.leadership_mode == "external" && deps_.leadership_backend == "etcd") {
         cluster::singleton::EtcdLeadershipBackend::Config etcd_cfg;
-        etcd_cfg.endpoints = etcd_endpoints_;
-        etcd_cfg.key_prefix = etcd_key_prefix_;
+        etcd_cfg.endpoints = deps_.etcd_endpoints;
+        etcd_cfg.key_prefix = deps_.etcd_key_prefix;
         etcd_cfg.request_timeout =
-            std::chrono::milliseconds(etcd_request_timeout_ms_);
+            std::chrono::milliseconds(deps_.etcd_request_timeout_ms);
         auto backend = std::make_unique<cluster::singleton::EtcdLeadershipBackend>(
             std::move(etcd_cfg));
         // Note: backend must outlive the adapter. Store in impl.
@@ -81,6 +81,13 @@ result<void> ClusterRuntimeImpl::start() noexcept {
 
     singleton_manager_->register_singleton(
         cluster::singleton::SingletonIdentity{"shard-coordinator", 0});
+
+    // TODO M2 wiring: Propagate singleton activation leases to the
+    // shard coordinator. After SingletonManagerCore::on_node_state_change(),
+    // check if the singleton is active and propagate the lease via
+    // ShardCoordinatorActor::on_lease_update(). Requires exposing a
+    // lease-propagator callback from SingletonManagerCore or storing a
+    // reference to the ShardCoordinatorActor.
 
     // Wire observer: failure-model state changes → singleton election +
     // route invalidation.

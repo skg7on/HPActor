@@ -108,10 +108,11 @@ bool ShardCoordinatorCore::validate_token(uint64_t fencing_token,
     std::lock_guard<std::mutex> lock(mutex_);
     if (!active_lease_.has_value())
         return false;
-    if (singleton_name != "shard-coordinator")
+    if (active_lease_->singleton_name != singleton_name)
         return false;
-    return fencing_token == active_lease_->fencing_token &&
-           active_lease_->singleton_name == singleton_name;
+    // Accept if the incoming token matches, or if the incoming lease's
+    // fences() subsumes the active lease token (future CLU-003 extension).
+    return fencing_token == active_lease_->fencing_token;
 }
 
 } // namespace hpactor::cluster::sharding

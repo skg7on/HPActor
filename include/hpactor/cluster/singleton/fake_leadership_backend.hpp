@@ -57,6 +57,7 @@ class FakeLeadershipBackend : public ILeadershipBackend {
     struct StoredLease {
         LeadershipLease lease;
         bool owned = false;
+        Clock::duration original_ttl{std::chrono::seconds(0)};
     };
 
     mutable std::mutex mutex_;
