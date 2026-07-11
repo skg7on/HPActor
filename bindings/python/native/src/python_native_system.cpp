@@ -18,6 +18,7 @@
 #include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/python/python_bridge_actor.hpp>
 #include <hpactor/python/python_command_router.hpp>
+#include <hpactor/python/python_topology_preparer.hpp>
 #include <hpactor/python/python_topology_provider.hpp>
 #include <hpactor/python/python_gateway_actor.hpp>
 #include <hpactor/python/python_gateway_wake_adapter.hpp>
@@ -215,6 +216,107 @@ PythonRuntimeSnapshot PythonNativeSystem::snapshot() const noexcept {
     return PythonRuntimeSnapshot{};
 }
 
+result<std::vector<PythonTopologyDescriptor>>
+PythonNativeSystem::prepare_topology(std::string_view path) noexcept {
+    auto plan_result = PythonTopologyPreparer::parse(path);
+    if (!plan_result.has_value()) {
+        return result<std::vector<PythonTopologyDescriptor>>::make(
+            plan_result.error());
+    }
+    auto plan = std::move(plan_result.value());
+
+    // Build descriptors for Python actors.
+    std::vector<PythonTopologyDescriptor> descriptors;
+    const auto& actors = plan->actors();
+    for (const auto& spec : actors) {
+        if (spec.kind != ConfiguredActorKind::Python)
+            continue;
+        const auto& def = plan->model().actors[spec.topology_index];
+        PythonTopologyDescriptor desc;
+        desc.topology_index = spec.topology_index;
+        desc.actor_id = def.id;
+        desc.behavior = def.behavior;
+        desc.args_fingerprint = spec.args_fingerprint;
+        if (spec.python.has_value()) {
+            desc.module = spec.python->module;
+            desc.qualname = spec.python->qualname;
+        }
+        // Collect sorted args.
+        for (const auto& [k, v] : def.args) {
+            desc.args.emplace_back(k, v);
+        }
+        std::sort(desc.args.begin(), desc.args.end());
+        descriptors.push_back(std::move(desc));
+    }
+
+    parsed_plan_ = std::move(plan);
+    return result<std::vector<PythonTopologyDescriptor>>::make(
+        std::move(descriptors));
+}
+
+result<uint64_t>
+PythonNativeSystem::bind_topology_manifest(
+    std::span<const FactoryTokenBinding> bindings,
+    uint64_t policy_fingerprint) noexcept {
+    if (!parsed_plan_) {
+        return result<uint64_t>::make(
+            error(errors::invalid_argument, "no parsed topology plan"));
+    }
+
+    auto prepared_result =
+        parsed_plan_->bind_manifest(bindings, policy_fingerprint);
+    if (!prepared_result.has_value()) {
+        return result<uint64_t>::make(prepared_result.error());
+    }
+
+    auto prepared = std::move(prepared_result.value());
+    uint64_t fp = prepared->effective_fingerprint();
+    prepared_ = std::move(prepared);
+
+    // Create topology provider if Python actors exist.
+    bool has_python = false;
+    for (const auto& spec : prepared_->actors()) {
+        if (spec.kind == ConfiguredActorKind::Python) {
+            has_python = true;
+            break;
+        }
+    }
+    if (has_python && runtime_) {
+        size_t max_actors = runtime_->config().max_actor_bindings;
+        topology_provider_ = std::make_unique<PythonTopologyProvider>(
+            *runtime_, *this, max_actors);
+    }
+
+    return result<uint64_t>::make(std::move(fp));
+}
+
+result<void> PythonNativeSystem::start_prepared_topology() noexcept {
+    if (!prepared_) {
+        return result<void>::make(
+            error(errors::invalid_argument, "no prepared topology"));
+    }
+
+    // TODO: Full integration with TopologyBootstrapTransaction.
+    // For now, this is a stub that will be completed when the C++ provider
+    // for ActorFactoryRegistry is wired up.
+    return result<void>::make();
+}
+
+result<void> PythonNativeSystem::complete_topology_actor(
+    uint64_t factory_token, uint64_t system_generation,
+    uint64_t actor_generation, uint8_t outcome,
+    uint32_t error_code, std::string_view detail) noexcept {
+    if (!topology_provider_) {
+        return result<void>::make(
+            error(errors::invalid_argument, "no topology provider"));
+    }
+
+    auto topo_outcome = static_cast<TopologyActorOutcome>(outcome);
+    return topology_provider_->ready_table().complete(
+        factory_token, system_generation, actor_generation,
+        topo_outcome, error_code, detail);
+}
+
 PythonTopologyProvider* PythonNativeSystem::topology_provider() noexcept {
     return topology_provider_.get();
 }
@@ -222,7 +324,6 @@ PythonTopologyProvider* PythonNativeSystem::topology_provider() noexcept {
 void PythonNativeSystem::record_topology_preflight(uint8_t phase,
                                                     bool success) noexcept {
     (void)phase; (void)success;
-    // TODO: wire into observability counters.
 }
 
 PythonTopologyErrorInfo

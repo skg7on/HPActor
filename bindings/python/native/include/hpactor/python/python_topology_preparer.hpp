@@ -29,13 +29,6 @@ class TopologyModel;
 
 namespace hpactor::python {
 
-/// \brief A binding from a topology index to an opaque factory token.
-struct FactoryTokenBinding final {
-    size_t topology_index{0};   ///< Index in the topology's actor list.
-    uint64_t factory_token{0};  ///< Non-zero token from the factory manifest.
-    uint64_t args_fingerprint{0}; ///< Must match PreparedActorSpec::args_fingerprint.
-};
-
 /// \brief An immutable parsed topology plan with classified actor specs.
 ///
 /// Produced by PythonTopologyPreparer. Contains the original TopologyModel and

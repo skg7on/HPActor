@@ -27,6 +27,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace hpactor {
 
@@ -37,6 +38,8 @@ struct Config;
 
 namespace hpactor::python {
 
+class ParsedTopologyPlan;
+class PreparedTopology;
 class PythonCommandRouter;
 class PythonGatewayWakeAdapter;
 class PythonTopologyProvider;
@@ -163,6 +166,25 @@ class PythonNativeSystem final {
 
     // ── Topology (Phase 1E) ─────────────────────────────────────────────
 
+    /// \brief Parse a TOML topology and return descriptors for Python actors.
+    [[nodiscard]] result<std::vector<PythonTopologyDescriptor>>
+    prepare_topology(std::string_view path) noexcept;
+
+    /// \brief Bind factory tokens to prepared topology specs.
+    [[nodiscard]] result<uint64_t>
+    bind_topology_manifest(std::span<const FactoryTokenBinding> bindings,
+                           uint64_t policy_fingerprint) noexcept;
+
+    /// \brief Start the prepared topology (creates provider, runs transaction).
+    [[nodiscard]] result<void> start_prepared_topology() noexcept;
+
+    /// \brief Complete a topology actor's startup from the Python side.
+    [[nodiscard]] result<void>
+    complete_topology_actor(uint64_t factory_token, uint64_t system_generation,
+                            uint64_t actor_generation, uint8_t outcome,
+                            uint32_t error_code,
+                            std::string_view detail) noexcept;
+
     /// \brief Access the topology provider (nullptr if not configured).
     [[nodiscard]] PythonTopologyProvider* topology_provider() noexcept;
 
@@ -181,6 +203,8 @@ class PythonNativeSystem final {
     std::unique_ptr<PythonCommandRouter> router_;
     std::unique_ptr<PythonGatewayWakeAdapter> wake_adapter_;
     std::unique_ptr<PythonTopologyProvider> topology_provider_;
+    std::unique_ptr<ParsedTopologyPlan> parsed_plan_;
+    std::unique_ptr<PreparedTopology> prepared_;
     PythonReliabilityController reliability_;
     PythonTopologyErrorInfo last_topology_error_;
     Actor application_bridge_;

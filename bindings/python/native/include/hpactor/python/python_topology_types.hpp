@@ -20,12 +20,25 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace hpactor::config {
 struct ActorDef;
 } // namespace hpactor::config
 
 namespace hpactor::python {
+
+// ── Forward declarations for preparer types referenced here ─────────────────
+
+/// \brief A binding from a topology index to an opaque factory token.
+struct FactoryTokenBinding final {
+    size_t topology_index{0};
+    uint64_t factory_token{0};
+    uint64_t args_fingerprint{0};
+};
+
+// ── Core topology value types ──────────────────────────────────────────────
 
 /// \brief Classification of a configured actor in a topology.
 enum class ConfiguredActorKind : uint8_t {
@@ -73,6 +86,18 @@ struct PythonTopologyErrorInfo final {
     uint32_t error_code{0};
     std::string detail;
     uint32_t rollback_error_bits{0};
+};
+
+/// \brief A descriptor for one configured Python actor, returned to the
+///        Python layer for manifest preflight.
+struct PythonTopologyDescriptor final {
+    size_t topology_index{0};
+    std::string actor_id;
+    std::string behavior;
+    std::string module;
+    std::string qualname;
+    std::vector<std::pair<std::string, std::string>> args; // sorted key-value pairs
+    uint64_t args_fingerprint{0};
 };
 
 /// \brief Parse a Python behavior reference string.
