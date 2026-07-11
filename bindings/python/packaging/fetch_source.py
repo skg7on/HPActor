@@ -51,12 +51,6 @@ def _verify_archive(path: Path, expected_sha256: str) -> None:
         )
 
 
-def _is_safe_path(base: Path, member_path: str) -> bool:
-    """Reject path-traversal attacks in tar members."""
-    resolved = (base / member_path).resolve()
-    return str(resolved).startswith(str(base.resolve()) + os.sep)
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -145,44 +139,37 @@ def main() -> None:
         if extract_dir.exists():
             shutil.rmtree(extract_dir)
         print(f"     extracting to {extract_dir}")
-        _extract(cache_path, args.extract)
+        _extract(cache_path, extract_dir)
 
     print("All dependencies fetched and verified.")
 
 
 def _extract(archive: Path, dest: Path) -> None:
-    """Extract *archive* to *dest*, stripping one common prefix."""
-    dest.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(archive, "r:*") as tf:
-        # Find common prefix
-        members = tf.getmembers()
-        prefixes = {m.name.split("/", 1)[0] for m in members if "/" in m.name}
-        if len(prefixes) == 1:
-            prefix = prefixes.pop() + "/"
-        else:
-            prefix = ""
+    """Extract *archive* to *dest*, flattening a single top-level dir.
 
-        for member in members:
-            # Strip prefix
-            if prefix and member.name.startswith(prefix):
-                rel = member.name[len(prefix):]
-            else:
-                rel = member.name
-            if not rel:
-                continue
-            target = dest / rel
-            if not _is_safe_path(dest, str(target.relative_to(dest))):
-                print(f"ERROR: path traversal in {member.name}", file=sys.stderr)
-                sys.exit(1)
-            if member.isdir():
-                target.mkdir(parents=True, exist_ok=True)
-            elif member.isfile() or member.issym():
-                target.parent.mkdir(parents=True, exist_ok=True)
-                tf.extract(member, dest)
-                # If it was extracted with prefix, move it
-                prefixed = dest / member.name
-                if prefixed != target and prefixed.exists():
-                    shutil.move(str(prefixed), str(target))
+    Archives like ``openssl-3.5.5.tar.gz`` contain everything under one
+    top-level directory.  We extract into a temp location, then move the
+    contents of that one directory into *dest* so that
+    ``dest/Configure`` exists rather than ``dest/openssl-3.5.5/Configure``.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        with tarfile.open(archive, "r:*") as tf:
+            tf.extractall(tmp)
+        entries = sorted(os.listdir(tmp))
+        if len(entries) == 1 and os.path.isdir(os.path.join(tmp, entries[0])):
+            # Single top-level directory — move its contents up
+            src = os.path.join(tmp, entries[0])
+            for item in os.listdir(src):
+                s = os.path.join(src, item)
+                d = str(dest / item)
+                shutil.move(s, d)
+        else:
+            # Multiple top-level entries — move each into dest
+            for item in entries:
+                s = os.path.join(tmp, item)
+                d = str(dest / item)
+                shutil.move(s, d)
 
 
 if __name__ == "__main__":
