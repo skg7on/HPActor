@@ -69,24 +69,22 @@ def _detect_target(deployment_target: str | None,
 def _build_openssl(prefix: Path, source_dir: Path, build_dir: Path,
                    target: dict, jobs: int) -> None:
     src = source_dir / "openssl-3.5.5"
-    work = build_dir / "openssl"
-    work.mkdir(parents=True, exist_ok=True)
 
-    configure = (src / "Configure").resolve()
+    # OpenSSL must be configured and built in its source tree
     subprocess.run(
         [
-            str(configure),
+            "./Configure",
             target["openssl_target"],
             "no-shared",
             "no-tests",
             "--prefix", str(prefix),
             "--openssldir", str(prefix / "ssl"),
         ],
-        cwd=str(work),
+        cwd=str(src),
         check=True,
     )
-    subprocess.run(["make", f"-j{jobs}"], cwd=str(work), check=True)
-    subprocess.run(["make", "install_sw"], cwd=str(work), check=True)
+    subprocess.run(["make", f"-j{jobs}"], cwd=str(src), check=True)
+    subprocess.run(["make", "install_sw"], cwd=str(src), check=True)
     print(f"[OK] OpenSSL 3.5.5 installed to {prefix}")
 
 
