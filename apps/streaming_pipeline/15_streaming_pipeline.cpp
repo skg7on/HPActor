@@ -995,8 +995,9 @@ int run_sender(const CrossProcessOpts& opts) {
               << "  ActorId: " << opts.target_id << "\n";
 
     auto system = make_networked_system(opts);
-    std::cout << "Local endpoint: " << endpoint_ops::to_string(system.endpoint())
-              << "\n";
+    auto sender_addr =
+        "127.0.0.1:" + std::to_string(opts.port ? opts.port : 0);
+    std::cout << "Local endpoint: " << sender_addr << "\n";
 
     // Parse the target endpoint and construct a remote ActorRef.
     auto target_ep = endpoint_ops::parse_endpoint(opts.target_endpoint);
