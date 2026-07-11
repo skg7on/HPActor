@@ -109,10 +109,10 @@ TEST_F(OutboundTrackerTest, FailPendingForNodeDlqsAll) {
     auto payload2 = StreamBuffer::from_data(kMsg2, 4);
     tracker_->track(MessageId{1}, target_, std::move(payload1));
     tracker_->track(MessageId{2}, target_, std::move(payload2));
-    // Matching the endpoint string produced by node_id() on this platform.
-    // The default ActorAddress stores 127.0.0.1:0 as Ipv4Endpoint{0x7F000001,
-    // 0}; inet_ntoa(addr) on little-endian produces "1.0.0.127:0".
-    tracker_->fail_pending_for_node("1.0.0.127:0");
+    // The default ActorAddress stores 127.0.0.1:0.  to_string() now
+    // correctly returns "127.0.0.1:0" on all platforms after the
+    // endian boundary fix in parse_endpoint/to_string.
+    tracker_->fail_pending_for_node("127.0.0.1:0");
     EXPECT_EQ(tracker_->pending_count(), 0);
 }
 
