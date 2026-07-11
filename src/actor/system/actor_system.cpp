@@ -15,7 +15,7 @@
 #include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/actor/spawn/actor_type_registry.hpp>
 
-#include "../../runtime/actor_system_impl.hpp"
+#include "runtime/actor_system_impl.hpp"
 #include <hpactor/actor/request/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -28,6 +28,8 @@
 #include <hpactor/actor/stream/stream_receiver_actor.hpp>
 #include <hpactor/actor/stream/stream_sender_actor.hpp>
 #include <hpactor/actor/stream/stream_types.hpp>
+#include <hpactor/actor/stream/stream_runtime.hpp>
+#include "net/inbound_frame_router.hpp"
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/fault/fault_macros.hpp>
@@ -402,9 +404,69 @@ ActorSystem::ActorSystem(const Config& config)
         net_deps.messaging = impl_->messaging_.get();
         net_deps.scheduler = impl_->core.scheduler.get();
 
-        // Inbound frame sink — wired via ConnectionPool/InboundFrameRouter
-        // in the RuntimeBuilder path.
-        net_deps.inbound_sink = net::InboundFrameSink{};
+        // ── Stream runtime + InboundFrameRouter ────────────────────────────
+        // Wire the inbound frame sink so incoming stream frames (StreamOpen,
+        // StreamData, StreamAck, StreamClose, StreamError) are dispatched to
+        // StreamRuntime, which spawns StreamReceiverActor on this node.
+        {
+            using Result = result<ActorId>;
+
+            StreamActorLifecyclePort stream_port;
+            stream_port.context = this;
+
+            stream_port.spawn_sender =
+                [](void* ctx, ActorId target, uint64_t stream_id,
+                   const StreamConfig& cfg,
+                   const TraceContext& tc) noexcept -> Result {
+                auto* sys = static_cast<ActorSystem*>(ctx);
+                auto actor = sys->spawn<StreamSenderActor>(
+                    target, ActorAddress{}, stream_id, cfg, tc,
+                    /*is_local=*/true,
+                    /*state=*/nullptr);
+                if (actor)
+                    return Result::make(actor.id());
+                return Result::make(
+                    error(errors::unknown, "spawn stream sender failed"));
+            };
+
+            stream_port.spawn_receiver =
+                [](void* ctx, ActorId target, uint64_t stream_id,
+                   const ActorAddress& sender, EndPoint peer,
+                   uint32_t initial_window_bytes,
+                   const TraceContext& tc) noexcept -> Result {
+                auto* sys = static_cast<ActorSystem*>(ctx);
+                auto actor = sys->spawn<StreamReceiverActor>(
+                    target, stream_id, sender, peer,
+                    initial_window_bytes, tc);
+                if (actor)
+                    return Result::make(actor.id());
+                return Result::make(
+                    error(errors::unknown, "spawn stream receiver failed"));
+            };
+
+            stream_port.stop = [](void* /*ctx*/, ActorId /*id*/) noexcept {
+                // Stream actors self-terminate after close/error.
+            };
+
+            StreamRuntime::Config stream_rt_cfg;
+            impl_->stream_runtime_ = std::make_unique<StreamRuntime>(
+                stream_rt_cfg, stream_port, *impl_->messaging_);
+
+            net::InboundFrameRouter::Config router_cfg;
+            impl_->inbound_frame_router_ =
+                std::make_unique<net::InboundFrameRouter>(
+                    net::InboundFrameRouter::Dependencies{
+                        .messaging = *impl_->messaging_,
+                        .rpc = *impl_->rpc_channel_,
+                        .streams = *impl_->stream_runtime_,
+                        .metrics =
+                            impl_->observability_->metrics_ring_buffer(),
+                    },
+                    router_cfg);
+
+            net_deps.inbound_sink =
+                net::InboundFrameSink{impl_->inbound_frame_router_.get()};
+        }
 
         // Node event sink — wired via RuntimeBuilder path.
         net_deps.node_events = NodeEventSink{};
@@ -1475,7 +1537,8 @@ void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
 
     auto receiver =
         spawn<StreamReceiverActor>(receiver_id, open.stream_id(), sender_addr,
-                                   open.initial_window_bytes(), trace_ctx);
+                                   impl_->core.endpoint, open.initial_window_bytes(),
+                                   trace_ctx);
 
     if (receiver) {
         register_stream_receiver(open.stream_id(), receiver.id());
@@ -1553,7 +1616,6 @@ void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
 namespace {
 bool deliver_to_stream_sender(void* ctx, ActorId target, TypedMessage msg) {
     auto* sys = static_cast<ActorSystem*>(ctx);
-    // try_deliver_local_fast returns EnqueueResult; accepted() means success.
     return sys->try_deliver_local_fast(target, std::move(msg)).accepted();
 }
 } // namespace
@@ -1610,6 +1672,15 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
     if (!sender)
         return std::nullopt;
     register_stream_sender(stream_id, sender.id());
+    // Also register in StreamRuntime so the unified-sink on_ack() path
+    // can find the sender actor when a remote ACK arrives.
+    if (impl_->stream_runtime_) {
+        EndPoint peer = is_local_target
+                            ? impl_->core.endpoint
+                            : receiver_addr.endpoint;
+        impl_->stream_runtime_->register_sender_for_peer(
+            peer, stream_id, sender.id());
+    }
 
     // Create StreamHandle with the delivery callback bound to this ActorSystem.
     StreamHandle handle(sender.id(), stream_id, deliver_to_stream_sender, this,
@@ -1620,6 +1691,7 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
         ActorAddress sender_addr{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0};
         auto receiver =
             spawn<StreamReceiverActor>(receiver_id, stream_id, sender_addr,
+                                       impl_->core.endpoint,
                                        config.initial_window_bytes, trace_ctx);
         if (receiver) {
             register_stream_receiver(stream_id, receiver.id());
@@ -1634,10 +1706,19 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
         // Remote target: send StreamOpenFrame via transport.
         auto* tp = transport();
         if (tp) {
+            // Build sender endpoint with the actual TCP listening port.
+            // LocalEndpoint has port 0; the transport listens on tcp_port.
+            EndPoint sender_ep = impl_->core.endpoint;
+            if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&sender_ep)) {
+                sender_ep = Ipv4Endpoint{
+                    ipv4->addr,
+                    htons(impl_->core.config.tcp_port)};
+            }
+
             net::StreamOpenFrame open;
             open.set_stream_id(stream_id);
             net::to_proto(open.mutable_sender(),
-                          ActorAddress{impl_->core.endpoint, ActorType{0},
+                          ActorAddress{sender_ep, ActorType{0},
                                        ActorId{0}, 0});
             net::to_proto(open.mutable_receiver(), receiver_addr);
             open.set_initial_window_bytes(config.initial_window_bytes);
