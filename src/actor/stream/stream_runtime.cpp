@@ -58,7 +58,8 @@ StreamRuntime::on_open(const net::InboundFrameContext& ictx,
     if (actor_port_.spawn_receiver) {
         auto spawned =
             actor_port_.spawn_receiver(actor_port_.context, target, sid, sender_addr,
-                                       open.initial_window_bytes(), trace_ctx);
+                                       ictx.peer, open.initial_window_bytes(),
+                                       trace_ctx);
 
         if (!spawned.has_value()) {
             // Rollback: erase the Opening reservation
@@ -70,6 +71,15 @@ StreamRuntime::on_open(const net::InboundFrameContext& ictx,
                 sessions_.erase(it);
             }
             return {StreamDispatchCode::SpawnFailed, 0, 0};
+        }
+
+        // Deliver StreamOpenedTag so the target actor knows a stream
+        // session has been established (mirrors the legacy
+        // deliver_remote_stream_open path in actor_system.cpp).
+        {
+            TypedMessage open_msg(stream::StreamOpenedTag, StreamBuffer{});
+            (void)messaging_.try_deliver_fast(
+                target, std::move(open_msg), FastDeliveryReason::StreamProtocol);
         }
 
         // Commit: transition Opening → Active
@@ -241,8 +251,14 @@ StreamRuntime::on_error(const net::InboundFrameContext& ictx,
 void StreamRuntime::register_sender(uint64_t stream_id, ActorId actor_id) {
     // Compatibility: local-only stream key (peer = local endpoint).
     // In Phase 5, peer is plumbed from NetworkRuntime.
+    register_sender_for_peer(endpoint_ops::parse_endpoint("127.0.0.1:0"),
+                              stream_id, actor_id);
+}
+
+void StreamRuntime::register_sender_for_peer(EndPoint peer, uint64_t stream_id,
+                                              ActorId actor_id) {
     std::lock_guard<std::mutex> lock(mutex_);
-    StreamKey key{endpoint_ops::parse_endpoint("127.0.0.1:0"), stream_id};
+    StreamKey key{peer, stream_id};
     auto it = sessions_.find(key);
     if (it != sessions_.end()) {
         it->second.sender_actor = actor_id;
