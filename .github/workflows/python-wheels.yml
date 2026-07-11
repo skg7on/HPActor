@@ -41,7 +41,7 @@ jobs:
             arch: aarch64
             platform: manylinux_2_28_aarch64
             deployment_target: ""
-          - os: macos-15
+          - os: macos-13
             arch: x86_64
             platform: macosx_12_0_x86_64
             deployment_target: "12.0"
@@ -82,6 +82,7 @@ jobs:
             --prefix build/wheel-deps/prefix \
             --source build/wheel-deps/src \
             --build-dir build/wheel-deps/build \
+            --arch "${{ matrix.arch }}" \
             $DEPLOY_ARGS \
             --jobs "$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)"
 

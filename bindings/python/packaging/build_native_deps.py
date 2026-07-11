@@ -24,9 +24,10 @@ from pathlib import Path
 
 # ── Target detection ──────────────────────────────────────────────────────
 
-def _detect_target(deployment_target: str | None) -> dict:
+def _detect_target(deployment_target: str | None,
+                   arch_override: str | None = None) -> dict:
     """Return {arch, os, openssl_target, cmake_arch} for the current machine."""
-    machine = platform.machine()
+    machine = arch_override or platform.machine()
     system = platform.system()
 
     if system == "Linux":
@@ -178,22 +179,31 @@ def main() -> None:
         help="macOS deployment target (e.g. 12.0)",
     )
     parser.add_argument(
+        "--arch", type=str, default=None,
+        help="Target architecture override (x86_64, aarch64, arm64)",
+    )
+    parser.add_argument(
         "--jobs", type=int, default=os.cpu_count() or 4,
         help="Parallel build jobs",
     )
     args = parser.parse_args()
 
-    target = _detect_target(args.deployment_target)
+    # Resolve paths so subprocess calls with changed cwd work correctly
+    prefix = args.prefix.resolve()
+    source = args.source.resolve()
+    build_dir = args.build_dir.resolve()
+
+    target = _detect_target(args.deployment_target, args.arch)
     print(f"Platform: {target['os']} {target['arch']}")
 
-    args.prefix.mkdir(parents=True, exist_ok=True)
-    args.build_dir.mkdir(parents=True, exist_ok=True)
+    prefix.mkdir(parents=True, exist_ok=True)
+    build_dir.mkdir(parents=True, exist_ok=True)
 
-    _build_openssl(args.prefix, args.source, args.build_dir,
+    _build_openssl(prefix, source, build_dir,
                    target, args.jobs)
-    _build_abseil(args.prefix, args.source, args.build_dir,
+    _build_abseil(prefix, source, build_dir,
                   target, args.deployment_target, args.jobs)
-    _build_protobuf(args.prefix, args.source, args.build_dir,
+    _build_protobuf(prefix, source, build_dir,
                     target, args.deployment_target, args.jobs)
 
     # Write dependency-build.json
@@ -205,7 +215,7 @@ def main() -> None:
         "os": target["os"],
         "deployment_target": args.deployment_target,
     }
-    report_path = args.prefix / "dependency-build.json"
+    report_path = prefix / "dependency-build.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n")
     print(f"Build report written to {report_path}")
 
