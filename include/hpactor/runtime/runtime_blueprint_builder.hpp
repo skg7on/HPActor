@@ -19,17 +19,23 @@
 #include <hpactor/config/reload_report.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <cstdint>
 #include <string>
 
 namespace hpactor {
 
 struct Config;
 
+namespace config {
+class TopologyModel;
+} // namespace config
+
 /// \brief Builds immutable \c RuntimeBlueprint from user-provided input.
 ///
-/// Supports \c from_config(config), \c from_config_and_topology(config, path),
-/// and \c from_topology(path). All parsing and validation happens before the
-/// blueprint is returned — no runtime side effects.
+/// Supports \c from_config(config), \c from_config_and_topology(config, model,
+/// extension_fingerprint), and \c from_topology(path). All parsing and
+/// validation happens before the blueprint is returned — no runtime side
+/// effects.
 ///
 /// Public headers do not expose \c toml++.
 class RuntimeBlueprintBuilder final {
@@ -40,6 +46,24 @@ class RuntimeBlueprintBuilder final {
     /// process constraints before returning. No threads, listeners, actor
     /// spawns, or daemonization occur.
     static result<RuntimeBlueprint> from_config(const Config& config) noexcept;
+
+    /// \brief Build a blueprint from a \c Config and an already-parsed
+    ///        topology model with an extension fingerprint.
+    ///
+    /// The extension fingerprint is typically the effective fingerprint from
+    /// a PreparedTopology, covering Python factory tokens and policy
+    /// fingerprint. It is incorporated into the blueprint's overall
+    /// fingerprint so topology changes are restart-classified.
+    ///
+    /// \param[in] config The actor-system configuration.
+    /// \param[in] topology The parsed and validated topology model.
+    /// \param[in] extension_fingerprint An opaque fingerprint covering
+    ///            extensions (e.g. Python binding tokens). Pass 0 for pure
+    ///            C++ topologies.
+    static result<RuntimeBlueprint>
+    from_config_and_topology(const Config& config,
+                             const config::TopologyModel& topology,
+                             uint64_t extension_fingerprint) noexcept;
 
     /// \brief Compute a reload classification diff between two blueprints.
     ///
