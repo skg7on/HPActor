@@ -385,6 +385,23 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 1D plan refined: `docs/superpowers/plans/2026-07-05-python-binding-phase1d-packaging-release.md` (pybind11 vendoring, `pybind11_add_module`, exception boundary, binary audit updates).
 - Umbrella spec updated: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md` (Section 1, Section 20).
 
+**Python Binding Phase 1E Declarative Topology** ✅ Core Infrastructure Complete (2026-07-11)
+- Issue: #426 — add `python:<module>:<qualname>` actors to HPActor TOML topology.
+- Design spec: `docs/superpowers/specs/2026-07-06-python-binding-phase1e-declarative-topology-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-06-python-binding-phase1e-declarative-topology.md`.
+- **Native topology types:** `ConfiguredActorKind`, `PythonBehaviorRef`, `PreparedActorSpec`, `PythonTopologyPhase`, `PythonTopologyErrorInfo`, `FactoryTokenBinding`, `PythonTopologyDescriptor` in `python_topology_types.hpp`.
+- **Topology preparer:** `PythonTopologyPreparer::parse()` → `ParsedTopologyPlan` → `PreparedTopology` with `bind_manifest()` for factory token binding. Classifies `python:`-prefixed behaviors as Python, validates grammar, rejects C++/Python name collisions.
+- **Runtime blueprint:** `RuntimeBlueprintBuilder::from_config_and_topology()` includes topology actors in fingerprint for reload diff detection.
+- **Transactional leases:** `ActorSpawnLease` — move-only RAII with `commit()`/`rollback()` for internally unpublished actors. `ActorDirectory::register_names_atomically()` — all-or-none batch name registration.
+- **Bootstrap transaction:** `ConfiguredActorProviderPort` — function-pointer port for provider dispatch. `TopologyBootstrapTransaction::execute()` — ordered spawn, await ready, atomic name commit, reverse-order rollback with stable phase error bits.
+- **Python topology provider:** `TopologyActorOutcome` enum, `PythonTopologyReadyTable` (bounded per-token mutex+CV), `PythonTopologyProvider` (value-only bridge via integer factory tokens). New dispatch kinds: `TopologyInstall=4`, `TopologyRollback=5`. New completion kinds: `TopologyReady`, `TopologyFailed`.
+- **Python native system:** `prepare_topology()`, `bind_topology_manifest()`, `start_prepared_topology()`, `complete_topology_actor()`, `record_topology_preflight()`, `last_topology_error()`.
+- **pybind11 endpoints:** 6 topology stubs implemented in `NativeSystemObject` with sealed noexcept guard.
+- **Python-side API:** `PythonTopologyPolicy` (allowlist with FNV-1a fingerprint), `TopologyPhase` enum, `TopologyError`, `_TopologyFactoryManifest` (importlib preflight with class validation and constructor binding). `ActorSystem.from_topology()` — side-effect-free constructor. `ActorSystem.resolve()` — committed name resolution.
+- **Key invariants:** TOML parsing remains native-only; Python imports/objects live only on the dedicated asyncio thread; native code sees only integer factory tokens; actor names commit atomically after all actors are ready; any failure rolls back the full transaction in reverse order; no RTTI/exceptions/`std::function`/`PyObject` in native provider/transaction code.
+- **Tests:** 51 unit tests (topology types 15, preparer 8, blueprint 2, lease 3, directory 4, transaction 3, provider 3), 3 integration tests (empty, spawn+rollback order, rollback on failure). 320+ total tests pass with no regressions.
+- **Remaining:** Full `start_prepared_topology()` integration with C++ `ActorFactoryRegistry` provider, Python-side `install_topology_actor`/`rollback_topology_actor` runtime handlers, installed-wheel topology smoke on all 4 platforms, manual/docs completion.
+
 **ActorSystem Refactor Phase 1: Runtime Ownership Shell** ✅ Phase 1a Complete (2026-06-28)
 - Introduced private `ActorSystem::Impl` in `src/runtime/` with named state groups:
   `CoreRuntimeState`, `ActorServiceState`, `MessagingRuntimeState`,

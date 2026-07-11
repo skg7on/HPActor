@@ -1,0 +1,15 @@
+# HPActor Python topology example
+# Demonstrates declaring a Python actor in TOML topology.
+
+[system]
+version = "1.0"
+
+[system.python]
+enabled = true
+topology_start_timeout_ms = 30000
+
+[[actor]]
+id = "echo"
+behavior = "python:examples.topology_actors:EchoActor"
+args = { prefix = "hello" }
+mailbox_capacity = 4096
