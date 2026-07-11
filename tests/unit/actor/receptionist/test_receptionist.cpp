@@ -16,11 +16,14 @@
 #include <hpactor/actor/receptionist/receptionist_messages.hpp>
 #include <hpactor/actor/receptionist/service_key.hpp>
 #include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/adt/stream_buffer.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 #include <gtest/gtest.h>
 
 #include <memory>
 
+#include "scheduler_test_driver.hpp"
 #include "system_test_fixture.hpp"
 
 using namespace hpactor;
@@ -173,4 +176,135 @@ TEST_F(ReceptionistTest, MultipleSubscribersForSameKey) {
     rec_->add_subscriber(key, sub2);
     rec_->add_subscriber(key, sub3);
     EXPECT_EQ(rec_->subscriber_count(), 3u);
+}
+
+// ── ActorContext Convenience Method Tests ─────────────────────────
+
+namespace {
+
+/// Test actor that exercises receptionist convenience methods via
+/// ActorContext.  Responds to TypeTag values to trigger different
+/// operations:
+///   - tag 100: receptionist_register
+///   - tag 101: receptionist_subscribe
+///   - tag 102: receptionist_unregister
+///   - tag 103: receptionist_unsubscribe
+class ReceptionistMethodActor : public EventBasedActor {
+  public:
+    ServiceKey key;
+    bool registered{false};
+    bool unregistered{false};
+    bool subscribed{false};
+    bool unsubscribed{false};
+
+    ReceptionistMethodActor(ActorContext* ctx, ActorSystem& sys, ServiceKey k)
+        : EventBasedActor(ctx, sys), key(std::move(k)) {
+        become(make_behavior());
+    }
+
+    Behavior make_behavior() override {
+        return Behavior{[this](TypedMessage& msg) {
+            auto tag = static_cast<uint32_t>(msg.type_id());
+            switch (tag) {
+                case 100:
+                    context()->receptionist_register(key);
+                    registered = true;
+                    break;
+                case 101:
+                    context()->receptionist_subscribe(key);
+                    subscribed = true;
+                    break;
+                case 102:
+                    context()->receptionist_unregister(key);
+                    unregistered = true;
+                    break;
+                case 103:
+                    context()->receptionist_unsubscribe(key);
+                    unsubscribed = true;
+                    break;
+                default:
+                    break;
+            }
+        }};
+    }
+};
+
+} // namespace
+
+/// Fixture that adds a SchedulerTestDriver so spawned actors can
+/// process messages deterministically.
+class ReceptionistContextTest : public ReceptionistTest {
+  protected:
+    void SetUp() override {
+        ReceptionistTest::SetUp();
+        driver_ = std::make_unique<test::SchedulerTestDriver>(*system_);
+    }
+
+    void TearDown() override {
+        driver_.reset();
+        ReceptionistTest::TearDown();
+    }
+
+    /// Send a message with \p tag to \p target and drain the scheduler.
+    void send_and_drain(const ActorAddress& target, uint32_t tag) {
+        TypedMessage msg(TypeTag(tag), StreamBuffer{});
+        system_->try_deliver_local(target.id, std::move(msg));
+        driver_->drain(100);
+    }
+
+    std::unique_ptr<test::SchedulerTestDriver> driver_;
+};
+
+TEST_F(ReceptionistContextTest, RegisterViaActorContext) {
+    ServiceKey key{"ctx-test"};
+    auto actor = system_->spawn<ReceptionistMethodActor>(key);
+    driver_->drain(100);
+
+    send_and_drain(actor.address(), 100);
+
+    auto listing = rec_->get_listing(key);
+    ASSERT_EQ(listing.addresses.size(), 1u);
+    EXPECT_EQ(listing.addresses[0], actor.address());
+}
+
+TEST_F(ReceptionistContextTest, SubscribeViaActorContext) {
+    ServiceKey key{"ctx-sub"};
+    auto actor = system_->spawn<ReceptionistMethodActor>(key);
+    driver_->drain(100);
+
+    send_and_drain(actor.address(), 101);
+
+    EXPECT_EQ(rec_->subscriber_count(), 1u);
+}
+
+TEST_F(ReceptionistContextTest, UnregisterViaActorContext) {
+    ServiceKey key{"ctx-unreg"};
+    auto actor = system_->spawn<ReceptionistMethodActor>(key);
+    driver_->drain(100);
+
+    // First register.
+    send_and_drain(actor.address(), 100);
+    ASSERT_EQ(rec_->registration_count(), 1u);
+
+    // Then unregister.
+    send_and_drain(actor.address(), 102);
+
+    EXPECT_EQ(rec_->registration_count(), 0u);
+    auto listing = rec_->get_listing(key);
+    EXPECT_TRUE(listing.addresses.empty());
+}
+
+TEST_F(ReceptionistContextTest, UnsubscribeViaActorContext) {
+    ServiceKey key{"ctx-unsub"};
+    auto actor = system_->spawn<ReceptionistMethodActor>(key);
+    driver_->drain(100);
+
+    // First subscribe.
+    send_and_drain(actor.address(), 101);
+    ASSERT_EQ(rec_->subscriber_count(), 1u);
+
+    // Then unsubscribe.
+    send_and_drain(actor.address(), 103);
+
+    EXPECT_EQ(rec_->subscriber_count(), 0u);
 }
