@@ -9,4 +9,5 @@ target_sources(hpactor_lib PRIVATE
     runtime_builder.cpp
     runtime_coordinator.cpp
     runtime_startup.cpp
+    topology_bootstrap_transaction.cpp
 )

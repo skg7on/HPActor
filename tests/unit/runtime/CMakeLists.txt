@@ -10,6 +10,7 @@ add_executable(test_unit_runtime
     test_unified_shutdown.cpp
     test_actor_system_factory.cpp
     test_actor_spawn_lease.cpp
+    test_topology_bootstrap_transaction.cpp
 )
 
 target_include_directories(test_unit_runtime PRIVATE
