@@ -2,6 +2,7 @@
 """HPActor — C++20 event-based actor framework with Python bindings."""
 
 from ._actor import Actor, actor
+from ._version import __version__
 from ._address import ActorAddress, ActorRef, ScheduleHandle
 from ._behavior import Behavior
 from ._context import ActorContext
@@ -29,6 +30,7 @@ from ._messages import MessageRegistry
 from ._system import ActorSystem
 
 __all__ = [
+    "__version__",
     "Actor",
     "ActorAddress",
     "ActorContext",

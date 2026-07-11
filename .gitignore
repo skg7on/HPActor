@@ -26,3 +26,8 @@ Testing/
 .superpowers
 build_asan/
 build_dbg/
+dist/
+wheelhouse/
+bindings/python/.venv/
+*.egg-info/
+WHEEL_AUDIT_*.json

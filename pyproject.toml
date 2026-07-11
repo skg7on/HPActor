@@ -1,0 +1,89 @@
+[build-system]
+requires = [
+  "scikit-build-core>=0.11,<0.14",
+  "setuptools-scm>=8,<10",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "hpactor"
+dynamic = ["version"]
+description = "Asyncio-first Python language binding for the HPActor actor runtime"
+readme = "bindings/python/README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "HPActor Contributors" }]
+dependencies = ["protobuf>=7.35.0,<8"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/skg7on/HPActor"
+Documentation = "https://skg7on.github.io/HPActor/"
+Issues = "https://github.com/skg7on/HPActor/issues"
+Source = "https://github.com/skg7on/HPActor"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.26"
+build-dir = "build/python/{wheel_tag}"
+wheel.py-api = "cp311"
+wheel.packages = ["bindings/python/hpactor"]
+wheel.license-files = ["LICENSE"]
+sdist.include = [
+  "CMakeLists.txt",
+  "cmake/**",
+  "include/**",
+  "src/**",
+  "protos/**",
+  "third_party/llhttp/**",
+  "third_party/linenoise/**",
+  "third_party/pybind11/**",
+  "bindings/python/**",
+  "LICENSE",
+]
+sdist.exclude = [
+  ".claude/**",
+  ".git/**",
+  ".github/**",
+  ".worktrees/**",
+  "apps/**",
+  "build/**",
+  "docs/**",
+  "examples/**",
+  "tests/**",
+  "tools/**",
+  "third_party/googletest/**",
+  "third_party/relacy/**",
+  "brainstorm/**",
+  "deploy/**",
+]
+
+[tool.scikit-build.cmake.define]
+ENABLE_PYTHON_BINDINGS = "ON"
+ENABLE_TESTS = "OFF"
+ENABLE_EXAMPLES = "OFF"
+ENABLE_APPS = "OFF"
+ENABLE_PROACTOR = "OFF"
+HPACTOR_PYTHON_WHEEL_BUILD = "ON"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.setuptools_scm"
+
+[tool.setuptools_scm]
+fallback_version = "0.1.0"
+version_scheme = "guess-next-dev"
+local_scheme = "node-and-date"
