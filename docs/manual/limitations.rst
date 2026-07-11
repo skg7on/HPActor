@@ -176,9 +176,30 @@ Wire Protocol
 Language Bindings
 -----------------
 
-HPActor is C++20 only. There are no official bindings for Python, Java,
-Go, Rust, or other languages. Non-C++ services must interact via the
-HTTP gateway or CLI, not as native actors.
+Python (Alpha — Phase 1D)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+HPActor provides an official alpha Python binding for CPython 3.11 and
+newer on manylinux_2_28 x86_64/ARM64 and macOS 12.0 x86_64/ARM64.
+The binding uses generated protobuf messages and explicit TypeTags.
+
+**In scope (Phase 1D):** in-process actor API, asyncio execution,
+delivery semantics, supervision, metrics, tracing, CLI, health checks,
+and graceful shutdown.
+
+**Not yet supported:** Windows, musllinux, PyPy, free-threaded
+CPython, native remote-node participation, declarative topology
+(Phase 1E), and external SDK clients (Phase 2).
+
+Install with ``pip install hpactor``.  See the Python manual at
+``docs/manual/python/`` for the quick-start guide and API reference.
+
+Other Languages
+~~~~~~~~~~~~~~~
+
+Java, Go, Rust, and other languages remain unsupported. Non-C++
+services must interact via the HTTP gateway or CLI, not as native
+actors.
 
 Coroutine Limitations
 ---------------------
