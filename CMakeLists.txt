@@ -6,8 +6,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Platform-specific settings (must be before project())
 # =============================================================================
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Protobuf dylib (libprotobuf.34+) is built for macOS 26.0+
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
+    # Default macOS deployment target for local dev builds.
+    # Wheel builds override via MACOSX_DEPLOYMENT_TARGET env var.
+    if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
+       AND NOT "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
+      set(CMAKE_OSX_DEPLOYMENT_TARGET "$ENV{MACOSX_DEPLOYMENT_TARGET}"
+          CACHE STRING "macOS deployment target")
+    elseif(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+      set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0"
+          CACHE STRING "macOS deployment target")
+    endif()
 endif()
 
 project(HPActor VERSION 0.1.0 LANGUAGES C CXX)
