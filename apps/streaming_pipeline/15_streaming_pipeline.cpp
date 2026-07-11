@@ -127,6 +127,8 @@ class SensorActor : public EventBasedActor {
           target_(target), stream_config_(std::move(stream_cfg)),
           batch_count_(batch_count), verbose_(verbose) {}
 
+    void on_activate() override { become(make_behavior()); }
+
     Behavior make_behavior() override {
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() == sp::PipelineControlTag) {
@@ -243,6 +245,8 @@ class TransformActor : public EventBasedActor {
         : EventBasedActor(ctx, sys), downstream_target_(downstream_target),
           downstream_config_(std::move(downstream_cfg)), verbose_(verbose) {}
 
+    void on_activate() override { become(make_behavior()); }
+
     Behavior make_behavior() override {
         return Behavior{[this](TypedMessage& msg) {
             auto tag = msg.type_id();
@@ -329,6 +333,8 @@ class AnalyticsActor : public EventBasedActor {
         stats_.total_min = 1e18;
         stats_.total_max = -1e18;
     }
+
+    void on_activate() override { become(make_behavior()); }
 
     Behavior make_behavior() override {
         return Behavior{[this](TypedMessage& msg) {
@@ -454,6 +460,7 @@ bool run_api_surface() {
     class Dummy : public EventBasedActor {
       public:
         Dummy(ActorContext* c, ActorSystem& s) : EventBasedActor(c, s) {}
+        void on_activate() override { become(make_behavior()); }
         Behavior make_behavior() override { return Behavior{[](TypedMessage&) {}}; }
     };
     auto target = system.spawn<Dummy>();
@@ -909,6 +916,8 @@ int run_receiver(const CrossProcessOpts& opts) {
             stats_.total_min = 1e18;
             stats_.total_max = -1e18;
         }
+        void on_activate() override { become(make_behavior()); }
+
         Behavior make_behavior() override {
             return Behavior{[this](TypedMessage& msg) {
                 auto tag = msg.type_id();
@@ -1093,8 +1102,9 @@ int run_sender(const CrossProcessOpts& opts) {
     std::cout << "Closing remote stream...\n";
     handle.close();
 
-    // Give the network thread time to flush the close frame.
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Give the scheduler time to process the first chunk, receive
+    // the ACK, and drain the send buffer BEFORE close is enqueued.
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
     std::cout << "Stream closed. Check receiver output for results.\n";
     return 0;
