@@ -1,5 +1,16 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #pragma once
 
@@ -11,7 +22,7 @@
 
 namespace hpactor::cluster::singleton {
 
-/// \brief Outcome codes for ILeadershipBackend operations.
+/// rief Outcome codes for ILeadershipBackend operations.
 enum class LeadershipStatusCode : uint8_t {
     Granted,
     AlreadyOwned,
@@ -26,10 +37,10 @@ enum class LeadershipStatusCode : uint8_t {
     TimedOut,
 };
 
-/// \brief Human-readable snake_case string for the status code.
+/// rief Human-readable snake_case string for the status code.
 const char* to_string(LeadershipStatusCode code) noexcept;
 
-/// \brief Result of a leadership backend operation.
+/// rief Result of a leadership backend operation.
 ///
 /// Carries the lease on success (Granted, Renewed) and the current
 /// owner on AlreadyOwned. Lost, BackendUnavailable, and other failures

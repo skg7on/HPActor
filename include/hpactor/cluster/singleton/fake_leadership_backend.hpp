@@ -1,5 +1,16 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #pragma once
 
@@ -11,7 +22,7 @@
 
 namespace hpactor::cluster::singleton {
 
-/// \brief Deterministic fake ILeadershipBackend for unit testing.
+/// rief Deterministic fake ILeadershipBackend for unit testing.
 ///
 /// Test code pre-configures ownership via force_grant() and calls
 /// simulate_unavailable() to exercise failure paths. Not thread-safe
@@ -29,17 +40,17 @@ class FakeLeadershipBackend : public ILeadershipBackend {
 
     // ── Test control surface ────────────────────────────────────────
 
-    /// \brief Pre-configure ownership so the next try_acquire succeeds.
+    /// rief Pre-configure ownership so the next try_acquire succeeds.
     void force_grant(const std::string& singleton_name,
                      const std::string& owner_node_id, Clock::duration ttl);
 
-    /// \brief Force-remove ownership for a singleton.
+    /// rief Force-remove ownership for a singleton.
     void force_revoke(const std::string& singleton_name);
 
-    /// \brief Toggle backend unavailability for all operations.
+    /// rief Toggle backend unavailability for all operations.
     void simulate_unavailable(bool unavailable);
 
-    /// \brief Number of acquire attempts for a singleton.
+    /// rief Number of acquire attempts for a singleton.
     int get_grant_count(const std::string& singleton_name) const;
 
   private:

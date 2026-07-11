@@ -1,5 +1,16 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #pragma once
 
@@ -13,7 +24,7 @@
 
 namespace hpactor::cluster::singleton {
 
-/// \brief Parameters for a leadership acquisition attempt.
+/// rief Parameters for a leadership acquisition attempt.
 struct LeadershipAttempt {
     std::string singleton_name;
     std::string self_node_id;
@@ -21,7 +32,7 @@ struct LeadershipAttempt {
     Clock::duration lease_ttl{};
 };
 
-/// \brief Abstract backend for distributed singleton leadership.
+/// rief Abstract backend for distributed singleton leadership.
 ///
 /// Implementations provide linearizable ownership through etcd, Consul,
 /// or internal Raft. All calls return explicit LeadershipResult values.
@@ -31,16 +42,16 @@ class ILeadershipBackend {
   public:
     virtual ~ILeadershipBackend() = default;
 
-    /// \brief Attempt to acquire leadership for a singleton.
+    /// rief Attempt to acquire leadership for a singleton.
     virtual LeadershipResult try_acquire(const LeadershipAttempt& attempt) = 0;
 
-    /// \brief Renew an existing lease before it expires.
+    /// rief Renew an existing lease before it expires.
     virtual LeadershipResult renew(const LeadershipLease& lease) = 0;
 
-    /// \brief Voluntarily release a lease.
+    /// rief Voluntarily release a lease.
     virtual LeadershipResult release(const LeadershipLease& lease) = 0;
 
-    /// \brief Query the current owner of a singleton.
+    /// rief Query the current owner of a singleton.
     virtual LeadershipResult current_owner(std::string_view singleton_name) = 0;
 };
 
