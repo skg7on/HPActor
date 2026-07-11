@@ -123,7 +123,13 @@ struct Ipv4Endpoint {
 inline void Ipv4Endpoint::to_sockaddr(sockaddr_in* out) const noexcept {
     out->sin_family = AF_INET;
     out->sin_port = port_nw;
+    // addr is stored in internal big-endian format (0x7F000001 always
+    // means 127.0.0.1).  Convert to platform network byte order for
+    // the socket API.
     out->sin_addr.s_addr = addr;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    out->sin_addr.s_addr = __builtin_bswap32(out->sin_addr.s_addr);
+#endif
     std::memset(out->sin_zero, 0, sizeof(out->sin_zero));
 }
 

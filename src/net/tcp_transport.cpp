@@ -101,9 +101,8 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_endpoint)) {
         family = AF_INET;
         auto* sa = reinterpret_cast<struct sockaddr_in*>(&addr_storage);
-        sa->sin_family = AF_INET;
+        ipv4->to_sockaddr(sa);
         sa->sin_port = htons(port);
-        sa->sin_addr.s_addr = ipv4->addr;
         addr_len = sizeof(struct sockaddr_in);
     } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&remote_endpoint)) {
         family = AF_INET6;
