@@ -27,7 +27,7 @@ namespace hpactor {
 struct Config;
 
 namespace config {
-class TopologyModel;
+struct TopologyModel;
 } // namespace config
 
 /// \brief Builds immutable \c RuntimeBlueprint from user-provided input.

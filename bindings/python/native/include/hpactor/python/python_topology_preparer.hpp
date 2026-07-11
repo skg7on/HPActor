@@ -24,7 +24,7 @@
 #include <vector>
 
 namespace hpactor::config {
-class TopologyModel;
+struct TopologyModel;
 } // namespace hpactor::config
 
 namespace hpactor::python {

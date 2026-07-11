@@ -24,7 +24,7 @@
 #include <vector>
 
 namespace hpactor::config {
-class TopologyModel;
+struct TopologyModel;
 struct ActorDef;
 } // namespace hpactor::config
 
