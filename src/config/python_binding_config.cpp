@@ -75,6 +75,10 @@ result<void> PythonBindingConfig::validate() const noexcept {
         return result<void>::make(error(errors::invalid_argument,
                                         "handler_shutdown_timeout_ms invalid"));
     }
+    if (topology_start_timeout_ms < 100 || topology_start_timeout_ms > 300'000) {
+        return result<void>::make(error(errors::invalid_argument,
+                                        "topology_start_timeout_ms invalid"));
+    }
     return result<void>::make();
 }
 
