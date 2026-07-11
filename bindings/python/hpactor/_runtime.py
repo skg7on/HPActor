@@ -309,8 +309,10 @@ class _RuntimeThread:
     """Dedicated asyncio event-loop thread owning all Python actors."""
 
     def __init__(self, registry: MessageRegistry,
-                 dispatch_capacity: int = 256):
+                 dispatch_capacity: int = 256,
+                 native_backend=None):
         self._registry = registry
+        self._native = native_backend
         self._coordinator = _DispatchCoordinator(dispatch_capacity)
         self._tokens = _TokenRegistry(dispatch_capacity)
         self._runtime = _ActorRuntime(registry, self._coordinator,
@@ -338,9 +340,25 @@ class _RuntimeThread:
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
             self._coordinator.set_loop(self._loop)
+            # Register native fd readers if in real mode
+            if self._native is not None:
+                disp_fd = self._native.dispatch_fd
+                comp_fd = self._native.completion_fd
+                if disp_fd >= 0:
+                    self._loop.add_reader(disp_fd, self._on_dispatch_readable)
+                if comp_fd >= 0:
+                    self._loop.add_reader(comp_fd, self._on_completion_readable)
             self._ready.set()
             while not self._stop_requested.is_set():
                 self._loop.run_forever()
+            # Remove native fd readers
+            if self._native is not None:
+                disp_fd = self._native.dispatch_fd
+                comp_fd = self._native.completion_fd
+                if disp_fd >= 0:
+                    self._loop.remove_reader(disp_fd)
+                if comp_fd >= 0:
+                    self._loop.remove_reader(comp_fd)
             # Drain remaining tasks
             pending = asyncio.all_tasks(self._loop)
             for task in pending:
@@ -361,6 +379,45 @@ class _RuntimeThread:
         self._loop.call_soon_threadsafe(self._loop.stop)
         if self._thread is not None and self._thread.is_alive():
             self._thread.join(timeout=5.0)
+
+    # ── Native fd reader callbacks ───────────────────────────────────
+
+    def _on_dispatch_readable(self) -> None:
+        """Called by asyncio when the native dispatch fd is readable."""
+        if self._native is None:
+            return
+        try:
+            max_batch = self._coordinator._capacity
+            dispatches = self._native.drain_dispatch(max_batch)
+            for d in dispatches:
+                self._coordinator.enqueue(d)
+            if dispatches:
+                self._coordinator.schedule_next()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            # Remove reader on persistent failure to avoid spinning
+            if (self._loop is not None and self._native is not None and
+                    self._native.dispatch_fd >= 0):
+                self._loop.remove_reader(self._native.dispatch_fd)
+
+    def _on_completion_readable(self) -> None:
+        """Called by asyncio when the native completion fd is readable."""
+        if self._native is None:
+            return
+        try:
+            max_batch = self._coordinator._capacity
+            completions = self._native.drain_completions(max_batch)
+            for c in completions:
+                token = c.get("token", 0)
+                if token and token in self._tokens._tokens:
+                    self._tokens.resolve(token, c)
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            if (self._loop is not None and self._native is not None and
+                    self._native.completion_fd >= 0):
+                self._loop.remove_reader(self._native.completion_fd)
 
     def submit(self, coro: Any) -> Any:
         """Submit a coroutine or callable to the runtime loop (thread-safe)."""

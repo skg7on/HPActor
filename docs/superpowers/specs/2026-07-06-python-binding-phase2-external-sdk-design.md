@@ -18,10 +18,13 @@ limitations under the License.
 
 **Status:** Approved design
 
-**Date:** 2026-07-06
+**Date:** 2026-07-06 (updated 2026-07-10 for pybind11 backend and current status)
 
 **Target:** Python 3.11+ portable clients, with native HPActor runtime support
-remaining on the Phase 1 CPython/Linux/macOS matrix
+remaining on the Phase 1 CPython/Linux/macOS matrix. The native `_hpactor`
+module now uses the pybind11 backend (see [pybind11 backend design]
+(2026-07-10-pybind11-backend-design.md)). The lazy native import via
+`__getattr__` on `hpactor` resolves to the pybind11-built module.
 
 ## 1. Summary
 
@@ -614,9 +617,11 @@ plus one sdist:
 
 Native and universal wheels share the same project name, version, public
 Python files, generated protobufs, dependency bounds, and metadata. Native
-wheels additionally contain `_hpactor` and native runtime assets. Required
-Python dependencies include the verified protobuf range and a bounded HTTPX
-range.
+wheels additionally contain `_hpactor` (pybind11-based) and native runtime
+assets. The pybind11 headers are vendored at build time under
+`third_party/pybind11/include/`. `Py_LIMITED_API` is deferred; ABI3 compliance
+to be verified by `abi3audit` as a Phase 1D follow-up. Required Python
+dependencies include the verified protobuf range and a bounded HTTPX range.
 
 Resolver tests prove:
 

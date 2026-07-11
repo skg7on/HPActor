@@ -300,6 +300,7 @@ file(GLOB_RECURSE _python_native_files CONFIGURE_DEPENDS
     ${CMAKE_SOURCE_DIR}/bindings/python/native/include/*.hpp
     ${CMAKE_SOURCE_DIR}/bindings/python/native/src/*.cpp)
 list(FILTER _python_native_files EXCLUDE REGEX "src/python_capi/")
+	list(FILTER _python_native_files EXCLUDE REGEX "src/python_pybind11/")
 set(_python_native_forbidden
     "Python.h" "PyObject" "dynamic_cast" "typeid" "throw "
     "try {" "catch (" "std::function")
@@ -327,6 +328,23 @@ foreach(_file IN LISTS _python_capi_files)
         COMMAND ${CMAKE_COMMAND}
             -DINPUT_FILE=${_file}
             "-DFORBIDDEN=${_python_capi_forbidden}"
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
+endforeach()
+
+# Pybind11 files: allowed to use Python.h, PyObject, typeid, throw,
+# try, catch, and exceptions.  Must still avoid dynamic_cast and
+# std::function.
+file(GLOB_RECURSE _python_pybind11_files CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/bindings/python/native/src/python_pybind11/*.cpp
+    ${CMAKE_SOURCE_DIR}/bindings/python/native/src/python_pybind11/*.hpp)
+set(_python_pybind11_forbidden "dynamic_cast" "std::function")
+foreach(_file IN LISTS _python_pybind11_files)
+    string(MAKE_C_IDENTIFIER "${_file}" _pyb11_test_suffix)
+    add_test(
+        NAME PythonBindingArchitecture.Pybind11.${_pyb11_test_suffix}
+        COMMAND ${CMAKE_COMMAND}
+            -DINPUT_FILE=${_file}
+            "-DFORBIDDEN=${_python_pybind11_forbidden}"
             -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
 endforeach()
 

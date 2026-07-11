@@ -36,20 +36,28 @@ target_sources(hpactor_python_native PRIVATE
     src/python_gateway_actor.cpp
     src/python_gateway_wake_adapter.cpp)
 
-# ── CPython limited-API extension module ──────────────────────────────────
+# ── pybind11 extension module ─────────────────────────────────────────
 if(Python3_FOUND OR Python3_Development_FOUND)
-  set(PYTHON_CAPI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/python_capi)
+  set(PYBIND11_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/python_pybind11)
 
   add_library(_hpactor MODULE
-      ${PYTHON_CAPI_DIR}/module.cpp
-      ${PYTHON_CAPI_DIR}/native_system_type.cpp
-      ${PYTHON_CAPI_DIR}/conversions.cpp)
+      ${PYBIND11_SRC_DIR}/module.cpp
+      ${PYBIND11_SRC_DIR}/native_system.cpp)
   set_target_properties(_hpactor PROPERTIES PREFIX "")
-  target_compile_definitions(_hpactor PRIVATE Py_LIMITED_API=0x030B0000)
+  # NOTE: Py_LIMITED_API / PYBIND11_USE_LIMITED_API are deferred.
+  # pybind11 2.13.6 has incomplete limited-API support for our usage
+  # (PyMethod_Check, PyInstanceMethod_Check not guarded).
+  # ABI3 compliance will be verified by abi3audit as a follow-up fix.
+  # target_compile_definitions(_hpactor PRIVATE
+  #     Py_LIMITED_API=0x030B0000
+  #     PYBIND11_USE_LIMITED_API=1)
   target_include_directories(_hpactor PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/include
+      ${PYBIND11_SRC_DIR})
+  target_include_directories(_hpactor SYSTEM PRIVATE
+      ${CMAKE_SOURCE_DIR}/third_party/pybind11/include
       ${Python3_INCLUDE_DIRS})
   target_link_libraries(_hpactor PRIVATE hpactor_python_native hpactor_lib
       hpactor_proto Python3::Python)
-  target_compile_options(_hpactor PRIVATE -fno-exceptions -fno-rtti)
+  target_compile_options(_hpactor PRIVATE -fexceptions -frtti)
 endif()
