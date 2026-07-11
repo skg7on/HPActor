@@ -71,9 +71,10 @@ def _build_openssl(prefix: Path, source_dir: Path, build_dir: Path,
     work = build_dir / "openssl"
     work.mkdir(parents=True, exist_ok=True)
 
+    configure = (src / "Configure").resolve()
     subprocess.run(
         [
-            str(src / "Configure"),
+            str(configure),
             target["openssl_target"],
             "no-shared",
             "no-tests",
