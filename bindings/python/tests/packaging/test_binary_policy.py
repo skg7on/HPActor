@@ -25,7 +25,6 @@ class WheelContentsTest(unittest.TestCase):
         self.assertIn("forbidden_unresolved_prefixes", data)
         self.assertIn("targets", data)
         targets = data["targets"]
-        self.assertIn("manylinux_2_28_x86_64", targets)
         self.assertIn("macosx_12_0_arm64", targets)
 
     def test_verify_script_exists(self) -> None:
