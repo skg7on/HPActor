@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -127,6 +128,23 @@ class ActorDirectory {
     ///         mailbox, or \c std::nullopt if not found or variable.
     std::optional<mailbox::DisruptorMailboxHandle>
     find_fixed_binding(ActorId id) const;
+
+    /// \brief A name-to-actor binding for batch registration.
+    struct NamedActor {
+        std::string name;  ///< Name to register.
+        ActorId actor;     ///< Actor id the name maps to.
+    };
+
+    /// \brief Atomically register a batch of name-to-actor mappings.
+    ///
+    /// Validates the complete batch under one lock: every actor must exist
+    /// in the directory and no name may be already registered. If validation
+    /// passes, all names are inserted. Otherwise, no names are modified.
+    ///
+    /// \param[in] batch Span of NamedActor entries to register.
+    /// \retval true All names were registered atomically.
+    /// \retval false A conflict was detected; no names were modified.
+    bool register_names_atomically(std::span<NamedActor> batch);
 
     /// \brief Register a name-to-address mapping.
     ///
