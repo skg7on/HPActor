@@ -27,7 +27,7 @@ class Pybind11NativeSystem:
     # ── Lifecycle ────────────────────────────────────────────────────
 
     def start(self) -> None:
-        import _hpactor
+        from . import _hpactor  # relative import — .so is inside the package
 
         cfg: Dict[str, Any] = {
             "dispatch_queue_capacity": 65536,

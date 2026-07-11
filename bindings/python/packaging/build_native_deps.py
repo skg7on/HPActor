@@ -24,8 +24,7 @@ from pathlib import Path
 
 # ── Target detection ──────────────────────────────────────────────────────
 
-def _detect_target(deployment_target: str | None,
-                   arch_override: str | None = None) -> dict:
+def _detect_target(arch_override: str | None = None) -> dict:
     """Return {arch, os, openssl_target, cmake_arch} for the current machine."""
     machine = arch_override or platform.machine()
     system = platform.system()
@@ -191,7 +190,7 @@ def main() -> None:
     source = args.source.resolve()
     build_dir = args.build_dir.resolve()
 
-    target = _detect_target(args.deployment_target, args.arch)
+    target = _detect_target(args.arch)
     print(f"Platform: {target['os']} {target['arch']}")
 
     prefix.mkdir(parents=True, exist_ok=True)

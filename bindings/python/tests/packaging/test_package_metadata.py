@@ -81,7 +81,10 @@ class PackageMetadataTest(unittest.TestCase):
         project = data["project"]
         self.assertEqual(project["name"], "hpactor")
         self.assertEqual(project["requires-python"], ">=3.11")
-        self.assertIn("protobuf", project["dependencies"][0])
+        self.assertTrue(
+            any("protobuf" in d for d in project["dependencies"]),
+            "protobuf dependency not found",
+        )
 
         scikit = data["tool"]["scikit-build"]
         self.assertEqual(scikit["wheel"]["py-api"], "cp311")
@@ -139,8 +142,6 @@ class PackageMetadataTest(unittest.TestCase):
     def test_version_fallback_when_not_installed(self) -> None:
         """When the package is not installed, __version__ returns the
         unknown sentinel."""
-        # Importing directly from source should give the fallback because
-        # the package won't be installed via pip.
         spec = importlib.util.spec_from_file_location(
             "hpactor._version",
             _repo_root()
@@ -150,11 +151,7 @@ class PackageMetadataTest(unittest.TestCase):
             / "_version.py",
         )
         mod = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(mod)
-        except Exception:
-            # If the module doesn't exist yet the RED phase is working.
-            raise
+        spec.loader.exec_module(mod)
         self.assertEqual(mod.__version__, "0+unknown")
 
 

@@ -22,7 +22,23 @@ import tarfile
 import tempfile
 import urllib.request
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
+
+
+# ── Redirect handler — reject non-HTTPS redirects ───────────────────────
+
+class _HttpsOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject redirects to non-HTTPS schemes (http://, file://, ftp://)."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        scheme = urlparse(newurl).scheme
+        if scheme != "https":
+            raise urllib.request.URLError(
+                f"Refusing to follow redirect to non-HTTPS URL: {newurl}"
+            )
+        return urllib.request.HTTPRedirectHandler.redirect_request(
+            self, req, fp, code, msg, headers, newurl
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -85,14 +101,46 @@ def main() -> None:
         expected = entry["sha256"]
         source_dir = entry["source_dir"]
 
+        # Validate source_dir — must not contain path traversal
+        sd = source_dir.replace("\\", "/")
+        if ".." in sd.split("/") or sd.startswith("/"):
+            print(
+                f"ERROR: {name}: source_dir contains path traversal: "
+                f"{source_dir}", file=sys.stderr,
+            )
+            sys.exit(1)
+
         # Only allow HTTPS
         if urlparse(url).scheme != "https":
             print(f"ERROR: {name}: URL must be HTTPS: {url}", file=sys.stderr)
             sys.exit(1)
 
-        archive_name = url.rstrip("/").rsplit("/", 1)[-1]
-        cache_path = args.cache / archive_name
+        # Derive safe archive name from URL path (no query/fragment)
+        archive_name = os.path.basename(urlparse(url).path)
+        if not archive_name or ".." in archive_name:
+            print(
+                f"ERROR: {name}: unsafe archive name from URL: {url}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        cache_path = (args.cache / archive_name).resolve()
+        if not str(cache_path).startswith(str(args.cache.resolve()) + os.sep):
+            print(
+                f"ERROR: {name}: archive path escapes cache: {cache_path}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         stamp_path = args.cache / f"{archive_name}.sha256"
+
+        # Validate extract_dir is a safe descendant of args.extract
+        extract_dir = (args.extract / source_dir).resolve()
+        extract_root = args.extract.resolve()
+        if not str(extract_dir).startswith(str(extract_root) + os.sep):
+            print(
+                f"ERROR: {name}: source_dir escapes extraction root: "
+                f"{source_dir}", file=sys.stderr,
+            )
+            sys.exit(1)
 
         # Already verified?
         if stamp_path.exists():
@@ -100,7 +148,6 @@ def main() -> None:
             if cached_digest == expected and cache_path.exists():
                 print(f"[OK] {name}: cached {archive_name} sha256={expected[:12]}...")
                 # Extract if needed
-                extract_dir = args.extract / source_dir
                 if not extract_dir.exists():
                     print(f"     extracting to {extract_dir}")
                     _extract(cache_path, extract_dir)
@@ -114,10 +161,13 @@ def main() -> None:
             print(f"[MISS] {name}: {archive_name} not in cache")
             sys.exit(1)
 
-        # Download
+        # Download — use secure opener that rejects non-HTTPS redirects
         print(f"[FETCH] {name}: {url}")
+        secure_opener = urllib.request.build_opener(
+            _HttpsOnlyRedirectHandler()
+        )
         try:
-            urllib.request.urlretrieve(url, cache_path)
+            secure_opener.retrieve(url, cache_path)
         except Exception as exc:
             cache_path.unlink(missing_ok=True)
             print(f"ERROR: {name}: download failed: {exc}", file=sys.stderr)
@@ -134,8 +184,7 @@ def main() -> None:
         stamp_path.write_text(expected + "\n")
         print(f"[OK] {name}: verified sha256={expected[:12]}...")
 
-        # Extract
-        extract_dir = args.extract / source_dir
+        # Atomic extraction: extract to temp, then rename into place
         if extract_dir.exists():
             shutil.rmtree(extract_dir)
         print(f"     extracting to {extract_dir}")
@@ -159,7 +208,9 @@ def _extract(archive: Path, dest: Path) -> None:
     """
     dest.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
-        shutil.unpack_archive(str(archive), tmp)
+        # Use tarfile directly with filter='data' for path-traversal protection
+        with tarfile.open(archive, "r:*") as tf:
+            tf.extractall(tmp, filter="data")
         entries = sorted(os.listdir(tmp))
         if len(entries) == 1 and os.path.isdir(os.path.join(tmp, entries[0])):
             # Single top-level directory — move its contents up

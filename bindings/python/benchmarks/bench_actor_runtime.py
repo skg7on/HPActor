@@ -4,12 +4,19 @@
 Measures empty-handler throughput, dispatch wait, handler latency,
 and ask/reply end-to-end p50/p95/p99 on an installed wheel.
 
+NOTE: This is a measurement harness scaffold.  Real measurement requires
+a full hpactor runtime inside a clean venv with the installed wheel.
+The current implementation records the harness overhead as a smoke test;
+actual actor benchmarks will be wired in a follow-up PR once the wheel
+build pipeline stabilizes.
+
 Usage:
     python bench_actor_runtime.py --wheel hpactor-*.whl \\
         --output perf.json --warmup 10000 --iterations 100000
 """
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -17,7 +24,6 @@ import statistics
 import subprocess
 import sys
 import time
-import venv
 from pathlib import Path
 
 
@@ -61,42 +67,38 @@ def main() -> None:
         "logical_cpus": os.cpu_count() or 0,
     }
 
-    # Run 5 trials, store medians
-    throughputs = []
-    latencies_p50 = []
-    latencies_p95 = []
-    latencies_p99 = []
-
-    for trial in range(5):
-        t_start = time.monotonic()
-        # In a real benchmark, this would run actual actor operations
-        # through a clean venv with the installed wheel.  For now we
-        # record the measurement harness.
-        time.sleep(0.01)  # placeholder for actual measurement
-        elapsed = time.monotonic() - t_start
-        throughputs.append(args.iterations / max(elapsed, 1e-9))
-        latencies_p50.append(elapsed * 1e9 / args.iterations / 2)
-        latencies_p95.append(elapsed * 1e9 / args.iterations)
-        latencies_p99.append(elapsed * 1e9 / args.iterations * 1.5)
+    # Compute wheel SHA256 for reproducibility tracking
+    wheel_sha256 = "TBD"
+    if args.wheel.exists():
+        h = hashlib.sha256()
+        with open(args.wheel, "rb") as fh:
+            while True:
+                chunk = fh.read(1 << 20)
+                if not chunk:
+                    break
+                h.update(chunk)
+        wheel_sha256 = h.hexdigest()
 
     result = {
-        "wheel_sha256": "TBD",
+        "wheel_sha256": wheel_sha256,
         **fingerprint,
         "parameters": {
             "warmup": args.warmup,
             "iterations": args.iterations,
             "payload_bytes": args.payload_bytes,
         },
-        "trials": 5,
-        "throughput_ops_per_sec": statistics.median(throughputs),
-        "p50_ns": statistics.median(latencies_p50),
-        "p95_ns": statistics.median(latencies_p95),
-        "p99_ns": statistics.median(latencies_p99),
+        "status": "scaffold",
+        "note": (
+            "Measurement harness scaffold — real actor benchmarks "
+            "require a full hpactor runtime inside a clean venv with the "
+            "installed wheel.  Wire in a follow-up PR."
+        ),
+        "trials": 0,
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(f"Benchmark written to {args.output}")
+    print(f"Benchmark scaffold written to {args.output}")
 
 
 if __name__ == "__main__":

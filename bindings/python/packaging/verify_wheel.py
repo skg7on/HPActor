@@ -55,15 +55,16 @@ def _check_content(wheel_path: Path, policy: dict) -> list[str]:
     if not license_files:
         errors.append("No LICENSE in dist-info")
 
-    # Required private libraries
+    # Required private libraries — verify they are present
     required = set(policy.get("required_private_libraries", []))
-    found_libs = {Path(n).name.replace(".so", "").replace(".dylib", "")
-                  .lstrip("lib")
-                  for n in names if n.endswith((".so", ".dylib"))}
-    found_libs.discard("_hpactor")
+    lib_files = {Path(n).name for n in names
+                 if n.endswith((".so", ".dylib")) and ".libs/" in n}
     for lib in required:
-        if lib not in found_libs and lib not in {n.rsplit(".", 1)[0] for n in names if ".so" in n}:
-            pass  # lib names vary; skip exact match, verify by presence
+        found = any(lib in f for f in lib_files)
+        if not found:
+            errors.append(
+                f"Required private library '{lib}' not found in wheel"
+            )
 
     return errors
 

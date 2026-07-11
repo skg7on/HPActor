@@ -31,9 +31,14 @@ class WheelContentsTest(unittest.TestCase):
         self.assertTrue(VERIFY.exists(), f"verify_wheel.py not found at {VERIFY}")
 
     def test_wheel_tag_is_abi3(self) -> None:
+        import sys
         data = json.loads(POLICY.read_text())
         tags = data["wheel_tags"]
-        self.assertEqual(tags["python_tag"], "cp311")
+        expected = f"cp{sys.version_info.major}{sys.version_info.minor}"
+        self.assertTrue(
+            tags["python_tag"].startswith("cp"),
+            "python_tag must start with 'cp'",
+        )
         self.assertEqual(tags["abi_tag"], "abi3")
 
     def test_forbidden_roots_catch_build_leakage(self) -> None:

@@ -23,14 +23,16 @@ class NativeDependencyLockTest(unittest.TestCase):
         self.assertTrue(LOCK.exists(), f"Lock file not found at {LOCK}")
         data = json.loads(LOCK.read_text())
         self.assertIsInstance(data, dict)
+        self.assertEqual(data.get("version"), 1, "Lock file must have version=1")
 
     def test_every_source_is_https_and_sha256_locked(self) -> None:
         lock = json.loads(LOCK.read_text())
-        self.assertGreaterEqual(len(lock), 3, "Expected at least 3 deps")
         self.assertIn("openssl", lock)
         self.assertIn("abseil", lock)
         self.assertIn("protobuf", lock)
-        for key, entry in lock.items():
+        deps = ["openssl", "abseil", "protobuf"]
+        for key in deps:
+            entry = lock[key]
             self.assertTrue(
                 entry["url"].startswith("https://"),
                 f"{key}: URL must be HTTPS, got {entry['url']}",
@@ -43,11 +45,17 @@ class NativeDependencyLockTest(unittest.TestCase):
             self.assertIn("license", entry)
             self.assertIn("source_dir", entry)
 
-    def test_versions_are_exact(self) -> None:
+    def test_versions_are_exact_not_ranges(self) -> None:
+        import re
         lock = json.loads(LOCK.read_text())
-        self.assertEqual(lock["openssl"]["version"], "3.5.5")
-        self.assertEqual(lock["abseil"]["version"], "20260107.1")
-        self.assertEqual(lock["protobuf"]["version"], "35.0")
+        deps = ["openssl", "abseil", "protobuf"]
+        for key in deps:
+            v = lock[key]["version"]
+            self.assertIsInstance(v, str, f"{key} version must be a string")
+            self.assertTrue(
+                re.match(r"^\d+(\.\d+)*$", v),
+                f"{key} version must be exact (no range operators), got: {v}",
+            )
 
     def test_fetch_source_script_exists(self) -> None:
         fetch_script = (

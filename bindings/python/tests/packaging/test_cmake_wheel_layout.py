@@ -1,11 +1,33 @@
 """Tests for Phase 1D Task 2: CMake wheel install layout."""
 
 import os
+import platform
 import re
+import shutil
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+
+
+def _read_rpath(so_path: Path):
+    """Return RPATH/RUNPATH lines from *so_path* on any platform."""
+    if shutil.which("readelf"):
+        result = subprocess.run(
+            ["readelf", "-d", str(so_path)],
+            capture_output=True, text=True,
+        )
+        return [l for l in result.stdout.splitlines()
+                if "RPATH" in l or "RUNPATH" in l]
+    elif shutil.which("otool"):
+        result = subprocess.run(
+            ["otool", "-l", str(so_path)],
+            capture_output=True, text=True,
+        )
+        return [l for l in result.stdout.splitlines()
+                if "LC_RPATH" in l or "path " in l]
+    else:
+        return []  # no tool available — skip checks
 
 
 # ---------------------------------------------------------------------------
@@ -130,18 +152,19 @@ class CMakeWheelLayoutTest(unittest.TestCase):
             "/opt/homebrew",
             "/usr/local",
         ]
-        for candidate in self.stage.rglob("*.so"):
-            result = subprocess.run(
-                ["readelf", "-d", str(candidate)],
-                capture_output=True, text=True,
-            )
-            for line in result.stdout.splitlines():
-                if "RPATH" in line or "RUNPATH" in line:
-                    for prefix in forbidden_prefixes:
-                        self.assertNotIn(
-                            prefix, line,
-                            f"Absolute RPATH in {candidate.name}: {line.strip()}"
-                        )
+        # Scan both .so (Linux) and .dylib (macOS) extensions
+        extensions = list(self.stage.rglob("*.so"))
+        extensions.extend(self.stage.rglob("*.dylib"))
+        if not extensions:
+            self.skipTest("No native extensions found in staging")
+        for candidate in extensions:
+            lines = _read_rpath(candidate)
+            for line in lines:
+                for prefix in forbidden_prefixes:
+                    self.assertNotIn(
+                        prefix, line,
+                        f"Absolute RPATH in {candidate.name}: {line.strip()}"
+                    )
 
 
 # ---------------------------------------------------------------------------

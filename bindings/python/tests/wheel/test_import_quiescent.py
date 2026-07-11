@@ -26,7 +26,9 @@ class ImportQuiescentTest(unittest.TestCase):
         before = _fd_count()
         if before < 0:
             self.skipTest("fd count not available")
-        # Re-import (already imported, no-op)
+        # Perform the import inside this test (not relying on ordering)
+        import hpactor  # noqa: F401
+        import hpactor._hpactor  # noqa: F401
         after = _fd_count()
         self.assertEqual(after, before,
                          "Import must not open file descriptors")

@@ -7,7 +7,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # =============================================================================
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Default macOS deployment target for local dev builds.
-    # Wheel builds override via MACOSX_DEPLOYMENT_TARGET env var.
+    # Wheel builds: scikit-build-core passes CMAKE_OSX_DEPLOYMENT_TARGET
+    # on the CMake command line, which takes precedence over this default.
     if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
        AND NOT "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
       set(CMAKE_OSX_DEPLOYMENT_TARGET "$ENV{MACOSX_DEPLOYMENT_TARGET}"
@@ -50,7 +51,8 @@ option(HPACTOR_PYTHON_WHEEL_BUILD
 # When building a wheel, require CMake 3.26+ for SABIModule support
 if(HPACTOR_PYTHON_WHEEL_BUILD AND CMAKE_VERSION VERSION_LESS 3.26)
   message(FATAL_ERROR
-    "Python ABI3 wheel builds require CMake 3.26 or newer")
+    "scikit-build-core wheel builds require CMake 3.26 or newer "
+    "(for SABIModule support)")
 endif()
 
 # =============================================================================

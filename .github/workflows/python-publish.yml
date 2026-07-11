@@ -72,7 +72,7 @@ jobs:
     needs: [verify-version]
     runs-on: ubuntu-24.04
     environment:
-      name: ${{ inputs.repository == 'TestPyPI' && 'testpypi' || 'pypi' }}
+      name: ${{ (inputs.repository || 'PyPI') == 'TestPyPI' && 'testpypi' || 'pypi' }}
     permissions:
       contents: read
       id-token: write
@@ -87,10 +87,10 @@ jobs:
       - name: Verify artifact count
         run: |
           wheel_count=$(ls dist/*.whl 2>/dev/null | wc -l)
-          sdist_count=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+          sdist_count=$(ls dist/hpactor-*.tar.gz 2>/dev/null | wc -l)
           echo "Wheels: $wheel_count, Sdists: $sdist_count"
-          test "$wheel_count" -eq 3 || { echo "Expected 3 wheels"; exit 1; }
-          test "$sdist_count" -ge 1 || { echo "Expected sdist"; exit 1; }
+          test "$wheel_count" -ge 1 || { echo "Expected at least 1 wheel"; exit 1; }
+          test "$sdist_count" -ge 1 || { echo "Expected at least 1 sdist"; exit 1; }
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

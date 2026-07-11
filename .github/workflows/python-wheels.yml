@@ -13,6 +13,11 @@ on:
       - ".github/workflows/python-wheels.yml"
   push:
     branches: [main]
+  workflow_call:
+    outputs:
+      accepted-wheel-set:
+        description: "Name of the accepted-wheel-set artifact"
+        value: "accepted-wheel-set"
   workflow_dispatch:
 
 concurrency:
@@ -36,6 +41,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install tools
         run: |
@@ -100,10 +106,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Install system dependencies
         run: |
-          brew install openssl@3 protobuf abseil ninja 2>/dev/null || true
+          brew install openssl@3 protobuf abseil ninja
 
       - name: Install build tools
         run: |
@@ -116,18 +123,55 @@ jobs:
           CIBW_BUILD: "cp311-*"
           CIBW_ARCHS: "native"
           CIBW_BEFORE_BUILD: "python -m pip install 'scikit-build-core>=0.11,<0.14' 'setuptools-scm>=8,<10'"
-          CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=12.0"
-          CMAKE_ARGS: "-DCMAKE_CXX_FLAGS=-Wno-error"
-        run: cibuildwheel --output-dir wheelhouse 2>&1 || true
+          CIBW_ENVIRONMENT: >-
+            MACOSX_DEPLOYMENT_TARGET=12.0
+            CMAKE_ARGS=-DCMAKE_CXX_FLAGS=-Wno-error
+        run: cibuildwheel --output-dir wheelhouse
 
-      - name: Report wheel status
+      - name: Verify wheel
         run: |
-          wheel_count=$(ls wheelhouse/hpactor-*.whl 2>/dev/null | wc -l)
-          echo "Built $wheel_count wheel(s)"
-          ls -la wheelhouse/ 2>/dev/null || echo "No wheels produced"
-          if [ "$wheel_count" -gt 0 ]; then
-            python bindings/python/packaging/verify_wheel.py \
-              --wheel wheelhouse/hpactor-*.whl \
-              --policy bindings/python/packaging/dependency-policy.json \
-              --report wheel-audit.json 2>/dev/null || true
-          fi
+          python bindings/python/packaging/verify_wheel.py \
+            --wheel wheelhouse/hpactor-*.whl \
+            --policy bindings/python/packaging/dependency-policy.json \
+            --report wheel-audit.json
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-arm64
+          path: |
+            wheelhouse/hpactor-*.whl
+            wheel-audit.json
+          retention-days: 7
+
+  # ── Acceptance gate ───────────────────────────────────────────────────
+
+  wheel-acceptance:
+    name: accept wheels
+    needs: [build-macos-wheel]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: accepted/
+
+      - name: Verify artifact set
+        run: |
+          wheel_count=$(ls accepted/*.whl 2>/dev/null | wc -l)
+          echo "Accepted $wheel_count wheel(s)"
+          test "$wheel_count" -ge 1 || {
+            echo "Expected at least 1 wheel, got $wheel_count"
+            exit 1
+          }
+          for whl in accepted/*.whl; do
+            echo "  $whl"
+          done
+
+      - name: Upload accepted set
+        uses: actions/upload-artifact@v4
+        with:
+          name: accepted-wheel-set
+          path: accepted/
+          retention-days: 7

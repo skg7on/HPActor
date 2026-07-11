@@ -3,10 +3,10 @@
 import unittest
 
 try:
-    from importlib.metadata import distribution, version
+    from importlib.metadata import PackageNotFoundError, distribution
 except ImportError:
+    PackageNotFoundError = None  # type: ignore[assignment]
     distribution = None  # type: ignore[assignment]
-    version = None  # type: ignore[assignment]
 
 
 class WheelMetadataTest(unittest.TestCase):
@@ -19,7 +19,10 @@ class WheelMetadataTest(unittest.TestCase):
     def test_package_metadata_present(self) -> None:
         if distribution is None:
             self.skipTest("importlib.metadata not available")
-        dist = distribution("hpactor")
+        try:
+            dist = distribution("hpactor")
+        except (PackageNotFoundError, ModuleNotFoundError):
+            self.skipTest("hpactor package not installed")
         self.assertEqual(dist.metadata["Name"], "hpactor")
         self.assertIn("protobuf", dist.metadata["Requires-Dist"])
 

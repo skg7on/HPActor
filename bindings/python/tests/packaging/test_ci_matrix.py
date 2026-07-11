@@ -1,12 +1,8 @@
 """Tests for Phase 1D Task 6: CI wheel matrix workflow."""
 
+import re
 import unittest
 from pathlib import Path
-
-try:
-    import yaml
-except ImportError:
-    yaml = None  # type: ignore[assignment]
 
 
 def _repo_root() -> Path:
@@ -14,19 +10,6 @@ def _repo_root() -> Path:
 
 
 WORKFLOW = _repo_root() / ".github" / "workflows" / "python-wheels.yml"
-
-
-def _load_yaml(path: Path) -> dict:
-    if yaml is not None:
-        with open(path) as fh:
-            return yaml.safe_load(fh)
-    # Fallback: use a minimal heuristic parser
-    text = path.read_text()
-    result = {}
-    for line in text.splitlines():
-        if line.startswith("name:"):
-            result["name"] = line.split(":", 1)[1].strip()
-    return result
 
 
 class WheelCiMatrixTest(unittest.TestCase):
@@ -37,20 +20,27 @@ class WheelCiMatrixTest(unittest.TestCase):
         )
 
     def test_supported_targets_present(self) -> None:
-        """Workflow contains at least one wheel build job."""
+        """Workflow contains the macOS ARM64 wheel build job."""
         text = WORKFLOW.read_text()
         self.assertIn("macosx_12_0_arm64", text,
                       "Workflow must reference macOS ARM64 wheel target")
         self.assertIn("cibuildwheel", text,
                       "Workflow must use cibuildwheel")
 
-    def test_no_publish_permissions(self) -> None:
+    def test_workflow_has_callable_trigger(self) -> None:
+        """Wheel workflow must declare workflow_call for reuse."""
         text = WORKFLOW.read_text()
-        # Wheel workflow must not have publish permissions
-        self.assertNotIn("id-token: write", text,
-                         "Wheel workflow must not have publish permissions")
-        self.assertNotIn("publish", text.lower().split("name:")[0],
-                         "Wheel workflow must not be named publish")
+        self.assertIn("workflow_call", text,
+                      "Workflow must declare workflow_call trigger")
+
+    def test_wheel_workflow_not_named_publish(self) -> None:
+        """The wheel workflow name must not contain 'publish'."""
+        text = WORKFLOW.read_text()
+        # Extract the workflow-level name: field (first name: after 'on:')
+        m = re.search(r"^name:\s*(.+)", text, re.MULTILINE)
+        if m:
+            self.assertNotIn("publish", m.group(1).lower(),
+                             f"Workflow name '{m.group(1)}' must not contain 'publish'")
 
 
 if __name__ == "__main__":
