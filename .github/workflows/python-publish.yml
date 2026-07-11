@@ -89,7 +89,7 @@ jobs:
           wheel_count=$(ls dist/*.whl 2>/dev/null | wc -l)
           sdist_count=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
           echo "Wheels: $wheel_count, Sdists: $sdist_count"
-          test "$wheel_count" -eq 4 || { echo "Expected 4 wheels"; exit 1; }
+          test "$wheel_count" -eq 3 || { echo "Expected 3 wheels"; exit 1; }
           test "$sdist_count" -ge 1 || { echo "Expected sdist"; exit 1; }
 
       - name: Publish to PyPI

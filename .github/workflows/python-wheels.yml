@@ -41,10 +41,6 @@ jobs:
             arch: aarch64
             platform: manylinux_2_28_aarch64
             deployment_target: ""
-          - os: macos-13
-            arch: x86_64
-            platform: macosx_12_0_x86_64
-            deployment_target: "12.0"
           - os: macos-14
             arch: arm64
             platform: macosx_12_0_arm64
@@ -148,8 +144,8 @@ jobs:
         run: |
           wheel_count=$(ls accepted/*.whl 2>/dev/null | wc -l)
           echo "Accepted $wheel_count wheels"
-          test "$wheel_count" -eq 4 || {
-            echo "Expected 4 wheels, got $wheel_count"
+          test "$wheel_count" -eq 3 || {
+            echo "Expected 3 wheels, got $wheel_count"
             exit 1
           }
           for whl in accepted/*.whl; do
