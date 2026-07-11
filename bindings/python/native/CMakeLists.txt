@@ -29,7 +29,15 @@ add_library(hpactor_python_native STATIC
 set_target_properties(hpactor_python_native PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hpactor_python_native PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(hpactor_python_native PUBLIC hpactor_lib hpactor_proto)
+
+# Wheel builds keep linkage private so the extension is self-contained.
+# Normal SDK builds keep public linkage for downstream consumers.
+if(HPACTOR_PYTHON_WHEEL_BUILD)
+  target_link_libraries(hpactor_python_native PRIVATE hpactor_lib hpactor_proto)
+else()
+  target_link_libraries(hpactor_python_native PUBLIC hpactor_lib hpactor_proto)
+endif()
+
 target_compile_options(hpactor_python_native PRIVATE -fno-exceptions -fno-rtti)
 target_sources(hpactor_python_native PRIVATE
     src/native_notifier.cpp
@@ -43,14 +51,19 @@ if(Python3_FOUND OR Python3_Development_FOUND)
   add_library(_hpactor MODULE
       ${PYBIND11_SRC_DIR}/module.cpp
       ${PYBIND11_SRC_DIR}/native_system.cpp)
-  set_target_properties(_hpactor PROPERTIES PREFIX "")
+  set_target_properties(_hpactor PROPERTIES
+      PREFIX ""
+      OUTPUT_NAME "_hpactor"
+      CXX_VISIBILITY_PRESET hidden
+      VISIBILITY_INLINES_HIDDEN ON)
+
   # NOTE: Py_LIMITED_API / PYBIND11_USE_LIMITED_API are deferred.
   # pybind11 2.13.6 has incomplete limited-API support for our usage
-  # (PyMethod_Check, PyInstanceMethod_Check not guarded).
-  # ABI3 compliance will be verified by abi3audit as a follow-up fix.
-  # target_compile_definitions(_hpactor PRIVATE
-  #     Py_LIMITED_API=0x030B0000
-  #     PYBIND11_USE_LIMITED_API=1)
+  # (PyCFunction_GET_SELF is exposed as a function, not a macro).
+  # ABI3 compliance will be verified by abi3audit in Task 4.
+  # The extension compiles against the full CPython API for now;
+  # the stable ABI tag is asserted at audit time, not at compile time.
+
   target_include_directories(_hpactor PRIVATE
       ${CMAKE_CURRENT_SOURCE_DIR}/include
       ${PYBIND11_SRC_DIR})

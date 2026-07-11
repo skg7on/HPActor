@@ -36,6 +36,14 @@ option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20
 option(ENABLE_FIXED_DISRUPTOR_MAILBOX
        "Enable experimental fixed-message Disruptor actor mailbox" OFF)
 option(ENABLE_PYTHON_BINDINGS "Build the native Python binding foundation" OFF)
+option(HPACTOR_PYTHON_WHEEL_BUILD
+       "Build the Python extension with wheel-compatible install layout (private)" OFF)
+
+# When building a wheel, require CMake 3.26+ for SABIModule support
+if(HPACTOR_PYTHON_WHEEL_BUILD AND CMAKE_VERSION VERSION_LESS 3.26)
+  message(FATAL_ERROR
+    "Python ABI3 wheel builds require CMake 3.26 or newer")
+endif()
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -98,6 +106,9 @@ add_subdirectory(src)
 if(ENABLE_PYTHON_BINDINGS)
     add_subdirectory(bindings/python/native)
 endif()
+
+# Wheel install layout (only when building for Python distribution)
+include(cmake/python_wheel_install.cmake)
 
 # AOT compiler — depends on hpactor_lib, so must come after src/
 add_subdirectory(tools/toml-compiler)
