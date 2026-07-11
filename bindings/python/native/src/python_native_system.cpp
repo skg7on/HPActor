@@ -18,6 +18,7 @@
 #include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/python/python_bridge_actor.hpp>
 #include <hpactor/python/python_command_router.hpp>
+#include <hpactor/python/python_topology_provider.hpp>
 #include <hpactor/python/python_gateway_actor.hpp>
 #include <hpactor/python/python_gateway_wake_adapter.hpp>
 
@@ -212,6 +213,21 @@ PythonRuntimeSnapshot PythonNativeSystem::snapshot() const noexcept {
     if (runtime_)
         return runtime_->snapshot();
     return PythonRuntimeSnapshot{};
+}
+
+PythonTopologyProvider* PythonNativeSystem::topology_provider() noexcept {
+    return topology_provider_.get();
+}
+
+void PythonNativeSystem::record_topology_preflight(uint8_t phase,
+                                                    bool success) noexcept {
+    (void)phase; (void)success;
+    // TODO: wire into observability counters.
+}
+
+PythonTopologyErrorInfo
+PythonNativeSystem::last_topology_error() const noexcept {
+    return last_topology_error_;
 }
 
 } // namespace hpactor::python

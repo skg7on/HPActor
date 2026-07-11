@@ -31,10 +31,12 @@ namespace hpactor::python {
 /// \brief Kinds of dispatch records sent from native bridge or system to the
 ///        Python actor runtime.
 enum class PythonDispatchKind : uint8_t {
-    Message = 0,     ///< A user message from another actor.
-    LinkedExit = 1,  ///< A linked actor has exited.
-    MonitorDown = 2, ///< A monitored actor has terminated.
-    Restart = 3,     ///< Actor is being restarted (new generation).
+    Message = 0,          ///< A user message from another actor.
+    LinkedExit = 1,       ///< A linked actor has exited.
+    MonitorDown = 2,      ///< A monitored actor has terminated.
+    Restart = 3,          ///< Actor is being restarted (new generation).
+    TopologyInstall = 4,  ///< A topology factory record should be installed.
+    TopologyRollback = 5, ///< A topology actor should be rolled back.
 };
 
 /// \brief Bounded failure metadata for Python actors.
@@ -94,6 +96,18 @@ enum class PythonCompletionKind : uint8_t {
     ScheduleResult, ///< Result of a schedule or cancel-schedule command.
     ActorStopped,   ///< A Python actor has stopped (normal or after failure).
     ActorFailed,    ///< A Python actor has failed with a bounded exception.
+    TopologyReady,  ///< A topology install has completed successfully.
+    TopologyFailed, ///< A topology install has failed.
+};
+
+/// \brief Outcomes for a topology actor install.
+enum class TopologyActorOutcome : uint8_t {
+    Ready = 0,              ///< Constructor, behavior, and on_start() succeeded.
+    ConstructorFailed = 1,  ///< Constructor raised an exception.
+    BehaviorFailed = 2,     ///< Behavior freeze failed.
+    StartFailed = 3,        ///< on_start() raised an exception.
+    RolledBack = 4,         ///< Actor was rolled back before ready.
+    Cancelled = 5,          ///< Startup was cancelled (timeout).
 };
 
 /// \brief Envelope dispatched to a Python-bound actor for handling.
@@ -115,6 +129,10 @@ struct PythonDispatchEnvelope final {
     uint64_t sequence{0};
     // Bounded failure metadata for non-message dispatch kinds.
     PythonFailureMetadata failure;
+    // ── Phase 1E topology fields ───────────────────────────────────────
+    size_t topology_index{0};      ///< Index in the topology model.
+    uint64_t factory_token{0};     ///< Token from the frozen factory manifest.
+    uint64_t args_fingerprint{0};  ///< Fingerprint of constructor args.
 };
 
 /// \brief Command sent from the Python interpreter thread to the native bridge

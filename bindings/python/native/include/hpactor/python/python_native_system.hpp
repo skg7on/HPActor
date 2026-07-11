@@ -18,6 +18,7 @@
 #include <hpactor/python/python_ports.hpp>
 #include <hpactor/python/python_reliability.hpp>
 #include <hpactor/python/python_runtime.hpp>
+#include <hpactor/python/python_topology_types.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -38,6 +39,7 @@ namespace hpactor::python {
 
 class PythonCommandRouter;
 class PythonGatewayWakeAdapter;
+class PythonTopologyProvider;
 
 /// \brief Return value for spawn_bridge().
 struct PythonSpawnedActor final {
@@ -159,6 +161,17 @@ class PythonNativeSystem final {
     /// \brief Return a point-in-time runtime snapshot.
     [[nodiscard]] PythonRuntimeSnapshot snapshot() const noexcept;
 
+    // ── Topology (Phase 1E) ─────────────────────────────────────────────
+
+    /// \brief Access the topology provider (nullptr if not configured).
+    [[nodiscard]] PythonTopologyProvider* topology_provider() noexcept;
+
+    /// \brief Record a preflight phase outcome for observability.
+    void record_topology_preflight(uint8_t phase, bool success) noexcept;
+
+    /// \brief Return the last topology error info.
+    [[nodiscard]] PythonTopologyErrorInfo last_topology_error() const noexcept;
+
   private:
     PythonNativeSystem(Config system_config,
                        PythonRuntimeConfig python_config) noexcept;
@@ -167,7 +180,9 @@ class PythonNativeSystem final {
     std::unique_ptr<PythonRuntime> runtime_;
     std::unique_ptr<PythonCommandRouter> router_;
     std::unique_ptr<PythonGatewayWakeAdapter> wake_adapter_;
+    std::unique_ptr<PythonTopologyProvider> topology_provider_;
     PythonReliabilityController reliability_;
+    PythonTopologyErrorInfo last_topology_error_;
     Actor application_bridge_;
     Actor gateway_;
     std::unordered_map<std::string, ActorAddress> name_registry_;

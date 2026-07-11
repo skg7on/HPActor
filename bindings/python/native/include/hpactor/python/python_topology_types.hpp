@@ -50,6 +50,31 @@ struct PreparedActorSpec final {
     uint64_t factory_token{0};                ///< Bound token from factory manifest.
 };
 
+/// \brief Phase in the topology lifecycle.
+enum class PythonTopologyPhase : uint8_t {
+    Idle = 0,
+    Parse = 1,
+    Policy = 2,
+    Import = 3,
+    ClassResolution = 4,
+    ClassValidation = 5,
+    ConstructorBinding = 6,
+    NativePrepare = 7,
+    ActorStart = 8,
+    Commit = 9,
+    Rollback = 10,
+};
+
+/// \brief Bounded structured error info for topology failures.
+struct PythonTopologyErrorInfo final {
+    PythonTopologyPhase phase{PythonTopologyPhase::Idle};
+    std::string actor_id;
+    std::string behavior;
+    uint32_t error_code{0};
+    std::string detail;
+    uint32_t rollback_error_bits{0};
+};
+
 /// \brief Parse a Python behavior reference string.
 ///
 /// The grammar is exactly \c "python:<module>:<qualname>".
