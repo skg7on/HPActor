@@ -102,32 +102,15 @@ struct Ipv4Endpoint {
     }
 };
 
-// Extract the first octet from a network-byte-order uint32_t addr.
-// On little-endian, the first network byte is the LSB of the uint32_t.
-// On big-endian, it is the MSB.
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define HPACTOR_IPV4_FIRST_OCTET(a)  ((a) & 0xFFU)
-#define HPACTOR_IPV4_SECOND_OCTET(a) (((a) >> 8) & 0xFFU)
-#define HPACTOR_IPV4_OCTET_N(a, n)   (((a) >> (8 * (n))) & 0xFFU)
-// 127.0.0.1 in network byte order on little-endian: bytes 7F 00 00 01
-#define HPACTOR_LOCALHOST_ADDR 0x0100007FU
-#else
-#define HPACTOR_IPV4_FIRST_OCTET(a)  ((a) >> 24)
-#define HPACTOR_IPV4_SECOND_OCTET(a) (((a) >> 16) & 0xFFU)
-#define HPACTOR_IPV4_OCTET_N(a, n)   (((a) >> (24 - 8 * (n))) & 0xFFU)
-// 127.0.0.1 in network byte order on big-endian: bytes 7F 00 00 01
-#define HPACTOR_LOCALHOST_ADDR 0x7F000001U
-#endif
-
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_loopback() const noexcept {
-    // addr is in network byte order; extract the first octet (127 for
-    // loopback) correctly regardless of host endianness.
-    return HPACTOR_IPV4_FIRST_OCTET(addr) == 0x7F;
+    // addr stores the address in big-endian uint32_t format where
+    // 0x7F000001 always means 127.0.0.1.  The MSB is the first octet.
+    return (addr >> 24) == 0x7F;
 }
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_private_network() const noexcept {
-    auto b1 = static_cast<uint8_t>(HPACTOR_IPV4_FIRST_OCTET(addr));
-    auto b2 = static_cast<uint8_t>(HPACTOR_IPV4_SECOND_OCTET(addr));
+    auto b1 = static_cast<uint8_t>((addr >> 24) & 0xFF);
+    auto b2 = static_cast<uint8_t>((addr >> 16) & 0xFF);
     return b1 == 10 ||
            (b1 == 172 && (b2 & 0xF0) == 16) ||
            (b1 == 192 && b2 == 168);
@@ -216,10 +199,9 @@ using EndPoint = std::variant<Ipv4Endpoint, Ipv6Endpoint>;
 // -----------------------------------------------------------------------------
 // LocalEndpoint - loopback endpoint for local actor communication
 // -----------------------------------------------------------------------------
-// 127.0.0.1:0 in network byte order (endian-aware).
-// On little-endian the uint32_t representation of network-order bytes
-// 7F 00 00 01 is 0x0100007F; on big-endian it is 0x7F000001.
-inline constexpr Ipv4Endpoint LocalEndpoint{HPACTOR_LOCALHOST_ADDR, 0};
+inline constexpr Ipv4Endpoint LocalEndpoint{0x7F000001, 0}; // 127.0.0.1:0 in
+                                                            // network byte
+                                                            // order
 
 // to_sockaddr free function for variant
 inline void to_sockaddr(const EndPoint& ep, sockaddr* out, socklen_t* len) {

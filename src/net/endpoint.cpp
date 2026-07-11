@@ -34,9 +34,13 @@ int address_family(const EndPoint& ep) {
 std::string to_string(const EndPoint& ep) {
     char buf[64];
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
-        // addr is in network byte order, pass directly to inet_ntoa
+        // addr is in internal big-endian uint32_t format.
+        // Convert to platform network byte order before passing to inet_ntoa.
         struct in_addr addr;
         addr.s_addr = ipv4->addr;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        addr.s_addr = __builtin_bswap32(addr.s_addr);
+#endif
         snprintf(buf, sizeof(buf), "%s:%u", inet_ntoa(addr), ipv4->port());
         return std::string(buf);
     }
@@ -81,8 +85,16 @@ EndPoint parse_endpoint(std::string_view node_id) {
     // Try numeric IPv4 address first
     struct in_addr addr;
     if (inet_pton(AF_INET, std::string(host).c_str(), &addr) == 1) {
-        // inet_pton returns network byte order in s_addr
-        return Ipv4Endpoint{addr.s_addr, htons(static_cast<uint16_t>(port))};
+        // inet_pton returns platform network byte order in s_addr.
+        // Convert to the internal big-endian uint32_t representation
+        // (where 0x7F000001 always means 127.0.0.1) so that
+        // Ipv4Endpoint::is_loopback() and is_private_network() work
+        // correctly regardless of host endianness.
+        uint32_t be_addr = addr.s_addr;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        be_addr = __builtin_bswap32(be_addr);
+#endif
+        return Ipv4Endpoint{be_addr, htons(static_cast<uint16_t>(port))};
     }
 
     // Try numeric IPv6 address
@@ -101,8 +113,12 @@ EndPoint parse_endpoint(std::string_view node_id) {
     int ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
     if (ret == 0 && result != nullptr) {
         auto* ai = reinterpret_cast<struct sockaddr_in*>(result->ai_addr);
-        // sin_addr.s_addr is in network byte order
+        // sin_addr.s_addr is in platform network byte order — convert
+        // to internal big-endian uint32_t representation.
         uint32_t addr_bytes = ai->sin_addr.s_addr;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+        addr_bytes = __builtin_bswap32(addr_bytes);
+#endif
         freeaddrinfo(result);
         return Ipv4Endpoint{addr_bytes, htons(static_cast<uint16_t>(port))};
     }
