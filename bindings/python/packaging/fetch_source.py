@@ -103,7 +103,7 @@ def main() -> None:
                 extract_dir = args.extract / source_dir
                 if not extract_dir.exists():
                     print(f"     extracting to {extract_dir}")
-                    _extract(cache_path, args.extract)
+                    _extract(cache_path, extract_dir)
                 continue
 
         # Remove stale data
