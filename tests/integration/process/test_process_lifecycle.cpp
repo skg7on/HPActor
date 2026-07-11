@@ -37,7 +37,17 @@ using namespace hpactor;
 class ProcessLifecycleTest : public ::testing::Test {
   protected:
     void SetUp() override {
-        temp_dir_ = std::filesystem::temp_directory_path() / "hpactor_proc_test";
+        // Use a unique temp directory per test case to prevent filesystem
+        // races during parallel CTest execution.  Without uniqueness every
+        // test process writes to the same <tmp>/hpactor_proc_test/hpactor.pid,
+        // producing TOCTOU failures when one process unlinks the pidfile
+        // while a concurrent process is still reading it.
+        const auto* test_info =
+            ::testing::UnitTest::GetInstance()->current_test_info();
+        std::string suffix =
+            test_info != nullptr ? std::string(test_info->name()) : "unknown";
+        temp_dir_ = std::filesystem::temp_directory_path() /
+                    ("hpactor_proc_test_" + suffix);
         std::filesystem::create_directories(temp_dir_);
         pidfile_path_ = (temp_dir_ / "hpactor.pid").string();
     }
