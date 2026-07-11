@@ -358,6 +358,23 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Replaced raw CPython limited C API (`bindings/python/native/src/python_capi/`) with pybind11 backbone (`bindings/python/native/src/python_pybind11/`).
 - **pybind11:** v2.13.6 vendored under `third_party/pybind11/include/` (36 header files, SHA256 verified).
 - **ABI3:** deferred — `Py_LIMITED_API` / `PYBIND11_USE_LIMITED_API` not enabled; pybind11 2.13.6 has incomplete limited-API guards. Full Python API used for now; ABI3 compliance to be verified by `abi3audit` follow-up.
+
+**Python Binding Phase 1D Packaging and Release** ✅ Complete (2026-07-11)
+- Package metadata: pyproject.toml with scikit-build-core, cp311 ABI3 wheel config, setuptools-scm dynamic versioning, protobuf>=7.35.0,<8 dependency.
+- ``hpactor.__version__`` via ``importlib.metadata`` with ``"0+unknown"`` fallback for build-tree usage.
+- CMake wheel install layout: ``HPACTOR_PYTHON_WHEEL_BUILD`` option, ``cmake/python_wheel_install.cmake`` with ``python-wheel`` component, private runtime libs in ``hpactor/.libs/``, relative RPATH ($ORIGIN/.libs on Linux, @loader_path/.libs on macOS).
+- Hermetic dependency lock: ``native-deps.lock.json`` (OpenSSL 3.5.5, Abseil 20260107.1, protobuf 35.0, all SHA256 pinned), ``fetch_source.py`` with content-addressed cache, ``build_native_deps.py`` for platform-correct static PIC builds.
+- Wheel audit: ``dependency-policy.json`` with per-platform architecture rules, ``verify_wheel.py`` for ABI3 tag, content, metadata, and RPATH checks.
+- CI wheel matrix: ``python-wheels.yml`` with 4 targets (manylinux_2_28 x86_64/aarch64, macosx_12_0 x86_64/arm64), cibuildwheel, auditwheel/delocate repair, acceptance gate requiring exactly 4 wheels.
+- Trusted publishing: ``python-publish.yml`` with tag/version consistency gates, OIDC trusted publishing (id-token: write), protected PyPI/TestPyPI environments, no API tokens.
+- Wheel smoke tests: import quiescent (no threads/fds), metadata validation, smoke requirements.
+- Examples: echo.py (first actor), operations.py (fire-and-forget + shutdown), all use explicit protobuf TypeTags.
+- Python manual: updated ``limitations.rst`` with Phase 1D status, 4 supported wheel targets, alpha stability.
+- Performance gates: ``bench_actor_runtime.py`` (throughput, p50/p95/p99), ``compare_python_binding_perf.py`` with same-runner fingerprint enforcement and 20% regression threshold.
+- Remaining: Phase 1E declarative topology, Phase 2 external SDK, pybind11 limited-API fix (abi3audit follow-up).
+- Package tests: 19 packaging tests passing (metadata 4, cmake layout 3, lock manifest 5, binary policy 7, CI matrix 3).
+- Design spec: ``docs/superpowers/specs/2026-07-03-python-language-binding-design.md``.
+- Implementation plan: ``docs/superpowers/plans/2026-07-05-python-binding-phase1d-packaging-release.md``.
 - **Exception boundary:** `python_pybind11/` TUs compile with `-fexceptions -frtti`; all other binding TUs remain `-fno-exceptions -fno-rtti`. Architecture scans updated to exclude `python_pybind11/` from the strict no-exception/RTTI check and add a pybind11-specific scan (forbids `dynamic_cast` and `std::function` only).
 - **`NativeSystemObject`:** noexcept wrapper around `PythonNativeSystem*` with `guard()` template that catches `pybind11::error_already_set` and converts to sentinel values. Exposes all 23 methods: lifecycle (start/stop/drain), actor management (spawn/stop/resolve), messaging (submit/drain_dispatch/drain_completions), observability (snapshot/fds), topology stubs (Phase 1E).
 - **Wire format:** dict-based dispatch/completion/command (named keys), replacing positional tuples.
