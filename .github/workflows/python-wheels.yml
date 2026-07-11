@@ -56,31 +56,24 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libssl-dev protobuf-compiler libprotobuf-dev ninja-build \
+            libabsl-dev 2>/dev/null || true
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl@3 protobuf abseil ninja 2>/dev/null || true
+
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
           python -m pip install 'build>=1.2,<2' cibuildwheel==4.1.0 \
             'scikit-build-core>=0.11,<0.14' 'setuptools-scm>=8,<10'
-
-      - name: Build native dependencies
-        env:
-          DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
-        run: |
-          python bindings/python/packaging/fetch_source.py \
-            --lock bindings/python/packaging/native-deps.lock.json \
-            --cache build/wheel-deps/cache \
-            --extract build/wheel-deps/src
-          DEPLOY_ARGS=""
-          if [ -n "$DEPLOYMENT_TARGET" ]; then
-            DEPLOY_ARGS="--deployment-target $DEPLOYMENT_TARGET"
-          fi
-          python bindings/python/packaging/build_native_deps.py \
-            --prefix build/wheel-deps/prefix \
-            --source build/wheel-deps/src \
-            --build-dir build/wheel-deps/build \
-            --arch "${{ matrix.arch }}" \
-            $DEPLOY_ARGS \
-            --jobs "$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)"
 
       - name: Build wheel
         env:
@@ -88,8 +81,6 @@ jobs:
           CIBW_ARCHS: "native"
           CIBW_BEFORE_BUILD: "python -m pip install 'scikit-build-core>=0.11,<0.14' 'setuptools-scm>=8,<10'"
           CIBW_ENVIRONMENT: >-
-            HPACTOR_WHEEL_DEPS_PREFIX=${{ github.workspace }}/build/wheel-deps/prefix
-            CMAKE_PREFIX_PATH=${{ github.workspace }}/build/wheel-deps/prefix
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.deployment_target }}
         run: cibuildwheel --output-dir wheelhouse
 
