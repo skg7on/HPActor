@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-10 09:04:55</td>
+            <td class="headerValue">2026-07-11 01:43:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.0&nbsp;%</td>
@@ -146,8 +146,8 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///         \c transition() call, or \c kStarting if no transition</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     ///         has occurred.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \note Thread safety: lock-free atomic load with acquire ordering.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2534 :     LifecycleState state() const noexcept {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5068 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2529 :     LifecycleState state() const noexcept {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5058 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Whether the actor accepts user (data-plane) messages in</span>
