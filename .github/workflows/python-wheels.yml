@@ -73,7 +73,7 @@ jobs:
               import tomllib
           else:
               import tomli as tomllib
-          data = tomllib.loads(open('pyproject.toml', 'rb').read())
+          data = tomllib.loads(open('pyproject.toml').read())
           assert data['project']['name'] == 'hpactor'
           assert data['project']['requires-python'] == '>=3.11'
           print('pyproject.toml validation passed')
