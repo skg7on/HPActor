@@ -140,6 +140,13 @@ def main() -> None:
             shutil.rmtree(extract_dir)
         print(f"     extracting to {extract_dir}")
         _extract(cache_path, extract_dir)
+        # Verify extraction produced meaningful content
+        extracted = list(extract_dir.iterdir())
+        if not extracted:
+            print(f"ERROR: {name}: extraction produced empty directory",
+                  file=sys.stderr)
+            sys.exit(1)
+        print(f"     {len(extracted)} top-level entries")
 
     print("All dependencies fetched and verified.")
 
@@ -147,15 +154,12 @@ def main() -> None:
 def _extract(archive: Path, dest: Path) -> None:
     """Extract *archive* to *dest*, flattening a single top-level dir.
 
-    Archives like ``openssl-3.5.5.tar.gz`` contain everything under one
-    top-level directory.  We extract into a temp location, then move the
-    contents of that one directory into *dest* so that
-    ``dest/Configure`` exists rather than ``dest/openssl-3.5.5/Configure``.
+    Uses :func:`shutil.unpack_archive` for robust extraction, then moves
+    the contents of the (expected single) top-level directory into *dest*.
     """
     dest.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
-        with tarfile.open(archive, "r:*") as tf:
-            tf.extractall(tmp)
+        shutil.unpack_archive(str(archive), tmp)
         entries = sorted(os.listdir(tmp))
         if len(entries) == 1 and os.path.isdir(os.path.join(tmp, entries[0])):
             # Single top-level directory — move its contents up
