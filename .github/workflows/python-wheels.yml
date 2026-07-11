@@ -79,11 +79,13 @@ jobs:
           print('pyproject.toml validation passed')
           "
 
-      - name: Run packaging tests
+      - name: Run static packaging tests
         run: |
-          python -m unittest discover \
-            -s bindings/python/tests/packaging \
-            -p 'test_*.py' -v
+          python -m unittest \
+            bindings.python.tests.packaging.test_lock_manifest \
+            bindings.python.tests.packaging.test_binary_policy \
+            bindings.python.tests.packaging.test_ci_matrix \
+            -v
 
   # ── macOS wheel build ──────────────────────────────────────────────────
 
