@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-11 01:43:17</td>
+            <td class="headerValue">2026-07-12 02:48:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
@@ -102,68 +102,71 @@
 <span id="L24"><span class="lineNum">      24</span>                 :             : namespace net {</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : class Connection;</span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : using ConnectionPtr = std::shared_ptr&lt;Connection&gt;;</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : class TcpTransport;</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             : } // namespace net</span>
-<span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :             : namespace cli {</span>
-<span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>                 :             : /// \brief Lightweight wrapper around \c net::TcpTransport for CLI connections.</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : ///</span>
-<span id="L34"><span class="lineNum">      34</span>                 :             : /// Uses \c TcpTransport::connect() and \c TcpTransport::connect_unix_domain()</span>
-<span id="L35"><span class="lineNum">      35</span>                 :             : /// for async socket creation and non-blocking connect completion, then</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : /// exposes the connected file descriptor for direct varint-prefixed</span>
-<span id="L37"><span class="lineNum">      37</span>                 :             : /// protobuf I/O (bypassing the WireFrameConnection layer).</span>
-<span id="L38"><span class="lineNum">      38</span>                 :             : class CliConnector {</span>
-<span id="L39"><span class="lineNum">      39</span>                 :             :   public:</span>
-<span id="L40"><span class="lineNum">      40</span>                 :             :     CliConnector();</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             :     ~CliConnector();</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>                 :             :     CliConnector(const CliConnector&amp;) = delete;</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             :     CliConnector&amp; operator=(const CliConnector&amp;) = delete;</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>                 :             :     /// \brief Connect to host:port via TcpTransport::connect().</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             :     /// \return Connected fd (&gt;= 0), or -1 on failure / timeout.</span>
-<span id="L48"><span class="lineNum">      48</span>                 :             :     int connect_tcp(const std::string&amp; host, uint16_t port,</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             :                     std::chrono::milliseconds timeout);</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :             :     /// \brief Connect to a Unix domain socket via</span>
-<span id="L52"><span class="lineNum">      52</span>                 :             :     ///        TcpTransport::connect_unix_domain().</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             :     /// \return Connected fd (&gt;= 0), or -1 on failure / timeout.</span>
-<span id="L54"><span class="lineNum">      54</span>                 :             :     int connect_uds(const std::string&amp; path, std::chrono::milliseconds timeout);</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             : </span>
-<span id="L56"><span class="lineNum">      56</span>                 :             :     /// \brief Close the connection and release transport resources.</span>
-<span id="L57"><span class="lineNum">      57</span>                 :             :     void disconnect();</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             : </span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :     /// \brief The connected fd, or -1 if not connected.</span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     int fd() const {</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaUNC">           0 :         return fd_;</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :             :     }</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             : </span>
-<span id="L64"><span class="lineNum">      64</span>                 :             :     /// \brief True when the underlying connection has reached Connected state.</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :     ///</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :     /// fd() may be non-negative even before the TCP handshake completes</span>
-<span id="L67"><span class="lineNum">      67</span>                 :             :     /// (EINPROGRESS).  Use is_connected() to guard operations that require a</span>
-<span id="L68"><span class="lineNum">      68</span>                 :             :     /// fully-established transport.</span>
-<span id="L69"><span class="lineNum">      69</span>                 :             :     bool is_connected() const;</span>
-<span id="L70"><span class="lineNum">      70</span>                 :             : </span>
-<span id="L71"><span class="lineNum">      71</span>                 :             :     /// \brief The underlying TcpTransport (for send/recv via try_send path).</span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaUNC">           0 :     net::TcpTransport* transport() {</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :         return transport_.get();</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :             :     }</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             : </span>
-<span id="L76"><span class="lineNum">      76</span>                 :             :     /// \brief The WireFrameConnection for this connection.</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaUNC">           0 :     net::ConnectionPtr connection() {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaUNC">           0 :         return conn_;</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
-<span id="L80"><span class="lineNum">      80</span>                 :             : </span>
-<span id="L81"><span class="lineNum">      81</span>                 :             :   private:</span>
-<span id="L82"><span class="lineNum">      82</span>                 :             :     std::unique_ptr&lt;net::TcpTransport&gt; transport_;</span>
-<span id="L83"><span class="lineNum">      83</span>                 :             :     net::ConnectionPtr conn_;</span>
-<span id="L84"><span class="lineNum">      84</span>                 :             :     int fd_ = -1;</span>
-<span id="L85"><span class="lineNum">      85</span>                 :             : };</span>
-<span id="L86"><span class="lineNum">      86</span>                 :             : </span>
-<span id="L87"><span class="lineNum">      87</span>                 :             : } // namespace cli</span>
-<span id="L88"><span class="lineNum">      88</span>                 :             : } // namespace hpactor</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : class EventLoop;</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : class TcpTransport;</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : } // namespace net</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : </span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : namespace cli {</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : </span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : /// \brief Lightweight wrapper around \c net::TcpTransport for CLI connections.</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : ///</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : /// Uses \c TcpTransport::connect() and \c TcpTransport::connect_unix_domain()</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             : /// for async socket creation and non-blocking connect completion, then</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             : /// exposes the connected file descriptor for direct varint-prefixed</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             : /// protobuf I/O (bypassing the WireFrameConnection layer).</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : class CliConnector {</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :   public:</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     CliConnector();</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     ~CliConnector();</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : </span>
+<span id="L44"><span class="lineNum">      44</span>                 :             :     CliConnector(const CliConnector&amp;) = delete;</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             :     CliConnector&amp; operator=(const CliConnector&amp;) = delete;</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : </span>
+<span id="L47"><span class="lineNum">      47</span>                 :             :     /// \brief Connect to host:port via TcpTransport::connect().</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             :     /// \return Connected fd (&gt;= 0), or -1 on failure / timeout.</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     int connect_tcp(const std::string&amp; host, uint16_t port,</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             :                     std::chrono::milliseconds timeout);</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : </span>
+<span id="L52"><span class="lineNum">      52</span>                 :             :     /// \brief Connect to a Unix domain socket via</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             :     ///        TcpTransport::connect_unix_domain().</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :     /// \return Connected fd (&gt;= 0), or -1 on failure / timeout.</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :     int connect_uds(const std::string&amp; path, std::chrono::milliseconds timeout);</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : </span>
+<span id="L57"><span class="lineNum">      57</span>                 :             :     /// \brief Close the connection and release transport resources.</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :     void disconnect();</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : </span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     /// \brief The connected fd, or -1 if not connected.</span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     int fd() const {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 :         return fd_;</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :     }</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : </span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     /// \brief True when the underlying connection has reached Connected state.</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     ///</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     /// fd() may be non-negative even before the TCP handshake completes</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :     /// (EINPROGRESS).  Use is_connected() to guard operations that require a</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :     /// fully-established transport.</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :     bool is_connected() const;</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             : </span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     /// \brief The underlying TcpTransport (for send/recv via try_send path).</span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :     net::TcpTransport* transport() {</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC">           0 :         return transport_.get();</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     }</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             : </span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :     /// \brief The WireFrameConnection for this connection.</span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaUNC">           0 :     net::ConnectionPtr connection() {</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaUNC">           0 :         return conn_;</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     }</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : </span>
+<span id="L82"><span class="lineNum">      82</span>                 :             :   private:</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; loop_; ///&lt; Local event loop (must outlive</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :                                            ///&lt; transport_).</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :     std::unique_ptr&lt;net::TcpTransport&gt; transport_;</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             :     net::ConnectionPtr conn_;</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             :     int fd_ = -1;</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : };</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             : </span>
+<span id="L90"><span class="lineNum">      90</span>                 :             : } // namespace cli</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

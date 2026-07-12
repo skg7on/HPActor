@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">47.9&nbsp;%</td>
+            <td class="headerCovTableEntryLo">44.3&nbsp;%</td>
             <td class="headerCovTableEntry">194</td>
-            <td class="headerCovTableEntry">93</td>
+            <td class="headerCovTableEntry">86</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-11 01:43:17</td>
+            <td class="headerValue">2026-07-12 02:48:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryMed">77.3&nbsp;%</td>
+            <td class="headerCovTableEntryLo">68.2&nbsp;%</td>
             <td class="headerCovTableEntry">22</td>
-            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntry">15</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -104,15 +104,15 @@
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : namespace net {</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC tlaBgGNC">          10 : WireFrameConnection::WireFrameConnection(int fd, EndPoint local_endpoint,</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          10 :                                          EndPoint remote_endpoint, EventLoop* loop)</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          10 :     : Connection(fd, local_endpoint, remote_endpoint, loop), is_sending_(false) {</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          10 :     write_buffer_.reserve(kWriteChunkSize);</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          10 : }</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC tlaBgGNC">           9 : WireFrameConnection::WireFrameConnection(int fd, EndPoint local_endpoint,</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           9 :                                          EndPoint remote_endpoint, EventLoop* loop)</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           9 :     : Connection(fd, local_endpoint, remote_endpoint, loop), is_sending_(false) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           9 :     write_buffer_.reserve(kWriteChunkSize);</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           9 : }</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          20 : WireFrameConnection::~WireFrameConnection() {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          10 :     close();</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          20 : }</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          18 : WireFrameConnection::~WireFrameConnection() {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           9 :     close();</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          18 : }</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : WireFrameConnectionPtr</span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           5 : WireFrameConnection::create_as_client(int fd, EndPoint local_endpoint,</span></span>
@@ -140,18 +140,18 @@
 <span id="L62"><span class="lineNum">      62</span>                 :             : }</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : </span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : WireFrameConnectionPtr</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           1 : WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaUNC tlaBgUNC">           0 : WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :                                               EndPoint remote_endpoint,</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :                                               EventLoop* loop) {</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     auto conn = std::shared_ptr&lt;WireFrameConnection&gt;(</span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :     conn-&gt;set_state(ConnectionState::Connecting);</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaUNC">           0 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC">           0 :     conn-&gt;set_state(ConnectionState::Connecting);</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     // Event loop registration deferred — caller must verify connect and call</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :     // setup_after_connect().</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           1 :     return conn;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :     return conn;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : }</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : </span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC">           0 : void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaUNC">           0 :     conn-&gt;set_state(ConnectionState::Connected);</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : </span>
 <span id="L79"><span class="lineNum">      79</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
@@ -197,29 +197,29 @@
 <span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           4 :     return conn;</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : }</span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : </span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_ready_handler(std::function&lt;void(ConnectionPtr)&gt; handler) {</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           2 :     ready_handler_ = std::move(handler);</span></span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           1 : void WireFrameConnection::set_ready_handler(std::function&lt;void(ConnectionPtr)&gt; handler) {</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           1 :     ready_handler_ = std::move(handler);</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :             : </span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_frame_handler(frame_handler handler) {</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           2 :     frame_handler_ = std::move(handler);</span></span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           1 : void WireFrameConnection::set_frame_handler(frame_handler handler) {</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           1 :     frame_handler_ = std::move(handler);</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : </span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           3 : void WireFrameConnection::set_error_handler(</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_error_handler(</span></span>
 <span id="L131"><span class="lineNum">     131</span>                 :             :     std::function&lt;void(ConnectionPtr, const error&amp;)&gt; handler) {</span>
-<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           3 :     error_handler_ = std::move(handler);</span></span>
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           3 : }</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           2 :     error_handler_ = std::move(handler);</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :             : </span>
 <span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_send_completion_handler(</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :             :     std::function&lt;void(int result)&gt; handler) {</span>
 <span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">           2 :     send_completion_handler_ = std::move(handler);</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L139"><span class="lineNum">     139</span>                 :             : </span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">           1 : void WireFrameConnection::set_max_inbound_frame_bytes(uint32_t max_bytes) {</span></span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">           1 :     max_inbound_frame_bytes_ = max_bytes;</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::set_max_inbound_frame_bytes(uint32_t max_bytes) {</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaUNC">           0 :     max_inbound_frame_bytes_ = max_bytes;</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             : </span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::set_frame_error_handler(</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaUNC">           0 : void WireFrameConnection::set_frame_error_handler(</span></span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :     std::function&lt;void(FrameDecodeError, uint32_t)&gt; handler) {</span>
 <span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaUNC">           0 :     frame_error_handler_ = std::move(handler);</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaUNC">           0 : }</span></span>
@@ -236,19 +236,19 @@
 <span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">          13 :     send_raw(frame_data);</span></span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : }</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">          17 : void WireFrameConnection::close() {</span></span>
-<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">          17 :     if (fd_ &gt;= 0) {</span></span>
-<span id="L163"><span class="lineNum">     163</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          10 :         if (loop_) {</span></span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">          10 :             loop_-&gt;clear_read_handler(fd_);</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">          10 :             loop_-&gt;remove_fd(fd_);</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">          15 : void WireFrameConnection::close() {</span></span>
+<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          15 :     if (fd_ &gt;= 0) {</span></span>
+<span id="L163"><span class="lineNum">     163</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           9 :         if (loop_) {</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">           9 :             loop_-&gt;clear_read_handler(fd_);</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">           9 :             loop_-&gt;remove_fd(fd_);</span></span>
 <span id="L166"><span class="lineNum">     166</span>                 :             :         }</span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">          10 :         ::close(fd_);</span></span>
-<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">          10 :         fd_ = -1;</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">           9 :         ::close(fd_);</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">           9 :         fd_ = -1;</span></span>
 <span id="L169"><span class="lineNum">     169</span>                 :             :     }</span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">          17 :     set_state(ConnectionState::Disconnected);</span></span>
-<span id="L171"><span class="lineNum">     171</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">          15 :     set_state(ConnectionState::Disconnected);</span></span>
+<span id="L171"><span class="lineNum">     171</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          15 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
 <span id="L172"><span class="lineNum">     172</span>                 :             :                       &quot;connection closed&quot;);</span>
-<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">          17 : }</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">          15 : }</span></span>
 <span id="L174"><span class="lineNum">     174</span>                 :             : </span>
 <span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::handle_read() {</span></span>
 <span id="L176"><span class="lineNum">     176</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           2 :     FAULT_INJECT(&quot;hpactor.wireframe.handle_read.drop&quot;) {</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-11 01:43:17</td>
+            <td class="headerValue">2026-07-12 02:48:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -80,8 +80,8 @@
 <span id="L2"><span class="lineNum">       2</span>                 :             : </span>
 <span id="L3"><span class="lineNum">       3</span>                 :             : namespace hpactor::net {</span>
 <span id="L4"><span class="lineNum">       4</span>                 :             : </span>
-<span id="L5"><span class="lineNum">       5</span>                 :<span class="tlaGNC tlaBgGNC">          43 : EndpointCircuitBreaker::EndpointCircuitBreaker(const EndpointCircuitBreakerConfig&amp; config)</span></span>
-<span id="L6"><span class="lineNum">       6</span>                 :<span class="tlaGNC">          43 :     : config_(config) {}</span></span>
+<span id="L5"><span class="lineNum">       5</span>                 :<span class="tlaGNC tlaBgGNC">          42 : EndpointCircuitBreaker::EndpointCircuitBreaker(const EndpointCircuitBreakerConfig&amp; config)</span></span>
+<span id="L6"><span class="lineNum">       6</span>                 :<span class="tlaGNC">          42 :     : config_(config) {}</span></span>
 <span id="L7"><span class="lineNum">       7</span>                 :             : </span>
 <span id="L8"><span class="lineNum">       8</span>                 :<span class="tlaGNC">          48 : void EndpointCircuitBreaker::record_failure() {</span></span>
 <span id="L9"><span class="lineNum">       9</span>                 :<span class="tlaGNC">          48 :     State current = state_.load(std::memory_order_acquire);</span></span>

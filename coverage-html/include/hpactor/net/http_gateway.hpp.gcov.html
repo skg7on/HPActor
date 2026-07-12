@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-11 01:43:17</td>
+            <td class="headerValue">2026-07-12 02:48:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -188,126 +188,146 @@
 <span id="L110"><span class="lineNum">     110</span>                 :             : /// \brief Reusable HTTP/1.1 server — I/O and protocol only, no actor</span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : /// coupling.</span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : ///</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             : /// Owns an \c EventLoop, \c TcpAcceptor, and a set of \c HTTPConnection</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             : /// instances. Drives the event loop from the caller's thread via</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             : /// \c run_once(). Designed to be embedded in a daemon actor or test</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             : /// harness.</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             : /// Uses a shared \c EventLoop (owned by \c NetworkRuntime) for async I/O:</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             : /// \c TcpAcceptor, and a set of \c HTTPConnection instances. The event</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : /// loop is driven externally; this class no longer calls \c run() or</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             : /// \c stop() on it.</span>
 <span id="L117"><span class="lineNum">     117</span>                 :             : ///</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             : /// \note Thread safety: \c listen(), \c stop(), \c run_once(), and</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             : ///       \c send_response() must all be called from the same thread</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             : ///       (the event loop thread).</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : class HTTPGateway {</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             :   public:</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :     /// \brief Callback for incoming HTTP requests.</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             :     ///</span>
-<span id="L125"><span class="lineNum">     125</span>                 :             :     /// \param[in] conn Connection the request arrived on (for sending</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             :     ///            the response).</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :     /// \param[in] req Parsed HTTP request.</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :     using RequestHandler = std::function&lt;void(HTTPConnection*, HttpRequest&amp;&amp;)&gt;;</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
-<span id="L130"><span class="lineNum">     130</span>                 :             :     /// \brief Callback for connection errors.</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     ///</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :     /// \param[in] conn Connection that encountered the error.</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :     /// \param[in] err Error details.</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     using ErrorHandler = std::function&lt;void(HTTPConnection*, const error&amp;)&gt;;</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             : </span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     HTTPGateway();</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :     ~HTTPGateway();</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             : </span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     /// \name Non-copyable</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     /// @{</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :     HTTPGateway(const HTTPGateway&amp;) = delete;</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :     HTTPGateway&amp; operator=(const HTTPGateway&amp;) = delete;</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :     /// @}</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             : </span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     /// \brief Start listening for HTTP connections.</span>
-<span id="L146"><span class="lineNum">     146</span>                 :             :     ///</span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     /// Must be called before \c run_once().</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     /// \param[in] port TCP port to bind.</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :     /// \param[in] bind_host IPv4 address to bind (default \c &quot;0.0.0.0&quot;).</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             :     /// \return \c true on success.</span>
-<span id="L151"><span class="lineNum">     151</span>                 :             :     bool listen(uint16_t port, const std::string&amp; bind_host = &quot;0.0.0.0&quot;);</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
-<span id="L153"><span class="lineNum">     153</span>                 :             :     /// \brief Stop listening and close all connections.</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             :     void stop();</span>
-<span id="L155"><span class="lineNum">     155</span>                 :             : </span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :     /// \brief Check whether the server is listening.</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             :     ///</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             :     /// \return \c true if the acceptor is active.</span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :     bool is_listening() const;</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             : </span>
-<span id="L161"><span class="lineNum">     161</span>                 :             :     /// \brief Return the bound port.</span>
-<span id="L162"><span class="lineNum">     162</span>                 :             :     ///</span>
-<span id="L163"><span class="lineNum">     163</span>                 :             :     /// \return TCP port number, or 0 if not listening.</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             :     uint16_t port() const;</span>
-<span id="L165"><span class="lineNum">     165</span>                 :             : </span>
-<span id="L166"><span class="lineNum">     166</span>                 :             :     /// \brief Process one iteration of the event loop.</span>
-<span id="L167"><span class="lineNum">     167</span>                 :             :     ///</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             :     /// Blocks until an event arrives or the timeout expires. Call</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     /// repeatedly from a daemon thread.</span>
-<span id="L170"><span class="lineNum">     170</span>                 :             :     /// \note Thread safety: Event loop thread only.</span>
-<span id="L171"><span class="lineNum">     171</span>                 :             :     void run_once();</span>
-<span id="L172"><span class="lineNum">     172</span>                 :             : </span>
-<span id="L173"><span class="lineNum">     173</span>                 :             :     /// \brief Set the incoming request handler.</span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :     ///</span>
-<span id="L175"><span class="lineNum">     175</span>                 :             :     /// \param[in] handler Callback invoked for each parsed HTTP request.</span>
-<span id="L176"><span class="lineNum">     176</span>                 :             :     void set_request_handler(RequestHandler handler);</span>
-<span id="L177"><span class="lineNum">     177</span>                 :             : </span>
-<span id="L178"><span class="lineNum">     178</span>                 :             :     /// \brief Set the error handler.</span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :     ///</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :     /// \param[in] handler Callback invoked on connection errors.</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :     void set_error_handler(ErrorHandler handler);</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             : </span>
-<span id="L183"><span class="lineNum">     183</span>                 :             :     /// \brief Send an HTTP response on a connection.</span>
-<span id="L184"><span class="lineNum">     184</span>                 :             :     ///</span>
-<span id="L185"><span class="lineNum">     185</span>                 :             :     /// \param[in] conn Connection to send on.</span>
-<span id="L186"><span class="lineNum">     186</span>                 :             :     /// \param[in] code HTTP status code.</span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :     /// \param[in] headers Response headers.</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :     /// \param[in] body Response body.</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             :     void send_response(HTTPConnection* conn, HttpStatusCode code,</span>
-<span id="L190"><span class="lineNum">     190</span>                 :             :                        std::vector&lt;HttpHeader&gt; headers, StreamBuffer body);</span>
-<span id="L191"><span class="lineNum">     191</span>                 :             : </span>
-<span id="L192"><span class="lineNum">     192</span>                 :             :     /// \brief Close a connection and remove it from tracking.</span>
-<span id="L193"><span class="lineNum">     193</span>                 :             :     ///</span>
-<span id="L194"><span class="lineNum">     194</span>                 :             :     /// \param[in] conn Connection to close.</span>
-<span id="L195"><span class="lineNum">     195</span>                 :             :     void close_connection(HTTPConnection* conn);</span>
-<span id="L196"><span class="lineNum">     196</span>                 :             : </span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :     /// \brief Set the maximum number of concurrent connections.</span>
-<span id="L198"><span class="lineNum">     198</span>                 :             :     ///</span>
-<span id="L199"><span class="lineNum">     199</span>                 :             :     /// \param[in] max Maximum connection count (default 1000).</span>
-<span id="L200"><span class="lineNum">     200</span>                 :             :     void set_max_connections(size_t max);</span>
-<span id="L201"><span class="lineNum">     201</span>                 :             : </span>
-<span id="L202"><span class="lineNum">     202</span>                 :             :     /// \brief Set the maximum HTTP request body size in bytes.</span>
-<span id="L203"><span class="lineNum">     203</span>                 :             :     ///</span>
-<span id="L204"><span class="lineNum">     204</span>                 :             :     /// \param[in] max Maximum request size (default 1 MiB).</span>
-<span id="L205"><span class="lineNum">     205</span>                 :             :     void set_max_request_size(size_t max);</span>
-<span id="L206"><span class="lineNum">     206</span>                 :             : </span>
-<span id="L207"><span class="lineNum">     207</span>                 :             :     /// \brief Access the underlying event loop.</span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     ///</span>
-<span id="L209"><span class="lineNum">     209</span>                 :             :     /// \return Reference to the internal \c EventLoop.</span>
-<span id="L210"><span class="lineNum">     210</span>                 :             :     /// \note Thread safety: The returned reference is safe only for the</span>
-<span id="L211"><span class="lineNum">     211</span>                 :             :     ///       owning thread.</span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">           1 :     EventLoop&amp; event_loop() {</span></span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           1 :         return loop_;</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :             :     }</span>
-<span id="L215"><span class="lineNum">     215</span>                 :             : </span>
-<span id="L216"><span class="lineNum">     216</span>                 :             :   private:</span>
-<span id="L217"><span class="lineNum">     217</span>                 :             :     void on_accept(int client_fd, EndPoint remote_endpoint);</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             : /// \note Thread safety: \c listen(), \c stop(), and</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : ///       \c send_response() must all be called from the event loop thread.</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             : class HTTPGateway {</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :   public:</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :     /// \brief Callback for incoming HTTP requests.</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :     ///</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     /// \param[in] conn Connection the request arrived on (for sending</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :     ///            the response).</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     /// \param[in] req Parsed HTTP request.</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :     using RequestHandler = std::function&lt;void(HTTPConnection*, HttpRequest&amp;&amp;)&gt;;</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : </span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :     /// \brief Callback for connection errors.</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :     ///</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             :     /// \param[in] conn Connection that encountered the error.</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     /// \param[in] err Error details.</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     using ErrorHandler = std::function&lt;void(HTTPConnection*, const error&amp;)&gt;;</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             : </span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     /// \brief Default constructor — creates an internal EventLoop.</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     ///</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     /// Use for standalone usage (tests, CLI servers without networking).</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     /// For production, prefer \c HTTPGateway(EventLoop*) to share the</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :     /// \c NetworkRuntime event loop.</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     HTTPGateway();</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             : </span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :     /// \brief Construct with a shared event loop.</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     ///</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     /// \param[in] loop Event loop for async I/O (not owned, must outlive</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     ///            this gateway). If \c nullptr, an internal loop is created.</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     explicit HTTPGateway(EventLoop* loop);</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     ~HTTPGateway();</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             : </span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :     /// \name Non-copyable</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     /// @{</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     HTTPGateway(const HTTPGateway&amp;) = delete;</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :     HTTPGateway&amp; operator=(const HTTPGateway&amp;) = delete;</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     /// @}</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             : </span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :     /// \brief Start listening for HTTP connections.</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     ///</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :     /// The shared event loop must already be running (managed by</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     /// \c NetworkRuntime). Registers the acceptor fd on the shared loop.</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :     /// \param[in] port TCP port to bind.</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :     /// \param[in] bind_host IPv4 address to bind (default \c &quot;0.0.0.0&quot;).</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             :     /// \return \c true on success.</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :     bool listen(uint16_t port, const std::string&amp; bind_host = &quot;0.0.0.0&quot;);</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : </span>
+<span id="L164"><span class="lineNum">     164</span>                 :             :     /// \brief Stop listening and close all connections.</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :     ///</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :     /// Does not stop the event loop — that is managed by</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             :     /// \c NetworkRuntime.</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     void stop();</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             : </span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :     /// \brief Check whether the server is listening.</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     ///</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :     /// \return \c true if the acceptor is active.</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :     bool is_listening() const;</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             : </span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     /// \brief Return the bound port.</span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :     ///</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :     /// \return TCP port number, or 0 if not listening.</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             :     uint16_t port() const;</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             : </span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     /// \brief Process one iteration of the event loop.</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     ///</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :     /// Blocks until an event arrives or the timeout expires on the</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     /// shared event loop. Call repeatedly from a daemon thread that</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     /// participates in driving the shared loop.</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             :     /// \note Thread safety: Event loop thread only.</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     /// \deprecated Prefer letting \c NetworkRuntime drive the shared</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             :     ///             loop. Use only when a daemon thread must participate.</span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :     void run_once();</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
+<span id="L190"><span class="lineNum">     190</span>                 :             :     /// \brief Set the incoming request handler.</span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     ///</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             :     /// \param[in] handler Callback invoked for each parsed HTTP request.</span>
+<span id="L193"><span class="lineNum">     193</span>                 :             :     void set_request_handler(RequestHandler handler);</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             : </span>
+<span id="L195"><span class="lineNum">     195</span>                 :             :     /// \brief Set the error handler.</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     ///</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :     /// \param[in] handler Callback invoked on connection errors.</span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :     void set_error_handler(ErrorHandler handler);</span>
+<span id="L199"><span class="lineNum">     199</span>                 :             : </span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :     /// \brief Send an HTTP response on a connection.</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             :     ///</span>
+<span id="L202"><span class="lineNum">     202</span>                 :             :     /// \param[in] conn Connection to send on.</span>
+<span id="L203"><span class="lineNum">     203</span>                 :             :     /// \param[in] code HTTP status code.</span>
+<span id="L204"><span class="lineNum">     204</span>                 :             :     /// \param[in] headers Response headers.</span>
+<span id="L205"><span class="lineNum">     205</span>                 :             :     /// \param[in] body Response body.</span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :     void send_response(HTTPConnection* conn, HttpStatusCode code,</span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :                        std::vector&lt;HttpHeader&gt; headers, StreamBuffer body);</span>
+<span id="L208"><span class="lineNum">     208</span>                 :             : </span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     /// \brief Close a connection and remove it from tracking.</span>
+<span id="L210"><span class="lineNum">     210</span>                 :             :     ///</span>
+<span id="L211"><span class="lineNum">     211</span>                 :             :     /// \param[in] conn Connection to close.</span>
+<span id="L212"><span class="lineNum">     212</span>                 :             :     void close_connection(HTTPConnection* conn);</span>
+<span id="L213"><span class="lineNum">     213</span>                 :             : </span>
+<span id="L214"><span class="lineNum">     214</span>                 :             :     /// \brief Set the maximum number of concurrent connections.</span>
+<span id="L215"><span class="lineNum">     215</span>                 :             :     ///</span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :     /// \param[in] max Maximum connection count (default 1000).</span>
+<span id="L217"><span class="lineNum">     217</span>                 :             :     void set_max_connections(size_t max);</span>
 <span id="L218"><span class="lineNum">     218</span>                 :             : </span>
-<span id="L219"><span class="lineNum">     219</span>                 :             :     EventLoop loop_;</span>
-<span id="L220"><span class="lineNum">     220</span>                 :             :     std::unique_ptr&lt;TcpAcceptor&gt; acceptor_;</span>
-<span id="L221"><span class="lineNum">     221</span>                 :             :     std::vector&lt;HTTPConnectionPtr&gt; connections_;</span>
-<span id="L222"><span class="lineNum">     222</span>                 :             :     std::mutex conn_mutex_;</span>
-<span id="L223"><span class="lineNum">     223</span>                 :             :     RequestHandler request_handler_;</span>
-<span id="L224"><span class="lineNum">     224</span>                 :             :     ErrorHandler error_handler_;</span>
-<span id="L225"><span class="lineNum">     225</span>                 :             :     std::string bind_host_;</span>
-<span id="L226"><span class="lineNum">     226</span>                 :             :     uint16_t port_{0};</span>
-<span id="L227"><span class="lineNum">     227</span>                 :             :     size_t max_connections_{1000};</span>
-<span id="L228"><span class="lineNum">     228</span>                 :             :     size_t max_request_size_{1048576};</span>
-<span id="L229"><span class="lineNum">     229</span>                 :             : };</span>
-<span id="L230"><span class="lineNum">     230</span>                 :             : </span>
-<span id="L231"><span class="lineNum">     231</span>                 :             : } // namespace net</span>
-<span id="L232"><span class="lineNum">     232</span>                 :             : } // namespace hpactor</span>
+<span id="L219"><span class="lineNum">     219</span>                 :             :     /// \brief Set the maximum HTTP request body size in bytes.</span>
+<span id="L220"><span class="lineNum">     220</span>                 :             :     ///</span>
+<span id="L221"><span class="lineNum">     221</span>                 :             :     /// \param[in] max Maximum request size (default 1 MiB).</span>
+<span id="L222"><span class="lineNum">     222</span>                 :             :     void set_max_request_size(size_t max);</span>
+<span id="L223"><span class="lineNum">     223</span>                 :             : </span>
+<span id="L224"><span class="lineNum">     224</span>                 :             :     /// \brief Access the shared event loop.</span>
+<span id="L225"><span class="lineNum">     225</span>                 :             :     ///</span>
+<span id="L226"><span class="lineNum">     226</span>                 :             :     /// \return Pointer to the shared \c EventLoop (owned by</span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :     ///         \c NetworkRuntime).</span>
+<span id="L228"><span class="lineNum">     228</span>                 :             :     /// \note Thread safety: The returned pointer is safe only for the</span>
+<span id="L229"><span class="lineNum">     229</span>                 :             :     ///       event loop thread.</span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">           1 :     EventLoop* event_loop() {</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">           1 :         return loop_;</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :     }</span>
+<span id="L233"><span class="lineNum">     233</span>                 :             : </span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :   private:</span>
+<span id="L235"><span class="lineNum">     235</span>                 :             :     void on_accept(int client_fd, EndPoint remote_endpoint);</span>
+<span id="L236"><span class="lineNum">     236</span>                 :             : </span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :     EventLoop* loop_ = nullptr; ///&lt; Active event loop (shared or internal).</span>
+<span id="L238"><span class="lineNum">     238</span>                 :             :     std::unique_ptr&lt;EventLoop&gt; own_loop_; ///&lt; Internal loop when no shared loop</span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :                                           ///&lt; provided.</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :     std::unique_ptr&lt;TcpAcceptor&gt; acceptor_;</span>
+<span id="L241"><span class="lineNum">     241</span>                 :             :     std::vector&lt;HTTPConnectionPtr&gt; connections_;</span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     std::mutex conn_mutex_;</span>
+<span id="L243"><span class="lineNum">     243</span>                 :             :     RequestHandler request_handler_;</span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :     ErrorHandler error_handler_;</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             :     std::string bind_host_;</span>
+<span id="L246"><span class="lineNum">     246</span>                 :             :     uint16_t port_{0};</span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :     size_t max_connections_{1000};</span>
+<span id="L248"><span class="lineNum">     248</span>                 :             :     size_t max_request_size_{1048576};</span>
+<span id="L249"><span class="lineNum">     249</span>                 :             : };</span>
+<span id="L250"><span class="lineNum">     250</span>                 :             : </span>
+<span id="L251"><span class="lineNum">     251</span>                 :             : } // namespace net</span>
+<span id="L252"><span class="lineNum">     252</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-11 01:43:17</td>
+            <td class="headerValue">2026-07-12 02:48:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
@@ -255,10 +255,10 @@
 <span id="L177"><span class="lineNum">     177</span>                 :             :     /// \param[in] frame The wire frame.</span>
 <span id="L178"><span class="lineNum">     178</span>                 :             :     using actor_message_handler = std::function&lt;void(const WireFrame&amp; frame)&gt;;</span>
 <span id="L179"><span class="lineNum">     179</span>                 :             : </span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           1 :     void set_actor_message_handler(actor_message_handler handler) {</span></span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           1 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           1 :         actor_message_handler_ = std::move(handler);</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           1 :     }</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           2 :     void set_actor_message_handler(actor_message_handler handler) {</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           2 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           2 :         actor_message_handler_ = std::move(handler);</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           2 :     }</span></span>
 <span id="L184"><span class="lineNum">     184</span>                 :             : </span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :     /// \brief Install a unified inbound frame sink.</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :     ///</span>

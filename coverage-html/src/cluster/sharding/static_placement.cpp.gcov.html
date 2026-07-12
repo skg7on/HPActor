@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-11 01:43:17</td>
+            <td class="headerValue">2026-07-12 02:48:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -101,14 +101,14 @@
 <span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           4 : }</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : PlacementPlan</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           4 : StaticPlacement::plan(std::span&lt;const ShardId&gt; shards,</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           5 : StaticPlacement::plan(std::span&lt;const ShardId&gt; shards,</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             :                       std::span&lt;const std::string&gt; alive_nodes,</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :                       std::span&lt;const ShardEntry&gt; /*current_assignments*/) {</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           4 :     PlacementPlan result;</span></span>
-<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          12 :     for (auto shard : shards) {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           8 :         auto it = mapping_.find(shard);</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :         if (it == mapping_.end())</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           4 :             continue; // no static mapping for this shard</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           5 :     PlacementPlan result;</span></span>
+<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">          29 :     for (auto shard : shards) {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          24 :         auto it = mapping_.find(shard);</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          24 :         if (it == mapping_.end())</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          20 :             continue; // no static mapping for this shard</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :         // Only assign if the configured owner is alive</span>
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           4 :         bool owner_alive = false;</span></span>
@@ -122,7 +122,7 @@
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           3 :             result.assignments[shard] = it-&gt;second;</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :         }</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     }</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           4 :     return result;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           5 :     return result;</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : }</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : } // namespace hpactor::cluster::sharding</span>
