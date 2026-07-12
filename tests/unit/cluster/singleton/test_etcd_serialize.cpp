@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 
-#include <etcd/etcd_serialize.hpp>
 #include <hpactor/cluster/singleton/leadership_lease.hpp>
+#include <hpactor/etcd/etcd_serialize.hpp>
 
 namespace hpactor::cluster::singleton {
 

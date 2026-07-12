@@ -21,7 +21,7 @@
 #include <hpactor/runtime/network_runtime.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
 #include <hpactor/actor/stream/stream_runtime.hpp>
-#include "../net/inbound_frame_router.hpp"
+#include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>

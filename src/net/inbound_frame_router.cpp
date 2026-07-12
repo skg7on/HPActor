@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // (Apache 2.0 license header)
 
-#include "inbound_frame_router.hpp"
+#include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>

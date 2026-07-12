@@ -19,7 +19,7 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/runtime/messaging_runtime.hpp>
 
-#include "net/inbound_frame_router.hpp"
+#include <hpactor/net/inbound_frame_router.hpp>
 
 namespace {
 

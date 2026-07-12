@@ -14,7 +14,7 @@
 
 #include <hpactor/runtime/runtime_startup.hpp>
 
-#include "actor_system_impl.hpp"
+#include <hpactor/runtime/actor_system_impl.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
 
 #include <hpactor/actor/system/actor_system.hpp>

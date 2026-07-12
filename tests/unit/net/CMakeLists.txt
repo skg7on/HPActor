@@ -24,5 +24,5 @@ add_executable(test_unit_net
     test_reliable_ack.cpp
 )
 target_link_libraries(test_unit_net hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
-target_include_directories(test_unit_net PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 gtest_discover_tests(test_unit_net PROPERTIES TIMEOUT 30)

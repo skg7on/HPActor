@@ -17,7 +17,7 @@
 #include <hpactor/actor/system/actor_system.hpp>
 
 // Access Impl internals to extract directory and DLQ for the dependency bundle.
-#include "../runtime/actor_system_impl.hpp"
+#include <hpactor/runtime/actor_system_impl.hpp>
 
 namespace hpactor::sched {
 
