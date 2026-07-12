@@ -310,11 +310,11 @@ result<void> PythonNativeSystem::start_prepared_topology() noexcept {
         runtime_->config().topology_start_timeout_ms);
 
     // Spawn and track each Python actor.
-    struct SpawnedEntry {
+    struct SpawnRecord {
         ActorAddress bridge_addr;
         uint64_t factory_token;
     };
-    std::vector<SpawnedEntry> spawned;
+    std::vector<SpawnRecord> spawned;
 
     for (size_t i = 0; i < actor_specs.size(); ++i) {
         const auto& spec = actor_specs[i];
