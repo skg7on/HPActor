@@ -52,6 +52,16 @@ def _is_absolute_module_name(name: str) -> bool:
 # ── Public API ──────────────────────────────────────────────────────────────
 
 
+class TopologyActorOutcome(Enum):
+    """Outcome of a single topology actor's startup (mirrors native enum)."""
+    Ready = 0
+    ConstructorFailed = 1
+    BehaviorFailed = 2
+    StartFailed = 3
+    RolledBack = 4
+    Cancelled = 5
+
+
 class TopologyPhase(Enum):
     """Phase in the topology lifecycle (mirrors native PythonTopologyPhase)."""
     PARSE = "parse"

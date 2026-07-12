@@ -1,0 +1,9 @@
+# Topology test: single Python actor
+[system.python]
+enabled = true
+topology_start_timeout_ms = 30000
+
+[[actors]]
+id = "echo"
+behavior = "python:topology_app.actors:EchoActor"
+args = { prefix = "test:" }

@@ -1,0 +1,8 @@
+# Topology test: actor start failure
+[system.python]
+enabled = true
+topology_start_timeout_ms = 5000
+
+[[actors]]
+id = "will_fail"
+behavior = "python:topology_app.actors:StartFails"

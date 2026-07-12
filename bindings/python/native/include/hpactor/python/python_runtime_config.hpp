@@ -70,6 +70,9 @@ struct PythonRuntimeConfig final {
     /// Maximum time (ms) to wait for handler shutdown [100, 300000].
     uint32_t handler_shutdown_timeout_ms{10'000};
 
+    /// Per-actor startup timeout for topology bootstrap [100, 300000] ms.
+    uint32_t topology_start_timeout_ms{30'000};
+
     /// When true, handler dispatch spans are traced.
     bool trace_handler_spans{true};
 

@@ -1,0 +1,7 @@
+# Topology test: module import failure
+[system.python]
+enabled = true
+
+[[actors]]
+id = "bad_import"
+behavior = "python:nonexistent_module:SomeActor"

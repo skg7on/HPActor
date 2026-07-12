@@ -110,17 +110,10 @@ class ActorSystem:
         assert self._topology_policy is not None
 
         try:
-            # Step 1: Construct native system.
+            # Step 1: Construct native system (without runtime yet).
             from ._native_pybind11 import Pybind11NativeSystem
             self._native = Pybind11NativeSystem(self._config)
             self._native.start()
-
-            self._thread = _RuntimeThread(
-                self._registry,
-                dispatch_capacity=self._config.get("dispatch_queue_capacity", 65536),
-                native_backend=self._native,
-            )
-            self._thread.start()
 
             # Step 2: Prepare topology natively (releases GIL).
             descriptors = await asyncio.to_thread(
@@ -134,6 +127,8 @@ class ActorSystem:
                 )
 
             # Step 3: Preflight manifest on runtime loop.
+            # Requires the native system's dispatch/completion FDs already
+            # accessible. Preflight uses importlib which needs no dispatch.
             index_to_token = await self._topology_manifest.preflight(
                 descriptors, self._topology_policy, self._registry
             )
@@ -146,7 +141,20 @@ class ActorSystem:
             policy_fp = self._topology_policy.fingerprint
             effective_fp = self._native.bind_topology_manifest(bindings, policy_fp)
 
-            # Step 5: Start prepared topology (releases GIL).
+            # Step 5: Start the Python runtime thread with the frozen manifest.
+            # This must happen before start_prepared_topology because the
+            # C++ side will push TopologyInstall dispatches that need
+            # Python-side handling.
+            self._thread = _RuntimeThread(
+                self._registry,
+                dispatch_capacity=self._config.get("dispatch_queue_capacity", 65536),
+                native_backend=self._native,
+                manifest=self._topology_manifest,
+            )
+            self._thread.start()
+
+            # Step 6: Start prepared topology (releases GIL).
+            # This blocks until all Python actors are installed and ready.
             await asyncio.to_thread(self._native.start_prepared_topology)
 
             return self

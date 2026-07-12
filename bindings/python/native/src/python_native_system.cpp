@@ -295,11 +295,103 @@ result<void> PythonNativeSystem::start_prepared_topology() noexcept {
         return result<void>::make(
             error(errors::invalid_argument, "no prepared topology"));
     }
+    if (!topology_provider_) {
+        return result<void>::make(
+            error(errors::invalid_argument, "no topology provider"));
+    }
+    if (!runtime_ || !system_) {
+        return result<void>::make(
+            error(errors::unknown, "system not started"));
+    }
 
-    // TODO: Full integration with TopologyBootstrapTransaction.
-    // For now, this is a stub that will be completed when the C++ provider
-    // for ActorFactoryRegistry is wired up.
+    const auto& model = prepared_->model();
+    const auto actor_specs = prepared_->actors();
+    auto timeout = std::chrono::milliseconds(
+        runtime_->config().topology_start_timeout_ms);
+
+    // Spawn and track each Python actor.
+    struct SpawnedEntry {
+        ActorAddress bridge_addr;
+        uint64_t factory_token;
+    };
+    std::vector<SpawnedEntry> spawned;
+
+    for (size_t i = 0; i < actor_specs.size(); ++i) {
+        const auto& spec = actor_specs[i];
+        if (spec.kind != ConfiguredActorKind::Python)
+            continue; // C++ actors handled via C++ provider (future)
+
+        const auto& def = model.actors[spec.topology_index];
+
+        // Reserve a ready-table slot.
+        auto reserve = topology_provider_->ready_table().reserve(
+            spec.factory_token);
+        if (!reserve.ok()) {
+            last_topology_error_ = PythonTopologyErrorInfo{
+                PythonTopologyPhase::ActorStart, def.id, def.behavior,
+                static_cast<uint32_t>(reserve.error().code()), ""};
+            goto rollback;
+        }
+
+        // Spawn a bridge actor.
+        auto bridge = spawn_bridge();
+        if (!bridge.ok()) {
+            last_topology_error_ = PythonTopologyErrorInfo{
+                PythonTopologyPhase::ActorStart, def.id, def.behavior,
+                static_cast<uint32_t>(bridge.error().code()), ""};
+            goto rollback;
+        }
+
+        // Push TopologyInstall dispatch to the Python runtime.
+        auto dispatch = std::make_shared<PythonDispatchEnvelope>();
+        dispatch->kind = PythonDispatchKind::TopologyInstall;
+        dispatch->actor = bridge.value().address;
+        dispatch->generation = bridge.value().generation;
+        dispatch->topology_index = spec.topology_index;
+        dispatch->factory_token = spec.factory_token;
+        dispatch->args_fingerprint = spec.args_fingerprint;
+
+        if (!runtime_->try_push_dispatch(dispatch)) {
+            (void)stop_bridge(bridge.value().address);
+            last_topology_error_ = PythonTopologyErrorInfo{
+                PythonTopologyPhase::ActorStart, def.id, def.behavior,
+                static_cast<uint32_t>(
+                    static_cast<int>(errors::mailbox_full)), ""};
+            goto rollback;
+        }
+
+        spawned.push_back(
+            {bridge.value().address, spec.factory_token});
+    }
+
+    // Await readiness for each actor.
+    for (const auto& entry : spawned) {
+        auto ready = topology_provider_->ready_table().wait_ready(
+            entry.factory_token, timeout);
+        if (!ready.ok()) {
+            for (const auto& spec : actor_specs) {
+                if (spec.factory_token == entry.factory_token) {
+                    last_topology_error_ = PythonTopologyErrorInfo{
+                        PythonTopologyPhase::ActorStart,
+                        model.actors[spec.topology_index].id,
+                        model.actors[spec.topology_index].behavior,
+                        static_cast<uint32_t>(ready.error().code()),
+                        ""};
+                    break;
+                }
+            }
+            goto rollback;
+        }
+    }
+
     return result<void>::make();
+
+rollback:
+    for (auto it = spawned.rbegin(); it != spawned.rend(); ++it) {
+        (void)stop_bridge(it->bridge_addr);
+    }
+    return result<void>::make(
+        error(errors::unknown, "topology bootstrap failed"));
 }
 
 result<void> PythonNativeSystem::complete_topology_actor(

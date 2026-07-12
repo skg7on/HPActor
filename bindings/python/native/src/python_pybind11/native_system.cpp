@@ -435,6 +435,9 @@ py::dict NativeSystemObject::dispatch_to_dict(
     d["flags"] = env.flags;
     d["ack_requested"] = env.ack_requested;
     d["sequence"] = env.sequence;
+    d["topology_index"] = env.topology_index;
+    d["factory_token"] = env.factory_token;
+    d["args_fingerprint"] = env.args_fingerprint;
     return d;
 }
 
