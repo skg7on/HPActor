@@ -27,10 +27,10 @@ namespace hpactor::python {
 
 /// \brief Result of an actor inspection.
 struct PythonInspectResult final {
-    ActorAddress actor;
-    uint64_t generation{0};
-    std::string detail_json;
-    bool timed_out{false};
+    ActorAddress actor;           ///< The inspected actor's address.
+    uint64_t generation{0};       ///< Actor generation at inspection time.
+    std::string detail_json;      ///< JSON-serialized state payload (max 16 KiB).
+    bool timed_out{false};        ///< Whether the inspection timed out before completion.
 };
 
 /// \brief Bounded asynchronous inspection service for Python actors.
@@ -39,25 +39,42 @@ struct PythonInspectResult final {
 /// called only from the CLI/management thread. Late results are counted stale.
 class PythonInspectionService final {
   public:
+    /// \brief Construct the inspection service with a maximum pending capacity.
+    ///
+    /// \param[in] max_pending Maximum number of concurrent pending inspections
+    ///                        (1..4096).
     explicit PythonInspectionService(uint32_t max_pending) noexcept;
 
     /// \brief Request an inspection of an actor.
     ///
     /// \param[in] actor The actor to inspect.
-    /// \param[in] generation The expected generation.
-    /// \param[in] timeout Maximum wait time.
-    /// \return The result, or an error (timeout, not found, etc.).
+    /// \param[in] generation The expected generation. Mismatch returns an error.
+    /// \param[in] timeout Maximum wait time for the inspector response.
+    /// \return The result, or an error (timeout, not found, generation
+    ///         mismatch, or queue full).
+    /// \note Thread safety: called only from the CLI/management thread.
     [[nodiscard]] result<PythonInspectResult>
     inspect(ActorAddress actor, uint64_t generation,
             std::chrono::milliseconds timeout) noexcept;
 
     /// \brief Complete a pending inspection with a result.
+    ///
+    /// Matched by actor address and generation to the pending inspection.
+    ///
+    /// \param[in] result The completed inspection result.
+    /// \note Thread safety: called from the Python runtime thread.
     void complete(PythonInspectResult result) noexcept;
 
-    /// \brief Cancel all pending inspections.
+    /// \brief Cancel all pending inspections with the given error reason.
+    ///
+    /// \param[in] reason The error to attach to each cancelled inspection.
+    /// \note Thread safety: safe to call from any thread.
     void cancel_all(error reason) noexcept;
 
     /// \brief Number of pending inspections.
+    ///
+    /// \return The count of inspections that have not yet been completed.
+    /// \note Thread safety: safe to call from any thread; inherently racy.
     [[nodiscard]] size_t pending_count() const noexcept;
 
   private:
