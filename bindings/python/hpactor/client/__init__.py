@@ -35,6 +35,7 @@ from .health import AsyncHealthClient, HealthClient
 from .metrics import AsyncMetricsClient, MetricsClient
 from .models import (
     Capability,
+    CliResult,
     HealthCheck,
     HealthProbe,
     HealthResult,
@@ -42,6 +43,7 @@ from .models import (
     MetricsNotModified,
     MetricsSnapshot,
     RequestEvent,
+    ResultCategory,
     TransportOwnership,
 )
 
@@ -55,6 +57,7 @@ __all__ = [
     "CliClient",
     "CliClientConfig",
     "CliCommandError",
+    "CliResult",
     "ClientClosedError",
     "ConfigurationError",
     "ConnectionError",
@@ -84,6 +87,7 @@ __all__ = [
     "ProtocolError",
     "RequestEvent",
     "ResponseLimitError",
+    "ResultCategory",
     "RetryPolicy",
     "TransportError",
     "TransportOwnership",

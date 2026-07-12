@@ -33,16 +33,6 @@ from .errors import (
 )
 from .models import CliResult
 
-_RPC_REPLIES: dict[str, type[Message]] = {
-    "inspect": InspectStateReply,
-    "kill": KillReply,
-    "quarantine": QuarantineReply,
-    "enumerate": ListActorsReply,
-    "system_stats": SystemStatsReply,
-    "memory_stats": MemoryStatsReply,
-}
-
-
 def _build_command(
     path: str | None = None,
     params: dict[str, str] | None = None,
@@ -221,7 +211,7 @@ class CliClient:
                 stream.write_frame(payload)
                 raw = stream.read_frame()
                 return _decode_response(raw)
-            except BaseException:
+            except Exception:
                 stream.close()
                 self._stream = None
                 raise
@@ -305,6 +295,45 @@ class AsyncCliClient:
         req = SystemStatsRequest()
         cmd = _build_rpc_command("system_stats", req)
         return await self._call_structured(cmd, SystemStatsReply)
+
+    async def quarantine(self, actor_id: int, reason: str = "") -> QuarantineReply:
+        from ._proto.cli_messages_pb2 import QuarantineRequest
+        req = QuarantineRequest(target_actor_id=actor_id, reason=reason)
+        cmd = _build_rpc_command("quarantine", req)
+        return await self._call_structured(cmd, QuarantineReply)
+
+    async def unquarantine(self, actor_id: int) -> QuarantineReply:
+        from ._proto.cli_messages_pb2 import QuarantineRequest
+        req = QuarantineRequest(target_actor_id=actor_id, unquarantine=True)
+        cmd = _build_rpc_command("quarantine", req)
+        return await self._call_structured(cmd, QuarantineReply)
+
+    async def list_actors(
+        self,
+        shard_index: int = 0,
+        offset: int = 0,
+        limit: int = 100,
+        filter_str: str = "",
+    ) -> ListActorsReply:
+        from ._proto.cli_messages_pb2 import ListActorsRequest
+        req = ListActorsRequest(
+            shard_index=shard_index,
+            offset=offset,
+            limit=limit,
+            filter=filter_str,
+        )
+        cmd = _build_rpc_command("enumerate", req)
+        return await self._call_structured(cmd, ListActorsReply)
+
+    async def memory_stats(self, actor_id: int = 0) -> MemoryStatsReply:
+        from ._proto.cli_messages_pb2 import MemoryStatsRequest
+        req = MemoryStatsRequest(actor_id=actor_id)
+        cmd = _build_rpc_command("memory_stats", req)
+        return await self._call_structured(cmd, MemoryStatsReply)
+
+    async def call(self, rpc_method: str, request: Message, response_type: type[Message]) -> Message:
+        cmd = _build_rpc_command(rpc_method, request)
+        return await self._call_structured(cmd, response_type)
 
     async def _call_structured(
         self, command: CliCommand, reply_type: type[Message]

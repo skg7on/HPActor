@@ -119,14 +119,14 @@ class HealthClient:
     def liveness(self) -> HealthResult:
         start = time.monotonic()
         url = self._config.endpoint.base_url + self._config.liveness_path
-        response = self._transport.request("GET", url)
+        response = self._transport.request("GET", url, idempotent=True)
         elapsed = time.monotonic() - start
         return _parse_health(HealthProbe.LIVENESS, response, elapsed)
 
     def readiness(self) -> HealthResult:
         start = time.monotonic()
         url = self._config.endpoint.base_url + self._config.readiness_path
-        response = self._transport.request("GET", url)
+        response = self._transport.request("GET", url, idempotent=True)
         elapsed = time.monotonic() - start
         return _parse_health(HealthProbe.READINESS, response, elapsed)
 
@@ -167,14 +167,14 @@ class AsyncHealthClient:
     async def liveness(self) -> HealthResult:
         start = time.monotonic()
         url = self._config.endpoint.base_url + self._config.liveness_path
-        response = await self._transport.request("GET", url)
+        response = await self._transport.request("GET", url, idempotent=True)
         elapsed = time.monotonic() - start
         return _parse_health(HealthProbe.LIVENESS, response, elapsed)
 
     async def readiness(self) -> HealthResult:
         start = time.monotonic()
         url = self._config.endpoint.base_url + self._config.readiness_path
-        response = await self._transport.request("GET", url)
+        response = await self._transport.request("GET", url, idempotent=True)
         elapsed = time.monotonic() - start
         return _parse_health(HealthProbe.READINESS, response, elapsed)
 

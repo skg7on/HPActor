@@ -20,6 +20,15 @@ _ACCEPTED_MEDIA_TYPES = frozenset({
 })
 
 
+def _check_media_type(media_type: str) -> None:
+    """Raise ProtocolError if *media_type* is not an accepted metrics format."""
+    if media_type and media_type not in _ACCEPTED_MEDIA_TYPES:
+        raise ProtocolError(
+            f"unexpected metrics content-type {media_type!r}; "
+            f"expected text/plain or application/openmetrics-text"
+        )
+
+
 def _extract_media_type(content_type: str | None) -> str:
     if not content_type:
         return ""
@@ -41,6 +50,7 @@ def _parse_metrics(
 
     content_type = response.headers.get("content-type", "")
     media_type = _extract_media_type(content_type)
+    _check_media_type(media_type)
 
     try:
         text = response.content.decode("utf-8", errors="strict")
@@ -79,7 +89,7 @@ class MetricsClient:
         }
         if etag:
             headers["If-None-Match"] = etag
-        response = self._transport.request("GET", url, headers=headers)
+        response = self._transport.request("GET", url, headers=headers, idempotent=True)
         elapsed = time.monotonic() - start
         return _parse_metrics(
             response,
@@ -116,7 +126,7 @@ class AsyncMetricsClient:
         }
         if etag:
             headers["If-None-Match"] = etag
-        response = await self._transport.request("GET", url, headers=headers)
+        response = await self._transport.request("GET", url, headers=headers, idempotent=True)
         elapsed = time.monotonic() - start
         return _parse_metrics(
             response,

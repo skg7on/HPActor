@@ -150,7 +150,9 @@ def _validate_path(path: str, *, allow_empty: bool = False) -> None:
     if not path.startswith("/"):
         raise ValueError(f"path must start with '/', got {path!r}")
     if urllib.parse.urlparse("http://x" + path).path != path:
-        raise ValueError(f"invalid path: {path!r}")
+        raise ValueError(
+            f"path must not contain query parameters or fragments: {path!r}"
+        )
 
 
 @dataclass(frozen=True, slots=True)

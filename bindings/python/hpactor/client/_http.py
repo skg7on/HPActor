@@ -133,6 +133,7 @@ class SyncHttpTransport:
             self._endpoint.timeouts.write,
         )
 
+        last_body: bytes | None = None
         last_response: httpx.Response | None = None
         for attempt in range(1, retry.attempts + 1):
             try:
@@ -146,11 +147,12 @@ class SyncHttpTransport:
             if _should_retry(retry, attempt, response, idempotent):
                 _sleep_or_raise(deadline, retry.initial_delay * (2 ** (attempt - 1)))
                 last_response = response
+                last_body = body
                 continue
             return _detached(response, body)
 
-        if last_response is not None:
-            return _detached(last_response, _stream_and_bound(last_response, limit))
+        if last_response is not None and last_body is not None:
+            return _detached(last_response, last_body)
         raise TransportError("retry exhausted with no response")
 
     def close(self) -> None:
@@ -217,6 +219,7 @@ class AsyncHttpTransport:
             self._endpoint.timeouts.write,
         )
 
+        last_body: bytes | None = None
         last_response: httpx.Response | None = None
         for attempt in range(1, retry.attempts + 1):
             try:
@@ -234,14 +237,12 @@ class AsyncHttpTransport:
                     deadline, retry.initial_delay * (2 ** (attempt - 1))
                 )
                 last_response = response
+                last_body = body
                 continue
             return _detached(response, body)
 
-        if last_response is not None:
-            return _detached(
-                last_response,
-                _stream_and_bound(last_response, limit),
-            )
+        if last_response is not None and last_body is not None:
+            return _detached(last_response, last_body)
         raise TransportError("retry exhausted with no response")
 
     async def aclose(self) -> None:
