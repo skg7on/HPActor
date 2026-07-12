@@ -31,17 +31,17 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">69.4&nbsp;%</td>
-            <td class="headerCovTableEntry">98</td>
+            <td class="headerCovTableEntryLo">37.4&nbsp;%</td>
+            <td class="headerCovTableEntry">182</td>
             <td class="headerCovTableEntry">68</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-12 02:48:39</td>
+            <td class="headerValue">2026-07-12 13:43:22</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
-            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntryLo">60.0&nbsp;%</td>
+            <td class="headerCovTableEntry">5</td>
             <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
@@ -56,8 +56,8 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">53.2&nbsp;%</td>
-            <td class="headerCovTableEntry">62</td>
+            <td class="headerCovTableEntryLo">29.5&nbsp;%</td>
+            <td class="headerCovTableEntry">112</td>
             <td class="headerCovTableEntry">33</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -273,11 +273,153 @@
 <span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">        6697 :     return result&lt;Actor&gt;::make(Actor{std::move(actor)});</span></span>
 <span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaGNC">        6697 : }</span></span>
 <span id="L196"><span class="lineNum">     196</span>                 :             : </span>
-<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void ActorSpawner::rollback_publication(ActorId id, AbstractActor&amp; /*actor*/) noexcept {</span></span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaUNC">           0 :     deps_.directory.erase(id);</span></span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L200"><span class="lineNum">     200</span>                 :             : </span>
-<span id="L201"><span class="lineNum">     201</span>                 :             : } // namespace hpactor</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             : result&lt;ActorSpawnLease&gt;</span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaUNC tlaBgUNC">           0 : ActorSpawner::adopt_unpublished(std::shared_ptr&lt;AbstractActor&gt; actor,</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :             :                                  const SpawnSpec&amp; spec) noexcept {</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :     // ── Validate ──────────────────────────────────────────────────────</span>
+<span id="L201"><span class="lineNum">     201</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!actor) {</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :             :         return result&lt;ActorSpawnLease&gt;::make(</span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaUNC">           0 :             error(errors::invalid_argument, &quot;null actor&quot;));</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :             :     }</span>
+<span id="L205"><span class="lineNum">     205</span>                 :             : </span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :     // Check reserved-id constraints</span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaUNC">           0 :     ActorId id;</span></span>
+<span id="L208"><span class="lineNum">     208</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (spec.reserved_id.has_value()) {</span></span>
+<span id="L209"><span class="lineNum">     209</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!actor-&gt;is_system_actor()) {</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaUNC">           0 :             return result&lt;ActorSpawnLease&gt;::make(error(</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaUNC">           0 :                 errors::invalid_argument, &quot;reserved id requires system actor&quot;));</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :             :         }</span>
+<span id="L213"><span class="lineNum">     213</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!is_reserved_id(*spec.reserved_id)) {</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :             :             return result&lt;ActorSpawnLease&gt;::make(</span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaUNC">           0 :                 error(errors::invalid_argument, &quot;reserved id outside system range&quot;));</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :         }</span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaUNC">           0 :         id = *spec.reserved_id;</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :             :     } else {</span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaUNC">           0 :         id = deps_.directory.allocate_id();</span></span>
+<span id="L220"><span class="lineNum">     220</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         while (is_reserved_id(id)) {</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaUNC">           0 :             id = deps_.directory.allocate_id();</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :             :         }</span>
+<span id="L223"><span class="lineNum">     223</span>                 :             :     }</span>
+<span id="L224"><span class="lineNum">     224</span>                 :             : </span>
+<span id="L225"><span class="lineNum">     225</span>                 :             :     // ── Assign address and type ────────────────────────────────────────</span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaUNC">           0 :     const ActorType type = spec.actor_type_override.has_value()</span></span>
+<span id="L227"><span class="lineNum">     227</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                                ? *spec.actor_type_override</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaUNC">           0 :                                : actor-&gt;type();</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :     actor-&gt;set_address(ActorAddress(deps_.endpoint, type, id, 0));</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaUNC">           0 :     actor-&gt;set_type_name(std::string{spec.type_name});</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :             : </span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :     // ── Verify context binding ─────────────────────────────────────────</span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaUNC">           0 :     auto actor_ctx = std::make_shared&lt;ActorContext&gt;(Actor(actor), &amp;deps_.facade);</span></span>
+<span id="L234"><span class="lineNum">     234</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!actor-&gt;bind_context(actor_ctx.get())) {</span></span>
+<span id="L235"><span class="lineNum">     235</span>                 :             :         return result&lt;ActorSpawnLease&gt;::make(</span>
+<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaUNC">           0 :             error(errors::invalid_argument, &quot;actor cannot bind local context&quot;));</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :     }</span>
+<span id="L238"><span class="lineNum">     238</span>                 :             : </span>
+<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaUNC">           0 :     actor-&gt;set_scheduler(&amp;deps_.scheduler);</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :             : </span>
+<span id="L241"><span class="lineNum">     241</span>                 :             :     // ── Build mailbox ─────────────────────────────────────────────────</span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaUNC">           0 :     ActorDirectoryEntry entry;</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaUNC">           0 :     entry.actor = Actor(actor);</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaUNC">           0 :     entry.instance = actor;</span></span>
+<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaUNC">           0 :     entry.context = actor_ctx;</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaUNC">           0 :     entry.mailbox_kind = actor-&gt;mailbox_kind();</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :             : </span>
+<span id="L248"><span class="lineNum">     248</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (entry.mailbox_kind == mailbox::MailboxKind::VariableMpsc &amp;&amp;</span></span>
+<span id="L249"><span class="lineNum">     249</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         spec.mailbox.default_backend == mailbox::MailboxBackend::Disruptor) {</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaUNC">           0 :         auto binding = actor-&gt;create_disruptor_mailbox();</span></span>
+<span id="L251"><span class="lineNum">     251</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (binding.valid()) {</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaUNC">           0 :             entry.mailbox_kind = mailbox::MailboxKind::Disruptor;</span></span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaUNC">           0 :             entry.fixed_mailbox = binding;</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :             :         }</span>
+<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L256"><span class="lineNum">     256</span>                 :             : </span>
+<span id="L257"><span class="lineNum">     257</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (entry.mailbox_kind == mailbox::MailboxKind::Disruptor) {</span></span>
+<span id="L258"><span class="lineNum">     258</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!entry.fixed_mailbox.valid()) {</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaUNC">           0 :             auto binding = actor-&gt;create_disruptor_mailbox();</span></span>
+<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (!binding.valid()) {</span></span>
+<span id="L261"><span class="lineNum">     261</span>                 :             :                 return result&lt;ActorSpawnLease&gt;::make(</span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaUNC">           0 :                     error(errors::invalid_argument, &quot;fixed mailbox binding is invalid&quot;));</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :             :             }</span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaUNC">           0 :             entry.fixed_mailbox = binding;</span></span>
+<span id="L265"><span class="lineNum">     265</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         }</span></span>
+<span id="L266"><span class="lineNum">     266</span>                 :             :     } else {</span>
+<span id="L267"><span class="lineNum">     267</span>                 :             :         auto mailbox_ptr =</span>
+<span id="L268"><span class="lineNum">     268</span>                 :             :             std::make_shared&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;(</span>
+<span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaUNC">           0 :                 id, &amp;deps_.scheduler, spec.mailbox);</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaUNC">           0 :         auto* mbox = mailbox_ptr.get();</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaUNC">           0 :         actor-&gt;set_mailbox(mbox);</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :             : </span>
+<span id="L273"><span class="lineNum">     273</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (deps_.metrics) [[unlikely]] {</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaUNC">           0 :             mbox-&gt;set_metrics_ring_buffer(deps_.metrics);</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaUNC">           0 :             actor-&gt;set_metrics_ring_buffer(deps_.metrics);</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :             :         }</span>
+<span id="L277"><span class="lineNum">     277</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (deps_.logger) [[unlikely]] {</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaUNC">           0 :             mbox-&gt;set_logger(deps_.logger);</span></span>
+<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaUNC">           0 :             actor-&gt;set_logger(deps_.logger);</span></span>
+<span id="L280"><span class="lineNum">     280</span>                 :             :         }</span>
+<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaUNC">           0 :         entry.mailbox = mailbox_ptr;</span></span>
+<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L283"><span class="lineNum">     283</span>                 :             : </span>
+<span id="L284"><span class="lineNum">     284</span>                 :             :     // ── Apply quarantine ──────────────────────────────────────────────</span>
+<span id="L285"><span class="lineNum">     285</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (spec.quarantine.has_value()) {</span></span>
+<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaUNC">           0 :         if (auto* eba = actor-&gt;is_event_based_actor()</span></span>
+<span id="L287"><span class="lineNum">     287</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                             ? static_cast&lt;EventBasedActor*&gt;(actor.get())</span></span>
+<span id="L288"><span class="lineNum">     288</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                             : nullptr) {</span></span>
+<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaUNC">           0 :             eba-&gt;configure_quarantine(*spec.quarantine);</span></span>
+<span id="L290"><span class="lineNum">     290</span>                 :             :         }</span>
+<span id="L291"><span class="lineNum">     291</span>                 :             :     }</span>
+<span id="L292"><span class="lineNum">     292</span>                 :             : </span>
+<span id="L293"><span class="lineNum">     293</span>                 :             :     // ── Publish without name ──────────────────────────────────────────</span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaUNC">           0 :     auto status = deps_.directory.publish(std::move(entry), std::nullopt);</span></span>
+<span id="L295"><span class="lineNum">     295</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (status != ActorDirectory::PublishStatus::Published) {</span></span>
+<span id="L296"><span class="lineNum">     296</span>                 :             :         return result&lt;ActorSpawnLease&gt;::make(</span>
+<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaUNC">           0 :             error(errors::invalid_argument, &quot;duplicate actor id&quot;));</span></span>
+<span id="L298"><span class="lineNum">     298</span>                 :             :     }</span>
+<span id="L299"><span class="lineNum">     299</span>                 :             : </span>
+<span id="L300"><span class="lineNum">     300</span>                 :             :     // ── Activate ──────────────────────────────────────────────────────</span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaUNC">           0 :     actor-&gt;activate_after_spawn();</span></span>
+<span id="L302"><span class="lineNum">     302</span>                 :             : </span>
+<span id="L303"><span class="lineNum">     303</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (auto* lifecycle = actor-&gt;as_lifecycle()) {</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaUNC">           0 :         lifecycle-&gt;transition(LifecycleState::kActive);</span></span>
+<span id="L305"><span class="lineNum">     305</span>                 :             :     }</span>
+<span id="L306"><span class="lineNum">     306</span>                 :             : </span>
+<span id="L307"><span class="lineNum">     307</span>                 :             :     // ── Register dispatch ─────────────────────────────────────────────</span>
+<span id="L308"><span class="lineNum">     308</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     switch (spec.dispatch_policy) {</span></span>
+<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaUNC">           0 :         case sched::DispatchPolicy::Cooperative:</span></span>
+<span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaUNC">           0 :             deps_.scheduler.notify_ready(id, 0, INT64_MAX);</span></span>
+<span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L312"><span class="lineNum">     312</span>                 :<span class="tlaUNC">           0 :         case sched::DispatchPolicy::DedicatedThread:</span></span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaUNC">           0 :             deps_.scheduler.register_dedicated_thread(</span></span>
+<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaUNC">           0 :                 id, spec.dispatch_hints.cpu_affinity);</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaUNC">           0 :         case sched::DispatchPolicy::DedicatedPool:</span></span>
+<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaUNC">           0 :             deps_.scheduler.register_dedicated_pool(id, spec.dispatch_hints.pool_size);</span></span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L319"><span class="lineNum">     319</span>                 :             :     }</span>
+<span id="L320"><span class="lineNum">     320</span>                 :             : </span>
+<span id="L321"><span class="lineNum">     321</span>                 :             :     // ── Emit success telemetry ────────────────────────────────────────</span>
+<span id="L322"><span class="lineNum">     322</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id,</span></span>
+<span id="L323"><span class="lineNum">     323</span>                 :             :                      static_cast&lt;uint32_t&gt;(log::LogEventId::kActorSpawned),</span>
+<span id="L324"><span class="lineNum">     324</span>                 :             :                      &quot;actor adopted unpublished&quot;,</span>
+<span id="L325"><span class="lineNum">     325</span>                 :             :                      log::field_lit(&quot;type&quot;, actor-&gt;type_name().data()));</span>
+<span id="L326"><span class="lineNum">     326</span>                 :             : </span>
+<span id="L327"><span class="lineNum">     327</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (deps_.metrics) [[unlikely]] {</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaUNC">           0 :         metrics::MetricEvent evt{};</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaUNC">           0 :         evt.actor_id = id;</span></span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaUNC">           0 :         evt.event_type = metrics::MetricEventType::kActorSpawned;</span></span>
+<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaUNC">           0 :         evt.value_hi = 1;</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaUNC">           0 :         deps_.metrics-&gt;try_push(evt);</span></span>
+<span id="L333"><span class="lineNum">     333</span>                 :             :     }</span>
+<span id="L334"><span class="lineNum">     334</span>                 :             : </span>
+<span id="L335"><span class="lineNum">     335</span>                 :             :     return result&lt;ActorSpawnLease&gt;::make(</span>
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaUNC">           0 :         ActorSpawnLease(Actor(actor), id, &amp;deps_.directory, &amp;deps_.scheduler));</span></span>
+<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :             : </span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaUNC">           0 : void ActorSpawner::rollback_publication(ActorId id, AbstractActor&amp; /*actor*/) noexcept {</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaUNC">           0 :     deps_.directory.erase(id);</span></span>
+<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L342"><span class="lineNum">     342</span>                 :             : </span>
+<span id="L343"><span class="lineNum">     343</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
