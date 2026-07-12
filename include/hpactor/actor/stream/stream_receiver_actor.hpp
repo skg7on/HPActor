@@ -34,8 +34,11 @@ class StreamReceiverActor : public EventBasedActor {
   public:
     StreamReceiverActor(ActorContext* ctx, ActorSystem& system,
                         ActorId target_actor_id, uint64_t stream_id,
-                        ActorAddress sender_addr, uint32_t initial_window_bytes,
+                        ActorAddress sender_addr, EndPoint peer,
+                        uint32_t initial_window_bytes,
                         TraceContext trace_ctx);
+
+    void on_activate() override { become(make_behavior()); }
 
     Behavior make_behavior() override;
 
@@ -49,6 +52,9 @@ class StreamReceiverActor : public EventBasedActor {
     ActorId target_actor_id_;
     uint64_t stream_id_;
     ActorAddress sender_addr_;
+    /// Actual TCP peer endpoint (from the accepted connection) for routing
+    /// ACKs back via the correct transport pool.
+    EndPoint peer_;
     uint32_t initial_window_bytes_;
     uint64_t last_delivered_seq_ = 0;
     uint64_t total_bytes_received_ = 0;

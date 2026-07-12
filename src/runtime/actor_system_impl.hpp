@@ -20,6 +20,8 @@
 #include <hpactor/runtime/messaging_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
+#include <hpactor/actor/stream/stream_runtime.hpp>
+#include "../net/inbound_frame_router.hpp"
 
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
@@ -152,6 +154,12 @@ class ActorSystem::Impl final : public ReliableAckTarget,
     ActorServiceState actors;
     std::unique_ptr<MessagingRuntime> messaging_;
     StreamRuntimeState streams;
+    /// \brief Phase 4: cohesive stream session state owner.
+    /// Constructed before InboundFrameRouter so it outlives the router.
+    std::unique_ptr<class StreamRuntime> stream_runtime_;
+    /// \brief Phase 4: sole inbound frame classifier.
+    /// Routes stream frames to stream_runtime_, data to messaging_, RPC to rpc_channel_.
+    std::unique_ptr<class net::InboundFrameRouter> inbound_frame_router_;
     /// \brief Fixed network-control output ports used by messaging.
     /// Constructed before messaging components; targets reach transport
     /// via impl->network_->transport().

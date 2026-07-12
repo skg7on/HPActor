@@ -103,19 +103,17 @@ struct Ipv4Endpoint {
 };
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_loopback() const noexcept {
-    // Network byte order: 127.0.0.1 = 0x7F000001
-    // MSB (byte 0 in network order) = 0x7F
-    // On little-endian, addr value is still 0x7F000001, so MSB = (addr >> 24)
-    // On big-endian, MSB = (addr >> 24) = 0x7F
-    // Both give same result
+    // addr stores the address in big-endian uint32_t format where
+    // 0x7F000001 always means 127.0.0.1.  The MSB is the first octet.
     return (addr >> 24) == 0x7F;
 }
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_private_network() const noexcept {
     auto b1 = static_cast<uint8_t>((addr >> 24) & 0xFF);
-    uint32_t rest = addr & 0xFFFF0000;
-    return b1 == 10 || (b1 == 172 && ((addr >> 16) & 0xFF & 0xF0) == 0x10) ||
-           (b1 == 192 && rest == 0xC0A80000);
+    auto b2 = static_cast<uint8_t>((addr >> 16) & 0xFF);
+    return b1 == 10 ||
+           (b1 == 172 && (b2 & 0xF0) == 16) ||
+           (b1 == 192 && b2 == 168);
 }
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_unspecified() const noexcept {
@@ -125,7 +123,13 @@ struct Ipv4Endpoint {
 inline void Ipv4Endpoint::to_sockaddr(sockaddr_in* out) const noexcept {
     out->sin_family = AF_INET;
     out->sin_port = port_nw;
+    // addr is stored in internal big-endian format (0x7F000001 always
+    // means 127.0.0.1).  Convert to platform network byte order for
+    // the socket API.
     out->sin_addr.s_addr = addr;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    out->sin_addr.s_addr = __builtin_bswap32(out->sin_addr.s_addr);
+#endif
     std::memset(out->sin_zero, 0, sizeof(out->sin_zero));
 }
 

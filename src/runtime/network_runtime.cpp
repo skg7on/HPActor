@@ -170,6 +170,7 @@ result<void> NetworkRuntime::start() noexcept {
 
     // Install the inbound frame sink (Phase 4 contract) before listening.
     if (impl_->deps.inbound_sink.active()) {
+        impl_->transport->set_inbound_frame_sink(impl_->deps.inbound_sink);
         impl_->transport->set_actor_message_handler(
             [sink = impl_->deps.inbound_sink](const net::WireFrame& frame) {
                 net::InboundFrameContext ictx{};

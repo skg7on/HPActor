@@ -1,0 +1,3 @@
+add_executable(15_streaming_pipeline 15_streaming_pipeline.cpp)
+target_link_libraries(15_streaming_pipeline PRIVATE hpactor_lib)
+target_include_directories(15_streaming_pipeline PRIVATE ${CMAKE_SOURCE_DIR})

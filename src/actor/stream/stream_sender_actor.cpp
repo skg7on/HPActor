@@ -68,7 +68,13 @@ Behavior StreamSenderActor::make_behavior() {
 }
 
 void StreamSenderActor::enqueue_chunk(TypedMessage chunk) {
-    if (state_ != State::Streaming && state_ != State::Opening)
+    // Accept chunks in Opening, Streaming, or Closing state.  The close
+    // message (InternalCloseTag, a system-lane message) may be dequeued
+    // before remaining user-lane chunks due to system-lane priority.
+    // We must accept those chunks even after the close has been processed
+    // so they can be sent when ACKs open the credit window.
+    if (state_ != State::Streaming && state_ != State::Opening &&
+        state_ != State::Closing)
         return;
     size_t chunk_size = chunk.payload().size();
     if (send_buffer_bytes_ + chunk_size > config_.send_buffer_bytes)
@@ -80,6 +86,7 @@ void StreamSenderActor::enqueue_chunk(TypedMessage chunk) {
 }
 
 void StreamSenderActor::send_pending_chunks() {
+    bool sent_any = false;
     while (!send_buffer_.empty() && state_ != State::Error) {
         // Credit window check: pause if in-flight exceeds advertised window.
         // window == 0 means the receiver has not yet opened the window.
@@ -94,7 +101,12 @@ void StreamSenderActor::send_pending_chunks() {
             if (cur_inflight > 0 && cur_window == 0)
                 break;
         }
-        if (state_ != State::Streaming && state_ != State::Opening)
+        // Allow send in Opening, Streaming, and Closing states.
+        // Closing is needed so pending chunks can be sent when ACKs
+        // arrive after the close has been deferred (system-lane close
+        // message dequeued before user-lane chunks).
+        if (state_ != State::Streaming && state_ != State::Opening &&
+            state_ != State::Closing)
             break;
 
         TypedMessage chunk = std::move(send_buffer_.front());
@@ -130,6 +142,19 @@ void StreamSenderActor::send_pending_chunks() {
 
         shared_state_->bytes_in_flight->fetch_add(chunk_size,
                                                   std::memory_order_release);
+        sent_any = true;
+    }
+
+    // Complete a deferred close only if we actually sent something in
+    // this call — proving that user-lane chunks have been dequeued and
+    // added to the buffer.  If the buffer was already empty when this
+    // was called (handle_internal_close() ran before pending user-lane
+    // chunks were dequeued), we don't close — subsequent calls from
+    // enqueue_chunk() or handle_stream_ack() will drain the buffer and
+    // trigger the close when sent_any is true.
+    if (sent_any && state_ == State::Closing && send_buffer_.empty()) {
+        send_close_to_receiver();
+        state_ = State::Closed;
     }
 }
 
@@ -146,7 +171,10 @@ void StreamSenderActor::handle_stream_ack(const ::hpactor::net::StreamAckFrame& 
 
     reset_idle_timer();
 
-    if (state_ == State::Streaming) {
+    // Also drain pending chunks when in Closing state — an ACK may have
+    // just opened the window after handle_internal_close() deferred the
+    // close frame because the send buffer wasn't empty.
+    if (state_ == State::Streaming || state_ == State::Closing) {
         send_pending_chunks();
     }
 }
@@ -165,14 +193,22 @@ void StreamSenderActor::handle_internal_close() {
     if (state_ != State::Streaming && state_ != State::Opening)
         return;
 
-    // Drain remaining buffered chunks before sending close.
-    if (!send_buffer_.empty()) {
-        state_ = State::Closing;
-        send_pending_chunks();
-    }
+    // Transition to Closing state.  Do NOT send the close frame yet:
+    // the close message (InternalCloseTag, system lane) may have been
+    // dequeued before remaining user-lane chunks due to system-lane
+    // priority.  If bytes_in_flight > 0, chunks were sent and more
+    // user-lane messages may be pending — defer the close to
+    // send_pending_chunks() after subsequent ACKs and enqueue_chunk()
+    // calls drain the buffer.  If nothing was ever sent, close now.
+    state_ = State::Closing;
+    send_pending_chunks();
 
-    send_close_to_receiver();
-    state_ = State::Closed;
+    if (send_buffer_.empty() &&
+        shared_state_->bytes_in_flight->load(std::memory_order_acquire) == 0) {
+        // No data ever sent — safe to close immediately.
+        send_close_to_receiver();
+        state_ = State::Closed;
+    }
 }
 
 void StreamSenderActor::handle_internal_error(TypedMessage& msg) {

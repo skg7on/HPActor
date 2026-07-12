@@ -48,7 +48,7 @@ struct StreamActorLifecyclePort {
                                     const StreamConfig&,
                                     const TraceContext&) noexcept {nullptr};
     result<ActorId> (*spawn_receiver)(void*, ActorId target, uint64_t stream_id,
-                                      const ActorAddress& sender,
+                                      const ActorAddress& sender, EndPoint peer,
                                       uint32_t initial_window_bytes,
                                       const TraceContext&) noexcept {nullptr};
     void (*stop)(void*, ActorId) noexcept {nullptr};
@@ -93,6 +93,9 @@ class StreamRuntime final {
     // ── Local (facade-forward) API ───────────────────────────────────────
 
     void register_sender(uint64_t stream_id, ActorId actor_id);
+    /// Register a sender with an explicit peer endpoint (for cross-process).
+    void register_sender_for_peer(EndPoint peer, uint64_t stream_id,
+                                   ActorId actor_id);
     void register_receiver(uint64_t stream_id, ActorId actor_id);
     void unregister_stream(uint64_t stream_id);
     uint64_t allocate_stream_id(ActorId sender_id);

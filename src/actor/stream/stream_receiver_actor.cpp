@@ -21,11 +21,12 @@ namespace hpactor {
 
 StreamReceiverActor::StreamReceiverActor(ActorContext* ctx, ActorSystem& system,
                                          ActorId target_actor_id, uint64_t stream_id,
-                                         ActorAddress sender_addr,
+                                         ActorAddress sender_addr, EndPoint peer,
                                          uint32_t initial_window_bytes,
                                          TraceContext trace_ctx)
     : EventBasedActor(ctx, system), target_actor_id_(target_actor_id),
       stream_id_(stream_id), sender_addr_(std::move(sender_addr)),
+      peer_(peer),
       initial_window_bytes_(initial_window_bytes), trace_ctx_(trace_ctx) {}
 
 Behavior StreamReceiverActor::make_behavior() {
@@ -94,9 +95,28 @@ void StreamReceiverActor::send_ack() {
     ack.set_last_sequence(last_delivered_seq_);
     ack.set_window_bytes(compute_window_bytes());
 
-    TypedMessage ack_msg(stream::StreamAckTag, ack);
-    ack_msg.set_sender_address(address());
-    system().try_deliver_local_fast(sender_addr_.id, std::move(ack_msg));
+    bool is_local =
+        sender_addr_.endpoint == system().endpoint();
+
+    if (is_local) {
+        // Local fast path: deliver directly to sender actor's mailbox.
+        TypedMessage ack_msg(stream::StreamAckTag, ack);
+        ack_msg.set_sender_address(address());
+        system().try_deliver_local_fast(sender_addr_.id, std::move(ack_msg));
+    } else {
+        // Remote path: serialize to WireFrame and send via transport.
+        // Use peer_ (the actual TCP source endpoint from handle_accept)
+        // rather than sender_addr_.endpoint (the configured listening
+        // address from the StreamOpenFrame) so the transport finds the
+        // existing connection pool keyed by the accepted connection's peer.
+        auto wire_frame =
+            net::WireFrame::from_stream_ack(std::move(ack));
+        auto* tp = system().transport();
+        if (tp) {
+            ActorAddress peer_addr{peer_, ActorType{0}, sender_addr_.id, 0};
+            (void)tp->try_send(peer_addr, wire_frame.encode());
+        }
+    }
 }
 
 uint32_t StreamReceiverActor::compute_window_bytes() {

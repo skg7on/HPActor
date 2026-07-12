@@ -50,6 +50,8 @@ class StreamSenderActor : public EventBasedActor {
                       StreamConfig config, TraceContext trace_ctx, bool is_local,
                       std::shared_ptr<StreamSenderState> state = nullptr);
 
+    void on_activate() override { become(make_behavior()); }
+
     Behavior make_behavior() override;
 
     /// Called by StreamHandle (via message) to enqueue a chunk for send.
