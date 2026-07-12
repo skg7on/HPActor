@@ -14,6 +14,7 @@
 
 #include <hpactor/cli/io/cli_connector.hpp>
 #include <hpactor/net/connection_pool.hpp>
+#include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
@@ -54,7 +55,10 @@ int CliConnector::connect_tcp(const std::string& host, uint16_t port,
     pool_cfg.min_connections = 1;
     pool_cfg.max_connections = 1;
 
-    transport_ = std::make_unique<net::TcpTransport>(local_ep, tls_cfg, pool_cfg);
+    loop_ = std::make_unique<net::EventLoop>();
+    loop_->run();
+    transport_ = std::make_unique<net::TcpTransport>(local_ep, tls_cfg,
+                                                     pool_cfg, loop_.get());
     conn_ = transport_->connect(remote_ep, host, port);
     if (!conn_)
         return -1;
@@ -80,7 +84,10 @@ int CliConnector::connect_uds(const std::string& path,
     pool_cfg.min_connections = 1;
     pool_cfg.max_connections = 1;
 
-    transport_ = std::make_unique<net::TcpTransport>(local_ep, tls_cfg, pool_cfg);
+    loop_ = std::make_unique<net::EventLoop>();
+    loop_->run();
+    transport_ = std::make_unique<net::TcpTransport>(local_ep, tls_cfg,
+                                                     pool_cfg, loop_.get());
     conn_ = transport_->connect_unix_domain(remote_ep, path);
     if (!conn_)
         return -1;

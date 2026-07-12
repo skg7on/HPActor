@@ -75,8 +75,10 @@ TEST_F(TcpTransportComprehensiveTest, MultipleTransportInstances) {
     PoolConfig pool_config;
     pool_config.use_tls = false;
 
-    TcpTransport transport1(ep1, tls_config, pool_config, nullptr);
-    TcpTransport transport2(ep2, tls_config, pool_config, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport1(ep1, tls_config, pool_config, &loop, nullptr);
+    TcpTransport transport2(ep2, tls_config, pool_config, &loop, nullptr);
 
     transport1.listen(19001);
     transport2.listen(19002);
@@ -101,9 +103,10 @@ TEST_F(TcpTransportComprehensiveTest, UdsThenTcpFallbackSameEndpoint) {
     PoolConfig pool_config;
     pool_config.use_tls = false;
 
-    TcpTransport transport(ep, tls_config, pool_config, &registry);
-
     EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_config, pool_config, &loop, &registry);
+
     TcpAcceptor acceptor(&loop);
     bool listening = acceptor.listen(19999);
     ASSERT_TRUE(listening);
@@ -182,7 +185,9 @@ TEST_F(TcpTransportComprehensiveTest, ConnectToUnknownNode) {
     PoolConfig pool_config;
     pool_config.use_tls = false;
 
-    TcpTransport transport(ep, tls_config, pool_config, &registry);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_config, pool_config, &loop, &registry);
 
     auto conn = transport.connect(ep);
     EXPECT_EQ(conn, nullptr);
@@ -327,7 +332,9 @@ TEST_F(TcpTransportComprehensiveTest, DoubleStopListening) {
     TlsConfig tls_config;
     PoolConfig pool_config;
 
-    TcpTransport transport(ep, tls_config, pool_config, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_config, pool_config, &loop, nullptr);
 
     transport.listen(22300);
 

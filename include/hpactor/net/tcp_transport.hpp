@@ -36,8 +36,16 @@ namespace net {
 // -----------------------------------------------------------------------------
 class TcpTransport : public Transport {
   public:
+    /// \brief Construct a TCP transport.
+    ///
+    /// \param[in] endpoint Local node endpoint.
+    /// \param[in] tls_config TLS configuration.
+    /// \param[in] pool_config Connection pool configuration.
+    /// \param[in] loop Event loop for async I/O (not owned).
+    /// \param[in] registry Optional node registry for name resolution.
     TcpTransport(EndPoint endpoint, const TlsConfig& tls_config,
-                 const PoolConfig& pool_config, NodeRegistry* registry = nullptr);
+                 const PoolConfig& pool_config, EventLoop* loop,
+                 NodeRegistry* registry = nullptr);
     ~TcpTransport() override;
 
     // Transport interface
@@ -102,8 +110,10 @@ class TcpTransport : public Transport {
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf);
 
     /// \brief Access the underlying EventLoop for synchronous I/O polling.
+    ///
+    /// \return Reference to the shared event loop (owned by NetworkRuntime).
     EventLoop& loop() {
-        return loop_;
+        return *loop_;
     }
 
   private:
@@ -125,7 +135,8 @@ class TcpTransport : public Transport {
     std::string derive_uds_path(const std::string& node_id) const;
 
     EndPoint endpoint_;
-    EventLoop loop_;
+    EventLoop* loop_ = nullptr; ///< Shared event loop (owned by
+                                ///< NetworkRuntime).
     TcpAcceptor acceptor_;
     TlsContext tls_context_;
     PoolConfig pool_config_;

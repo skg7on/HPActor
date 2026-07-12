@@ -250,14 +250,10 @@ TEST(NetworkWorkflow, EventLoopTimerIntegration) {
     auto* transport = system.transport();
     ASSERT_NE(transport, nullptr);
 
-    // Access the underlying EventLoop
+    // Access the underlying EventLoop — it is started by
+    // NetworkRuntime::start() so is_running() is true.
     auto* tcp = static_cast<net::TcpTransport*>(transport);
     net::EventLoop& loop = tcp->loop();
-    EXPECT_FALSE(loop.is_running());
-
-    // Run the event loop in a background thread
-    std::thread loop_thread([&loop]() { loop.run(); });
-    test::assert_eventually([&loop]() { return loop.is_running(); }, 3000);
     EXPECT_TRUE(loop.is_running());
 
     // Schedule a one-shot timer — verify handle is non-zero
@@ -272,11 +268,8 @@ TEST(NetworkWorkflow, EventLoopTimerIntegration) {
     EXPECT_GT(rep_handle, 0u);
     loop.cancel_timer(rep_handle);
 
-    // Stop the loop and join
+    // The EventLoop lifecycle is managed by NetworkRuntime.
     loop.stop();
-    if (loop_thread.joinable()) {
-        loop_thread.join();
-    }
 
     auto result = system.shutdown();
     EXPECT_TRUE(result.has_value());

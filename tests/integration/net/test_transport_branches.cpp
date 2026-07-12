@@ -81,7 +81,9 @@ TEST_F(TransportBranchesTest, TcpTransportConstructAndListenLifecycle) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
     EXPECT_EQ(transport.endpoint(), ep);
 
     transport.listen(0);
@@ -99,7 +101,9 @@ TEST_F(TransportBranchesTest, TcpTransportUdsConnectLifecycle) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
 
     std::string socket_path = "/tmp/hpactor/test_transport_uds.sock";
     ::unlink(socket_path.c_str());
@@ -126,7 +130,9 @@ TEST_F(TransportBranchesTest, TransportWithDifferentPoolConfigs) {
         cfg.use_tls = false;
 
         TlsConfig tls_cfg;
-        TcpTransport transport(ep, tls_cfg, cfg, nullptr);
+        EventLoop loop;
+        loop.run();
+        TcpTransport transport(ep, tls_cfg, cfg, &loop, nullptr);
         EXPECT_EQ(transport.endpoint(), ep);
     }
 
@@ -141,7 +147,9 @@ TEST_F(TransportBranchesTest, TransportWithDifferentPoolConfigs) {
         cfg.use_tls = false;
 
         TlsConfig tls_cfg;
-        TcpTransport transport(ep, tls_cfg, cfg, nullptr);
+        EventLoop loop;
+        loop.run();
+        TcpTransport transport(ep, tls_cfg, cfg, &loop, nullptr);
         EXPECT_EQ(transport.endpoint(), ep);
     }
 }
@@ -175,7 +183,9 @@ TEST_F(TransportBranchesTest, TransportActorMessageHandlerRegistration) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
 
     bool handler_called = false;
     transport.set_actor_message_handler(
@@ -191,7 +201,9 @@ TEST_F(TransportBranchesTest, TransportRpcHandlerWiring) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
 
     int call_count = 0;
     transport.set_rpc_handler(
@@ -207,7 +219,9 @@ TEST_F(TransportBranchesTest, TransportMetricsRingBufferPassThrough) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
 
     metrics::MpscRingBuffer<metrics::MetricEvent> ring_buffer;
     transport.set_metrics_ring_buffer(&ring_buffer);
@@ -371,7 +385,9 @@ TEST_F(TransportBranchesTest, TcpTransportConnectUnknownHostReturnsNull) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
 
     EndPoint unknown = make_ep("192.0.2.1", 9999);
     auto conn = transport.connect(unknown);
@@ -387,7 +403,9 @@ TEST_F(TransportBranchesTest, FaultInjectionPathCoverage) {
     TlsConfig tls_cfg;
     PoolConfig pool_cfg = make_pool_cfg(2);
 
-    TcpTransport transport(ep, tls_cfg, pool_cfg, nullptr);
+    EventLoop loop;
+    loop.run();
+    TcpTransport transport(ep, tls_cfg, pool_cfg, &loop, nullptr);
 
     ActorAddress addr;
     StreamBuffer data = {'f', 'a', 'u', 'l', 't'};

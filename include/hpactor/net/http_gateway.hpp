@@ -110,14 +110,13 @@ class RouteRegistry {
 /// \brief Reusable HTTP/1.1 server — I/O and protocol only, no actor
 /// coupling.
 ///
-/// Owns an \c EventLoop, \c TcpAcceptor, and a set of \c HTTPConnection
-/// instances. Drives the event loop from the caller's thread via
-/// \c run_once(). Designed to be embedded in a daemon actor or test
-/// harness.
+/// Uses a shared \c EventLoop (owned by \c NetworkRuntime) for async I/O:
+/// \c TcpAcceptor, and a set of \c HTTPConnection instances. The event
+/// loop is driven externally; this class no longer calls \c run() or
+/// \c stop() on it.
 ///
-/// \note Thread safety: \c listen(), \c stop(), \c run_once(), and
-///       \c send_response() must all be called from the same thread
-///       (the event loop thread).
+/// \note Thread safety: \c listen(), \c stop(), and
+///       \c send_response() must all be called from the event loop thread.
 class HTTPGateway {
   public:
     /// \brief Callback for incoming HTTP requests.
@@ -133,7 +132,18 @@ class HTTPGateway {
     /// \param[in] err Error details.
     using ErrorHandler = std::function<void(HTTPConnection*, const error&)>;
 
+    /// \brief Default constructor — creates an internal EventLoop.
+    ///
+    /// Use for standalone usage (tests, CLI servers without networking).
+    /// For production, prefer \c HTTPGateway(EventLoop*) to share the
+    /// \c NetworkRuntime event loop.
     HTTPGateway();
+
+    /// \brief Construct with a shared event loop.
+    ///
+    /// \param[in] loop Event loop for async I/O (not owned, must outlive
+    ///            this gateway). If \c nullptr, an internal loop is created.
+    explicit HTTPGateway(EventLoop* loop);
     ~HTTPGateway();
 
     /// \name Non-copyable
@@ -144,13 +154,17 @@ class HTTPGateway {
 
     /// \brief Start listening for HTTP connections.
     ///
-    /// Must be called before \c run_once().
+    /// The shared event loop must already be running (managed by
+    /// \c NetworkRuntime). Registers the acceptor fd on the shared loop.
     /// \param[in] port TCP port to bind.
     /// \param[in] bind_host IPv4 address to bind (default \c "0.0.0.0").
     /// \return \c true on success.
     bool listen(uint16_t port, const std::string& bind_host = "0.0.0.0");
 
     /// \brief Stop listening and close all connections.
+    ///
+    /// Does not stop the event loop — that is managed by
+    /// \c NetworkRuntime.
     void stop();
 
     /// \brief Check whether the server is listening.
@@ -165,9 +179,12 @@ class HTTPGateway {
 
     /// \brief Process one iteration of the event loop.
     ///
-    /// Blocks until an event arrives or the timeout expires. Call
-    /// repeatedly from a daemon thread.
+    /// Blocks until an event arrives or the timeout expires on the
+    /// shared event loop. Call repeatedly from a daemon thread that
+    /// participates in driving the shared loop.
     /// \note Thread safety: Event loop thread only.
+    /// \deprecated Prefer letting \c NetworkRuntime drive the shared
+    ///             loop. Use only when a daemon thread must participate.
     void run_once();
 
     /// \brief Set the incoming request handler.
@@ -204,19 +221,22 @@ class HTTPGateway {
     /// \param[in] max Maximum request size (default 1 MiB).
     void set_max_request_size(size_t max);
 
-    /// \brief Access the underlying event loop.
+    /// \brief Access the shared event loop.
     ///
-    /// \return Reference to the internal \c EventLoop.
-    /// \note Thread safety: The returned reference is safe only for the
-    ///       owning thread.
-    EventLoop& event_loop() {
+    /// \return Pointer to the shared \c EventLoop (owned by
+    ///         \c NetworkRuntime).
+    /// \note Thread safety: The returned pointer is safe only for the
+    ///       event loop thread.
+    EventLoop* event_loop() {
         return loop_;
     }
 
   private:
     void on_accept(int client_fd, EndPoint remote_endpoint);
 
-    EventLoop loop_;
+    EventLoop* loop_ = nullptr; ///< Active event loop (shared or internal).
+    std::unique_ptr<EventLoop> own_loop_; ///< Internal loop when no shared loop
+                                          ///< provided.
     std::unique_ptr<TcpAcceptor> acceptor_;
     std::vector<HTTPConnectionPtr> connections_;
     std::mutex conn_mutex_;

@@ -24,6 +24,7 @@ namespace hpactor {
 namespace net {
 class Connection;
 using ConnectionPtr = std::shared_ptr<Connection>;
+class EventLoop;
 class TcpTransport;
 } // namespace net
 
@@ -79,6 +80,8 @@ class CliConnector {
     }
 
   private:
+    std::unique_ptr<net::EventLoop> loop_; ///< Local event loop (must outlive
+                                           ///< transport_).
     std::unique_ptr<net::TcpTransport> transport_;
     net::ConnectionPtr conn_;
     int fd_ = -1;

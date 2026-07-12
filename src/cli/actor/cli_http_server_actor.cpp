@@ -67,7 +67,8 @@ void register_legacy_handler();
 CliHttpServerActor::CliHttpServerActor(ActorContext* ctx, ActorSystem& system,
                                        const CliHttpServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      gateway_(std::make_unique<net::HTTPGateway>()), host_impl_(system_) {}
+      gateway_(std::make_unique<net::HTTPGateway>(system.event_loop())),
+      host_impl_(system_) {}
 
 CliHttpServerActor::~CliHttpServerActor() = default;
 

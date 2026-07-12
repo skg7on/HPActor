@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/actor/gateway/http_gateway_actor.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
 #include <cstring>
 
@@ -54,7 +54,7 @@ class ReplyAdapter final : public EventBasedActor {
 
 HTTPGatewayActor::HTTPGatewayActor(ActorContext* ctx, ActorSystem& sys,
                                    const std::string& bind_host, uint16_t port)
-    : ExternalMsgGatewayActor(ctx, sys),
+    : ExternalMsgGatewayActor(ctx, sys), gateway_(sys.event_loop()),
       serializer_(std::make_unique<HttpSerializer>()) {
     auto handler = [this](TypedMessage&& msg) {
         std::lock_guard<std::mutex> lock(reply_queue_mutex_);
@@ -109,6 +109,9 @@ void HTTPGatewayActor::on_daemon_stop() {
 }
 
 bool HTTPGatewayActor::run_once() {
+    // Participate in the shared EventLoop (or drive the internal one when
+    // no NetworkRuntime is active, e.g. in tests).  This is safe even when
+    // NetworkRuntime drives the same loop from its dedicated thread.
     gateway_.run_once();
 
     for (;;) {
@@ -219,7 +222,7 @@ void HTTPGatewayActor::on_request(HTTPConnection* conn,
 
     int timeout_ms = static_cast<int>(
         std::chrono::duration_cast<std::chrono::milliseconds>(reply_timeout_).count());
-    gateway_.event_loop().run_after(
+    gateway_.event_loop()->run_after(
         [this, request_id] { on_timeout(request_id); }, timeout_ms);
 }
 

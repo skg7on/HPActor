@@ -237,9 +237,9 @@ TEST(NetworkFinal, TcpTransportUdsPathAndLoopback) {
     auto* transport = static_cast<net::TcpTransport*>(system.transport());
     ASSERT_NE(transport, nullptr);
 
-    // Access the EventLoop
+    // Access the EventLoop — it is started by NetworkRuntime::start().
     net::EventLoop& loop = transport->loop();
-    EXPECT_FALSE(loop.is_running());
+    EXPECT_TRUE(loop.is_running());
 
     // Check backend name (kqueue on macOS, epoll on Linux)
     const char* backend = loop.backend_name();

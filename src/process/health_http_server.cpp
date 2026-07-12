@@ -26,7 +26,7 @@ namespace hpactor::process {
 HealthHttpServer::HealthHttpServer(ActorContext* ctx, ActorSystem& system,
                                    const HealthHttpConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      gateway_(std::make_unique<net::HTTPGateway>()) {
+      gateway_(std::make_unique<net::HTTPGateway>(system.event_loop())) {
     (void)system_; // may be unused when health_state_ is wired; kept for API
                    // compat
 }
@@ -102,8 +102,8 @@ bool HealthHttpServer::run_once() {
     if (!listen_ok_)
         return false;
 
-    // Delegate to HTTPGateway's event loop poll — same pattern as
-    // HTTPGatewayActor: wait(100ms) + process_completions().
+    // Participate in the EventLoop — drives the internal loop when no
+    // NetworkRuntime is active, or participates in the shared one.
     gateway_->run_once();
     return true;
 }
