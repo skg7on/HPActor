@@ -182,3 +182,53 @@ jobs:
           name: accepted-wheel-set
           path: accepted/
           retention-days: 7
+
+  # ── Topology smoke ─────────────────────────────────────────────────────
+
+  topology-smoke:
+    name: topology smoke
+    needs: [wheel-acceptance]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        exclude:
+          # macOS ARM only (macos-14 is arm64, no separate x86_64 runner for 12.0)
+          - os: ubuntu-24.04-arm
+            python-version: "3.12"
+          - os: ubuntu-24.04-arm
+            python-version: "3.13"
+          - os: ubuntu-24.04-arm
+            python-version: "3.14"
+          # Reduce matrix to representative Python versions per OS
+          - os: ubuntu-24.04
+            python-version: "3.12"
+          - os: ubuntu-24.04
+            python-version: "3.13"
+          - os: ubuntu-24.04
+            python-version: "3.14"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: accepted-wheel-set
+          path: wheelhouse/
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install wheel
+        run: |
+          WHEEL=$(ls wheelhouse/hpactor-*.whl 2>/dev/null | head -1)
+          if [ -z "$WHEEL" ]; then
+            echo "No wheel found — skipping topology smoke"
+            exit 0
+          fi
+          python -m pip install "$WHEEL"
+
+      - name: Run topology smoke
+        run: |
+          python -m unittest bindings.python.tests.wheel.test_topology_smoke -v
