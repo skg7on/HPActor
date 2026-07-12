@@ -98,7 +98,7 @@ add_test(
 # Check 1: No ActorSystem*/&/Impl captures in router or stream runtime.
 set(_phase4_no_facade "ActorSystem*" "ActorSystem&" "Impl*" "Impl&")
 set(_phase4_sources
-    ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/net/inbound_frame_router.hpp
     ${CMAKE_SOURCE_DIR}/src/net/inbound_frame_router.cpp
     ${CMAKE_SOURCE_DIR}/include/hpactor/actor/stream/stream_runtime.hpp
     ${CMAKE_SOURCE_DIR}/src/actor/stream/stream_runtime.cpp)
@@ -271,7 +271,7 @@ endforeach()
 # Check 3: No type-erased cluster ownership in runtime/actor files.
 set(_phase7_no_void_cluster "unique_ptr<void" "cluster_cleanup_fn")
 set(_phase7_cluster_sources
-    ${CMAKE_SOURCE_DIR}/src/runtime/actor_system_impl.hpp
+    ${CMAKE_SOURCE_DIR}/include/hpactor/runtime/actor_system_impl.hpp
     ${CMAKE_SOURCE_DIR}/src/actor/system/actor_system.cpp)
 foreach(_file IN LISTS _phase7_cluster_sources)
     add_test(

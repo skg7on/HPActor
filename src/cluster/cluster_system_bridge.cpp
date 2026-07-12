@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../runtime/actor_system_impl.hpp"
 #include "cluster_runtime_impl.hpp"
+#include <hpactor/runtime/actor_system_impl.hpp>
 
 #include <hpactor/actor/system/actor_system.hpp>
 

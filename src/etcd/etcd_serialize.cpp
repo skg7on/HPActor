@@ -13,7 +13,7 @@
 // limitations under the License.
 // Note: This TU is compiled with -fexceptions for protobuf/JSON parsing.
 
-#include "etcd_serialize.hpp"
+#include <hpactor/etcd/etcd_serialize.hpp>
 
 #include <sstream>
 

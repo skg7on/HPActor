@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/actor/spawn/actor_type_registry.hpp>
+#include <hpactor/actor/system/actor_system.hpp>
 
-#include "runtime/actor_system_impl.hpp"
-#include <hpactor/actor/request/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/gateway/http_gateway_actor.hpp>
@@ -24,12 +22,12 @@
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 #include <hpactor/actor/local_actor.hpp>
+#include <hpactor/actor/request/ask_manager.hpp>
 #include <hpactor/actor/spawn/spawn_receiver.hpp>
 #include <hpactor/actor/stream/stream_receiver_actor.hpp>
+#include <hpactor/actor/stream/stream_runtime.hpp>
 #include <hpactor/actor/stream/stream_sender_actor.hpp>
 #include <hpactor/actor/stream/stream_types.hpp>
-#include <hpactor/actor/stream/stream_runtime.hpp>
-#include "net/inbound_frame_router.hpp"
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/fault/fault_macros.hpp>
@@ -40,8 +38,10 @@
 #include <hpactor/mailbox/outbound_tracker.hpp>
 #include <hpactor/mailbox/reliable_retry_policy.hpp>
 #include <hpactor/msg/outbound_delivery_tracker.hpp>
+#include <hpactor/net/inbound_frame_router.hpp>
 #include <hpactor/process/process_manager.hpp>
 #include <hpactor/runtime/actor_spawner.hpp>
+#include <hpactor/runtime/actor_system_impl.hpp>
 #include <hpactor/runtime/runtime_blueprint.hpp>
 #include <hpactor/runtime/runtime_blueprint_builder.hpp>
 #include <hpactor/runtime/runtime_builder.hpp>
@@ -419,10 +419,10 @@ ActorSystem::ActorSystem(const Config& config)
                    const StreamConfig& cfg,
                    const TraceContext& tc) noexcept -> Result {
                 auto* sys = static_cast<ActorSystem*>(ctx);
-                auto actor = sys->spawn<StreamSenderActor>(
-                    target, ActorAddress{}, stream_id, cfg, tc,
-                    /*is_local=*/true,
-                    /*state=*/nullptr);
+                auto actor = sys->spawn<StreamSenderActor>(target, ActorAddress{},
+                                                           stream_id, cfg, tc,
+                                                           /*is_local=*/true,
+                                                           /*state=*/nullptr);
                 if (actor)
                     return Result::make(actor.id());
                 return Result::make(
@@ -436,8 +436,7 @@ ActorSystem::ActorSystem(const Config& config)
                    const TraceContext& tc) noexcept -> Result {
                 auto* sys = static_cast<ActorSystem*>(ctx);
                 auto actor = sys->spawn<StreamReceiverActor>(
-                    target, stream_id, sender, peer,
-                    initial_window_bytes, tc);
+                    target, stream_id, sender, peer, initial_window_bytes, tc);
                 if (actor)
                     return Result::make(actor.id());
                 return Result::make(
@@ -459,8 +458,7 @@ ActorSystem::ActorSystem(const Config& config)
                         .messaging = *impl_->messaging_,
                         .rpc = *impl_->rpc_channel_,
                         .streams = *impl_->stream_runtime_,
-                        .metrics =
-                            impl_->observability_->metrics_ring_buffer(),
+                        .metrics = impl_->observability_->metrics_ring_buffer(),
                     },
                     router_cfg);
 
@@ -1535,10 +1533,9 @@ void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
             trace_ctx = parsed.value();
     }
 
-    auto receiver =
-        spawn<StreamReceiverActor>(receiver_id, open.stream_id(), sender_addr,
-                                   impl_->core.endpoint, open.initial_window_bytes(),
-                                   trace_ctx);
+    auto receiver = spawn<StreamReceiverActor>(
+        receiver_id, open.stream_id(), sender_addr, impl_->core.endpoint,
+        open.initial_window_bytes(), trace_ctx);
 
     if (receiver) {
         register_stream_receiver(open.stream_id(), receiver.id());
@@ -1675,11 +1672,10 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
     // Also register in StreamRuntime so the unified-sink on_ack() path
     // can find the sender actor when a remote ACK arrives.
     if (impl_->stream_runtime_) {
-        EndPoint peer = is_local_target
-                            ? impl_->core.endpoint
-                            : receiver_addr.endpoint;
-        impl_->stream_runtime_->register_sender_for_peer(
-            peer, stream_id, sender.id());
+        EndPoint peer =
+            is_local_target ? impl_->core.endpoint : receiver_addr.endpoint;
+        impl_->stream_runtime_->register_sender_for_peer(peer, stream_id,
+                                                         sender.id());
     }
 
     // Create StreamHandle with the delivery callback bound to this ActorSystem.
@@ -1689,10 +1685,9 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
     if (is_local_target) {
         // Local target: spawn StreamReceiverActor directly.
         ActorAddress sender_addr{impl_->core.endpoint, ActorType{0}, ActorId{0}, 0};
-        auto receiver =
-            spawn<StreamReceiverActor>(receiver_id, stream_id, sender_addr,
-                                       impl_->core.endpoint,
-                                       config.initial_window_bytes, trace_ctx);
+        auto receiver = spawn<StreamReceiverActor>(
+            receiver_id, stream_id, sender_addr, impl_->core.endpoint,
+            config.initial_window_bytes, trace_ctx);
         if (receiver) {
             register_stream_receiver(stream_id, receiver.id());
         }
@@ -1710,16 +1705,14 @@ ActorSystem::open_stream_impl(ActorId receiver_id, ActorAddress receiver_addr,
             // LocalEndpoint has port 0; the transport listens on tcp_port.
             EndPoint sender_ep = impl_->core.endpoint;
             if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&sender_ep)) {
-                sender_ep = Ipv4Endpoint{
-                    ipv4->addr,
-                    htons(impl_->core.config.tcp_port)};
+                sender_ep =
+                    Ipv4Endpoint{ipv4->addr, htons(impl_->core.config.tcp_port)};
             }
 
             net::StreamOpenFrame open;
             open.set_stream_id(stream_id);
             net::to_proto(open.mutable_sender(),
-                          ActorAddress{sender_ep, ActorType{0},
-                                       ActorId{0}, 0});
+                          ActorAddress{sender_ep, ActorType{0}, ActorId{0}, 0});
             net::to_proto(open.mutable_receiver(), receiver_addr);
             open.set_initial_window_bytes(config.initial_window_bytes);
             if (trace_ctx.valid()) {
