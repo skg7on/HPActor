@@ -237,8 +237,7 @@ TEST(NetworkFinal, TcpTransportUdsPathAndLoopback) {
     auto* transport = static_cast<net::TcpTransport*>(system.transport());
     ASSERT_NE(transport, nullptr);
 
-    // Access the EventLoop — it is now started by NetworkRuntime::start()
-    // as Stage 0, so is_running() is true.
+    // Access the EventLoop — it is started by NetworkRuntime::start().
     net::EventLoop& loop = transport->loop();
     EXPECT_TRUE(loop.is_running());
 

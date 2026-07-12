@@ -250,8 +250,8 @@ TEST(NetworkWorkflow, EventLoopTimerIntegration) {
     auto* transport = system.transport();
     ASSERT_NE(transport, nullptr);
 
-    // Access the underlying EventLoop — it is now started by
-    // NetworkRuntime::start() as Stage 0, so is_running() is true.
+    // Access the underlying EventLoop — it is started by
+    // NetworkRuntime::start() so is_running() is true.
     auto* tcp = static_cast<net::TcpTransport*>(transport);
     net::EventLoop& loop = tcp->loop();
     EXPECT_TRUE(loop.is_running());
@@ -268,8 +268,7 @@ TEST(NetworkWorkflow, EventLoopTimerIntegration) {
     EXPECT_GT(rep_handle, 0u);
     loop.cancel_timer(rep_handle);
 
-    // The EventLoop lifecycle is now managed by NetworkRuntime.
-    // Stopping it directly and shutting down the system are sufficient.
+    // The EventLoop lifecycle is managed by NetworkRuntime.
     loop.stop();
 
     auto result = system.shutdown();
