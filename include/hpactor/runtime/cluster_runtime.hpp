@@ -52,6 +52,14 @@ struct ClusterStopRequest {
 /// \brief Dependencies injected into a cluster runtime implementation.
 struct ClusterRuntimeDependencies {
     std::string node_id;
+    std::string leadership_mode = "local";
+    std::string leadership_backend = "etcd";
+    std::vector<std::string> etcd_endpoints;
+    std::string etcd_key_prefix = "/hpactor";
+    uint32_t etcd_request_timeout_ms = 1000;
+    std::string etcd_tls_ca_file;
+    std::string etcd_tls_cert_file;
+    std::string etcd_tls_key_file;
 };
 
 /// \brief Typed control-plane boundary for the cluster subsystem.

@@ -44,7 +44,13 @@ void SingletonManagerCore::on_node_state_change(const std::vector<std::string>& 
             }
             if (record.state == SingletonState::Activating) {
                 record.state = SingletonState::Active;
-                record.identity.fencing_token++;
+                // Prefer backend-issued token; fall back to local increment
+                uint64_t backend_token = election_->get_fencing_token(name);
+                if (backend_token > 0) {
+                    record.identity.fencing_token = backend_token;
+                } else {
+                    record.identity.fencing_token++;
+                }
             }
         } else {
             // Self not winner — go to Standby if currently Active/Draining

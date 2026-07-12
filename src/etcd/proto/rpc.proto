@@ -1,0 +1,192 @@
+// =============================================================================
+// src/etcd/proto/rpc.proto — etcd v3 RPC services (KV, Lease, Watch)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// =============================================================================
+
+syntax = "proto3";
+package etcdserverpb;
+
+import "kv.proto";
+
+// -------------------------------------------------------------------
+// Common
+// -------------------------------------------------------------------
+
+message ResponseHeader {
+  uint64 cluster_id = 1;
+  uint64 member_id = 2;
+  int64 revision = 3;
+  uint64 raft_term = 4;
+}
+
+// -------------------------------------------------------------------
+// KV service
+// -------------------------------------------------------------------
+
+service KV {
+  rpc Range(RangeRequest) returns (RangeResponse) {}
+  rpc Txn(TxnRequest) returns (TxnResponse) {}
+}
+
+message RangeRequest {
+  enum SortOrder { NONE = 0; ASCEND = 1; DESCEND = 2; }
+  enum SortTarget { KEY = 0; VERSION = 1; CREATE = 2; MOD = 3; VALUE = 4; }
+
+  bytes key = 1;
+  bytes range_end = 2;
+  int64 limit = 3;
+  int64 revision = 4;
+  SortOrder sort_order = 5;
+  SortTarget sort_target = 6;
+  bool serializable = 7;
+  bool keys_only = 8;
+  bool count_only = 9;
+  int64 min_mod_revision = 10;
+  int64 max_mod_revision = 11;
+  int64 min_create_revision = 12;
+  int64 max_create_revision = 13;
+}
+
+message RangeResponse {
+  ResponseHeader header = 1;
+  repeated mvccpb.KeyValue kvs = 2;
+  bool more = 3;
+  int64 count = 4;
+}
+
+message Compare {
+  enum CompareResult { EQUAL = 0; GREATER = 1; LESS = 2; NOT_EQUAL = 3; }
+  enum CompareTarget { VERSION = 0; CREATE = 1; MOD = 2; VALUE = 3; LEASE = 4; }
+
+  CompareResult result = 1;
+  CompareTarget target = 2;
+  bytes key = 3;
+  oneof target_union {
+    int64 version = 4;
+    int64 create_revision = 5;
+    int64 mod_revision = 6;
+    bytes value = 7;
+    int64 lease = 8;
+  }
+  bytes range_end = 64;
+}
+
+message RequestOp {
+  oneof request {
+    RangeRequest request_range = 1;
+    TxnRequest request_put = 2;      // reusing TxnRequest for put operations
+    RangeRequest request_delete_range = 3;
+    TxnRequest request_txn = 4;
+  }
+}
+
+message ResponseOp {
+  oneof response {
+    RangeResponse response_range = 1;
+    TxnResponse response_put = 2;    // reusing TxnResponse for put operations
+    RangeResponse response_delete_range = 3;
+    TxnResponse response_txn = 4;
+  }
+}
+
+message TxnRequest {
+  repeated Compare compare = 1;
+  repeated RequestOp success = 2;
+  repeated RequestOp failure = 3;
+}
+
+message TxnResponse {
+  ResponseHeader header = 1;
+  bool succeeded = 2;
+  repeated ResponseOp responses = 3;
+}
+
+// -------------------------------------------------------------------
+// Lease service
+// -------------------------------------------------------------------
+
+service Lease {
+  rpc LeaseGrant(LeaseGrantRequest) returns (LeaseGrantResponse) {}
+  rpc LeaseRevoke(LeaseRevokeRequest) returns (LeaseRevokeResponse) {}
+  rpc LeaseKeepAlive(LeaseKeepAliveRequest) returns (LeaseKeepAliveResponse) {}
+}
+
+message LeaseGrantRequest {
+  int64 TTL = 1;
+  int64 ID = 2;
+}
+
+message LeaseGrantResponse {
+  ResponseHeader header = 1;
+  int64 ID = 2;
+  int64 TTL = 3;
+  string error = 4;
+}
+
+message LeaseRevokeRequest {
+  int64 ID = 1;
+}
+
+message LeaseRevokeResponse {
+  ResponseHeader header = 1;
+}
+
+message LeaseKeepAliveRequest {
+  int64 ID = 1;
+}
+
+message LeaseKeepAliveResponse {
+  ResponseHeader header = 1;
+  int64 ID = 2;
+  int64 TTL = 3;
+}
+
+// -------------------------------------------------------------------
+// Watch service
+// -------------------------------------------------------------------
+
+service Watch {
+  rpc Watch(stream WatchRequest) returns (stream WatchResponse) {}
+}
+
+message WatchCreateRequest {
+  bytes key = 1;
+  bytes range_end = 2;
+  int64 start_revision = 3;
+  bool progress_notify = 4;
+  enum FilterType { NOPUT = 0; NODELETE = 1; }
+  repeated FilterType filters = 5;
+  bool prev_kv = 6;
+  int64 watch_id = 7;
+  bytes fragment = 8;
+}
+
+message WatchRequest {
+  oneof request_union {
+    WatchCreateRequest create_request = 1;
+    WatchCreateRequest cancel_request = 2;
+    WatchCreateRequest progress_request = 3;
+  }
+}
+
+message WatchResponse {
+  ResponseHeader header = 1;
+  int64 watch_id = 2;
+  bool created = 3;
+  bool canceled = 4;
+  int64 compact_revision = 5;
+  int64 cancel_reason = 6;
+  bytes fragment = 7;
+  repeated mvccpb.Event events = 11;
+}

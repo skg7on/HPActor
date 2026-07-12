@@ -226,9 +226,8 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
 
     // 3. Decode the response.
     if (*done && !response_body->empty()) {
-        bool parse_ok = resp.ParseFromArray(
-            response_body->data(), static_cast<int>(response_body->size()));
-        (void)parse_ok;
+        (void)resp.ParseFromArray(response_body->data(),
+                                  static_cast<int>(response_body->size()));
     }
 
     // 4. If the request failed (timeout or transport error), force a

@@ -16,6 +16,7 @@
 
 #include <hpactor/cluster/sharding/shard_coordinator.hpp>
 #include <hpactor/cluster/sharding/shard_resolver.hpp>
+#include <hpactor/cluster/singleton/leadership_lease.hpp>
 
 #include <memory>
 #include <string>
@@ -52,8 +53,29 @@ class ShardCoordinatorActor {
         return core_.get_shard_owner(shard);
     }
 
+    // DEPRECATED: Use rebalance_with_token() for production.
+    // This method is kept for tests and internal use only.
     void rebalance(const std::vector<std::string>& alive_nodes) {
         core_.rebalance(alive_nodes);
+    }
+
+    // ── Leadership lease management (CLU-003 integration) ──────────
+
+    /// \brief Update the active leadership lease for token-gated operations.
+    void on_lease_update(const singleton::LeadershipLease& lease) {
+        core_.set_active_lease(lease);
+    }
+
+    /// \brief Rebalance shards with token validation.
+    ///
+    /// \return true if token is valid and rebalance was executed.
+    bool rebalance_with_token(const std::vector<std::string>& alive_nodes,
+                              uint64_t fencing_token) {
+        if (!core_.validate_token(fencing_token, "shard-coordinator")) {
+            return false;
+        }
+        core_.rebalance(alive_nodes);
+        return true;
     }
 
   private:
