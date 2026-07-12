@@ -73,6 +73,12 @@ monitoring, and operating HPActor-based systems.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Python Binding
+
+   python/topology
+
+.. toctree::
+   :maxdepth: 2
    :caption: Appendix
 
    limitations

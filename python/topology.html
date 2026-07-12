@@ -1,0 +1,506 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python Declarative Topology &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Limitations &amp; Known Gaps" href="../limitations.html" />
+    <link rel="prev" title="Production Deployment" href="../best-practices/deployment.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Binding</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Python Declarative Topology</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#behavior-reference-syntax">Behavior Reference Syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#actor-arguments">Actor Arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-allowlist">Module Allowlist</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#actorsystem-from-topology">ActorSystem.from_topology()</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ActorSystem.from_topology"><code class="docutils literal notranslate"><span class="pre">ActorSystem.from_topology()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#transactional-commit-and-rollback">Transactional Commit and Rollback</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#errors">Errors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#TopologyPhase"><code class="docutils literal notranslate"><span class="pre">TopologyPhase</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#TopologyError"><code class="docutils literal notranslate"><span class="pre">TopologyError</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#TopologyError.phase"><code class="docutils literal notranslate"><span class="pre">TopologyError.phase</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#TopologyError.actor_id"><code class="docutils literal notranslate"><span class="pre">TopologyError.actor_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#TopologyError.behavior"><code class="docutils literal notranslate"><span class="pre">TopologyError.behavior</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#TopologyError.error_code"><code class="docutils literal notranslate"><span class="pre">TopologyError.error_code</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#execution-domain-rules">Execution-Domain Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#security-model">Security Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#known-limitations">Known Limitations</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Python Declarative Topology</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/python/topology.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="python-declarative-topology">
+<h1>Python Declarative Topology<a class="headerlink" href="#python-declarative-topology" title="Link to this heading"></a></h1>
+<p>HPActor supports declaring Python actors alongside C++ actors in the existing
+<code class="docutils literal notranslate"><span class="pre">[[actors]]</span></code> TOML topology.  A namespaced behavior reference tells the
+bootstrap engine to import, validate, construct, and start a Python actor
+class on the dedicated Python runtime thread.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Python topology is <strong>trusted executable configuration</strong>.  Importing a
+module listed in the topology file executes its top-level code.
+Applications must keep the topology file and installed packages under
+the same deployment trust controls as native executable configuration.</p>
+<p>This is <strong>not</strong> a sandbox.</p>
+</div>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p>Define an actor class decorated with <code class="docutils literal notranslate"><span class="pre">&#64;actor(&quot;name&quot;)</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">hpactor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Actor</span><span class="p">,</span> <span class="n">actor</span>
+
+<span class="nd">@actor</span><span class="p">(</span><span class="s2">&quot;echo&quot;</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EchoActor</span><span class="p">(</span><span class="n">Actor</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">prefix</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">on_start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">behavior</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">hpactor</span><span class="w"> </span><span class="kn">import</span> <span class="n">Behavior</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">Behavior</span><span class="p">()</span>
+        <span class="n">b</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;StringValue&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_echo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">b</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_echo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">msg</span><span class="p">)()</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">+</span> <span class="n">msg</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">await</span> <span class="n">ctx</span><span class="o">.</span><span class="n">reply</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Declare the actor in TOML:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.python]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">topology_start_timeout_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30000</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;echo&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;python:my_app.actors:EchoActor&quot;</span>
+<span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">prefix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;prod:&quot;</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+</li>
+<li><p>Supply an application-side module allowlist and load:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">hpactor._system</span><span class="w"> </span><span class="kn">import</span> <span class="n">ActorSystem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hpactor._topology</span><span class="w"> </span><span class="kn">import</span> <span class="n">PythonTopologyPolicy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hpactor._messages</span><span class="w"> </span><span class="kn">import</span> <span class="n">MessageRegistry</span>
+
+<span class="n">registry</span> <span class="o">=</span> <span class="n">MessageRegistry</span><span class="p">()</span>
+<span class="n">registry</span><span class="o">.</span><span class="n">freeze</span><span class="p">()</span>
+
+<span class="n">system</span> <span class="o">=</span> <span class="n">ActorSystem</span><span class="o">.</span><span class="n">from_topology</span><span class="p">(</span>
+    <span class="s2">&quot;config/topology.toml&quot;</span><span class="p">,</span>
+    <span class="n">messages</span><span class="o">=</span><span class="n">registry</span><span class="p">,</span>
+    <span class="n">policy</span><span class="o">=</span><span class="n">PythonTopologyPolicy</span><span class="p">(</span>
+        <span class="n">allowed_module_prefixes</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;my_app.actors&quot;</span><span class="p">,),</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="k">async</span> <span class="k">with</span> <span class="n">system</span><span class="p">:</span>
+    <span class="n">echo</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="s2">&quot;echo&quot;</span><span class="p">)</span>
+    <span class="c1"># ... send / ask ...</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="behavior-reference-syntax">
+<h2>Behavior Reference Syntax<a class="headerlink" href="#behavior-reference-syntax" title="Link to this heading"></a></h2>
+<pre>
+<strong id="grammar-token-behavior">behavior</strong> ::= &quot;python:&quot; module &quot;:&quot; qualname
+<strong id="grammar-token-module">module</strong>   ::= segment (&quot;.&quot; segment)*
+<strong id="grammar-token-qualname">qualname</strong> ::= segment (&quot;.&quot; segment)*
+<strong id="grammar-token-segment">segment</strong>  ::= [A-Za-z_] [A-Za-z0-9_]*
+</pre>
+<p>The <code class="docutils literal notranslate"><span class="pre">module</span></code> and every dotted segment must match <code class="docutils literal notranslate"><span class="pre">[A-Za-z_][A-Za-z0-9_]*</span></code>.
+<code class="docutils literal notranslate"><span class="pre">qualname</span></code> uses the same grammar so module-level classes and nested classes
+are representable.  Empty segments, relative imports, slashes, backslashes,
+whitespace, <code class="docutils literal notranslate"><span class="pre">&lt;locals&gt;</span></code>, NUL bytes, and more than one module/class separator
+are rejected.</p>
+<p><strong>Limits:</strong></p>
+</section>
+<section id="actor-arguments">
+<h2>Actor Arguments<a class="headerlink" href="#actor-arguments" title="Link to this heading"></a></h2>
+<p>TOML actor arguments are passed to the Python constructor as keyword
+arguments:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">prefix</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;prod&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">retries</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;3&quot;</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">EchoActor</span><span class="p">(</span><span class="n">Actor</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">retries</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span><span class="p">):</span>
+        <span class="o">...</span>
+</pre></div>
+</div>
+<p>The existing TOML parser canonicalizes integer, floating-point, and Boolean
+scalar values into strings.  Arrays, nested inline tables, byte strings, and
+positional arguments are rejected.</p>
+<p>Keys must be valid Python identifiers, must not start with <code class="docutils literal notranslate"><span class="pre">__hpactor_</span></code>,
+and must be at most 128 UTF-8 bytes.  Actor argument values are never
+emitted to errors, logs, metrics, CLI, or health snapshots — they may
+contain secrets.</p>
+<p>Constructor signature validation uses <code class="docutils literal notranslate"><span class="pre">inspect.signature(actor_class).bind(**args)</span></code>
+without constructing the actor.  A required positional-only parameter,
+missing required keyword, or unexpected keyword fails before any actor is
+published.</p>
+</section>
+<section id="module-allowlist">
+<h2>Module Allowlist<a class="headerlink" href="#module-allowlist" title="Link to this heading"></a></h2>
+<p>Declaring a Python actor in TOML requires an application-supplied
+<code class="docutils literal notranslate"><span class="pre">PythonTopologyPolicy</span></code>.  The topology file <strong>cannot</strong> widen the allowlist.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">hpactor._topology</span><span class="w"> </span><span class="kn">import</span> <span class="n">PythonTopologyPolicy</span>
+
+<span class="n">policy</span> <span class="o">=</span> <span class="n">PythonTopologyPolicy</span><span class="p">(</span>
+    <span class="n">allowed_module_prefixes</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;my_app.actors&quot;</span><span class="p">,</span> <span class="s2">&quot;my_app.workers&quot;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>An allowed prefix matches the exact module <strong>or</strong> any child separated by
+a dot:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">my_app.actors</span></code> permits <code class="docutils literal notranslate"><span class="pre">my_app.actors</span></code> and <code class="docutils literal notranslate"><span class="pre">my_app.actors.billing</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">my_app.actors</span></code> does <strong>not</strong> permit <code class="docutils literal notranslate"><span class="pre">my_app.actors_evil</span></code></p></li>
+</ul>
+<p>The policy must be non-empty when the topology contains any Python behavior.
+Prefixes use the same absolute module grammar as behavior references.</p>
+<p>The policy fingerprint (FVN-1a 64-bit over sorted, length-prefixed prefix
+bytes) is included in the runtime blueprint fingerprint.  A policy change
+requires a restart.</p>
+</section>
+<section id="actorsystem-from-topology">
+<h2>ActorSystem.from_topology()<a class="headerlink" href="#actorsystem-from-topology" title="Link to this heading"></a></h2>
+<dl class="py method">
+<dt class="sig sig-object py" id="ActorSystem.from_topology">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">ActorSystem.</span></span><span class="sig-name descname"><span class="pre">from_topology</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">policy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ActorSystem.from_topology" title="Link to this definition"></a></dt>
+<dd><p>Construct a system for declarative topology bootstrap.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Absolute path to the TOML topology file.</p></li>
+<li><p><strong>messages</strong> (<em>MessageRegistry</em>) – Frozen protobuf message registry.</p></li>
+<li><p><strong>policy</strong> (<em>PythonTopologyPolicy</em>) – Application module allowlist.</p></li>
+<li><p><strong>config</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Optional Python binding configuration overrides.</p></li>
+</ul>
+</dd>
+</dl>
+<p><code class="docutils literal notranslate"><span class="pre">from_topology()</span></code> is <strong>side-effect free</strong> — it stores the path, policy,
+and manifest.  No threads, file descriptors, imports, or native state
+are created until <code class="docutils literal notranslate"><span class="pre">__aenter__</span></code> is called.</p>
+</dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">__aenter__</span></code> performs the full bootstrap in order:</p>
+<ol class="arabic simple">
+<li><p>Construct and start the native runtime.</p></li>
+<li><p>Parse TOML natively and extract Python actor descriptors.</p></li>
+<li><p>Preflight the factory manifest on the dedicated Python loop:
+import each referenced module once, resolve qualified class names,
+validate <code class="docutils literal notranslate"><span class="pre">Actor</span></code> subclasses, and bind constructor signatures.</p></li>
+<li><p>Bind factory tokens to native prepared topology specs.</p></li>
+<li><p>Start the Python runtime thread with the frozen manifest.</p></li>
+<li><p>Execute the topology bootstrap transaction:
+spawn bridge actors, push <code class="docutils literal notranslate"><span class="pre">TopologyInstall</span></code> dispatches, and await
+readiness from the Python runtime.</p></li>
+<li><p>On any failure, roll back all actors in reverse order.</p></li>
+</ol>
+<p>After <code class="docutils literal notranslate"><span class="pre">__aenter__</span></code> returns, the system is in <code class="docutils literal notranslate"><span class="pre">Running</span></code> state and
+committed actor names are available:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">with</span> <span class="n">system</span><span class="p">:</span>
+    <span class="n">echo</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="s2">&quot;echo&quot;</span><span class="p">)</span>  <span class="c1"># raises KeyError if not found</span>
+</pre></div>
+</div>
+</section>
+<section id="transactional-commit-and-rollback">
+<h2>Transactional Commit and Rollback<a class="headerlink" href="#transactional-commit-and-rollback" title="Link to this heading"></a></h2>
+<p>Topology startup is an <strong>all-or-none transaction</strong>:</p>
+<ol class="arabic">
+<li><p>No actor name is externally visible until <strong>every</strong> actor is ready.</p></li>
+<li><p>For each Python actor, the native startup thread:
+a. Reserves a readiness slot (keyed by factory token).
+b. Spawns a <code class="docutils literal notranslate"><span class="pre">PythonBridgeActor</span></code> (the native proxy).
+c. Pushes a <code class="docutils literal notranslate"><span class="pre">TopologyInstall</span></code> dispatch to the Python runtime queue.
+d. Awaits the <code class="docutils literal notranslate"><span class="pre">TopologyReady</span></code> / <code class="docutils literal notranslate"><span class="pre">TopologyFailed</span></code> completion</p>
+<blockquote>
+<div><p>(with a per-actor deadline from <code class="docutils literal notranslate"><span class="pre">topology_start_timeout_ms</span></code>).</p>
+</div></blockquote>
+</li>
+<li><p>The Python runtime thread handles each <code class="docutils literal notranslate"><span class="pre">TopologyInstall</span></code> dispatch:
+a. Constructs <code class="docutils literal notranslate"><span class="pre">actor_class(**frozen_args)</span></code>.
+b. Freezes the behavior against the frozen message registry.
+c. Creates a runner and installs it in the dispatch coordinator.
+d. Calls <code class="docutils literal notranslate"><span class="pre">await</span> <span class="pre">actor.on_start()</span></code>.
+e. Signals native readiness via <code class="docutils literal notranslate"><span class="pre">complete_topology_actor()</span></code>.</p></li>
+<li><p>If every actor is ready, the transaction commits.</p></li>
+<li><p>If <strong>any</strong> actor fails — import, class resolution, constructor,
+<code class="docutils literal notranslate"><span class="pre">on_start()</span></code>, capacity, timeout, or bridge spawn — the transaction
+rolls back <strong>every</strong> actor in reverse order:</p>
+<ul class="simple">
+<li><p>Cancels in-progress <code class="docutils literal notranslate"><span class="pre">on_start()</span></code> calls.</p></li>
+<li><p>Runs <code class="docutils literal notranslate"><span class="pre">on_stop()</span></code> for actors whose <code class="docutils literal notranslate"><span class="pre">on_start()</span></code> succeeded.</p></li>
+<li><p>Removes runners and factory records.</p></li>
+<li><p>Stops bridge actors and drains their mailboxes.</p></li>
+</ul>
+<p>The primary error is preserved; secondary rollback failures accumulate
+bounded error bits and structured logs.</p>
+</li>
+<li><p>After a failed startup, no actor names, directory entries, scheduler
+registrations, bridges, runners, factory records, threads, or file
+descriptors remain.</p></li>
+</ol>
+</section>
+<section id="errors">
+<h2>Errors<a class="headerlink" href="#errors" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="TopologyPhase">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">TopologyPhase</span></span><a class="headerlink" href="#TopologyPhase" title="Link to this definition"></a></dt>
+<dd><p>Phases of the topology lifecycle:</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="TopologyError">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">TopologyError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">HPActorError</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#TopologyError" title="Link to this definition"></a></dt>
+<dd><p>Error during declarative topology loading.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TopologyError.phase">
+<span class="sig-name descname"><span class="pre">phase</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#TopologyPhase" title="TopologyPhase"><span class="pre">TopologyPhase</span></a></span><a class="headerlink" href="#TopologyError.phase" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TopologyError.actor_id">
+<span class="sig-name descname"><span class="pre">actor_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><a class="headerlink" href="#TopologyError.actor_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TopologyError.behavior">
+<span class="sig-name descname"><span class="pre">behavior</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><a class="headerlink" href="#TopologyError.behavior" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TopologyError.error_code">
+<span class="sig-name descname"><span class="pre">error_code</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><a class="headerlink" href="#TopologyError.error_code" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="execution-domain-rules">
+<h2>Execution-Domain Rules<a class="headerlink" href="#execution-domain-rules" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>TOML parsing</strong> — native C++ only.  No <code class="docutils literal notranslate"><span class="pre">tomllib</span></code> or third-party
+TOML library in Python.</p></li>
+<li><p><strong>Python imports, class objects, factory records, actor instances,
+behaviors, ``on_start()``, ``on_stop()``</strong> — dedicated Python
+asyncio thread only.</p></li>
+<li><p><strong>Scheduler workers</strong> — execute only <code class="docutils literal notranslate"><span class="pre">PythonBridgeActor</span></code> and
+value-only HPActor operations.  Never acquire the GIL.</p></li>
+<li><p><strong>Cross-thread records</strong> — strings, IDs, fingerprints, generations,
+factory tokens, status codes, and bounded details only.  No
+<code class="docutils literal notranslate"><span class="pre">PyObject*</span></code> or borrowed Python memory.</p></li>
+<li><p><strong>Bridge queues</strong> — bounded lock-free MPSC rings.  Rejected enqueue
+fails the topology transaction.</p></li>
+<li><p><strong>Stale records</strong> — every record carries native-system generation and
+actor generation.  Mismatches are discarded and counted.</p></li>
+</ul>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.python]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">topology_start_timeout_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30000</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">topology_start_timeout_ms</span></code> (default 30,000, range 100–300,000) is a
+per-actor deadline guard.  It is <strong>not</strong> a sleep-based progress check.</p>
+<p>Topology configuration changes are <code class="docutils literal notranslate"><span class="pre">RestartRequired</span></code>.  There is no
+hot reload for module references, classes, or actor membership.</p>
+</section>
+<section id="security-model">
+<h2>Security Model<a class="headerlink" href="#security-model" title="Link to this heading"></a></h2>
+<p>Python topology is <strong>trusted executable configuration</strong>:</p>
+<ul class="simple">
+<li><p>Uses <code class="docutils literal notranslate"><span class="pre">importlib.import_module()</span></code> with absolute names only.</p></li>
+<li><p>Never accepts a filesystem path or URL.</p></li>
+<li><p>Never mutates <code class="docutils literal notranslate"><span class="pre">sys.path</span></code>.</p></li>
+<li><p>Never calls package entry-point discovery.</p></li>
+<li><p>Never evaluates an expression.</p></li>
+<li><p>Resolves only validated attribute segments with <code class="docutils literal notranslate"><span class="pre">getattr()</span></code>.</p></li>
+<li><p>Never logs argument values.</p></li>
+</ul>
+<p>This is not a sandbox.  Importing an allowed module executes its top-level
+code.  Applications must keep the topology and allowed package installation
+under the same deployment trust controls as native executable configuration.</p>
+</section>
+<section id="known-limitations">
+<h2>Known Limitations<a class="headerlink" href="#known-limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>TOML only</strong> — binary topology (<code class="docutils literal notranslate"><span class="pre">.hpactor</span></code> compiled format) does not
+support Python behaviors.  Attempting to load a binary topology
+containing Python actors raises <code class="docutils literal notranslate"><span class="pre">TopologyError</span></code>.</p></li>
+<li><p><strong>Startup only</strong> — Python actors declared in TOML are created at system
+startup.  Dynamic children must use <code class="docutils literal notranslate"><span class="pre">ActorSystem.spawn()</span></code> or
+<code class="docutils literal notranslate"><span class="pre">ActorContext.spawn()</span></code>.</p></li>
+<li><p><strong>Local process only</strong> — Python actors run in-process.  Remote
+placement of Python actors is not supported.</p></li>
+<li><p><strong>No hot reload</strong> — topology changes require a restart.  Live class
+replacement, module reloading, and actor-tree diffing are not supported.</p></li>
+<li><p><strong>No inferred TypeTags</strong> — protobuf <code class="docutils literal notranslate"><span class="pre">TypeTag</span></code> values are not
+registered from topology.  Use an explicit <code class="docutils literal notranslate"><span class="pre">MessageRegistry</span></code>.</p></li>
+<li><p><strong>Imported modules persist</strong> — <code class="docutils literal notranslate"><span class="pre">sys.modules</span></code> is not cleaned after a
+failed startup.  Python provides no safe general module-unload contract.
+All binding-owned classes, factory records, actors, runners, bridges,
+and callbacks are released.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../best-practices/deployment.html" class="btn btn-neutral float-left" title="Production Deployment" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../limitations.html" class="btn btn-neutral float-right" title="Limitations &amp; Known Gaps" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
