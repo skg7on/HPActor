@@ -104,7 +104,11 @@
 <li class="toctree-l2"><a class="reference internal" href="#platform-support">Platform Support</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#scalability-limits">Scalability Limits</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#wire-protocol">Wire Protocol</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#language-bindings">Language Bindings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#language-bindings">Language Bindings</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#python-alpha-phase-1d">Python (Alpha — Phase 1D)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#other-languages">Other Languages</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#coroutine-limitations">Coroutine Limitations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#test-coverage">Test Coverage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#roadmap">Roadmap</a></li>
@@ -325,9 +329,26 @@ version. There is no protocol negotiation during connection handshake.</p></li>
 </section>
 <section id="language-bindings">
 <h2>Language Bindings<a class="headerlink" href="#language-bindings" title="Link to this heading"></a></h2>
-<p>HPActor is C++20 only. There are no official bindings for Python, Java,
-Go, Rust, or other languages. Non-C++ services must interact via the
-HTTP gateway or CLI, not as native actors.</p>
+<section id="python-alpha-phase-1d">
+<h3>Python (Alpha — Phase 1D)<a class="headerlink" href="#python-alpha-phase-1d" title="Link to this heading"></a></h3>
+<p>HPActor provides an official alpha Python binding for CPython 3.11 and
+newer on manylinux_2_28 x86_64/ARM64 and macOS 12.0 x86_64/ARM64.
+The binding uses generated protobuf messages and explicit TypeTags.</p>
+<p><strong>In scope (Phase 1D):</strong> in-process actor API, asyncio execution,
+delivery semantics, supervision, metrics, tracing, CLI, health checks,
+and graceful shutdown.</p>
+<p><strong>Not yet supported:</strong> Windows, musllinux, PyPy, free-threaded
+CPython, native remote-node participation, declarative topology
+(Phase 1E), and external SDK clients (Phase 2).</p>
+<p>Install with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">hpactor</span></code>.  See the Python manual at
+<code class="docutils literal notranslate"><span class="pre">docs/manual/python/</span></code> for the quick-start guide and API reference.</p>
+</section>
+<section id="other-languages">
+<h3>Other Languages<a class="headerlink" href="#other-languages" title="Link to this heading"></a></h3>
+<p>Java, Go, Rust, and other languages remain unsupported. Non-C++
+services must interact via the HTTP gateway or CLI, not as native
+actors.</p>
+</section>
 </section>
 <section id="coroutine-limitations">
 <h2>Coroutine Limitations<a class="headerlink" href="#coroutine-limitations" title="Link to this heading"></a></h2>
