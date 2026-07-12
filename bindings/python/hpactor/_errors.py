@@ -43,3 +43,24 @@ class AskCancelledError(HPActorError):
 
 class SystemClosedError(HPActorError):
     """Operation attempted after the ActorSystem was closed."""
+
+
+class NativeBindingUnavailable(HPActorError):
+    """The native _hpactor extension module is not available.
+
+    Raised when accessing a native-only name (e.g., ``ActorSystem``) from
+    the universal wheel or an environment without a compiled native module.
+    """
+
+    def __init__(self, *, name: str, implementation: str = "", platform: str = ""):
+        msg = (
+            f"Native binding '{name}' is unavailable on "
+            f"{implementation or 'unknown'}/{platform or 'unknown'}. "
+            f"Install a native wheel for CPython 3.11+ on "
+            f"Linux (x86_64, ARM64) or macOS (x86_64, ARM64) to use "
+            f"the in-process actor runtime."
+        )
+        super().__init__(msg)
+        self.name = name
+        self.implementation = implementation
+        self.platform = platform

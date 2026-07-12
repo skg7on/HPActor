@@ -1,0 +1,91 @@
+# Copyright 2026 HPActor Contributors (Apache 2.0)
+"""External client SDK for HPActor health, metrics, gateway, and CLI surfaces."""
+
+from .bundle import AsyncHPActorClient, HPActorClient
+from .cli import AsyncCliClient, CliClient
+from .config import (
+    CliClientConfig,
+    GatewayClientConfig,
+    HealthClientConfig,
+    HPActorClientConfig,
+    HttpEndpointConfig,
+    HttpLimits,
+    HttpTimeouts,
+    MetricsClientConfig,
+    RetryPolicy,
+)
+from .errors import (
+    ClientClosedError,
+    CliCommandError,
+    ConfigurationError,
+    ConnectionError,
+    EventLoopMismatchError,
+    HPActorClientError,
+    HealthCheckFailed,
+    HttpResponseError,
+    InsecureTransportError,
+    OperationTimeout,
+    ProtocolError,
+    ResponseLimitError,
+    TransportError,
+    UnsupportedCapability,
+)
+from .gateway import AsyncGatewayClient, GatewayClient
+from .health import AsyncHealthClient, HealthClient
+from .metrics import AsyncMetricsClient, MetricsClient
+from .models import (
+    Capability,
+    HealthCheck,
+    HealthProbe,
+    HealthResult,
+    HealthState,
+    MetricsNotModified,
+    MetricsSnapshot,
+    RequestEvent,
+    TransportOwnership,
+)
+
+__all__ = [
+    "AsyncCliClient",
+    "AsyncGatewayClient",
+    "AsyncHealthClient",
+    "AsyncHPActorClient",
+    "AsyncMetricsClient",
+    "Capability",
+    "CliClient",
+    "CliClientConfig",
+    "CliCommandError",
+    "ClientClosedError",
+    "ConfigurationError",
+    "ConnectionError",
+    "EventLoopMismatchError",
+    "GatewayClient",
+    "GatewayClientConfig",
+    "HPActorClient",
+    "HPActorClientConfig",
+    "HPActorClientError",
+    "HealthCheck",
+    "HealthCheckFailed",
+    "HealthClient",
+    "HealthClientConfig",
+    "HealthProbe",
+    "HealthResult",
+    "HealthState",
+    "HttpEndpointConfig",
+    "HttpLimits",
+    "HttpResponseError",
+    "HttpTimeouts",
+    "InsecureTransportError",
+    "MetricsClient",
+    "MetricsClientConfig",
+    "MetricsNotModified",
+    "MetricsSnapshot",
+    "OperationTimeout",
+    "ProtocolError",
+    "RequestEvent",
+    "ResponseLimitError",
+    "RetryPolicy",
+    "TransportError",
+    "TransportOwnership",
+    "UnsupportedCapability",
+]
