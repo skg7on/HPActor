@@ -1,0 +1,21 @@
+{
+  "_comment": "Binary dependency policy for hpactor wheel repair and audit.",
+  "required_private_libraries": ["hpactor_lib", "hpactor_proto"],
+  "forbidden_unresolved_prefixes": ["hpactor", "protobuf", "absl", "ssl", "crypto"],
+  "forbidden_absolute_roots": [
+    "/home/",
+    "/Users/",
+    "/opt/homebrew",
+    "/usr/local",
+    "/tmp/"
+  ],
+  "allowed_system_roots_linux": ["/usr/lib/", "/lib/"],
+  "allowed_system_roots_macos": ["/usr/lib/", "/System/Library/Frameworks/"],
+  "targets": {
+    "macosx_12_0_arm64": { "arch": "arm64", "deployment_target": "12.0" }
+  },
+  "wheel_tags": {
+    "python_tag": "cp311",
+    "abi_tag": "abi3"
+  }
+}

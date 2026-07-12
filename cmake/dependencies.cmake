@@ -6,6 +6,19 @@
 #   PROTO_SRCS, PROTO_HDRS, HPACTOR_PROTO_ABSL_LIBS, HPACTOR_ABSL_LIBS,
 #   hpactor_proto target, linenoise target, toml++ interface target.
 
+# ---- Wheel dependency prefix -------------------------------------------------
+
+if(HPACTOR_PYTHON_WHEEL_BUILD)
+  if(DEFINED HPACTOR_WHEEL_DEPS_PREFIX)
+    list(PREPEND CMAKE_PREFIX_PATH "${HPACTOR_WHEEL_DEPS_PREFIX}")
+    message(STATUS "Wheel deps prefix: ${HPACTOR_WHEEL_DEPS_PREFIX}")
+  else()
+    message(WARNING
+      "HPACTOR_PYTHON_WHEEL_BUILD=ON but HPACTOR_WHEEL_DEPS_PREFIX "
+      "is not set.  Build may use system dependencies.")
+  endif()
+endif()
+
 # ---- Protobuf + Abseil -----------------------------------------------------
 
 find_package(Protobuf REQUIRED)

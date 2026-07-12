@@ -1,0 +1,99 @@
+name: Publish Python Wheels
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: "Target package index"
+        required: true
+        type: choice
+        options: [TestPyPI, PyPI]
+        default: "TestPyPI"
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Build accepted wheels via reusable workflow ───────────────────────
+
+  build:
+    uses: ./.github/workflows/python-wheels.yml
+
+  # ── Version consistency checks ────────────────────────────────────────
+
+  verify-version:
+    needs: [build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: pip install 'setuptools-scm>=8,<10' 'build>=1.2,<2'
+
+      - name: Resolve version
+        id: version
+        run: |
+          VERSION="$(python -m setuptools_scm)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
+
+      - name: Verify tag matches version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          SCM_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$TAG_VERSION" != "$SCM_VERSION" ]; then
+            echo "Tag $TAG_VERSION != scm version $SCM_VERSION"
+            exit 1
+          fi
+          echo "Version match: $TAG_VERSION"
+
+      - name: Build sdist
+        run: python -m build --sdist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/hpactor-*.tar.gz
+
+  # ── Publish to PyPI ───────────────────────────────────────────────────
+
+  publish-pypi:
+    name: "publish to ${{ inputs.repository || 'PyPI' }}"
+    needs: [verify-version]
+    runs-on: ubuntu-24.04
+    environment:
+      name: ${{ (inputs.repository || 'PyPI') == 'TestPyPI' && 'testpypi' || 'pypi' }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "accepted-wheel-set|sdist"
+          merge-multiple: true
+          path: dist/
+
+      - name: Verify artifact count
+        run: |
+          wheel_count=$(ls dist/*.whl 2>/dev/null | wc -l)
+          sdist_count=$(ls dist/hpactor-*.tar.gz 2>/dev/null | wc -l)
+          echo "Wheels: $wheel_count, Sdists: $sdist_count"
+          test "$wheel_count" -ge 1 || { echo "Expected at least 1 wheel"; exit 1; }
+          test "$sdist_count" -ge 1 || { echo "Expected at least 1 sdist"; exit 1; }
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ inputs.repository == 'TestPyPI' && 'https://test.pypi.org/legacy/' || '' }}
+          verbose: true

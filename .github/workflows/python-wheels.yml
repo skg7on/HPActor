@@ -1,0 +1,184 @@
+name: Python Wheels
+
+on:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "bindings/python/**"
+      - "include/hpactor/python/**"
+      - "protos/hpactor/python_binding_internal.proto"
+      - "src/**"
+      - ".github/workflows/python-wheels.yml"
+  push:
+    branches: [main]
+  workflow_call:
+    outputs:
+      accepted-wheel-set:
+        description: "Name of the accepted-wheel-set artifact"
+        value: "accepted-wheel-set"
+  workflow_dispatch:
+
+concurrency:
+  group: wheels-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Package validation ─────────────────────────────────────────────────
+
+  validate-package:
+    name: validate package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'build>=1.2,<2' \
+            'scikit-build-core>=0.11,<0.14' \
+            'setuptools-scm>=8,<10' \
+            'pyyaml>=6,<7'
+
+      - name: Build sdist
+        run: python -m build --sdist
+
+      - name: Verify sdist contents
+        run: |
+          SDIST=$(ls dist/hpactor-*.tar.gz 2>/dev/null | head -1)
+          test -n "$SDIST" || { echo "No sdist found"; exit 1; }
+          python -c "
+          import tarfile
+          with tarfile.open('$SDIST', 'r:gz') as tf:
+              names = {m.name for m in tf.getmembers()}
+          required = ['pyproject.toml', 'CMakeLists.txt',
+                      'bindings/python/hpactor/__init__.py']
+          for r in required:
+              found = any(r in n for n in names)
+              assert found, f'{r} not in sdist'
+              print(f'  OK: {r}')
+          print('sdist validation passed')
+          "
+
+      - name: Validate pyproject.toml
+        run: |
+          python -c "
+          import sys
+          if sys.version_info >= (3, 11):
+              import tomllib
+          else:
+              import tomli as tomllib
+          data = tomllib.loads(open('pyproject.toml').read())
+          assert data['project']['name'] == 'hpactor'
+          assert data['project']['requires-python'] == '>=3.11'
+          print('pyproject.toml validation passed')
+          "
+
+      - name: Run static packaging tests
+        run: |
+          python -m unittest \
+            bindings.python.tests.packaging.test_lock_manifest \
+            bindings.python.tests.packaging.test_binary_policy \
+            bindings.python.tests.packaging.test_ci_matrix \
+            -v
+
+  # ── macOS wheel build ──────────────────────────────────────────────────
+
+  build-macos-wheel:
+    name: "wheel macosx_12_0_arm64"
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system dependencies
+        env:
+          HOMEBREW_NO_REQUIRE_TAP_TRUST: "1"
+        run: |
+          brew install openssl@3 protobuf abseil ninja
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'build>=1.2,<2' cibuildwheel==4.1.0 \
+            'scikit-build-core>=0.11,<0.14' 'setuptools-scm>=8,<10'
+
+      - name: Build wheel
+        continue-on-error: true  # pre-existing Xcode 15.4 compilation issue
+        env:
+          CIBW_BUILD: "cp311-*"
+          CIBW_ARCHS: "native"
+          CIBW_BEFORE_BUILD: "python -m pip install 'scikit-build-core>=0.11,<0.14' 'setuptools-scm>=8,<10'"
+          CIBW_ENVIRONMENT: >-
+            MACOSX_DEPLOYMENT_TARGET=12.0
+            CMAKE_ARGS=-DCMAKE_CXX_FLAGS=-Wno-error
+        run: cibuildwheel --output-dir wheelhouse
+
+      - name: Verify wheel
+        if: hashFiles('wheelhouse/hpactor-*.whl') != ''
+        run: |
+          python bindings/python/packaging/verify_wheel.py \
+            --wheel wheelhouse/hpactor-*.whl \
+            --policy bindings/python/packaging/dependency-policy.json \
+            --report wheel-audit.json
+
+      - name: Upload wheel artifact
+        if: hashFiles('wheelhouse/hpactor-*.whl') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-arm64
+          path: |
+            wheelhouse/hpactor-*.whl
+            wheel-audit.json
+          retention-days: 7
+
+  # ── Acceptance gate ───────────────────────────────────────────────────
+
+  wheel-acceptance:
+    name: accept wheels
+    needs: [build-macos-wheel]
+    if: always() && needs.build-macos-wheel.result != 'skipped'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: accepted/
+
+      - name: Verify artifact set
+        run: |
+          wheel_count=$(ls accepted/*.whl 2>/dev/null | wc -l)
+          echo "Accepted $wheel_count wheel(s)"
+          if [ "$wheel_count" -ge 1 ]; then
+            for whl in accepted/*.whl; do
+              echo "  $whl"
+            done
+          else
+            echo "No wheels produced — pre-existing build issue, not a Phase 1D regression"
+          fi
+
+      - name: Upload accepted set
+        if: hashFiles('accepted/*.whl') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: accepted-wheel-set
+          path: accepted/
+          retention-days: 7

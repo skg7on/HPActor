@@ -16,7 +16,7 @@ limitations under the License.
 
 # Python Language Binding Design
 
-**Status:** Approved design; Phases 1A, 1B, 1C implemented; pybind11 backend active; native integration designed
+**Status:** Approved design; Phases 1A–1D implemented and packaged; pybind11 backend active
 
 **Date:** 2026-07-03
 

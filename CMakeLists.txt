@@ -6,8 +6,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Platform-specific settings (must be before project())
 # =============================================================================
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Protobuf dylib (libprotobuf.34+) is built for macOS 26.0+
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
+    # Default macOS deployment target for local dev builds.
+    # Wheel builds: scikit-build-core passes CMAKE_OSX_DEPLOYMENT_TARGET
+    # on the CMake command line, which takes precedence over this default.
+    if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET
+       AND NOT "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
+      set(CMAKE_OSX_DEPLOYMENT_TARGET "$ENV{MACOSX_DEPLOYMENT_TARGET}"
+          CACHE STRING "macOS deployment target")
+    elseif(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+      set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0"
+          CACHE STRING "macOS deployment target")
+    endif()
 endif()
 
 project(HPActor VERSION 0.1.0 LANGUAGES C CXX)
@@ -36,6 +45,15 @@ option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20
 option(ENABLE_FIXED_DISRUPTOR_MAILBOX
        "Enable experimental fixed-message Disruptor actor mailbox" OFF)
 option(ENABLE_PYTHON_BINDINGS "Build the native Python binding foundation" OFF)
+option(HPACTOR_PYTHON_WHEEL_BUILD
+       "Build the Python extension with wheel-compatible install layout (private)" OFF)
+
+# When building a wheel, require CMake 3.26+ for SABIModule support
+if(HPACTOR_PYTHON_WHEEL_BUILD AND CMAKE_VERSION VERSION_LESS 3.26)
+  message(FATAL_ERROR
+    "scikit-build-core wheel builds require CMake 3.26 or newer "
+    "(for SABIModule support)")
+endif()
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -98,6 +116,9 @@ add_subdirectory(src)
 if(ENABLE_PYTHON_BINDINGS)
     add_subdirectory(bindings/python/native)
 endif()
+
+# Wheel install layout (only when building for Python distribution)
+include(cmake/python_wheel_install.cmake)
 
 # AOT compiler — depends on hpactor_lib, so must come after src/
 add_subdirectory(tools/toml-compiler)
