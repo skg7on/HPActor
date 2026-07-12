@@ -28,6 +28,11 @@ from ._errors import (
 )
 from ._messages import MessageRegistry
 from ._system import ActorSystem
+from ._topology import (
+    PythonTopologyPolicy,
+    TopologyError,
+    TopologyPhase,
+)
 
 __all__ = [
     "__version__",
@@ -50,10 +55,13 @@ __all__ = [
     "FailureSource",
     "HPActorError",
     "MessageRegistry",
+    "PythonTopologyPolicy",
     "RegistrationError",
     "ResourceExhaustedError",
     "ScheduleHandle",
     "SerializationError",
     "SystemClosedError",
+    "TopologyError",
+    "TopologyPhase",
     "actor",
 ]

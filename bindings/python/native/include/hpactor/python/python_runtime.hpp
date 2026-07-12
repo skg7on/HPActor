@@ -91,6 +91,17 @@ struct PythonRuntimeSnapshot final {
 
     /// Read-end file descriptor of the completion notifier, or -1 if closed.
     int completion_notifier_fd{-1};
+
+    // ── Phase 1E topology fields ────────────────────────────────────────
+    uint64_t topology_fingerprint{0};    ///< Effective fingerprint if topology
+                                         ///< was loaded.
+    size_t topology_prepared{0};         ///< Count of prepared Python actors.
+    size_t topology_started{0};          ///< Count of started Python actors.
+    size_t topology_committed{0};        ///< Count of committed Python actors.
+    size_t topology_rolled_back{0};      ///< Count of rolled-back Python actors.
+    uint8_t topology_phase{0};           ///< Current topology phase enum value.
+    uint8_t topology_failure_phase{0};   ///< Phase where failure occurred (0=none).
+    std::string topology_last_actor_id;  ///< Last actor ID in topology (bounded).
 };
 
 /// \brief Move-only lease that binds an ActorId to a monotonic generation.

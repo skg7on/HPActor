@@ -230,47 +230,111 @@ int NativeSystemObject::completion_fd() const noexcept {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Topology stubs (Phase 1E)
+// Topology (Phase 1E)
 // ═══════════════════════════════════════════════════════════════════════
 
 py::object
-NativeSystemObject::prepare_topology(const std::string& /*path*/) noexcept {
+NativeSystemObject::prepare_topology(const std::string& path) noexcept {
     return guard([&]() -> py::object {
-        PyErr_SetString(PyExc_NotImplementedError, "topology not yet implemented");
-        throw py::error_already_set();
+        auto result = native_->prepare_topology(path);
+        if (!result.ok()) {
+            PyErr_SetString(PyExc_RuntimeError, "topology prepare failed");
+            throw py::error_already_set();
+        }
+        // Convert descriptors to tuple of tuples.
+        py::list descriptors;
+        for (const auto& desc : result.value()) {
+            py::tuple args_tuple(desc.args.size());
+            for (size_t i = 0; i < desc.args.size(); ++i) {
+                args_tuple[i] = py::make_tuple(desc.args[i].first,
+                                                desc.args[i].second);
+            }
+            descriptors.append(py::make_tuple(
+                desc.topology_index, desc.actor_id, desc.behavior,
+                desc.module, desc.qualname, args_tuple,
+                desc.args_fingerprint));
+        }
+        return descriptors;
     });
 }
 
-bool NativeSystemObject::bind_topology_manifest(py::list /*bindings*/) noexcept {
+bool NativeSystemObject::bind_topology_manifest(py::list bindings) noexcept {
     return guard([&]() -> bool {
-        PyErr_SetString(PyExc_NotImplementedError, "topology not yet implemented");
-        throw py::error_already_set();
+        std::vector<hpactor::python::FactoryTokenBinding> native_bindings;
+        for (auto item : bindings) {
+            auto tup = item.cast<py::tuple>();
+            if (py::len(tup) != 3) {
+                PyErr_SetString(PyExc_ValueError,
+                                "binding must be (index, token, fingerprint)");
+                throw py::error_already_set();
+            }
+            hpactor::python::FactoryTokenBinding fb;
+            fb.topology_index = tup[0].cast<size_t>();
+            fb.factory_token = tup[1].cast<uint64_t>();
+            fb.args_fingerprint = tup[2].cast<uint64_t>();
+            native_bindings.push_back(fb);
+        }
+        auto result = native_->bind_topology_manifest(native_bindings, 0);
+        if (!result.ok()) {
+            PyErr_SetString(PyExc_RuntimeError, "bind_topology_manifest failed");
+            throw py::error_already_set();
+        }
+        return true;
     });
 }
 
 bool NativeSystemObject::start_prepared_topology() noexcept {
     return guard([&]() -> bool {
-        PyErr_SetString(PyExc_NotImplementedError, "topology not yet implemented");
-        throw py::error_already_set();
+        auto result = native_->start_prepared_topology();
+        if (!result.ok()) {
+            PyErr_SetString(PyExc_RuntimeError, "start_prepared_topology failed");
+            throw py::error_already_set();
+        }
+        return true;
     });
 }
 
-bool NativeSystemObject::complete_topology_actor(py::dict /*outcome*/) noexcept {
+bool NativeSystemObject::complete_topology_actor(py::dict outcome) noexcept {
     return guard([&]() -> bool {
-        PyErr_SetString(PyExc_NotImplementedError, "topology not yet implemented");
-        throw py::error_already_set();
+        uint64_t factory_token = outcome["factory_token"].cast<uint64_t>();
+        uint64_t system_generation = outcome["system_generation"].cast<uint64_t>();
+        uint64_t actor_generation = outcome["actor_generation"].cast<uint64_t>();
+        uint8_t topo_outcome = outcome["outcome"].cast<uint8_t>();
+        uint32_t error_code = outcome["error_code"].cast<uint32_t>();
+        std::string detail = outcome["detail"].cast<std::string>();
+
+        auto result = native_->complete_topology_actor(
+            factory_token, system_generation, actor_generation,
+            topo_outcome, error_code, detail);
+        if (!result.ok()) {
+            PyErr_SetString(PyExc_RuntimeError, "complete_topology_actor failed");
+            throw py::error_already_set();
+        }
+        return true;
     });
 }
 
-bool NativeSystemObject::record_topology_preflight(py::dict /*preflight*/) noexcept {
+bool NativeSystemObject::record_topology_preflight(py::dict preflight) noexcept {
     return guard([&]() -> bool {
-        PyErr_SetString(PyExc_NotImplementedError, "topology not yet implemented");
-        throw py::error_already_set();
+        uint8_t phase = preflight["phase"].cast<uint8_t>();
+        bool success = preflight["success"].cast<bool>();
+        native_->record_topology_preflight(phase, success);
+        return true;
     });
 }
 
 py::object NativeSystemObject::last_topology_error() noexcept {
-    return guard([&]() -> py::object { return py::none(); });
+    return guard([&]() -> py::object {
+        auto err = native_->last_topology_error();
+        if (err.phase == hpactor::python::PythonTopologyPhase::Idle) {
+            return py::none();
+        }
+        return py::make_tuple(
+            static_cast<uint8_t>(err.phase),
+            err.actor_id.empty() ? py::none() : py::cast(err.actor_id),
+            err.behavior.empty() ? py::none() : py::cast(err.behavior),
+            err.error_code, err.detail, err.rollback_error_bits);
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -371,6 +435,9 @@ py::dict NativeSystemObject::dispatch_to_dict(
     d["flags"] = env.flags;
     d["ack_requested"] = env.ack_requested;
     d["sequence"] = env.sequence;
+    d["topology_index"] = env.topology_index;
+    d["factory_token"] = env.factory_token;
+    d["args_fingerprint"] = env.args_fingerprint;
     return d;
 }
 

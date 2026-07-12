@@ -18,6 +18,7 @@
 #include <hpactor/python/python_ports.hpp>
 #include <hpactor/python/python_reliability.hpp>
 #include <hpactor/python/python_runtime.hpp>
+#include <hpactor/python/python_topology_types.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -26,6 +27,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace hpactor {
 
@@ -36,8 +38,11 @@ struct Config;
 
 namespace hpactor::python {
 
+class ParsedTopologyPlan;
+class PreparedTopology;
 class PythonCommandRouter;
 class PythonGatewayWakeAdapter;
+class PythonTopologyProvider;
 
 /// \brief Return value for spawn_bridge().
 struct PythonSpawnedActor final {
@@ -159,6 +164,36 @@ class PythonNativeSystem final {
     /// \brief Return a point-in-time runtime snapshot.
     [[nodiscard]] PythonRuntimeSnapshot snapshot() const noexcept;
 
+    // ── Topology (Phase 1E) ─────────────────────────────────────────────
+
+    /// \brief Parse a TOML topology and return descriptors for Python actors.
+    [[nodiscard]] result<std::vector<PythonTopologyDescriptor>>
+    prepare_topology(std::string_view path) noexcept;
+
+    /// \brief Bind factory tokens to prepared topology specs.
+    [[nodiscard]] result<uint64_t>
+    bind_topology_manifest(std::span<const FactoryTokenBinding> bindings,
+                           uint64_t policy_fingerprint) noexcept;
+
+    /// \brief Start the prepared topology (creates provider, runs transaction).
+    [[nodiscard]] result<void> start_prepared_topology() noexcept;
+
+    /// \brief Complete a topology actor's startup from the Python side.
+    [[nodiscard]] result<void>
+    complete_topology_actor(uint64_t factory_token, uint64_t system_generation,
+                            uint64_t actor_generation, uint8_t outcome,
+                            uint32_t error_code,
+                            std::string_view detail) noexcept;
+
+    /// \brief Access the topology provider (nullptr if not configured).
+    [[nodiscard]] PythonTopologyProvider* topology_provider() noexcept;
+
+    /// \brief Record a preflight phase outcome for observability.
+    void record_topology_preflight(uint8_t phase, bool success) noexcept;
+
+    /// \brief Return the last topology error info.
+    [[nodiscard]] PythonTopologyErrorInfo last_topology_error() const noexcept;
+
   private:
     PythonNativeSystem(Config system_config,
                        PythonRuntimeConfig python_config) noexcept;
@@ -167,7 +202,11 @@ class PythonNativeSystem final {
     std::unique_ptr<PythonRuntime> runtime_;
     std::unique_ptr<PythonCommandRouter> router_;
     std::unique_ptr<PythonGatewayWakeAdapter> wake_adapter_;
+    std::unique_ptr<PythonTopologyProvider> topology_provider_;
+    std::unique_ptr<ParsedTopologyPlan> parsed_plan_;
+    std::unique_ptr<PreparedTopology> prepared_;
     PythonReliabilityController reliability_;
+    PythonTopologyErrorInfo last_topology_error_;
     Actor application_bridge_;
     Actor gateway_;
     std::unordered_map<std::string, ActorAddress> name_registry_;

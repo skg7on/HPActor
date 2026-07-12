@@ -15,6 +15,17 @@ from ._delivery import DeliveryOptions, DeliveryReceipt
 from ._errors import ActorNotReadyError, SystemClosedError
 from ._messages import MessageRegistry
 from ._runtime import _ActorRunner, _RuntimeThread
+from ._topology import (
+    PythonTopologyPolicy,
+    TopologyError,
+    TopologyPhase,
+    _TopologyFactoryManifest,
+)
+
+
+class _SystemMode:
+    IMPERATIVE = "imperative"
+    TOPOLOGY = "topology"
 
 
 class ActorSystem:
@@ -48,12 +59,132 @@ class ActorSystem:
         self._closed = False
         self._runners: Dict[int, _ActorRunner] = {}
         self._refs: Dict[str, ActorRef] = {}
+        # Topology state (populated by from_topology).
+        self._mode: str = _SystemMode.IMPERATIVE
+        self._topology_path: str = ""
+        self._topology_policy: Optional[PythonTopologyPolicy] = None
+        self._topology_manifest: Optional[_TopologyFactoryManifest] = None
+
+    # ── Declarative topology constructor ──────────────────────────────────
+
+    @classmethod
+    def from_topology(
+        cls,
+        path: str,
+        *,
+        messages: MessageRegistry,
+        policy: PythonTopologyPolicy,
+        config: Optional[Dict[str, Any]] = None,
+    ) -> ActorSystem:
+        """Create an ActorSystem from a TOML topology file.
+
+        Returns a side-effect-free instance — no parsing, imports, threads,
+        or actors are created until ``__aenter__()``.
+        """
+        import os
+        system = cls(messages=messages, config=config)
+        system._mode = _SystemMode.TOPOLOGY
+        system._topology_path = os.path.abspath(path)
+        system._topology_policy = policy
+        system._topology_manifest = _TopologyFactoryManifest()
+        return system
+
+    # ── Name resolution ──────────────────────────────────────────────────
+
+    def resolve(self, name: str) -> ActorRef:
+        """Resolve a committed topology actor name to an ActorRef.
+
+        Only available after the system has entered Running state.
+        Raises KeyError if the name is not registered.
+        """
+        if self._closed:
+            raise SystemClosedError("ActorSystem closed")
+        ref = self._refs.get(name)
+        if ref is None:
+            raise KeyError(name)
+        return ref
+
+    async def _enter_topology(self) -> ActorSystem:
+        """Enter Running state via declarative topology bootstrap."""
+        assert self._topology_manifest is not None
+        assert self._topology_policy is not None
+
+        try:
+            # Step 1: Construct native system (without runtime yet).
+            from ._native_pybind11 import Pybind11NativeSystem
+            self._native = Pybind11NativeSystem(self._config)
+            self._native.start()
+
+            # Step 2: Prepare topology natively (releases GIL).
+            descriptors = await asyncio.to_thread(
+                self._native.prepare_topology, self._topology_path
+            )
+
+            if not descriptors:
+                raise TopologyError(
+                    TopologyPhase.NATIVE_PREPARE,
+                    detail="no Python actors found in topology",
+                )
+
+            # Step 3: Preflight manifest on runtime loop.
+            # Requires the native system's dispatch/completion FDs already
+            # accessible. Preflight uses importlib which needs no dispatch.
+            index_to_token = await self._topology_manifest.preflight(
+                descriptors, self._topology_policy, self._registry
+            )
+
+            # Step 4: Build native bindings.
+            bindings = [
+                (idx, token, self._topology_manifest.record_for_token(token).args_fingerprint)
+                for idx, token in index_to_token.items()
+            ]
+            policy_fp = self._topology_policy.fingerprint
+            effective_fp = self._native.bind_topology_manifest(bindings, policy_fp)
+
+            # Step 5: Start the Python runtime thread with the frozen manifest.
+            # This must happen before start_prepared_topology because the
+            # C++ side will push TopologyInstall dispatches that need
+            # Python-side handling.
+            self._thread = _RuntimeThread(
+                self._registry,
+                dispatch_capacity=self._config.get("dispatch_queue_capacity", 65536),
+                native_backend=self._native,
+                manifest=self._topology_manifest,
+            )
+            self._thread.start()
+
+            # Step 6: Start prepared topology (releases GIL).
+            # This blocks until all Python actors are installed and ready.
+            await asyncio.to_thread(self._native.start_prepared_topology)
+
+            return self
+
+        except Exception:
+            # Best-effort cleanup.
+            try:
+                if self._thread:
+                    self._thread.stop()
+                    self._thread = None
+            except Exception:
+                pass
+            try:
+                if self._native:
+                    self._native.stop()
+                    self._native = None
+            except Exception:
+                pass
+            raise
 
     # ── Async context manager ─────────────────────────────────────────────
 
     async def __aenter__(self) -> ActorSystem:
         if self._closed:
             raise SystemClosedError("ActorSystem has been closed")
+
+        # ── Topology mode ─────────────────────────────────────────────────
+        if self._mode == _SystemMode.TOPOLOGY:
+            return await self._enter_topology()
+
         dispatch_cap = self._config.get("dispatch_queue_capacity", 256)
 
         if self._use_native:

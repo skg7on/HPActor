@@ -90,6 +90,30 @@ ActorDirectory::find_fixed_binding(ActorId id) const {
     return entry->fixed_mailbox;
 }
 
+bool ActorDirectory::register_names_atomically(std::span<NamedActor> batch) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    // Phase 1: Validate complete batch.
+    for (const auto& item : batch) {
+        // Name must not already be registered.
+        if (names_.contains(item.name)) {
+            return false;
+        }
+        // Actor must exist in the directory.
+        if (!entries_.contains(item.actor)) {
+            return false;
+        }
+    }
+
+    // Phase 2: Commit all names.
+    for (const auto& item : batch) {
+        auto it = entries_.find(item.actor);
+        names_.emplace(item.name, it->second.actor.address());
+    }
+
+    return true;
+}
+
 bool ActorDirectory::register_name(std::string name, ActorAddress address) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto [it, inserted] = names_.emplace(std::move(name), address);

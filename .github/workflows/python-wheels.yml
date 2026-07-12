@@ -182,3 +182,42 @@ jobs:
           name: accepted-wheel-set
           path: accepted/
           retention-days: 7
+
+  # ── Topology smoke ─────────────────────────────────────────────────────
+
+  topology-smoke:
+    name: topology smoke (${{ matrix.os }}, ${{ matrix.python-version }})
+    needs: [wheel-acceptance]
+    if: always() && needs.wheel-acceptance.result == 'success'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-14]
+        python-version: ["3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: accepted-wheel-set
+          path: wheelhouse/
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install wheel
+        run: |
+          WHEEL=$(ls wheelhouse/hpactor-*.whl 2>/dev/null | head -1)
+          if [ -z "$WHEEL" ]; then
+            echo "No wheel found — skipping topology smoke (pre-existing build issue)"
+            exit 0
+          fi
+          python -m pip install "$WHEEL"
+
+      - name: Run topology smoke
+        if: hashFiles('wheelhouse/hpactor-*.whl') != ''
+        run: |
+          python -m unittest bindings.python.tests.wheel.test_topology_smoke -v

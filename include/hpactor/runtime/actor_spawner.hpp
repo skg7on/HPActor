@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/system/actor_directory.hpp>
 #include <hpactor/actor/system/actor_system.hpp>
+#include <hpactor/runtime/actor_spawn_lease.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <hpactor/runtime/spawn_spec.hpp>
@@ -69,6 +70,20 @@ class ActorSpawner final {
     /// \return A valid \c Actor on success, or a typed error code.
     result<Actor>
     adopt(std::shared_ptr<AbstractActor> actor, const SpawnSpec& spec) noexcept;
+
+    /// \brief Adopt a constructed actor without publishing a name.
+    ///
+    /// Performs the adoption pipeline up to directory publication, but
+    /// publishes with no registered name. Returns an \c ActorSpawnLease
+    /// that can be committed (transferring ownership) or rolled back
+    /// (removing the actor from the directory).
+    ///
+    /// \param[in] actor The fully constructed actor.
+    /// \param[in] spec  Resolved spawn specification.
+    /// \return An \c ActorSpawnLease on success, or a typed error code.
+    result<ActorSpawnLease>
+    adopt_unpublished(std::shared_ptr<AbstractActor> actor,
+                      const SpawnSpec& spec) noexcept;
 
   private:
     void rollback_publication(ActorId id, AbstractActor& actor) noexcept;

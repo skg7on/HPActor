@@ -25,6 +25,7 @@ from ._errors import (
     SystemClosedError,
 )
 from ._messages import MessageRegistry
+from ._topology import _TopologyFactoryManifest, TopologyActorOutcome
 
 
 class _ActorRunner:
@@ -137,6 +138,17 @@ class _DispatchCoordinator:
         """Scan the deque and schedule one turn per inactive actor."""
         if self._loop is None:
             return
+
+        # Check for system dispatches (TopologyInstall=4, TopologyRollback=5).
+        if self._deque:
+            head = self._deque[0]
+            if isinstance(head, dict):
+                kind = head.get("kind", 0)
+                if kind in (4, 5):  # TopologyInstall, TopologyRollback
+                    self._deque.popleft()
+                    self._handle_system_dispatch(head)
+                    return
+
         scheduled = 0
         for _ in range(len(self._deque)):
             dispatch = self._deque[0]
@@ -161,6 +173,20 @@ class _DispatchCoordinator:
                 self._deque.rotate(-1)  # move to end
             if scheduled > 0:
                 break
+
+    def _handle_system_dispatch(self, dispatch: dict) -> None:
+        """Route a system dispatch to the appropriate runtime handler."""
+        if self._loop is None or self._runtime is None:
+            return
+        kind = dispatch.get("kind", 0)
+        if kind == 4:  # TopologyInstall
+            self._loop.call_soon_threadsafe(
+                lambda d=dispatch: asyncio.ensure_future(
+                    self._runtime.install_topology_actor(d)))
+        elif kind == 5:  # TopologyRollback
+            self._loop.call_soon_threadsafe(
+                lambda d=dispatch: asyncio.ensure_future(
+                    self._runtime.rollback_topology_actor(d)))
 
     def on_turn_complete(self, actor_id: int, generation: int) -> None:
         key = (actor_id, generation)
@@ -208,11 +234,17 @@ class _ActorRuntime:
         registry: MessageRegistry,
         coordinator: _DispatchCoordinator,
         tokens: _TokenRegistry,
+        manifest: Optional[_TopologyFactoryManifest] = None,
+        native_system: Any = None,
     ):
         self.registry = registry
         self.coordinator = coordinator
         self.tokens = tokens
+        self._manifest = manifest
+        self._native = native_system
         self._pending_deliveries: Dict[int, DeliveryReceipt] = {}
+        # Track in-progress topology actors: {factory_token: (runner, task)}
+        self._topology_tasks: Dict[int, Any] = {}
 
     # ── Command stubs (delegate to native system in real integration) ─────
 
@@ -304,19 +336,135 @@ class _ActorRuntime:
     def _fail_ask(self, ask_id: int, exc: Exception) -> None:
         self.tokens.fail(ask_id, exc)
 
+    # ── Topology handlers (Phase 1E) ──────────────────────────────────────
+
+    async def install_topology_actor(self, dispatch: dict) -> None:
+        """Install a topology actor from a TopologyInstall dispatch."""
+        factory_token = dispatch.get("factory_token", 0)
+        if not factory_token or self._manifest is None or self._native is None:
+            return
+
+        record = self._manifest.record_for_token(factory_token)
+        if record is None:
+            return
+
+        try:
+            # Construct the actor.
+            actor = record.actor_class(**dict(record.args))
+        except Exception as exc:
+            await self._complete_topology_outcome(
+                factory_token, dispatch,
+                TopologyActorOutcome.ConstructorFailed,
+                str(exc)[:4096])
+            return
+
+        # Bind behavior.
+        try:
+            actor._bind(self.registry)
+        except Exception as exc:
+            await self._complete_topology_outcome(
+                factory_token, dispatch,
+                TopologyActorOutcome.BehaviorFailed,
+                str(exc)[:4096])
+            return
+
+        # Build the ActorRef from the bridge address.
+        from ._address import ActorRef
+        actor_address = dispatch.get("actor")
+        generation = dispatch.get("generation", 0)
+
+        # actor from native is a tuple (family, packed_addr, port, ...)
+        # Build an ActorAddress/ActorRef from the native tuple.
+        if isinstance(actor_address, (list, tuple)):
+            from ._address import ActorAddress
+            family = actor_address[0]
+            packed = actor_address[1]
+            port = actor_address[2]
+            addr = ActorAddress(
+                family=family, packed_address=packed, port=port,
+                actor_type=0, actor_id=getattr(actor, '_actor_id', 0),
+                incarnation=generation)
+            ref = ActorRef(address=addr, name="")
+        else:
+            ref = ActorRef(address=actor_address, name="")
+
+        # Create runner and install.
+        runner = _ActorRunner(actor, ref, self.registry)
+        self.coordinator.install(runner)
+
+        # Run on_start().
+        try:
+            await actor.on_start()
+        except Exception as exc:
+            await self._complete_topology_outcome(
+                factory_token, dispatch,
+                TopologyActorOutcome.StartFailed,
+                str(exc)[:4096])
+            return
+
+        # Success — signal readiness.
+        await self._complete_topology_outcome(
+            factory_token, dispatch, TopologyActorOutcome.Ready, "")
+
+    async def rollback_topology_actor(self, dispatch: dict) -> None:
+        """Rollback a previously installed topology actor."""
+        factory_token = dispatch.get("factory_token", 0)
+        if not factory_token:
+            return
+
+        # Cancel any in-progress task.
+        task_info = self._topology_tasks.pop(factory_token, None)
+        if task_info is not None:
+            runner = task_info.get("runner")
+            if runner and not runner.stopped:
+                try:
+                    await runner.stop_once()
+                except Exception:
+                    pass
+
+    async def _complete_topology_outcome(
+        self, factory_token: int, dispatch: dict,
+        outcome: Any, detail: str) -> None:
+        """Call native.complete_topology_actor with the correct outcome."""
+        if self._native is None:
+            return
+        try:
+            oc_map = {
+                TopologyActorOutcome.Ready: 0,
+                TopologyActorOutcome.ConstructorFailed: 1,
+                TopologyActorOutcome.BehaviorFailed: 2,
+                TopologyActorOutcome.StartFailed: 3,
+                TopologyActorOutcome.RolledBack: 4,
+                TopologyActorOutcome.Cancelled: 5,
+            }
+            outcome_code = oc_map.get(outcome, 3)
+            error_code = 0 if outcome == TopologyActorOutcome.Ready else 1
+            self._native.complete_topology_actor({
+                "factory_token": factory_token,
+                "system_generation": dispatch.get("generation", 0),
+                "actor_generation": dispatch.get("generation", 0),
+                "outcome": outcome_code,
+                "error_code": error_code,
+                "detail": detail[:4096],
+            })
+        except Exception:
+            pass
+
 
 class _RuntimeThread:
     """Dedicated asyncio event-loop thread owning all Python actors."""
 
     def __init__(self, registry: MessageRegistry,
                  dispatch_capacity: int = 256,
-                 native_backend=None):
+                 native_backend=None,
+                 manifest: Optional[_TopologyFactoryManifest] = None):
         self._registry = registry
         self._native = native_backend
         self._coordinator = _DispatchCoordinator(dispatch_capacity)
         self._tokens = _TokenRegistry(dispatch_capacity)
         self._runtime = _ActorRuntime(registry, self._coordinator,
-                                       self._tokens)
+                                       self._tokens, manifest=manifest,
+                                       native_system=native_backend)
         self._coordinator._runtime = self._runtime
         self._thread: Optional[threading.Thread] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None

@@ -38,6 +38,8 @@ struct PythonBindingConfig final {
     uint32_t loop_lag_unready_ms{5000};
     uint32_t handler_shutdown_timeout_ms{10000};
     bool trace_handler_spans{true};
+    uint32_t topology_start_timeout_ms{30000}; ///< Per-actor startup timeout for
+                                               ///< topology (100..300000 ms).
 
     /// \brief Validate all bounded fields.
     ///

@@ -15,6 +15,7 @@
 #include <hpactor/runtime/runtime_blueprint_builder.hpp>
 
 #include <hpactor/actor/system/actor_system.hpp> // for Config
+#include <hpactor/config/topology_model.hpp>
 
 #include <cstring>
 
@@ -122,6 +123,41 @@ RuntimeBlueprintBuilder::from_config(const Config& config) noexcept {
     fp = hash_string(bp.cluster_.node_id, fp);
 
     bp.fingerprint_ = fp;
+
+    return result<RuntimeBlueprint>::make(std::move(bp));
+}
+
+result<RuntimeBlueprint> RuntimeBlueprintBuilder::from_config_and_topology(
+    const Config& config, const config::TopologyModel& topology,
+    uint64_t extension_fingerprint) noexcept {
+    // Build base blueprint from config.
+    auto bp_result = from_config(config);
+    if (!bp_result.has_value()) {
+        return bp_result;
+    }
+    RuntimeBlueprint bp = std::move(bp_result.value());
+
+    // Populate actor specs from the topology model.
+    std::vector<ConfiguredActorSpec> actors;
+    actors.reserve(topology.actors.size());
+    for (const auto& def : topology.actors) {
+        ConfiguredActorSpec spec;
+        spec.id = def.id;
+        spec.behavior = def.behavior;
+        actors.push_back(std::move(spec));
+    }
+
+    // Compute fingerprint: extend base fingerprint with topology data.
+    uint64_t fp = bp.fingerprint_;
+    fp = hash_u64(extension_fingerprint, fp);
+    fp = hash_u64(actors.size(), fp);
+    for (const auto& a : actors) {
+        fp = hash_string(a.id, fp);
+        fp = hash_string(a.behavior, fp);
+    }
+
+    bp.fingerprint_ = fp;
+    bp.actors_ = std::move(actors);
 
     return result<RuntimeBlueprint>::make(std::move(bp));
 }

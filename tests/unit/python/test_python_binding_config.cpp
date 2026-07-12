@@ -31,6 +31,7 @@ TEST(PythonBindingConfigTest, DefaultsAreApproved) {
     EXPECT_EQ(cfg.max_commands_per_turn, 256u);
     EXPECT_EQ(cfg.loop_lag_unready_ms, 5000u);
     EXPECT_EQ(cfg.handler_shutdown_timeout_ms, 10000u);
+    EXPECT_EQ(cfg.topology_start_timeout_ms, 30000u);
     EXPECT_TRUE(cfg.trace_handler_spans);
 }
 

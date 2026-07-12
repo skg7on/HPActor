@@ -18,6 +18,8 @@
 #include <hpactor/actor/system/actor_system.hpp>
 #include <hpactor/python/python_bridge_actor.hpp>
 #include <hpactor/python/python_command_router.hpp>
+#include <hpactor/python/python_topology_preparer.hpp>
+#include <hpactor/python/python_topology_provider.hpp>
 #include <hpactor/python/python_gateway_actor.hpp>
 #include <hpactor/python/python_gateway_wake_adapter.hpp>
 
@@ -212,6 +214,213 @@ PythonRuntimeSnapshot PythonNativeSystem::snapshot() const noexcept {
     if (runtime_)
         return runtime_->snapshot();
     return PythonRuntimeSnapshot{};
+}
+
+result<std::vector<PythonTopologyDescriptor>>
+PythonNativeSystem::prepare_topology(std::string_view path) noexcept {
+    auto plan_result = PythonTopologyPreparer::parse(path);
+    if (!plan_result.has_value()) {
+        return result<std::vector<PythonTopologyDescriptor>>::make(
+            plan_result.error());
+    }
+    auto plan = std::move(plan_result.value());
+
+    // Build descriptors for Python actors.
+    std::vector<PythonTopologyDescriptor> descriptors;
+    const auto& actors = plan->actors();
+    for (const auto& spec : actors) {
+        if (spec.kind != ConfiguredActorKind::Python)
+            continue;
+        const auto& def = plan->model().actors[spec.topology_index];
+        PythonTopologyDescriptor desc;
+        desc.topology_index = spec.topology_index;
+        desc.actor_id = def.id;
+        desc.behavior = def.behavior;
+        desc.args_fingerprint = spec.args_fingerprint;
+        if (spec.python.has_value()) {
+            desc.module = spec.python->module;
+            desc.qualname = spec.python->qualname;
+        }
+        // Collect sorted args.
+        for (const auto& [k, v] : def.args) {
+            desc.args.emplace_back(k, v);
+        }
+        std::sort(desc.args.begin(), desc.args.end());
+        descriptors.push_back(std::move(desc));
+    }
+
+    parsed_plan_ = std::move(plan);
+    return result<std::vector<PythonTopologyDescriptor>>::make(
+        std::move(descriptors));
+}
+
+result<uint64_t>
+PythonNativeSystem::bind_topology_manifest(
+    std::span<const FactoryTokenBinding> bindings,
+    uint64_t policy_fingerprint) noexcept {
+    if (!parsed_plan_) {
+        return result<uint64_t>::make(
+            error(errors::invalid_argument, "no parsed topology plan"));
+    }
+
+    auto prepared_result =
+        parsed_plan_->bind_manifest(bindings, policy_fingerprint);
+    if (!prepared_result.has_value()) {
+        return result<uint64_t>::make(prepared_result.error());
+    }
+
+    auto prepared = std::move(prepared_result.value());
+    uint64_t fp = prepared->effective_fingerprint();
+    prepared_ = std::move(prepared);
+
+    // Create topology provider if Python actors exist.
+    bool has_python = false;
+    for (const auto& spec : prepared_->actors()) {
+        if (spec.kind == ConfiguredActorKind::Python) {
+            has_python = true;
+            break;
+        }
+    }
+    if (has_python && runtime_) {
+        size_t max_actors = runtime_->config().max_actor_bindings;
+        topology_provider_ = std::make_unique<PythonTopologyProvider>(
+            *runtime_, *this, max_actors);
+    }
+
+    return result<uint64_t>::make(std::move(fp));
+}
+
+result<void> PythonNativeSystem::start_prepared_topology() noexcept {
+    if (!prepared_) {
+        return result<void>::make(
+            error(errors::invalid_argument, "no prepared topology"));
+    }
+    if (!topology_provider_) {
+        return result<void>::make(
+            error(errors::invalid_argument, "no topology provider"));
+    }
+    if (!runtime_ || !system_) {
+        return result<void>::make(
+            error(errors::unknown, "system not started"));
+    }
+
+    const auto& model = prepared_->model();
+    const auto actor_specs = prepared_->actors();
+    auto timeout = std::chrono::milliseconds(
+        runtime_->config().topology_start_timeout_ms);
+
+    // Spawn and track each Python actor.
+    struct SpawnRecord {
+        ActorAddress bridge_addr;
+        uint64_t factory_token;
+    };
+    std::vector<SpawnRecord> spawned;
+
+    for (size_t i = 0; i < actor_specs.size(); ++i) {
+        const auto& spec = actor_specs[i];
+        if (spec.kind != ConfiguredActorKind::Python)
+            continue; // C++ actors handled via C++ provider (future)
+
+        const auto& def = model.actors[spec.topology_index];
+
+        // Reserve a ready-table slot.
+        auto reserve = topology_provider_->ready_table().reserve(
+            spec.factory_token);
+        if (!reserve.ok()) {
+            last_topology_error_ = PythonTopologyErrorInfo{
+                PythonTopologyPhase::ActorStart, def.id, def.behavior,
+                static_cast<uint32_t>(reserve.error().code()), ""};
+            goto rollback;
+        }
+
+        // Spawn a bridge actor.
+        auto bridge = spawn_bridge();
+        if (!bridge.ok()) {
+            last_topology_error_ = PythonTopologyErrorInfo{
+                PythonTopologyPhase::ActorStart, def.id, def.behavior,
+                static_cast<uint32_t>(bridge.error().code()), ""};
+            goto rollback;
+        }
+
+        // Push TopologyInstall dispatch to the Python runtime.
+        auto dispatch = std::make_shared<PythonDispatchEnvelope>();
+        dispatch->kind = PythonDispatchKind::TopologyInstall;
+        dispatch->actor = bridge.value().address;
+        dispatch->generation = bridge.value().generation;
+        dispatch->topology_index = spec.topology_index;
+        dispatch->factory_token = spec.factory_token;
+        dispatch->args_fingerprint = spec.args_fingerprint;
+
+        if (!runtime_->try_push_dispatch(dispatch)) {
+            (void)stop_bridge(bridge.value().address);
+            last_topology_error_ = PythonTopologyErrorInfo{
+                PythonTopologyPhase::ActorStart, def.id, def.behavior,
+                static_cast<uint32_t>(
+                    static_cast<int>(errors::mailbox_full)), ""};
+            goto rollback;
+        }
+
+        spawned.push_back(
+            {bridge.value().address, spec.factory_token});
+    }
+
+    // Await readiness for each actor.
+    for (const auto& entry : spawned) {
+        auto ready = topology_provider_->ready_table().wait_ready(
+            entry.factory_token, timeout);
+        if (!ready.ok()) {
+            for (const auto& spec : actor_specs) {
+                if (spec.factory_token == entry.factory_token) {
+                    last_topology_error_ = PythonTopologyErrorInfo{
+                        PythonTopologyPhase::ActorStart,
+                        model.actors[spec.topology_index].id,
+                        model.actors[spec.topology_index].behavior,
+                        static_cast<uint32_t>(ready.error().code()),
+                        ""};
+                    break;
+                }
+            }
+            goto rollback;
+        }
+    }
+
+    return result<void>::make();
+
+rollback:
+    for (auto it = spawned.rbegin(); it != spawned.rend(); ++it) {
+        (void)stop_bridge(it->bridge_addr);
+    }
+    return result<void>::make(
+        error(errors::unknown, "topology bootstrap failed"));
+}
+
+result<void> PythonNativeSystem::complete_topology_actor(
+    uint64_t factory_token, uint64_t system_generation,
+    uint64_t actor_generation, uint8_t outcome,
+    uint32_t error_code, std::string_view detail) noexcept {
+    if (!topology_provider_) {
+        return result<void>::make(
+            error(errors::invalid_argument, "no topology provider"));
+    }
+
+    auto topo_outcome = static_cast<TopologyActorOutcome>(outcome);
+    return topology_provider_->ready_table().complete(
+        factory_token, system_generation, actor_generation,
+        topo_outcome, error_code, detail);
+}
+
+PythonTopologyProvider* PythonNativeSystem::topology_provider() noexcept {
+    return topology_provider_.get();
+}
+
+void PythonNativeSystem::record_topology_preflight(uint8_t phase,
+                                                    bool success) noexcept {
+    (void)phase; (void)success;
+}
+
+PythonTopologyErrorInfo
+PythonNativeSystem::last_topology_error() const noexcept {
+    return last_topology_error_;
 }
 
 } // namespace hpactor::python
