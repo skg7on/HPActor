@@ -49,6 +49,8 @@ Built HTML lands in `docs/manual/_build/html/`.
 
 ## Quick Start
 
+### C++ Build
+
 ```bash
 # Configure and build
 cmake -S . -B build -GNinja
@@ -59,6 +61,34 @@ ctest --output-on-failure --parallel 8
 
 # Run a single test
 ./build/tests/unit/core/test_unit_core --gtest_filter="*ActorId*"
+```
+
+### Python Binding
+
+The Python binding has two surfaces — the **native runtime** (`_hpactor` extension for in-process actors) and the **external SDK** (`hpactor.client` for health, metrics, gateway, and CLI — works without the native module).
+
+```bash
+# Install runtime dependencies
+pip install protobuf httpx
+
+# Build the native extension and run C++-side Python binding tests
+cmake -S . -B build -GNinja -DENABLE_PYTHON_BINDINGS=ON
+ninja -C build _hpactor
+ctest --test-dir build -R PythonBinding --output-on-failure
+
+# Run pure-Python client SDK tests (no native build required)
+PYTHONPATH=bindings/python:$PYTHONPATH python3 -m unittest discover -s bindings/python/tests/unit/client -v
+
+# Quick smoke test — importing the client must not load the native module
+PYTHONPATH=bindings/python:$PYTHONPATH python3 -c "
+import hpactor.client
+import sys
+assert 'hpactor._hpactor' not in sys.modules
+print('OK: client SDK works without native runtime')
+"
+
+# Use the external SDK against a running HPActor daemon
+python3 bindings/python/examples/external_client.py --base-url http://127.0.0.1:8080
 ```
 
 ### Build Options
