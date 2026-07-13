@@ -727,6 +727,9 @@ ActorRef ActorSystem::resolve_actor(const std::string& name) {
         auto addr_opt = impl_->resolve_name_fn(name);
         if (addr_opt.has_value()) {
             auto* transport = get_transport_for(addr_opt->endpoint);
+            if (!transport) {
+                return ActorRef{};
+            }
             return ActorRef{ActorProxy{*addr_opt, transport}};
         }
     }

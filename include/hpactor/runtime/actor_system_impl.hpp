@@ -179,6 +179,14 @@ class ActorSystem::Impl final : public ReliableAckTarget,
     /// ActorSystem::resolve_actor() can access it directly.
     std::unique_ptr<cluster::name::NameResolver> name_resolver;
 
+    /// \brief Home-node name directory (owned by Impl, passed by ref to
+    ///        NameResolver). Created by enable_cluster() in hpactor_cluster.
+    std::unique_ptr<cluster::name::NameDirectory> name_directory_;
+
+    /// \brief TTL cache for remote name→address entries (owned by Impl,
+    ///        passed by ref to NameResolver). Created by enable_cluster().
+    std::unique_ptr<cluster::name::NameResolveCache> name_resolve_cache_;
+
     /// \brief Resolve function wrapper that avoids linking hpactor_lib
     /// directly to NameResolver::resolve (circular dep). Set when
     /// name_resolver is initialized.
