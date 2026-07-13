@@ -37,3 +37,13 @@ gtest_discover_tests(test_name_resolver
     TEST_PREFIX "unit/cluster/name/"
     DISCOVERY_TIMEOUT 10
 )
+
+add_executable(test_actor_directory_port
+    test_actor_directory_port.cpp
+)
+target_link_libraries(test_actor_directory_port PRIVATE hpactor_lib GTest::gtest GTest::gtest_main)
+target_include_directories(test_actor_directory_port PRIVATE ${CMAKE_SOURCE_DIR}/include)
+gtest_discover_tests(test_actor_directory_port
+    TEST_PREFIX "unit/cluster/name/"
+    DISCOVERY_TIMEOUT 10
+)
