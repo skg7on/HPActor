@@ -14,6 +14,11 @@
 
 #include <gtest/gtest.h>
 
+// pybind11 on GCC (not Clang) defaults to hidden visibility for its namespace.
+// Override that here so GTest-generated subclasses (which get default
+// visibility) don't trigger -Werror=attributes with g++ ≥ 15.
+#define PYBIND11_NAMESPACE pybind11
+
 #include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 
