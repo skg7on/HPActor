@@ -13,9 +13,8 @@
 // limitations under the License.
 #include <hpactor/cluster/name/name_resolver.hpp>
 #include <hpactor/cluster/name/consistent_hash_ring.hpp>
+#include <hpactor/cluster/name/name_directory_codec.hpp>
 #include <hpactor/msg/name_directory_tags.hpp>
-#include <hpactor/msg/typed_message.hpp>
-#include <hpactor/adt/stream_buffer.hpp>
 
 #include <condition_variable>
 #include <memory>
@@ -24,99 +23,12 @@
 
 namespace hpactor::cluster::name {
 
-// ── Protobuf wire-format encoding helpers ────────────────────────────────────
-// Mirror the decode helpers in inbound_frame_router.cpp.  These produce the
-// raw protobuf bytes for name_directory.proto messages without pulling in
-// protobuf codegen (protobuf codegen for name_directory.proto is Task 12).
-
-namespace {
-
-// Wire types (3-bit, lower bits of each tag)
-constexpr uint8_t kVarint          = 0;
-constexpr uint8_t kLengthDelimited = 2;
-
-// Tag encoding
-constexpr uint8_t kVarintContinuationBit = 0x80;
-constexpr uint8_t kVarintPayloadMask     = 0x7F;
-
-void append_varint(std::string& out, uint64_t value) {
-    while (value >= kVarintContinuationBit) {
-        out.push_back(static_cast<char>((value & kVarintPayloadMask) |
-                                         kVarintContinuationBit));
-        value >>= 7;
-    }
-    out.push_back(static_cast<char>(value & kVarintPayloadMask));
-}
-
-void append_tag(std::string& out, uint32_t field_number, uint8_t wire_type) {
-    append_varint(out, (static_cast<uint64_t>(field_number) << 3) | wire_type);
-}
-
-void append_length_delimited(std::string& out, uint32_t field_number,
-                             std::string_view data) {
-    append_tag(out, field_number, kLengthDelimited);
-    append_varint(out, data.size());
-    out.append(data);
-}
-
-void append_varint_field(std::string& out, uint32_t field_number,
-                         uint64_t value) {
-    append_tag(out, field_number, kVarint);
-    append_varint(out, value);
-}
-
-// ── Name-directory message encoders ──────────────────────────────────────
-
-std::string encode_register_request(std::string_view name, uint64_t actor_id,
-                                    std::string_view endpoint_str,
-                                    uint64_t generation) {
-    // PbNameRegisterRequest: name=1, actor_id=2, endpoint=3, generation=4
-    std::string out;
-    append_length_delimited(out, 1, name);       // field 1: name
-    append_varint_field(out, 2, actor_id);       // field 2: actor_id
-    append_length_delimited(out, 3, endpoint_str); // field 3: endpoint
-    append_varint_field(out, 4, generation);    // field 4: generation
-    return out;
-}
-
-std::string encode_resolve_query(std::string_view name) {
-    // PbNameResolveQuery: name=1
-    std::string out;
-    append_length_delimited(out, 1, name);       // field 1: name
-    return out;
-}
-
-std::string encode_unregister_request(std::string_view name,
-                                      uint64_t generation) {
-    // PbNameUnregisterRequest: name=1, generation=2
-    std::string out;
-    append_length_delimited(out, 1, name);       // field 1: name
-    append_varint_field(out, 2, generation);    // field 2: generation
-    return out;
-}
-
-std::string encode_register_response(uint32_t result_code) {
-    // PbNameRegisterResponse: result=1 (varint enum)
-    std::string out;
-    append_varint_field(out, 1, result_code);
-    return out;
-}
-
-std::string encode_resolve_response(bool found, uint64_t actor_id,
-                                    std::string_view endpoint_str,
-                                    uint64_t generation) {
-    // PbNameResolveResponse: found=1, actor_id=2, endpoint=3, generation=4
-    std::string out;
-    append_varint_field(out, 1, found ? 1ULL : 0ULL); // field 1: found
-    if (found) {
-        append_varint_field(out, 2, actor_id);     // field 2: actor_id
-        append_length_delimited(out, 3, endpoint_str); // field 3: endpoint
-        append_varint_field(out, 4, generation);  // field 4: generation
-    }
-    return out;
-}
-
-} // namespace
+using codec::encode_register_request;
+using codec::encode_register_response;
+using codec::encode_resolve_query;
+using codec::encode_resolve_response;
+using codec::encode_unregister_request;
+using codec::make_name_message;
 
 // ── NameResolver ─────────────────────────────────────────────────────────────
 
@@ -173,10 +85,7 @@ std::optional<ActorAddress> NameResolver::resolve(std::string_view name) {
 
     // Build and send PbNameResolveQuery.
     auto payload_bytes = encode_resolve_query(name);
-    StreamBuffer payload = StreamBuffer::from_data(
-        reinterpret_cast<const uint8_t*>(payload_bytes.data()),
-        payload_bytes.size());
-    TypedMessage msg(kNameResolveQueryTag, std::move(payload));
+    auto msg = make_name_message(kNameResolveQueryTag, payload_bytes);
 
     // Register pending request before sending.
     auto pending = std::make_shared<PendingResolve>();
@@ -244,10 +153,7 @@ void NameResolver::on_local_register(std::string_view name,
         std::string endpoint_str = endpoint_ops::to_string(address.endpoint);
         auto payload_bytes = encode_register_request(
             name, address.id.value(), endpoint_str, generation);
-        StreamBuffer payload = StreamBuffer::from_data(
-            reinterpret_cast<const uint8_t*>(payload_bytes.data()),
-            payload_bytes.size());
-        TypedMessage msg(kNameRegisterRequestTag, std::move(payload));
+        auto msg = make_name_message(kNameRegisterRequestTag, payload_bytes);
         outbound_port_.send(outbound_port_.context, *home, std::move(msg));
     }
 }
@@ -275,10 +181,7 @@ void NameResolver::on_local_unregister(std::string_view name) {
             gen = local_entry->generation;
         }
         auto payload_bytes = encode_unregister_request(name, gen);
-        StreamBuffer payload = StreamBuffer::from_data(
-            reinterpret_cast<const uint8_t*>(payload_bytes.data()),
-            payload_bytes.size());
-        TypedMessage msg(kNameUnregisterRequestTag, std::move(payload));
+        auto msg = make_name_message(kNameUnregisterRequestTag, payload_bytes);
         outbound_port_.send(outbound_port_.context, *home, std::move(msg));
     }
 
@@ -339,10 +242,7 @@ NameResolver::on_name_register_request(EndPoint from,
 
     if (outbound_port_.active()) {
         auto resp_bytes = encode_register_response(result_code);
-        StreamBuffer payload = StreamBuffer::from_data(
-            reinterpret_cast<const uint8_t*>(resp_bytes.data()),
-            resp_bytes.size());
-        TypedMessage msg(kNameRegisterResponseTag, std::move(payload));
+        auto msg = make_name_message(kNameRegisterResponseTag, resp_bytes);
         outbound_port_.send(outbound_port_.context, from, std::move(msg));
     }
 
@@ -384,10 +284,7 @@ NameResolver::on_name_resolve_query(EndPoint from, std::string_view name) {
         uint64_t gen = found ? entry->generation : 0ULL;
 
         auto resp_bytes = encode_resolve_response(found, actor_id, ep_str, gen);
-        StreamBuffer payload = StreamBuffer::from_data(
-            reinterpret_cast<const uint8_t*>(resp_bytes.data()),
-            resp_bytes.size());
-        TypedMessage msg(kNameResolveResponseTag, std::move(payload));
+        auto msg = make_name_message(kNameResolveResponseTag, resp_bytes);
         outbound_port_.send(outbound_port_.context, from, std::move(msg));
     }
 

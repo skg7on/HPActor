@@ -5,101 +5,22 @@
 
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/msg/name_directory_tags.hpp>
+#include <hpactor/cluster/name/name_directory_codec.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 
 #include <hpactor/runtime/messaging_runtime.hpp>
 
 namespace hpactor::net {
 
+// ── Protobuf wire-format helpers for name-protocol messages ────────────────
+// Imported from the shared codec so constants and decoders stay in sync with
+// the encoders in name_resolver.cpp.
+namespace pb = cluster::name::codec::pb;
+namespace nd = cluster::name::codec::name_dir;
+using cluster::name::codec::decode_varint;
+using cluster::name::codec::skip_field_value;
+
 namespace {
-
-// ── Protobuf wire-format constants ──────────────────────────────────────
-// See: https://protobuf.dev/programming-guides/encoding/
-// These constants describe the binary encoding used by protobuf wire format
-// and are stable across all protobuf versions.  Field numbers derive from
-// protos/hpactor/name_directory.proto and MUST match that file.
-
-namespace pb {
-// Wire types (3-bit, lower bits of each tag)
-constexpr uint8_t kVarint          = 0;
-constexpr uint8_t kFixed64         = 1;
-constexpr uint8_t kLengthDelimited = 2;
-constexpr uint8_t kFixed32         = 5;
-
-// Tag decoding
-constexpr uint8_t  kTagWireTypeMask    = 0x07;
-constexpr uint8_t  kTagFieldNumberShift = 3;
-
-// Varint encoding
-constexpr uint8_t  kVarintContinuationBit = 0x80;
-constexpr uint64_t kVarintPayloadMask     = 0x7FULL;
-constexpr int      kVarintShiftIncrement  = 7;
-constexpr int      kVarintMaxShift        = 64;
-
-// Fixed-size field widths (bytes)
-constexpr size_t kFixed64Size = 8;
-constexpr size_t kFixed32Size = 4;
-
-// ── Field numbers from name_directory.proto ─────────────────────────────
-// Messages and their field assignments:
-//   PbNameRegisterRequest:   name=1, actor_id=2, endpoint=3, generation=4
-//   PbNameResolveQuery:      name=1
-//   PbNameUnregisterRequest: name=1, generation=2
-namespace name_dir {
-constexpr uint32_t kFieldName       = 1;
-constexpr uint32_t kFieldActorId    = 2; // PbNameRegisterRequest
-constexpr uint32_t kFieldEndpoint   = 3; // PbNameRegisterRequest
-constexpr uint32_t kFieldGeneration = 4; // PbNameRegisterRequest
-constexpr uint32_t kUnregFieldGeneration = 2; // PbNameUnregisterRequest
-	constexpr uint32_t kFieldResult     = 1; // PbNameRegisterResponse
-	constexpr uint32_t kFieldFound      = 1; // PbNameResolveResponse
-} // namespace name_dir
-} // namespace pb
-
-// ── Minimal protobuf wire-format reader for name-protocol messages ──────
-// Protobuf codegen for name_directory.proto is not yet wired (Task 12).
-// These helpers extract fields needed by InboundNamePort from raw bytes.
-
-inline bool decode_varint(const uint8_t*& p, const uint8_t* end,
-                          uint64_t& out) noexcept {
-    out = 0;
-    int shift = 0;
-    while (p < end) {
-        uint64_t byte = *p++;
-        out |= (byte & pb::kVarintPayloadMask) << shift;
-        if ((byte & pb::kVarintContinuationBit) == 0) return true;
-        shift += pb::kVarintShiftIncrement;
-        if (shift >= pb::kVarintMaxShift) return false;
-    }
-    return false;
-}
-
-inline bool skip_field_value(const uint8_t*& p, const uint8_t* end,
-                             uint8_t wire_type) noexcept {
-    switch (wire_type) {
-    case pb::kVarint:
-        while (p < end && (*p & pb::kVarintContinuationBit)) ++p;
-        if (p < end) ++p;
-        return true;
-    case pb::kLengthDelimited: {
-        uint64_t len;
-        if (!decode_varint(p, end, len)) return false;
-        if (len > static_cast<uint64_t>(end - p)) return false;
-        p += len;
-        return true;
-    }
-    case pb::kFixed64:
-        if (static_cast<uint64_t>(end - p) < pb::kFixed64Size) return false;
-        p += pb::kFixed64Size;
-        return true;
-    case pb::kFixed32:
-        if (static_cast<uint64_t>(end - p) < pb::kFixed32Size) return false;
-        p += pb::kFixed32Size;
-        return true;
-    default:
-        return false;
-    }
-}
 
 FrameDispatchResult
 make_result(FrameDispatchCode code, WireFrame::PayloadType pt) noexcept {
@@ -276,9 +197,8 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
     }
 
     // ── Name protocol dispatch ─────────────────────────────────────────────
-    // Short-circuit name-protocol request frames to InboundNamePort before
-    // normal message delivery. Response tags pass through to the
-    // requesting NameResolver via ordinary delivery.
+    // Short-circuit all name-protocol frames (requests and responses) to
+    // InboundNamePort before normal message delivery.
     {
         uint32_t tag_raw = data.type_tag();
         auto tag = static_cast<TypeTag>(tag_raw);
@@ -305,7 +225,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     uint32_t fn = static_cast<uint32_t>(
                         tag_val >> pb::kTagFieldNumberShift);
 
-                    if (fn == pb::name_dir::kFieldName &&
+                    if (fn == nd::kFieldName &&
                         wt == pb::kLengthDelimited) {
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
@@ -314,11 +234,11 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                             reinterpret_cast<const char*>(p), len);
                         p += len;
                         has_name = true;
-                    } else if (fn == pb::name_dir::kFieldActorId &&
+                    } else if (fn == nd::kFieldActorId &&
                                wt == pb::kVarint) {
                         if (!decode_varint(p, end, actor_id)) break;
                         has_actor_id = true;
-                    } else if (fn == pb::name_dir::kFieldEndpoint &&
+                    } else if (fn == nd::kFieldEndpoint &&
                                wt == pb::kLengthDelimited) {
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
@@ -327,7 +247,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                             reinterpret_cast<const char*>(p), len);
                         p += len;
                         has_endpoint = true;
-                    } else if (fn == pb::name_dir::kFieldGeneration &&
+                    } else if (fn == nd::kFieldGeneration &&
                                wt == pb::kVarint) {
                         if (!decode_varint(p, end, generation)) break;
                         has_generation = true;
@@ -365,7 +285,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     uint32_t fn = static_cast<uint32_t>(
                         tag_val >> pb::kTagFieldNumberShift);
 
-                    if (fn == pb::name_dir::kFieldName &&
+                    if (fn == nd::kFieldName &&
                         wt == pb::kLengthDelimited) {
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
@@ -403,7 +323,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     uint32_t fn = static_cast<uint32_t>(
                         tag_val >> pb::kTagFieldNumberShift);
 
-                    if (fn == pb::name_dir::kFieldName &&
+                    if (fn == nd::kFieldName &&
                         wt == pb::kLengthDelimited) {
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
@@ -412,7 +332,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                             reinterpret_cast<const char*>(p), len);
                         p += len;
                         has_name = true;
-                    } else if (fn == pb::name_dir::kUnregFieldGeneration &&
+                    } else if (fn == nd::kUnregFieldGeneration &&
                                wt == pb::kVarint) {
                         if (!decode_varint(p, end, generation)) break;
                         has_generation = true;
@@ -446,7 +366,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     uint32_t fn = static_cast<uint32_t>(
                         tag_val >> pb::kTagFieldNumberShift);
 
-                    if (fn == pb::name_dir::kFieldResult &&
+                    if (fn == nd::kFieldResult &&
                         wt == pb::kVarint) {
                         if (!decode_varint(p, end, result_code)) break;
                         has_result = true;
@@ -484,16 +404,16 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                         tag_val >> pb::kTagFieldNumberShift);
 
                     // PbNameResolveResponse: found=1, actor_id=2, endpoint=3, generation=4
-                    if (fn == pb::name_dir::kFieldFound &&
+                    if (fn == nd::kFieldFound &&
                         wt == pb::kVarint) {
                         uint64_t v;
                         if (!decode_varint(p, end, v)) break;
                         found = (v != 0);
                         has_found = true;
-                    } else if (fn == pb::name_dir::kFieldActorId &&
+                    } else if (fn == nd::kFieldActorId &&
                                wt == pb::kVarint) {
                         if (!decode_varint(p, end, actor_id)) break;
-                    } else if (fn == pb::name_dir::kFieldEndpoint &&
+                    } else if (fn == nd::kFieldEndpoint &&
                                wt == pb::kLengthDelimited) {
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
@@ -501,7 +421,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                         endpoint_str = std::string_view(
                             reinterpret_cast<const char*>(p), len);
                         p += len;
-                    } else if (fn == pb::name_dir::kFieldGeneration &&
+                    } else if (fn == nd::kFieldGeneration &&
                                wt == pb::kVarint) {
                         if (!decode_varint(p, end, generation)) break;
                     } else {
