@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include <hpactor/runtime/actor_spawner.hpp>
 #include <hpactor/runtime/cluster_runtime.hpp>
 #include <hpactor/runtime/messaging_network_emitters.hpp>
@@ -21,6 +23,7 @@
 #include <hpactor/runtime/network_runtime.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
 #include <hpactor/actor/stream/stream_runtime.hpp>
+#include <hpactor/cluster/name/name_resolver.hpp>
 #include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
@@ -170,6 +173,16 @@ class ActorSystem::Impl final : public ReliableAckTarget,
     /// \brief Phase 7: typed optional cluster runtime.
     /// Null when cluster is disabled.
     std::unique_ptr<IClusterRuntime> cluster_;
+
+    /// \brief Phase 10: cross-node name resolution.
+    /// Null when cluster/name-resolution is disabled. Owned by Impl so
+    /// ActorSystem::resolve_actor() can access it directly.
+    std::unique_ptr<cluster::name::NameResolver> name_resolver;
+
+    /// \brief Resolve function wrapper that avoids linking hpactor_lib
+    /// directly to NameResolver::resolve (circular dep). Set when
+    /// name_resolver is initialized.
+    std::function<std::optional<ActorAddress>(std::string_view)> resolve_name_fn;
 
     /// \brief Fallback RpcChannel used when networking is disabled.
     /// Created during construction with the system scheduler; transport

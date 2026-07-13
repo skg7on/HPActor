@@ -716,12 +716,21 @@ void ActorSystem::register_actor(const std::string& name, Actor actor) {
     impl_->actors.registry.put(name, actor.address());
 }
 
-Actor ActorSystem::resolve_actor(const std::string& name) {
+ActorRef ActorSystem::resolve_actor(const std::string& name) {
+    // 1. Local directory (fast path).
     auto actor_opt = impl_->actors.directory.resolve_actor(name);
     if (actor_opt.has_value()) {
-        return actor_opt.value();
+        return ActorRef{actor_opt.value()};
     }
-    return Actor{};
+    // 2. Cluster name resolution (new fallback).
+    if (impl_->resolve_name_fn) {
+        auto addr_opt = impl_->resolve_name_fn(name);
+        if (addr_opt.has_value()) {
+            auto* transport = get_transport_for(addr_opt->endpoint);
+            return ActorRef{ActorProxy{*addr_opt, transport}};
+        }
+    }
+    return ActorRef{};
 }
 
 void ActorSystem::unregister_actor(const std::string& name) {
