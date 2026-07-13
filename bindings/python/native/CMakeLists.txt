@@ -38,8 +38,8 @@ target_include_directories(hpactor_python_native PUBLIC
 # Wheel builds keep linkage private so the extension is self-contained.
 # Normal SDK builds keep public linkage for downstream consumers.
 if(HPACTOR_PYTHON_WHEEL_BUILD)
-  target_link_libraries(hpactor_python_native PRIVATE hpactor_lib hpactor_proto
-      protobuf::libprotobuf)
+  target_link_libraries(hpactor_python_native PRIVATE hpactor_lib hpactor_proto)
+  target_link_libraries(hpactor_python_native PUBLIC protobuf::libprotobuf)
 else()
   target_link_libraries(hpactor_python_native PUBLIC hpactor_lib hpactor_proto)
 endif()
