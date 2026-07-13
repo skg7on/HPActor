@@ -103,7 +103,8 @@ struct TestContext {
         InboundNamePort inbound{};        // not used in unit tests
 
         resolver = std::make_unique<NameResolver>(
-            name_dir, discovery, cache, config, outbound, inbound);
+            name_dir, discovery, cache, config,
+            ep("10.0.0.1:9000"), outbound, inbound);
 
         // Wire the registration port back to the resolver.
         reg_port.context = resolver.get();
@@ -207,7 +208,7 @@ TEST(NameResolverTest, ResolveWhenDisabledFallsThrough) {
     InboundNamePort inbound{};
     auto disabled_resolver = std::make_unique<NameResolver>(
         ctx.name_dir, ctx.discovery, ctx.cache, ctx.config,
-        outbound, inbound);
+        ep("10.0.0.1:9000"), outbound, inbound);
 
     auto result = disabled_resolver->resolve("anything");
     EXPECT_FALSE(result.has_value());

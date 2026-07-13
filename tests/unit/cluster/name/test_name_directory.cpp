@@ -123,7 +123,6 @@ TEST(NameDirectoryTest, GenerationGuardRejectsStale) {
 TEST(NameDirectoryTest, PurgeByEndpoint) {
     NameDirectory dir;
     auto ep_a = endpoint_ops::parse_endpoint("192.168.1.1:9000");
-    auto ep_b = endpoint_ops::parse_endpoint("192.168.1.2:9000");
 
     auto e1 = make_entry(1, "192.168.1.1:9000");
     auto e2 = make_entry(2, "192.168.1.2:9000");

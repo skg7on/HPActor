@@ -77,7 +77,6 @@ TEST(NameResolveCacheTest, EvictRemovesEntry) {
 TEST(NameResolveCacheTest, EvictNodeRemovesAllEntriesForEndpoint) {
     NameResolveCache cache;
     auto ep1 = endpoint_ops::parse_endpoint("192.168.1.1:9000");
-    auto ep2 = endpoint_ops::parse_endpoint("192.168.1.2:9000");
 
     cache.put("a", make_addr("192.168.1.1:9000", 1), 60s);
     cache.put("b", make_addr("192.168.1.2:9000", 2), 60s);
