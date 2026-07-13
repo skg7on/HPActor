@@ -34,3 +34,5 @@ add_executable(test_unit_cluster
 )
 target_link_libraries(test_unit_cluster hpactor hpactor_proto hpactor_cluster hpactor_etcd pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_cluster)
+
+add_subdirectory(name)

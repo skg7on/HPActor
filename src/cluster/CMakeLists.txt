@@ -29,6 +29,7 @@ add_library(hpactor_cluster STATIC
     pubsub/pubsub_mediator_actor.cpp
     receptionist/cluster_receptionist_core.cpp
     receptionist/cluster_receptionist_actor.cpp
+    name/name_directory.cpp
 )
 target_link_libraries(hpactor_cluster PUBLIC hpactor hpactor_etcd)
 target_include_directories(hpactor_cluster PUBLIC
