@@ -4,6 +4,7 @@
 #include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/msg/type_tag.hpp>
+#include <hpactor/msg/name_directory_tags.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 
 #include <hpactor/runtime/messaging_runtime.hpp>
@@ -11,6 +12,51 @@
 namespace hpactor::net {
 
 namespace {
+
+// ── Minimal protobuf wire-format reader for name-protocol messages ──────
+// Protobuf codegen for name_directory.proto is not yet wired (Task 12).
+// These helpers extract fields needed by InboundNamePort from raw bytes.
+
+inline bool decode_varint(const uint8_t*& p, const uint8_t* end,
+                          uint64_t& out) noexcept {
+    out = 0;
+    int shift = 0;
+    while (p < end) {
+        uint64_t byte = *p++;
+        out |= (byte & 0x7FULL) << shift;
+        if ((byte & 0x80) == 0) return true;
+        shift += 7;
+        if (shift >= 64) return false;
+    }
+    return false;
+}
+
+inline bool skip_field_value(const uint8_t*& p, const uint8_t* end,
+                             uint8_t wire_type) noexcept {
+    switch (wire_type) {
+    case 0: // varint
+        while (p < end && (*p & 0x80)) ++p;
+        if (p < end) ++p;
+        return true;
+    case 2: { // length-delimited
+        uint64_t len;
+        if (!decode_varint(p, end, len)) return false;
+        if (p + len > end) return false;
+        p += len;
+        return true;
+    }
+    case 1: // 64-bit fixed
+        if (p + 8 > end) return false;
+        p += 8;
+        return true;
+    case 5: // 32-bit fixed
+        if (p + 4 > end) return false;
+        p += 4;
+        return true;
+    default:
+        return false;
+    }
+}
 
 FrameDispatchResult
 make_result(FrameDispatchCode code, WireFrame::PayloadType pt) noexcept {
@@ -36,7 +82,8 @@ constexpr bool is_python_binding_control_tag(uint32_t tag) noexcept {
 
 InboundFrameRouter::InboundFrameRouter(Dependencies dependencies, Config config) noexcept
     : config_(config), messaging_(dependencies.messaging), rpc_(dependencies.rpc),
-      streams_(dependencies.streams), metrics_(dependencies.metrics) {}
+      streams_(dependencies.streams), metrics_(dependencies.metrics),
+      name_port_(dependencies.name_port) {}
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -183,6 +230,149 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
         messaging_.backpressure().handle_remote_signal(frame);
         return make_result(FrameDispatchCode::BackpressureHandled,
                            WireFrame::PayloadType::Data);
+    }
+
+    // ── Name protocol dispatch ─────────────────────────────────────────────
+    // Short-circuit name-protocol request frames to InboundNamePort before
+    // normal message delivery. Response tags (0x81, 0x83) pass through to the
+    // requesting NameResolver via ordinary delivery.
+    {
+        uint32_t tag_raw = data.type_tag();
+        auto tag = static_cast<TypeTag>(tag_raw);
+        if (cluster::name::is_name_protocol_tag(tag) && name_port_.active()) {
+            switch (tag_raw) {
+            case 0x80: { // NameRegisterRequest
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                std::string_view name;
+                uint64_t actor_id = 0;
+                std::string_view endpoint_str;
+                uint64_t generation = 0;
+                bool has_name = false, has_actor_id = false;
+                bool has_endpoint = false, has_generation = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & 0x07;
+                    uint32_t fn = static_cast<uint32_t>(tag_val >> 3);
+
+                    if (fn == 1 && wt == 2) { // name (string)
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (p + len > end) break;
+                        name = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                        has_name = true;
+                    } else if (fn == 2 && wt == 0) { // actor_id (uint64)
+                        if (!decode_varint(p, end, actor_id)) break;
+                        has_actor_id = true;
+                    } else if (fn == 3 && wt == 2) { // endpoint (string)
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (p + len > end) break;
+                        endpoint_str = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                        has_endpoint = true;
+                    } else if (fn == 4 && wt == 0) { // generation (uint64)
+                        if (!decode_varint(p, end, generation)) break;
+                        has_generation = true;
+                    } else {
+                        if (!skip_field_value(p, end, wt)) break;
+                    }
+                }
+
+                if (has_name && has_actor_id && has_endpoint &&
+                    has_generation) {
+                    ActorAddress addr{
+                        endpoint_ops::parse_endpoint(endpoint_str),
+                        ActorType{0}, ActorId{actor_id}, 0};
+                    name_port_.on_register_request(name_port_.context,
+                                                    ictx.peer, name, addr,
+                                                    generation);
+                }
+                return make_result(FrameDispatchCode::ActorDelivered,
+                                   WireFrame::PayloadType::Data);
+            }
+            case 0x82: { // NameResolveQuery
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                std::string_view name;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & 0x07;
+                    uint32_t fn = static_cast<uint32_t>(tag_val >> 3);
+
+                    if (fn == 1 && wt == 2) { // name (string)
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (p + len > end) break;
+                        name = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        break;
+                    }
+                    if (!skip_field_value(p, end, wt)) break;
+                }
+
+                name_port_.on_resolve_query(name_port_.context, ictx.peer,
+                                             name);
+                return make_result(FrameDispatchCode::ActorDelivered,
+                                   WireFrame::PayloadType::Data);
+            }
+            case 0x84: { // NameUnregisterRequest
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                std::string_view name;
+                uint64_t generation = 0;
+                bool has_name = false, has_generation = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & 0x07;
+                    uint32_t fn = static_cast<uint32_t>(tag_val >> 3);
+
+                    if (fn == 1 && wt == 2) { // name (string)
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (p + len > end) break;
+                        name = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                        has_name = true;
+                    } else if (fn == 2 && wt == 0) { // generation (uint64)
+                        if (!decode_varint(p, end, generation)) break;
+                        has_generation = true;
+                    } else {
+                        if (!skip_field_value(p, end, wt)) break;
+                    }
+                }
+
+                if (has_name && has_generation) {
+                    name_port_.on_unregister_request(name_port_.context,
+                                                      ictx.peer, name,
+                                                      generation);
+                }
+                return make_result(FrameDispatchCode::ActorDelivered,
+                                   WireFrame::PayloadType::Data);
+            }
+            default:
+                break; // Response tags (0x81, 0x83) pass through
+            }
+        }
     }
 
     // Ordinary data — AckRequested only (or no control flags).

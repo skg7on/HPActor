@@ -14,6 +14,7 @@
 #include <hpactor/types/types.hpp>
 
 #include <hpactor/actor/stream/stream_runtime.hpp>
+#include <hpactor/cluster/name/inbound_name_port.hpp>
 #include <hpactor/runtime/messaging_runtime.hpp>
 
 namespace hpactor {
@@ -45,6 +46,7 @@ class InboundFrameRouter final : public InboundFrameTarget {
         RpcChannel& rpc;
         StreamRuntime& streams;
         metrics::MpscRingBuffer<metrics::MetricEvent>* metrics{nullptr};
+        cluster::name::InboundNamePort name_port{};
     };
 
     InboundFrameRouter(Dependencies dependencies, Config config) noexcept;
@@ -90,6 +92,7 @@ class InboundFrameRouter final : public InboundFrameTarget {
     RpcChannel& rpc_;
     StreamRuntime& streams_;
     [[maybe_unused]] metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_;
+    cluster::name::InboundNamePort name_port_;
     std::atomic<bool> accepting_{true};
 };
 
