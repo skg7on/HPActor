@@ -41,11 +41,11 @@ constexpr uint8_t kVarintPayloadMask     = 0x7F;
 
 void append_varint(std::string& out, uint64_t value) {
     while (value >= kVarintContinuationBit) {
-        out.push_back(static_cast<uint8_t>((value & kVarintPayloadMask) |
-                                            kVarintContinuationBit));
+        out.push_back(static_cast<char>((value & kVarintPayloadMask) |
+                                         kVarintContinuationBit));
         value >>= 7;
     }
-    out.push_back(static_cast<uint8_t>(value & kVarintPayloadMask));
+    out.push_back(static_cast<char>(value & kVarintPayloadMask));
 }
 
 void append_tag(std::string& out, uint32_t field_number, uint8_t wire_type) {
