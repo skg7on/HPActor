@@ -31,6 +31,7 @@ add_library(hpactor_cluster STATIC
     receptionist/cluster_receptionist_actor.cpp
     name/name_directory.cpp
     name/name_resolve_cache.cpp
+    name/consistent_hash_ring.cpp
 )
 target_link_libraries(hpactor_cluster PUBLIC hpactor hpactor_etcd)
 target_include_directories(hpactor_cluster PUBLIC

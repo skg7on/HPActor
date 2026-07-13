@@ -17,3 +17,13 @@ gtest_discover_tests(test_name_resolve_cache
     TEST_PREFIX "unit/cluster/name/"
     DISCOVERY_TIMEOUT 10
 )
+
+add_executable(test_consistent_hash_ring
+    test_consistent_hash_ring.cpp
+)
+target_link_libraries(test_consistent_hash_ring PRIVATE hpactor_lib hpactor_cluster GTest::gtest GTest::gtest_main)
+target_include_directories(test_consistent_hash_ring PRIVATE ${CMAKE_SOURCE_DIR}/include)
+gtest_discover_tests(test_consistent_hash_ring
+    TEST_PREFIX "unit/cluster/name/"
+    DISCOVERY_TIMEOUT 10
+)
