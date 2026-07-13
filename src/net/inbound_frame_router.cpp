@@ -51,6 +51,8 @@ constexpr uint32_t kFieldActorId    = 2; // PbNameRegisterRequest
 constexpr uint32_t kFieldEndpoint   = 3; // PbNameRegisterRequest
 constexpr uint32_t kFieldGeneration = 4; // PbNameRegisterRequest
 constexpr uint32_t kUnregFieldGeneration = 2; // PbNameUnregisterRequest
+	constexpr uint32_t kFieldResult     = 1; // PbNameRegisterResponse
+	constexpr uint32_t kFieldFound      = 1; // PbNameResolveResponse
 } // namespace name_dir
 } // namespace pb
 
@@ -427,8 +429,98 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                 return make_result(FrameDispatchCode::ActorRejected,
                                    WireFrame::PayloadType::Data);
             }
+            case static_cast<uint32_t>(cluster::name::kNameRegisterResponseTag): {
+                if (!name_port_.on_register_response) break;
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                uint64_t result_code = 0;
+                bool has_result = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                    uint32_t fn = static_cast<uint32_t>(
+                        tag_val >> pb::kTagFieldNumberShift);
+
+                    if (fn == pb::name_dir::kFieldResult &&
+                        wt == pb::kVarint) {
+                        if (!decode_varint(p, end, result_code)) break;
+                        has_result = true;
+                    } else {
+                        if (!skip_field_value(p, end, wt)) break;
+                    }
+                }
+
+                if (has_result) {
+                    name_port_.on_register_response(name_port_.context,
+                                                    ictx.peer,
+                                                    static_cast<uint32_t>(result_code));
+                }
+                return make_result(FrameDispatchCode::ActorRejected,
+                                   WireFrame::PayloadType::Data);
+            }
+            case static_cast<uint32_t>(cluster::name::kNameResolveResponseTag): {
+                if (!name_port_.on_resolve_response) break;
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                bool found = false;
+                uint64_t actor_id = 0;
+                std::string_view endpoint_str;
+                uint64_t generation = 0;
+                bool has_found = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                    uint32_t fn = static_cast<uint32_t>(
+                        tag_val >> pb::kTagFieldNumberShift);
+
+                    // PbNameResolveResponse: found=1, actor_id=2, endpoint=3, generation=4
+                    if (fn == pb::name_dir::kFieldFound &&
+                        wt == pb::kVarint) {
+                        uint64_t v;
+                        if (!decode_varint(p, end, v)) break;
+                        found = (v != 0);
+                        has_found = true;
+                    } else if (fn == pb::name_dir::kFieldActorId &&
+                               wt == pb::kVarint) {
+                        if (!decode_varint(p, end, actor_id)) break;
+                    } else if (fn == pb::name_dir::kFieldEndpoint &&
+                               wt == pb::kLengthDelimited) {
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
+                        endpoint_str = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                    } else if (fn == pb::name_dir::kFieldGeneration &&
+                               wt == pb::kVarint) {
+                        if (!decode_varint(p, end, generation)) break;
+                    } else {
+                        if (!skip_field_value(p, end, wt)) break;
+                    }
+                }
+
+                if (has_found) {
+                    name_port_.on_resolve_response(name_port_.context,
+                                                   ictx.peer, found,
+                                                   actor_id, endpoint_str,
+                                                   generation);
+                }
+                return make_result(FrameDispatchCode::ActorRejected,
+                                   WireFrame::PayloadType::Data);
+            }
             default:
-                break; // Response tags pass through to ordinary delivery
+                break; // Unknown name-protocol tag — pass through
+                        // to ordinary delivery.
             }
         }
     }

@@ -37,9 +37,9 @@ TEST(NameResolutionArchitecture, PortTypesAreFixedSizes) {
     // OutboundNameQueryPort: 1 fn ptr + 1 void*.
     EXPECT_LE(sizeof(hpactor::cluster::name::OutboundNameQueryPort),
               2 * sizeof(void*));
-    // InboundNamePort: 3 fn ptrs + 1 void*.
+    // InboundNamePort: 5 fn ptrs + 1 void*.
     EXPECT_LE(sizeof(hpactor::cluster::name::InboundNamePort),
-              4 * sizeof(void*));
+              6 * sizeof(void*));
 }
 
 TEST(NameResolutionArchitecture, ConfigFieldsAreDefaulted) {
