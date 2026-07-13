@@ -105,6 +105,9 @@ static bool scenario_tier3_resolve(NodeRole role, ActorSystem& system,
         const char* other_name = service_name_for(other_role);
         auto ep = endpoint_for(other_role, base_port);
 
+        std::cout << "  [resolve] '" << other_name << "' → querying "
+                  << endpoint_ops::to_string(ep) << " ..." << std::endl;
+
         auto t1 = steady_clock::now();
         auto resolved = system.resolve_actor(other_name);
         auto t2 = steady_clock::now();
