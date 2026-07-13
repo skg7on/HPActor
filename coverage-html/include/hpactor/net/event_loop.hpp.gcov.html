@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-13 06:24:24</td>
+            <td class="headerValue">2026-07-13 07:11:19</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -155,8 +155,8 @@
 <span id="L77"><span class="lineNum">      77</span>                 :             :     /// \brief Check whether the backend is running.</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     ///</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     /// \return \c true if \c run() has been called and \c stop() has not.</span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     bool is_running() const {</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">          53 :         return running_.load();</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC tlaBgGNC">          52 :     bool is_running() const {</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">          52 :         return running_.load();</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : </span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     /// \brief Return the backend name for diagnostics.</span>
@@ -308,9 +308,9 @@
 <span id="L230"><span class="lineNum">     230</span>                 :             :     /// When set, completions go to this callback instead of the</span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     /// \c ActorSystem.</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     /// \param[in] cb Callback for test verification.</span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">         163 :     void set_completion_callback(completion_callback cb) {</span></span>
-<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">         163 :         completion_callback_ = std::move(cb);</span></span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">         163 :     }</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">         167 :     void set_completion_callback(completion_callback cb) {</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">         167 :         completion_callback_ = std::move(cb);</span></span>
+<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">         167 :     }</span></span>
 <span id="L236"><span class="lineNum">     236</span>                 :             : </span>
 <span id="L237"><span class="lineNum">     237</span>                 :             :     /// \brief Access the underlying backend for direct async operations.</span>
 <span id="L238"><span class="lineNum">     238</span>                 :             :     ///</span>
