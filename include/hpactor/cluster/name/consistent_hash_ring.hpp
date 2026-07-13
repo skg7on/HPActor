@@ -15,9 +15,18 @@ namespace hpactor::cluster::name {
 
 /// \brief Comparator for deterministic ordering of EndPoint in std::set.
 ///
-/// Uses endpoint_ops::to_string() for ordering. This is not a hot-path
-/// operation — called during ring rebuilds on membership change.
+/// EndPoint (\c std::variant<Ipv4Endpoint, Ipv6Endpoint>) has no
+/// \c operator<. This comparator uses \c endpoint_ops::to_string() for
+/// lexicographic ordering, enabling use in ordered containers.
+///
+/// \note Not a hot-path operation — called only during ring rebuilds on
+///       membership change events.
 struct EndPointCompare {
+    /// \brief Lexicographic comparison of two endpoints via their string
+    ///        representations.
+    /// \param[in] a First endpoint.
+    /// \param[in] b Second endpoint.
+    /// \return \c true if \p a < \p b by string ordering.
     bool operator()(const EndPoint& a, const EndPoint& b) const noexcept;
 };
 

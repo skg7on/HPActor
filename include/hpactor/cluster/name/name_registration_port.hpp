@@ -13,17 +13,27 @@ namespace hpactor::cluster::name {
 /// \brief Function-pointer port installed on ActorDirectory for name
 ///        registration/unregistration callbacks.
 ///
-/// Fixed-size (two pointers + one void*). No std::function, no exceptions.
+/// Fixed-size (two function pointers + one \c void*). No \c std::function,
+/// no exceptions. When either callback is \c nullptr, the corresponding
+/// operation is a no-op.
+///
+/// \note The port is set once at construction time by \c RuntimeBuilder.
+///       Individual call sites check each callback independently — it is
+///       valid to set only \c on_register or only \c on_unregister.
 struct NameRegistrationPort {
+    /// \brief Callback signature for name registration.
     using RegisterFn = void (*)(void* context, std::string_view name,
                                  ActorAddress address, uint64_t generation);
+    /// \brief Callback signature for name unregistration.
     using UnregisterFn = void (*)(void* context, std::string_view name);
 
-    void* context = nullptr;
-    RegisterFn on_register = nullptr;
-    UnregisterFn on_unregister = nullptr;
+    void* context = nullptr;       ///< Opaque pointer passed to each callback.
+    RegisterFn on_register = nullptr;     ///< Registration callback.
+    UnregisterFn on_unregister = nullptr; ///< Unregistration callback.
 
     /// \brief True when both callbacks are installed.
+    /// \return \c true if both \c on_register and \c on_unregister are
+    ///         non-null.
     [[nodiscard]] bool active() const noexcept {
         return on_register != nullptr && on_unregister != nullptr;
     }

@@ -31,7 +31,9 @@ struct NameResolutionConfig {
     uint32_t virtual_nodes{100};
 
     /// Validate that all fields are within acceptable bounds.
-    /// \retval true Config is valid.
+    ///
+    /// \retval true All fields are within their configured ranges.
+    /// \note Does not modify any state — pure const predicate.
     [[nodiscard]] bool valid() const noexcept {
         return resolve_timeout_ms >= 100 &&
                resolve_timeout_ms <= 60'000 &&

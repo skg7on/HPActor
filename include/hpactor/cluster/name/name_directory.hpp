@@ -17,17 +17,24 @@ namespace hpactor::cluster::name {
 
 /// \brief Result of a name registration attempt on the home node.
 enum class RegisterResult : uint8_t {
-    Ok,
-    DuplicateName,
-    StaleGeneration,
+    Ok,              ///< Registration succeeded.
+    DuplicateName,   ///< Another actor already registered this name with the
+                     ///< same generation.
+    StaleGeneration, ///< The caller's generation counter is behind the
+                     ///< existing entry — the caller has outdated information.
 };
 
 /// \brief A single entry in the home-node name directory.
+///
+/// Each entry maps a registered name to the actor's identity and physical
+/// location. The \c generation field allows the home node to reject stale
+/// registration requests.
 struct NameEntry {
     ActorId actor_id;       ///< The actor's unique ID.
     EndPoint endpoint;      ///< Where the actor actually runs.
     uint64_t generation{0}; ///< Monotonic counter; bumped on re-registration.
-    std::chrono::steady_clock::time_point registered_at{}; ///< Registration timestamp.
+    std::chrono::steady_clock::time_point registered_at{}; ///< Registration
+                                                            ///< timestamp.
 };
 
 /// \brief Thread-safe store for name→(ActorId, EndPoint) mappings homed on
@@ -43,9 +50,14 @@ class NameDirectory {
 
     /// \brief Register a name→entry mapping.
     ///
-    /// Rejects duplicates and stale generations (gen <= existing.gen).
+    /// If the name is already registered, compares \p entry.generation against
+    /// the existing generation:
+    /// - \c gen > existing → overwrite (valid re-registration)
+    /// - \c gen == existing → \c RegisterResult::DuplicateName
+    /// - \c gen < existing → \c RegisterResult::StaleGeneration
+    ///
     /// \param[in] name Actor name to register.
-    /// \param[in] entry NameEntry with actor_id, endpoint, generation.
+    /// \param[in] entry NameEntry with actor_id, endpoint, and generation.
     /// \return RegisterResult::Ok on success, or a typed rejection.
     RegisterResult register_entry(const std::string& name,
                                   const NameEntry& entry);
@@ -67,10 +79,14 @@ class NameDirectory {
     /// departed node.
     /// \param[in] ep Endpoint whose entries should be purged.
     /// \return Number of entries removed.
+    /// \note Thread safety: internally synchronized via \c mutex_.
     size_t purge_by_endpoint(EndPoint ep);
 
     /// \brief Consistent snapshot of all entries.
+    ///
+    /// Iterates the internal map under the lock and copies every entry.
     /// \return Vector of (name, NameEntry) pairs.
+    /// \note Linear in the number of registered entries.
     std::vector<std::pair<std::string, NameEntry>> snapshot() const;
 
     /// \brief Number of registered entries.

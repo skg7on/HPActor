@@ -34,16 +34,21 @@ class NameResolveCache {
              std::chrono::seconds ttl);
 
     /// \brief Remove a specific name from the cache.
+    /// \param[in] name Actor name to evict.
     void evict(const std::string& name);
 
     /// \brief Remove all entries pointing to a given endpoint.
     ///
-    /// Called on node departure.
+    /// Called on node departure to purge cached resolution results for
+    /// actors hosted on the departed node.
+    ///
+    /// \param[in] ep Endpoint whose cached entries should be purged.
     void evict_node(EndPoint ep);
 
     /// \brief Remove all expired entries.
     ///
     /// Call periodically to prevent unbounded growth from stale entries.
+    /// Does not compact memory or shrink the underlying hashmap.
     void purge_expired();
 
   private:
