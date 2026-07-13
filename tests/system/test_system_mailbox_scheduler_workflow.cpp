@@ -274,8 +274,12 @@ TEST(MailboxScheduler, SchedulerWorkerDispatchAndExecution) {
 
 TEST(MailboxScheduler, WorkStealingBetweenWorkers) {
     Config cfg = test::config_with_scheduler(2);
-    // Workers must be running for work stealing to occur
-    cfg.scheduler_start_paused = false;
+    // Start paused so we can deterministically set up both actors and deliver
+    // all messages before workers begin processing.  This eliminates the race
+    // between deliver_local() → notify_ready() (which drops AlreadyRunning
+    // notifications) and the adaptive batch's mailbox-empty check, which
+    // otherwise orphans messages under coverage-instrumentation slowdown.
+    cfg.scheduler_start_paused = true;
 
     ActorSystem system(cfg);
     ASSERT_NE(system.scheduler(), nullptr);
@@ -286,11 +290,15 @@ TEST(MailboxScheduler, WorkStealingBetweenWorkers) {
     auto* raw1 = static_cast<CountingActor*>(a1.get().get());
     auto* raw2 = static_cast<CountingActor*>(a2.get().get());
 
-    // Deliver messages to both actors
+    // Deliver all messages to both actors while workers are paused.
     for (uint32_t i = 0; i < 5; ++i) {
         system.deliver_local(a1.id(), make_msg(0x1000 + i));
         system.deliver_local(a2.id(), make_msg(0x2000 + i));
     }
+
+    // Resume workers — both actors have full mailboxes.  Workers compete for
+    // work and may steal across deques, exercising the work-stealing path.
+    system.scheduler()->resume_workers();
 
     // Wait for both actors to process all messages
     bool done = test::assert_eventually(
