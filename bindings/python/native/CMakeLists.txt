@@ -33,7 +33,8 @@ set_target_properties(hpactor_python_native PROPERTIES POSITION_INDEPENDENT_CODE
 target_include_directories(hpactor_python_native PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_BINARY_DIR})
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party/llhttp)
 
 # Wheel builds keep linkage private so the extension is self-contained.
 # Normal SDK builds keep public linkage for downstream consumers.
