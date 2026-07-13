@@ -43,8 +43,9 @@ std::optional<ActorAddress> NameResolver::resolve(std::string_view name) {
     std::string name_str{name};
 
     // Tier 1: local NameDirectory (this node is the home node).
+    // NameDirectory has its own internal mutex — no need to acquire
+    // NameResolver::mutex_ (which only guards ring_).
     {
-        std::lock_guard<std::mutex> lock(mutex_);
         auto entry = name_directory_.resolve(name_str);
         if (entry.has_value()) {
             return ActorAddress{entry->endpoint, ActorType{0},
@@ -148,6 +149,16 @@ NameResolver::on_name_register_request(EndPoint /*from*/,
                                         ActorAddress address,
                                         uint64_t generation) {
     if (!config_.enabled) return NameRegisterResult::Disabled;
+
+    // Verify this node is the authoritative home for this name.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto home = ring_.lookup(name);
+        if (!home.has_value() || *home != local_endpoint_) {
+            return NameRegisterResult::Disabled;
+        }
+    }
+
     NameEntry entry;
     entry.actor_id = address.id;
     entry.endpoint = address.endpoint;
@@ -167,6 +178,16 @@ NameResolveResult
 NameResolver::on_name_resolve_query(EndPoint /*from*/, std::string_view name) {
     NameResolveResult result;
     if (!config_.enabled) return result;
+
+    // Verify this node is the home for the queried name.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto home = ring_.lookup(name);
+        if (!home.has_value() || *home != local_endpoint_) {
+            return result;
+        }
+    }
+
     auto entry = name_directory_.resolve(std::string{name});
     if (entry.has_value()) {
         result.address = ActorAddress{entry->endpoint, ActorType{0},
@@ -180,6 +201,16 @@ void NameResolver::on_name_unregister_request(EndPoint /*from*/,
                                                uint64_t generation) {
     if (!config_.enabled) return;
     std::string name_str{name};
+
+    // Verify this node is the home for the name being unregistered.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto home = ring_.lookup(name);
+        if (!home.has_value() || *home != local_endpoint_) {
+            return;
+        }
+    }
+
     auto existing = name_directory_.resolve(name_str);
     if (existing.has_value() && generation >= existing->generation) {
         name_directory_.unregister(name_str);

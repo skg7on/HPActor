@@ -48,16 +48,59 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
     impl_->name_directory_ = std::make_unique<cluster::name::NameDirectory>();
     impl_->name_resolve_cache_ = std::make_unique<cluster::name::NameResolveCache>();
 
-    // Outbound/inbound ports start as inactive stubs — the integration
-    // task (Task 8) will wire real transport-send and frame-dispatch
-    // function pointers once the message layer is ready.
+    // Outbound port starts as inactive stub — outbound name-protocol
+    // messages are not yet delivered (requires transport message layer).
     cluster::name::OutboundNameQueryPort outbound_port;
+
+    // Inbound port: wired to the NameResolver so incoming name-protocol
+    // frames (tags 0x80-0x84) are dispatched via InboundFrameRouter.
     cluster::name::InboundNamePort inbound_port;
+    inbound_port.context = nullptr; // set after NameResolver construction
 
     impl_->name_resolver = std::make_unique<cluster::name::NameResolver>(
         *impl_->name_directory_, *impl_->network_->discovery(),
         *impl_->name_resolve_cache_, nr_cfg, impl_->core.endpoint,
         outbound_port, inbound_port);
+
+    // Wire the inbound port — InboundFrameRouter dispatches name-protocol
+    // frames to the NameResolver via these function pointers.
+    inbound_port.context = impl_->name_resolver.get();
+    inbound_port.on_register_request =
+        [](void* ctx, EndPoint from, std::string_view name,
+           ActorAddress addr, uint64_t gen) {
+            static_cast<cluster::name::NameResolver*>(ctx)
+                ->on_name_register_request(from, name, addr, gen);
+        };
+    inbound_port.on_resolve_query =
+        [](void* ctx, EndPoint from, std::string_view name) {
+            static_cast<cluster::name::NameResolver*>(ctx)
+                ->on_name_resolve_query(from, name);
+        };
+    inbound_port.on_unregister_request =
+        [](void* ctx, EndPoint from, std::string_view name, uint64_t gen) {
+            static_cast<cluster::name::NameResolver*>(ctx)
+                ->on_name_unregister_request(from, name, gen);
+        };
+    if (impl_->inbound_frame_router_) {
+        impl_->inbound_frame_router_->set_name_port(inbound_port);
+    }
+
+    // Wire the registration port — ActorDirectory notifies NameResolver
+    // when names are published (register) or erased (unregister).
+    cluster::name::NameRegistrationPort reg_port;
+    reg_port.context = impl_->name_resolver.get();
+    reg_port.on_register =
+        [](void* ctx, std::string_view name, ActorAddress addr,
+           uint64_t gen) {
+            static_cast<cluster::name::NameResolver*>(ctx)
+                ->on_local_register(name, addr, gen);
+        };
+    reg_port.on_unregister =
+        [](void* ctx, std::string_view name) {
+            static_cast<cluster::name::NameResolver*>(ctx)
+                ->on_local_unregister(name);
+        };
+    impl_->actors.directory.set_name_registration_port(reg_port);
 
     // Bind the bridge so ActorSystem::resolve_actor() can query the
     // name resolver without linking hpactor_lib against NameResolver.

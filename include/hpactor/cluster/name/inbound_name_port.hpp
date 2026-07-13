@@ -47,10 +47,16 @@ struct InboundNamePort {
     ResolveFn on_resolve_query = nullptr;         ///< Resolve-query handler.
     UnregisterFn on_unregister_request = nullptr; ///< Unregister-request handler.
 
-    /// \brief True when the port has a context and at least one handler.
-    /// \return \c true if \c context is non-null.
+    /// \brief True when at least one handler is installed.
+    ///
+    /// Individual dispatch sites check their own callback pointer before
+    /// calling — a partially-wired port (e.g., only on_resolve_query set)
+    /// is valid and will only dispatch for the configured handler(s).
+    /// \return \c true if at least one callback is non-null.
     [[nodiscard]] bool active() const noexcept {
-        return context != nullptr;
+        return on_register_request != nullptr ||
+               on_resolve_query != nullptr ||
+               on_unregister_request != nullptr;
     }
 };
 

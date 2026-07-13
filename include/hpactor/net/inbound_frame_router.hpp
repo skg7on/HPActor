@@ -72,6 +72,15 @@ class InboundFrameRouter final : public InboundFrameTarget {
     /// \brief Idempotent: stop accepting new frames for shutdown.
     void disable() noexcept;
 
+    /// \brief Install or update the name-protocol dispatch port.
+    ///
+    /// Called by \c enable_cluster() after \c NameResolver construction.
+    /// Safe to call at any point — the dispatch path reads \c name_port_
+    /// on the event-loop thread without additional synchronization.
+    void set_name_port(cluster::name::InboundNamePort port) noexcept {
+        name_port_ = port;
+    }
+
   private:
     /// Common message builder: validates address, constructs TypedMessage,
     /// parses trace, sets metadata, then calls full messaging delivery.

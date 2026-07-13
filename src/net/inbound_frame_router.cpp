@@ -41,16 +41,16 @@ inline bool skip_field_value(const uint8_t*& p, const uint8_t* end,
     case 2: { // length-delimited
         uint64_t len;
         if (!decode_varint(p, end, len)) return false;
-        if (p + len > end) return false;
+        if (len > static_cast<uint64_t>(end - p)) return false;
         p += len;
         return true;
     }
     case 1: // 64-bit fixed
-        if (p + 8 > end) return false;
+        if (static_cast<uint64_t>(end - p) < 8) return false;
         p += 8;
         return true;
     case 5: // 32-bit fixed
-        if (p + 4 > end) return false;
+        if (static_cast<uint64_t>(end - p) < 4) return false;
         p += 4;
         return true;
     default:
@@ -242,6 +242,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
         if (cluster::name::is_name_protocol_tag(tag) && name_port_.active()) {
             switch (tag_raw) {
             case 0x80: { // NameRegisterRequest
+                if (!name_port_.on_register_request) break;
                 const auto& pl = data.payload();
                 const uint8_t* p =
                     reinterpret_cast<const uint8_t*>(pl.data());
@@ -263,7 +264,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     if (fn == 1 && wt == 2) { // name (string)
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
-                        if (p + len > end) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
                         name = std::string_view(
                             reinterpret_cast<const char*>(p), len);
                         p += len;
@@ -274,7 +275,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     } else if (fn == 3 && wt == 2) { // endpoint (string)
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
-                        if (p + len > end) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
                         endpoint_str = std::string_view(
                             reinterpret_cast<const char*>(p), len);
                         p += len;
@@ -296,10 +297,11 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                                                     ictx.peer, name, addr,
                                                     generation);
                 }
-                return make_result(FrameDispatchCode::ActorDelivered,
+                return make_result(FrameDispatchCode::ActorRejected,
                                    WireFrame::PayloadType::Data);
             }
             case 0x82: { // NameResolveQuery
+                if (!name_port_.on_resolve_query) break;
                 const auto& pl = data.payload();
                 const uint8_t* p =
                     reinterpret_cast<const uint8_t*>(pl.data());
@@ -317,7 +319,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     if (fn == 1 && wt == 2) { // name (string)
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
-                        if (p + len > end) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
                         name = std::string_view(
                             reinterpret_cast<const char*>(p), len);
                         has_name = true;
@@ -330,10 +332,11 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     name_port_.on_resolve_query(name_port_.context,
                                                  ictx.peer, name);
                 }
-                return make_result(FrameDispatchCode::ActorDelivered,
+                return make_result(FrameDispatchCode::ActorRejected,
                                    WireFrame::PayloadType::Data);
             }
             case 0x84: { // NameUnregisterRequest
+                if (!name_port_.on_unregister_request) break;
                 const auto& pl = data.payload();
                 const uint8_t* p =
                     reinterpret_cast<const uint8_t*>(pl.data());
@@ -352,7 +355,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                     if (fn == 1 && wt == 2) { // name (string)
                         uint64_t len;
                         if (!decode_varint(p, end, len)) break;
-                        if (p + len > end) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
                         name = std::string_view(
                             reinterpret_cast<const char*>(p), len);
                         p += len;
@@ -370,7 +373,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                                                       ictx.peer, name,
                                                       generation);
                 }
-                return make_result(FrameDispatchCode::ActorDelivered,
+                return make_result(FrameDispatchCode::ActorRejected,
                                    WireFrame::PayloadType::Data);
             }
             default:
