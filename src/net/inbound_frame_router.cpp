@@ -306,6 +306,7 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                 const uint8_t* end = p + pl.size();
 
                 std::string_view name;
+                bool has_name = false;
 
                 while (p < end) {
                     uint64_t tag_val;
@@ -319,13 +320,16 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
                         if (p + len > end) break;
                         name = std::string_view(
                             reinterpret_cast<const char*>(p), len);
+                        has_name = true;
                         break;
                     }
                     if (!skip_field_value(p, end, wt)) break;
                 }
 
-                name_port_.on_resolve_query(name_port_.context, ictx.peer,
-                                             name);
+                if (has_name) {
+                    name_port_.on_resolve_query(name_port_.context,
+                                                 ictx.peer, name);
+                }
                 return make_result(FrameDispatchCode::ActorDelivered,
                                    WireFrame::PayloadType::Data);
             }

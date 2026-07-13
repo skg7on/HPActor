@@ -52,6 +52,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/cli_messages.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/cli.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/ai_resource.proto
+    ${CMAKE_SOURCE_DIR}/protos/hpactor/name_directory.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/python_binding_internal.proto
 )
 

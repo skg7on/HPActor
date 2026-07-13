@@ -367,3 +367,16 @@ foreach(_file IN LISTS _python_forbidden_core_files)
             "-DFORBIDDEN=#include <Python.h>;#include \"Python.h\""
             -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_file_excludes.cmake)
 endforeach()
+
+# ── Name Resolution architecture fitness ──────────────────────────────────────
+
+# Compiled GTest: port sizes, config defaults, default constructibility.
+# Compilation with -fno-rtti -fno-exceptions verifies the cluster/name headers
+# contain no RTTI/exception/std::function usage.
+add_executable(test_name_resolution_architecture
+    test_name_resolution_architecture.cpp
+)
+target_link_libraries(test_name_resolution_architecture
+    hpactor hpactor_cluster hpactor_test_support GTest::gtest_main
+)
+gtest_discover_tests(test_name_resolution_architecture)

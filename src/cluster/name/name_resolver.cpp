@@ -11,12 +11,14 @@ NameResolver::NameResolver(NameDirectory& name_directory,
                            net::IServiceDiscovery& discovery,
                            NameResolveCache& cache,
                            const config::NameResolutionConfig& config,
+                           EndPoint local_endpoint,
                            OutboundNameQueryPort outbound_port,
                            InboundNamePort inbound_port)
     : name_directory_(name_directory)
     , discovery_(discovery)
     , cache_(cache)
     , config_(config)
+    , local_endpoint_(std::move(local_endpoint))
     , outbound_port_(outbound_port)
     , inbound_port_(inbound_port) {
     // Build initial ring from current membership.
@@ -179,12 +181,7 @@ size_t NameResolver::home_entry_count() const noexcept {
 }
 
 EndPoint NameResolver::local_endpoint() const noexcept {
-    auto members = discovery_.discover_all();
-    if (!members.empty()) {
-        return members[0].identity.endpoint;
-    }
-    // Fallback: return an endpoint that will not match anything.
-    return Ipv4Endpoint{0, 0};
+    return local_endpoint_;
 }
 
 } // namespace hpactor::cluster::name

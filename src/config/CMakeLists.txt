@@ -24,5 +24,6 @@ target_sources(hpactor_lib PRIVATE
     parsers/shutdown_config_parser.cpp
     parsers/system_core_config_parser.cpp
     parsers/topology_config_parser.cpp
+    parsers/name_resolution_config_parser.cpp
     parsers/tracing_config_parser.cpp
 )

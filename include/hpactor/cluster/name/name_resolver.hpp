@@ -48,6 +48,7 @@ class NameResolver {
                  net::IServiceDiscovery& discovery,
                  NameResolveCache& cache,
                  const config::NameResolutionConfig& config,
+                 EndPoint local_endpoint,
                  OutboundNameQueryPort outbound_port,
                  InboundNamePort inbound_port);
 
@@ -100,7 +101,8 @@ class NameResolver {
     NameDirectory& name_directory_;
     net::IServiceDiscovery& discovery_;
     NameResolveCache& cache_;
-    const config::NameResolutionConfig& config_;
+    config::NameResolutionConfig config_;
+    EndPoint local_endpoint_;
     OutboundNameQueryPort outbound_port_;
     InboundNamePort inbound_port_;
     ConsistentHashRing ring_;

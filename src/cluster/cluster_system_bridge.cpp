@@ -56,7 +56,8 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
 
     impl_->name_resolver = std::make_unique<cluster::name::NameResolver>(
         *impl_->name_directory_, *impl_->network_->discovery(),
-        *impl_->name_resolve_cache_, nr_cfg, outbound_port, inbound_port);
+        *impl_->name_resolve_cache_, nr_cfg, impl_->core.endpoint,
+        outbound_port, inbound_port);
 
     // Bind the bridge so ActorSystem::resolve_actor() can query the
     // name resolver without linking hpactor_lib against NameResolver.
