@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-13 05:01:47</td>
+            <td class="headerValue">2026-07-13 06:24:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.9&nbsp;%</td>
@@ -131,7 +131,7 @@
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     // ---- Constructors ----</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC tlaBgGNC">      207323 :     StreamBuffer() = default;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC tlaBgGNC">      207304 :     StreamBuffer() = default;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     // Create a buffer with count zero-initialized bytes (matches std::vector).</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     explicit StreamBuffer(size_t count);</span>
@@ -142,7 +142,7 @@
 <span id="L64"><span class="lineNum">      64</span>                 :             :     template &lt;typename InputIt, typename = std::enable_if_t&lt;!std::is_integral_v&lt;InputIt&gt;&gt;&gt;</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     StreamBuffer(InputIt first, InputIt last);</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">     2495626 :     ~StreamBuffer() = default;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">     2496836 :     ~StreamBuffer() = default;</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     /// \brief Create a buffer with pre-allocated capacity but \c size() == 0.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     ///</span>
@@ -173,13 +173,13 @@
 <span id="L95"><span class="lineNum">      95</span>                 :             : </span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     // ---- Move ----</span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : </span>
-<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">     1777180 :     StreamBuffer(StreamBuffer&amp;&amp;) noexcept = default;</span></span>
-<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">      135328 :     StreamBuffer&amp; operator=(StreamBuffer&amp;&amp;) noexcept = default;</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">     1778417 :     StreamBuffer(StreamBuffer&amp;&amp;) noexcept = default;</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">      135311 :     StreamBuffer&amp; operator=(StreamBuffer&amp;&amp;) noexcept = default;</span></span>
 <span id="L100"><span class="lineNum">     100</span>                 :             : </span>
 <span id="L101"><span class="lineNum">     101</span>                 :             :     // ---- Capacity ----</span>
 <span id="L102"><span class="lineNum">     102</span>                 :             : </span>
-<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">      642489 :     size_t size() const noexcept {</span></span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">      642489 :         return buf_.size() - read_pos_;</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">      643854 :     size_t size() const noexcept {</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">      643854 :         return buf_.size() - read_pos_;</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :             :     }</span>
 <span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">         210 :     bool empty() const noexcept {</span></span>
 <span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">         210 :         return size() == 0;</span></span>
@@ -239,8 +239,8 @@
 <span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">      283175 :         maybe_compact();</span></span>
 <span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">      283175 :         return buf_.data() + read_pos_;</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :     }</span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">       54687 :     const uint8_t* data() const noexcept {</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">       54687 :         return buf_.data() + read_pos_;</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">       54674 :     const uint8_t* data() const noexcept {</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">       54674 :         return buf_.data() + read_pos_;</span></span>
 <span id="L166"><span class="lineNum">     166</span>                 :             :     }</span>
 <span id="L167"><span class="lineNum">     167</span>                 :             : </span>
 <span id="L168"><span class="lineNum">     168</span>                 :             :     // ---- Reserve + Write (direct I/O) ----</span>
@@ -293,9 +293,9 @@
 <span id="L215"><span class="lineNum">     215</span>                 :             : // ---- Template implementations ----</span>
 <span id="L216"><span class="lineNum">     216</span>                 :             : </span>
 <span id="L217"><span class="lineNum">     217</span>                 :             : template &lt;typename InputIt, typename&gt;</span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">         524 : StreamBuffer::StreamBuffer(InputIt first, InputIt last) {</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">         524 :     buf_.insert(buf_.end(), first, last);</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         524 : }</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">         512 : StreamBuffer::StreamBuffer(InputIt first, InputIt last) {</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">         512 :     buf_.insert(buf_.end(), first, last);</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         512 : }</span></span>
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
 <span id="L222"><span class="lineNum">     222</span>                 :             : template &lt;typename InputIt&gt;</span>
 <span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">          56 : void StreamBuffer::assign(InputIt first, InputIt last) {</span></span>
