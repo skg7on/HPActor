@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="Python Declarative Topology" href="python/topology.html" /> 
+    <link rel="prev" title="External Client SDK" href="python/external-sdk.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -89,7 +89,12 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Python Binding</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="python/index.html">Python Binding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python/your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python/actor-api.html">Actor API Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="python/topology.html">Python Declarative Topology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python/external-sdk.html">External Client SDK</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
 <ul class="current">
@@ -109,7 +114,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#scalability-limits">Scalability Limits</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#wire-protocol">Wire Protocol</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#language-bindings">Language Bindings</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#python-alpha-phase-1d">Python (Alpha — Phase 1D)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#python-phases-1a2">Python (Phases 1A–2)</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#other-languages">Other Languages</a></li>
 </ul>
 </li>
@@ -333,19 +338,30 @@ version. There is no protocol negotiation during connection handshake.</p></li>
 </section>
 <section id="language-bindings">
 <h2>Language Bindings<a class="headerlink" href="#language-bindings" title="Link to this heading"></a></h2>
-<section id="python-alpha-phase-1d">
-<h3>Python (Alpha — Phase 1D)<a class="headerlink" href="#python-alpha-phase-1d" title="Link to this heading"></a></h3>
-<p>HPActor provides an official alpha Python binding for CPython 3.11 and
+<section id="python-phases-1a2">
+<h3>Python (Phases 1A–2)<a class="headerlink" href="#python-phases-1a2" title="Link to this heading"></a></h3>
+<p>HPActor provides an official Python binding for CPython 3.11 and
 newer on manylinux_2_28 x86_64/ARM64 and macOS 12.0 x86_64/ARM64.
-The binding uses generated protobuf messages and explicit TypeTags.</p>
-<p><strong>In scope (Phase 1D):</strong> in-process actor API, asyncio execution,
+The binding has two complementary surfaces:</p>
+<ol class="arabic simple">
+<li><p><strong>In-process actor API</strong> — pybind11-based <code class="docutils literal notranslate"><span class="pre">_hpactor</span></code> native
+extension backed by the full HPActor C++ runtime.  Define, spawn,
+send, ask, schedule, and supervise actors from Python with
+asyncio-native interfaces.  Mixed C++/Python actor trees via
+declarative TOML topology.</p></li>
+<li><p><strong>External client SDK</strong> (<code class="docutils literal notranslate"><span class="pre">hpactor.client</span></code>) — pure-Python
+sync/async <code class="docutils literal notranslate"><span class="pre">HealthClient</span></code>, <code class="docutils literal notranslate"><span class="pre">MetricsClient</span></code>, <code class="docutils literal notranslate"><span class="pre">GatewayClient</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">CliClient</span></code> for consuming HPActor health, metrics, HTTP
+gateway, and CLI surfaces without importing the native runtime.</p></li>
+</ol>
+<p><strong>In scope (Phase 2):</strong> in-process actor API, asyncio execution,
 delivery semantics, supervision, metrics, tracing, CLI, health checks,
-and graceful shutdown.</p>
+graceful shutdown, declarative TOML topology, and external SDK clients.</p>
 <p><strong>Not yet supported:</strong> Windows, musllinux, PyPy, free-threaded
-CPython, native remote-node participation, declarative topology
-(Phase 1E), and external SDK clients (Phase 2).</p>
-<p>Install with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">hpactor</span></code>.  See the Python manual at
-<code class="docutils literal notranslate"><span class="pre">docs/manual/python/</span></code> for the quick-start guide and API reference.</p>
+CPython, native remote-node participation, authenticated CLI,
+automatic capability discovery, and an automatic metrics listener.</p>
+<p>Install with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">hpactor</span></code>.  See <a class="reference internal" href="python/index.html"><span class="doc">Python Binding</span></a>
+for the quick-start guide and API reference.</p>
 </section>
 <section id="other-languages">
 <h3>Other Languages<a class="headerlink" href="#other-languages" title="Link to this heading"></a></h3>
@@ -401,7 +417,7 @@ backlog is in <code class="docutils literal notranslate"><span class="pre">docs/
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="python/topology.html" class="btn btn-neutral float-left" title="Python Declarative Topology" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="python/external-sdk.html" class="btn btn-neutral float-left" title="External Client SDK" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

@@ -19,8 +19,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Limitations &amp; Known Gaps" href="../limitations.html" />
-    <link rel="prev" title="Production Deployment" href="../best-practices/deployment.html" /> 
+    <link rel="next" title="External Client SDK" href="external-sdk.html" />
+    <link rel="prev" title="Actor API Reference" href="actor-api.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -90,6 +90,37 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Python Binding</span></p>
 <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python Binding</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="actor-api.html">Actor API Reference</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Python Declarative Topology</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#quick-start">Quick Start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#behavior-reference-syntax">Behavior Reference Syntax</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#actor-arguments">Actor Arguments</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-allowlist">Module Allowlist</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#actorsystem-from-topology">ActorSystem.from_topology()</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorSystem.from_topology"><code class="docutils literal notranslate"><span class="pre">ActorSystem.from_topology()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#transactional-commit-and-rollback">Transactional Commit and Rollback</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#errors">Errors</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#TopologyPhase"><code class="docutils literal notranslate"><span class="pre">TopologyPhase</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#TopologyError"><code class="docutils literal notranslate"><span class="pre">TopologyError</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#execution-domain-rules">Execution-Domain Rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#security-model">Security Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#known-limitations">Known Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="external-sdk.html">External Client SDK</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="actor-api.html">Actor API Reference</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Python Declarative Topology</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick Start</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#behavior-reference-syntax">Behavior Reference Syntax</a></li>
@@ -117,6 +148,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#known-limitations">Known Limitations</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="external-sdk.html">External Client SDK</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
 <ul>
@@ -137,6 +169,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Python Binding</a></li>
       <li class="breadcrumb-item active">Python Declarative Topology</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/python/topology.rst.txt" rel="nofollow"> View page source</a>
@@ -476,8 +509,8 @@ and callbacks are released.</p></li>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../best-practices/deployment.html" class="btn btn-neutral float-left" title="Production Deployment" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../limitations.html" class="btn btn-neutral float-right" title="Limitations &amp; Known Gaps" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="actor-api.html" class="btn btn-neutral float-left" title="Actor API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="external-sdk.html" class="btn btn-neutral float-right" title="External Client SDK" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

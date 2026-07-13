@@ -1,0 +1,749 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>External Client SDK &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Limitations &amp; Known Gaps" href="../limitations.html" />
+    <link rel="prev" title="Python Declarative Topology" href="topology.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Binding</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python Binding</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="actor-api.html">Actor API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="topology.html">Python Declarative Topology</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">External Client SDK</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#HttpEndpointConfig"><code class="docutils literal notranslate"><span class="pre">HttpEndpointConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#HttpTimeouts"><code class="docutils literal notranslate"><span class="pre">HttpTimeouts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#HttpLimits"><code class="docutils literal notranslate"><span class="pre">HttpLimits</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#RetryPolicy"><code class="docutils literal notranslate"><span class="pre">RetryPolicy</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#health-client">Health Client</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#HealthClient"><code class="docutils literal notranslate"><span class="pre">HealthClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncHealthClient"><code class="docutils literal notranslate"><span class="pre">AsyncHealthClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#HealthResult"><code class="docutils literal notranslate"><span class="pre">HealthResult</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#HealthState"><code class="docutils literal notranslate"><span class="pre">HealthState</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#metrics-client">Metrics Client</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#MetricsClient"><code class="docutils literal notranslate"><span class="pre">MetricsClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncMetricsClient"><code class="docutils literal notranslate"><span class="pre">AsyncMetricsClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#gateway-client">Gateway Client</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#GatewayClient"><code class="docutils literal notranslate"><span class="pre">GatewayClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cli-client">CLI Client</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#CliClient"><code class="docutils literal notranslate"><span class="pre">CliClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#CliClientConfig"><code class="docutils literal notranslate"><span class="pre">CliClientConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#bundle">Bundle</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#HPActorClient"><code class="docutils literal notranslate"><span class="pre">HPActorClient</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncHPActorClient"><code class="docutils literal notranslate"><span class="pre">AsyncHPActorClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#error-model">Error Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bounds-and-security">Bounds and Security</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#server-side-requirements">Server-Side Requirements</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="actor-api.html">Actor API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topology.html">Python Declarative Topology</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">External Client SDK</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#HttpEndpointConfig"><code class="docutils literal notranslate"><span class="pre">HttpEndpointConfig</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#HttpTimeouts"><code class="docutils literal notranslate"><span class="pre">HttpTimeouts</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#HttpLimits"><code class="docutils literal notranslate"><span class="pre">HttpLimits</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#RetryPolicy"><code class="docutils literal notranslate"><span class="pre">RetryPolicy</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#health-client">Health Client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#HealthClient"><code class="docutils literal notranslate"><span class="pre">HealthClient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#AsyncHealthClient"><code class="docutils literal notranslate"><span class="pre">AsyncHealthClient</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncHealthClient.liveness"><code class="docutils literal notranslate"><span class="pre">AsyncHealthClient.liveness()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncHealthClient.readiness"><code class="docutils literal notranslate"><span class="pre">AsyncHealthClient.readiness()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncHealthClient.require_live"><code class="docutils literal notranslate"><span class="pre">AsyncHealthClient.require_live()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncHealthClient.require_ready"><code class="docutils literal notranslate"><span class="pre">AsyncHealthClient.require_ready()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#HealthResult"><code class="docutils literal notranslate"><span class="pre">HealthResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#HealthState"><code class="docutils literal notranslate"><span class="pre">HealthState</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#metrics-client">Metrics Client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#MetricsClient"><code class="docutils literal notranslate"><span class="pre">MetricsClient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#AsyncMetricsClient"><code class="docutils literal notranslate"><span class="pre">AsyncMetricsClient</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncMetricsClient.scrape"><code class="docutils literal notranslate"><span class="pre">AsyncMetricsClient.scrape()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#gateway-client">Gateway Client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#GatewayClient"><code class="docutils literal notranslate"><span class="pre">GatewayClient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#AsyncGatewayClient"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.request"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.request()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.request_checked"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.request_checked()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.get"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.post"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.put"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.put()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.patch"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.patch()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncGatewayClient.delete"><code class="docutils literal notranslate"><span class="pre">AsyncGatewayClient.delete()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cli-client">CLI Client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#CliClient"><code class="docutils literal notranslate"><span class="pre">CliClient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#AsyncCliClient"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.execute"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.execute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.inspect"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.inspect()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.kill"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.kill()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.quarantine"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.quarantine()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.unquarantine"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.unquarantine()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.list_actors"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.list_actors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.system_stats"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.system_stats()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.memory_stats"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.memory_stats()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#AsyncCliClient.call"><code class="docutils literal notranslate"><span class="pre">AsyncCliClient.call()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#CliClientConfig"><code class="docutils literal notranslate"><span class="pre">CliClientConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#bundle">Bundle</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#HPActorClient"><code class="docutils literal notranslate"><span class="pre">HPActorClient</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#AsyncHPActorClient"><code class="docutils literal notranslate"><span class="pre">AsyncHPActorClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#error-model">Error Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bounds-and-security">Bounds and Security</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#server-side-requirements">Server-Side Requirements</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Python Binding</a></li>
+      <li class="breadcrumb-item active">External Client SDK</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/python/external-sdk.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="external-client-sdk">
+<h1>External Client SDK<a class="headerlink" href="#external-client-sdk" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">hpactor.client</span></code> package provides sync and async clients for HPActor
+health, metrics, HTTP gateway, and CLI surfaces.  It is pure Python — it
+never imports the <code class="docutils literal notranslate"><span class="pre">_hpactor</span></code> native extension.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">hpactor.client</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AsyncHPActorClient</span><span class="p">,</span>
+    <span class="n">HealthClientConfig</span><span class="p">,</span>
+    <span class="n">HPActorClientConfig</span><span class="p">,</span>
+    <span class="n">HttpEndpointConfig</span><span class="p">,</span>
+    <span class="n">MetricsClientConfig</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">endpoint</span> <span class="o">=</span> <span class="n">HttpEndpointConfig</span><span class="p">(</span><span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://node.example&quot;</span><span class="p">)</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">HPActorClientConfig</span><span class="p">(</span>
+    <span class="n">health</span><span class="o">=</span><span class="n">HealthClientConfig</span><span class="p">(</span><span class="n">endpoint</span><span class="o">=</span><span class="n">endpoint</span><span class="p">),</span>
+    <span class="n">metrics</span><span class="o">=</span><span class="n">MetricsClientConfig</span><span class="p">(</span><span class="n">endpoint</span><span class="o">=</span><span class="n">endpoint</span><span class="p">),</span>
+<span class="p">)</span>
+
+<span class="k">async</span> <span class="k">with</span> <span class="n">AsyncHPActorClient</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="n">readiness</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">health</span><span class="o">.</span><span class="n">readiness</span><span class="p">()</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">scrape</span><span class="p">()</span>
+</pre></div>
+</div>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<p>All configuration types are frozen, validated, and secret-redacted.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="HttpEndpointConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HttpEndpointConfig</span></span><a class="headerlink" href="#HttpEndpointConfig" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">base_url:</span> <span class="pre">str</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">verify:</span> <span class="pre">bool</span> <span class="pre">|</span> <span class="pre">ssl.SSLContext</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">follow_redirects:</span> <span class="pre">bool</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">timeouts:</span> <span class="pre">HttpTimeouts</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">limits:</span> <span class="pre">HttpLimits</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">retry:</span> <span class="pre">RetryPolicy</span></span></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="HttpTimeouts">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HttpTimeouts</span></span><a class="headerlink" href="#HttpTimeouts" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">connect:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">5.0</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">read:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">30.0</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">write:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">30.0</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">pool:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">5.0</span></span></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="HttpLimits">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HttpLimits</span></span><a class="headerlink" href="#HttpLimits" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">max_keepalive_connections:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">20</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">max_connections:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">100</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">max_response_bytes:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">16</span> <span class="pre">MiB</span></span></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="RetryPolicy">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">RetryPolicy</span></span><a class="headerlink" href="#RetryPolicy" title="Link to this definition"></a></dt>
+<dd><p>Opt-in.  Applies only to explicitly idempotent requests.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">attempts:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">1</span>&#160; <span class="pre">(max</span> <span class="pre">3)</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">initial_delay:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">0.1</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">max_delay:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">2.0</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">retry_statuses:</span> <span class="pre">frozenset[int]</span> <span class="pre">=</span> <span class="pre">{429,</span> <span class="pre">502,</span> <span class="pre">503,</span> <span class="pre">504}</span></span></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="health-client">
+<h2>Health Client<a class="headerlink" href="#health-client" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="HealthClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HealthClient</span></span><a class="headerlink" href="#HealthClient" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="AsyncHealthClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">AsyncHealthClient</span></span><a class="headerlink" href="#AsyncHealthClient" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="AsyncHealthClient.liveness">
+<span class="sig-name descname"><span class="pre">liveness</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#HealthResult" title="HealthResult"><span class="pre">HealthResult</span></a></span></span><a class="headerlink" href="#AsyncHealthClient.liveness" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncHealthClient.readiness">
+<span class="sig-name descname"><span class="pre">readiness</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#HealthResult" title="HealthResult"><span class="pre">HealthResult</span></a></span></span><a class="headerlink" href="#AsyncHealthClient.readiness" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncHealthClient.require_live">
+<span class="sig-name descname"><span class="pre">require_live</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#HealthResult" title="HealthResult"><span class="pre">HealthResult</span></a></span></span><a class="headerlink" href="#AsyncHealthClient.require_live" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncHealthClient.require_ready">
+<span class="sig-name descname"><span class="pre">require_ready</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#HealthResult" title="HealthResult"><span class="pre">HealthResult</span></a></span></span><a class="headerlink" href="#AsyncHealthClient.require_ready" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">require_live()</span></code> and <code class="docutils literal notranslate"><span class="pre">require_ready()</span></code> raise <code class="docutils literal notranslate"><span class="pre">HealthCheckFailed</span></code>
+unless the state is <code class="docutils literal notranslate"><span class="pre">HEALTHY</span></code>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="HealthResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HealthResult</span></span><a class="headerlink" href="#HealthResult" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">probe:</span> <span class="pre">HealthProbe</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">state:</span> <span class="pre">HealthState</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">http_status:</span> <span class="pre">int</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">checks:</span> <span class="pre">tuple[HealthCheck,</span> <span class="pre">...]</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">raw_body:</span> <span class="pre">bytes</span></span></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="HealthState">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HealthState</span></span><a class="headerlink" href="#HealthState" title="Link to this definition"></a></dt>
+<dd><p>Enum: <code class="docutils literal notranslate"><span class="pre">HEALTHY</span></code>, <code class="docutils literal notranslate"><span class="pre">DEGRADED</span></code>, <code class="docutils literal notranslate"><span class="pre">UNHEALTHY</span></code>, <code class="docutils literal notranslate"><span class="pre">UNKNOWN</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="metrics-client">
+<h2>Metrics Client<a class="headerlink" href="#metrics-client" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="MetricsClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">MetricsClient</span></span><a class="headerlink" href="#MetricsClient" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="AsyncMetricsClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">AsyncMetricsClient</span></span><a class="headerlink" href="#AsyncMetricsClient" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="AsyncMetricsClient.scrape">
+<span class="sig-name descname"><span class="pre">scrape</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">etag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">MetricsSnapshot</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">MetricsNotModified</span></span></span><a class="headerlink" href="#AsyncMetricsClient.scrape" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<p>Returns raw OpenMetrics / Prometheus exposition text.  Conditional
+GET with <code class="docutils literal notranslate"><span class="pre">etag</span></code>; a <code class="docutils literal notranslate"><span class="pre">304</span></code> response returns <code class="docutils literal notranslate"><span class="pre">MetricsNotModified</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="gateway-client">
+<h2>Gateway Client<a class="headerlink" href="#gateway-client" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="GatewayClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">GatewayClient</span></span><a class="headerlink" href="#GatewayClient" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="AsyncGatewayClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">AsyncGatewayClient</span></span><a class="headerlink" href="#AsyncGatewayClient" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.request">
+<span class="sig-name descname"><span class="pre">request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">idempotent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_absolute_url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">httpx_options</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">httpx.Response</span></span></span><a class="headerlink" href="#AsyncGatewayClient.request" title="Link to this definition"></a></dt>
+<dd><p>Send an arbitrary HTTP request.  Responses are fully buffered and
+bounded.  Absolute URLs are rejected unless <code class="docutils literal notranslate"><span class="pre">allow_absolute_url=True</span></code>
+is set explicitly.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.request_checked">
+<span class="sig-name descname"><span class="pre">request_checked</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">httpx.Response</span></span></span><a class="headerlink" href="#AsyncGatewayClient.request_checked" title="Link to this definition"></a></dt>
+<dd><p>Like <code class="docutils literal notranslate"><span class="pre">request</span></code>, but raises <code class="docutils literal notranslate"><span class="pre">HttpResponseError</span></code> on non-2xx.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AsyncGatewayClient.get" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.post">
+<span class="sig-name descname"><span class="pre">post</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AsyncGatewayClient.post" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.put">
+<span class="sig-name descname"><span class="pre">put</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AsyncGatewayClient.put" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.patch">
+<span class="sig-name descname"><span class="pre">patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AsyncGatewayClient.patch" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncGatewayClient.delete">
+<span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">options</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#AsyncGatewayClient.delete" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="cli-client">
+<h2>CLI Client<a class="headerlink" href="#cli-client" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="CliClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">CliClient</span></span><a class="headerlink" href="#CliClient" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="AsyncCliClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">AsyncCliClient</span></span><a class="headerlink" href="#AsyncCliClient" title="Link to this definition"></a></dt>
+<dd><p>Communicates over Unix-domain sockets or TCP using the HPAC framing
+protocol (ASCII <code class="docutils literal notranslate"><span class="pre">HPAC</span></code>, big-endian 32-bit payload length, protobuf
+body — byte-compatible with the C++ <code class="docutils literal notranslate"><span class="pre">CliProtoServerActor</span></code>).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.execute">
+<span class="sig-name descname"><span class="pre">execute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fmt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pretty'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CliResult</span></span></span><a class="headerlink" href="#AsyncCliClient.execute" title="Link to this definition"></a></dt>
+<dd><p>Execute a command-tree path.  Raises <code class="docutils literal notranslate"><span class="pre">CliCommandError</span></code> if the
+server returns <code class="docutils literal notranslate"><span class="pre">is_error=True</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.inspect">
+<span class="sig-name descname"><span class="pre">inspect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor_id</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">InspectStateReply</span></span></span><a class="headerlink" href="#AsyncCliClient.inspect" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.kill">
+<span class="sig-name descname"><span class="pre">kill</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor_id</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">force</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">KillReply</span></span></span><a class="headerlink" href="#AsyncCliClient.kill" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.quarantine">
+<span class="sig-name descname"><span class="pre">quarantine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">QuarantineReply</span></span></span><a class="headerlink" href="#AsyncCliClient.quarantine" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.unquarantine">
+<span class="sig-name descname"><span class="pre">unquarantine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor_id</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">QuarantineReply</span></span></span><a class="headerlink" href="#AsyncCliClient.unquarantine" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.list_actors">
+<span class="sig-name descname"><span class="pre">list_actors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shard_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_str</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ListActorsReply</span></span></span><a class="headerlink" href="#AsyncCliClient.list_actors" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.system_stats">
+<span class="sig-name descname"><span class="pre">system_stats</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">SystemStatsReply</span></span></span><a class="headerlink" href="#AsyncCliClient.system_stats" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.memory_stats">
+<span class="sig-name descname"><span class="pre">memory_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">actor_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">MemoryStatsReply</span></span></span><a class="headerlink" href="#AsyncCliClient.memory_stats" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="AsyncCliClient.call">
+<span class="sig-name descname"><span class="pre">call</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rpc_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">response_type</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Message</span></span></span><a class="headerlink" href="#AsyncCliClient.call" title="Link to this definition"></a></dt>
+<dd><p>Forward-compatible low-level RPC for implemented methods.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="CliClientConfig">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">CliClientConfig</span></span><a class="headerlink" href="#CliClientConfig" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">uds_path:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">&quot;/tmp/hpactor/hpactor.sock&quot;</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">host:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">port:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">None</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">connect_timeout:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">5.0</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">request_timeout:</span> <span class="pre">float</span> <span class="pre">=</span> <span class="pre">10.0</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">max_inbound_payload:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">16</span> <span class="pre">MiB</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">max_outbound_payload:</span> <span class="pre">int</span> <span class="pre">=</span> <span class="pre">16</span> <span class="pre">MiB</span></span></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">allow_insecure_remote_tcp:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></span></dt>
+<dd></dd></dl>
+
+<p>Non-loopback TCP requires <code class="docutils literal notranslate"><span class="pre">allow_insecure_remote_tcp=True</span></code>.
+Loopback addresses (<code class="docutils literal notranslate"><span class="pre">127.0.0.0/8</span></code>, <code class="docutils literal notranslate"><span class="pre">::1</span></code>, <code class="docutils literal notranslate"><span class="pre">localhost</span></code>) are
+permitted without the opt-in.</p>
+</dd></dl>
+
+</section>
+<section id="bundle">
+<h2>Bundle<a class="headerlink" href="#bundle" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="HPActorClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">HPActorClient</span></span><a class="headerlink" href="#HPActorClient" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="AsyncHPActorClient">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">AsyncHPActorClient</span></span><a class="headerlink" href="#AsyncHPActorClient" title="Link to this definition"></a></dt>
+<dd><p>Thin configured bundle that constructs only the requested
+capabilities:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="n">HPActorClientConfig</span><span class="p">(</span>
+    <span class="n">health</span><span class="o">=</span><span class="n">HealthClientConfig</span><span class="p">(</span><span class="n">endpoint</span><span class="o">=</span><span class="n">endpoint</span><span class="p">),</span>
+    <span class="n">cli</span><span class="o">=</span><span class="n">CliClientConfig</span><span class="p">(</span><span class="n">uds_path</span><span class="o">=</span><span class="s2">&quot;/tmp/hpactor/hpactor.sock&quot;</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="k">with</span> <span class="n">HPActorClient</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">client</span><span class="o">.</span><span class="n">capabilities</span><span class="p">)</span>   <span class="c1"># {HEALTH, CLI}</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">health</span><span class="o">.</span><span class="n">liveness</span><span class="p">()</span>     <span class="c1"># OK</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">metrics</span><span class="o">.</span><span class="n">scrape</span><span class="p">()</span>      <span class="c1"># raises UnsupportedCapability</span>
+</pre></div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">capabilities:</span> <span class="pre">frozenset[Capability]</span></span></dt>
+<dd></dd></dl>
+
+<p>Accessing a capability not in <em>capabilities</em> raises
+<code class="docutils literal notranslate"><span class="pre">UnsupportedCapability</span></code> with the capability name.</p>
+</dd></dl>
+
+</section>
+<section id="error-model">
+<h2>Error Model<a class="headerlink" href="#error-model" title="Link to this heading"></a></h2>
+<p>All SDK errors inherit from <code class="docutils literal notranslate"><span class="pre">HPActorClientError</span></code>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>HPActorClientError
+  ConfigurationError
+    InsecureTransportError
+  UnsupportedCapability
+  ClientClosedError
+  EventLoopMismatchError
+  TransportError
+    ConnectionError
+    OperationTimeout
+  ResponseLimitError
+  ProtocolError
+  HttpResponseError
+  HealthCheckFailed
+  CliCommandError
+</pre></div>
+</div>
+</section>
+<section id="bounds-and-security">
+<h2>Bounds and Security<a class="headerlink" href="#bounds-and-security" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Response bodies</strong> are bounded at 16 MiB by default.  Streaming
+reads accumulate until the limit; exceeding it raises
+<code class="docutils literal notranslate"><span class="pre">ResponseLimitError</span></code>.</p></li>
+<li><p><strong>Redirect following is off</strong> by default.</p></li>
+<li><p><strong>TLS verification is on</strong> by default.</p></li>
+<li><p><strong>Retries are off</strong> by default and require an explicit
+<code class="docutils literal notranslate"><span class="pre">RetryPolicy</span></code> and idempotency declaration.</p></li>
+<li><p><strong>CLI commands are never retried</strong> — the server may have executed the
+command before the response connection failed.</p></li>
+<li><p><strong>Non-loopback CLI TCP</strong> requires <code class="docutils literal notranslate"><span class="pre">allow_insecure_remote_tcp=True</span></code>
+and emits a warning.  The manual recommends UDS or an authenticated
+proxy for production.</p></li>
+<li><p><strong>Diagnostic payloads in exceptions</strong> are truncated to 4 KiB.</p></li>
+</ul>
+</section>
+<section id="server-side-requirements">
+<h2>Server-Side Requirements<a class="headerlink" href="#server-side-requirements" title="Link to this heading"></a></h2>
+<p>Each client expects explicit server-side configuration:</p>
+<ul class="simple">
+<li><p><strong>Health</strong> — an HTTP listener with <code class="docutils literal notranslate"><span class="pre">HealthHttpServer</span></code> attached</p></li>
+<li><p><strong>Metrics</strong> — an explicitly exposed route returning
+<code class="docutils literal notranslate"><span class="pre">MetricsActor</span></code> output (not an automatic <code class="docutils literal notranslate"><span class="pre">/metrics</span></code> listener)</p></li>
+<li><p><strong>Gateway</strong> — <code class="docutils literal notranslate"><span class="pre">HTTPGatewayActor</span></code> with registered application routes</p></li>
+<li><p><strong>CLI</strong> — <code class="docutils literal notranslate"><span class="pre">CliProtoServerActor</span></code> listening on UDS or trusted TCP</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="topology.html" class="btn btn-neutral float-left" title="Python Declarative Topology" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../limitations.html" class="btn btn-neutral float-right" title="Limitations &amp; Known Gaps" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

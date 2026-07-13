@@ -1,0 +1,536 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actor API Reference &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Python Declarative Topology" href="topology.html" />
+    <link rel="prev" title="Your First Python Actor" href="your-first-actor.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Python Binding</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python Binding</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Actor API Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#actorsystem">ActorSystem</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorSystem"><code class="docutils literal notranslate"><span class="pre">ActorSystem</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#actor">Actor</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Actor"><code class="docutils literal notranslate"><span class="pre">Actor</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#behavior">Behavior</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Behavior"><code class="docutils literal notranslate"><span class="pre">Behavior</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#actorcontext">ActorContext</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorContext"><code class="docutils literal notranslate"><span class="pre">ActorContext</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#delivery">Delivery</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryOptions"><code class="docutils literal notranslate"><span class="pre">DeliveryOptions</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryReceipt"><code class="docutils literal notranslate"><span class="pre">DeliveryReceipt</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryStatus"><code class="docutils literal notranslate"><span class="pre">DeliveryStatus</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#addresses">Addresses</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorAddress"><code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ActorRef"><code class="docutils literal notranslate"><span class="pre">ActorRef</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#errors">Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="topology.html">Python Declarative Topology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="external-sdk.html">External Client SDK</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="your-first-actor.html">Your First Python Actor</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Actor API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#actorsystem">ActorSystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ActorSystem"><code class="docutils literal notranslate"><span class="pre">ActorSystem</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorSystem.from_topology"><code class="docutils literal notranslate"><span class="pre">ActorSystem.from_topology()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ActorSystem.resolve"><code class="docutils literal notranslate"><span class="pre">ActorSystem.resolve()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#actor">Actor</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Actor"><code class="docutils literal notranslate"><span class="pre">Actor</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Actor.behavior"><code class="docutils literal notranslate"><span class="pre">Actor.behavior()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#behavior">Behavior</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Behavior"><code class="docutils literal notranslate"><span class="pre">Behavior</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#Behavior.on"><code class="docutils literal notranslate"><span class="pre">Behavior.on()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#Behavior.on_request"><code class="docutils literal notranslate"><span class="pre">Behavior.on_request()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#actorcontext">ActorContext</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ActorContext"><code class="docutils literal notranslate"><span class="pre">ActorContext</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorContext.sender"><code class="docutils literal notranslate"><span class="pre">ActorContext.sender</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ActorContext.self_address"><code class="docutils literal notranslate"><span class="pre">ActorContext.self_address</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#delivery">Delivery</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#DeliveryOptions"><code class="docutils literal notranslate"><span class="pre">DeliveryOptions</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryOptions.mode"><code class="docutils literal notranslate"><span class="pre">DeliveryOptions.mode</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryOptions.deadline_ms"><code class="docutils literal notranslate"><span class="pre">DeliveryOptions.deadline_ms</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryOptions.no_drop"><code class="docutils literal notranslate"><span class="pre">DeliveryOptions.no_drop</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#DeliveryReceipt"><code class="docutils literal notranslate"><span class="pre">DeliveryReceipt</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryReceipt.status"><code class="docutils literal notranslate"><span class="pre">DeliveryReceipt.status</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#DeliveryReceipt.message_id"><code class="docutils literal notranslate"><span class="pre">DeliveryReceipt.message_id</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#DeliveryStatus"><code class="docutils literal notranslate"><span class="pre">DeliveryStatus</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#addresses">Addresses</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ActorAddress"><code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#ActorAddress.actor_id"><code class="docutils literal notranslate"><span class="pre">ActorAddress.actor_id</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ActorAddress.incarnation"><code class="docutils literal notranslate"><span class="pre">ActorAddress.incarnation</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#ActorRef"><code class="docutils literal notranslate"><span class="pre">ActorRef</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#errors">Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topology.html">Python Declarative Topology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="external-sdk.html">External Client SDK</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Python Binding</a></li>
+      <li class="breadcrumb-item active">Actor API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/python/actor-api.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="actor-api-reference">
+<h1>Actor API Reference<a class="headerlink" href="#actor-api-reference" title="Link to this heading"></a></h1>
+<p>This page covers the imperative Python actor programming model —
+defining actors, sending messages, asking for replies, and using
+delivery options.</p>
+<section id="actorsystem">
+<h2>ActorSystem<a class="headerlink" href="#actorsystem" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="ActorSystem">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ActorSystem</span></span><a class="headerlink" href="#ActorSystem" title="Link to this definition"></a></dt>
+<dd><p>The main entry point for the in-process actor runtime.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="ActorSystem.from_topology">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_topology</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">messages</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">policy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ActorSystem.from_topology" title="Link to this definition"></a></dt>
+<dd><p>Construct a system for declarative TOML topology bootstrap.
+Side-effect free — no threads or native state until <code class="docutils literal notranslate"><span class="pre">__aenter__</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">spawn(actor_class,</span> <span class="pre">*,</span> <span class="pre">args=None,</span> <span class="pre">messages,</span> <span class="pre">delivery=None)</span></span></dt>
+<dd><p>Spawn a new actor.  Returns an <code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>actor_class</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.14)"><em>type</em></a>) – An <code class="docutils literal notranslate"><span class="pre">Actor</span></code> subclass decorated with <code class="docutils literal notranslate"><span class="pre">&#64;actor()</span></code>.</p></li>
+<li><p><strong>args</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Keyword arguments forwarded to the constructor.</p></li>
+<li><p><strong>messages</strong> (<em>MessageRegistry</em>) – Frozen protobuf message registry.</p></li>
+<li><p><strong>delivery</strong> (<a class="reference internal" href="#DeliveryOptions" title="DeliveryOptions"><em>DeliveryOptions</em></a>) – Optional delivery mode and deadline.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">send(target,</span> <span class="pre">message,</span> <span class="pre">*,</span> <span class="pre">options=None)</span></span></dt>
+<dd><p>Send a fire-and-forget message to <em>target</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">ask(target,</span> <span class="pre">message,</span> <span class="pre">*,</span> <span class="pre">timeout=5.0,</span> <span class="pre">options=None)</span></span></dt>
+<dd><p>Send a request and await a typed response.  Raises
+<code class="docutils literal notranslate"><span class="pre">AskTimeoutError</span></code> if no response arrives within <em>timeout</em> seconds.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="ActorSystem.resolve">
+<span class="sig-name descname"><span class="pre">resolve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#ActorSystem.resolve" title="Link to this definition"></a></dt>
+<dd><p>Look up a named actor.  Returns an <code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code> or raises <code class="docutils literal notranslate"><span class="pre">KeyError</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">schedule(target,</span> <span class="pre">delay,</span> <span class="pre">message)</span></span></dt>
+<dd><p>Deliver <em>message</em> to <em>target</em> after <em>delay</em> seconds.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">__aenter__()</span></span></dt>
+<dd><p>Start the native runtime.  All actor state is initialized.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">__aexit__(*args)</span></span></dt>
+<dd><p>Initiate graceful drain, stop all actors, join threads.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="actor">
+<h2>Actor<a class="headerlink" href="#actor" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="Actor">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Actor</span></span><a class="headerlink" href="#Actor" title="Link to this definition"></a></dt>
+<dd><p>Base class for all Python actors.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Actor.behavior">
+<span class="sig-name descname"><span class="pre">behavior</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#Behavior" title="Behavior"><span class="pre">Behavior</span></a></span></span><a class="headerlink" href="#Actor.behavior" title="Link to this definition"></a></dt>
+<dd><p>Return a <code class="docutils literal notranslate"><span class="pre">Behavior</span></code> with registered message handlers.
+Called once at startup.  The behavior is frozen after construction.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">on_start()</span></span></dt>
+<dd><p>Called after the actor is published and the system is running.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">on_stop()</span></span></dt>
+<dd><p>Called during graceful shutdown before the actor is removed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">on_restart()</span></span></dt>
+<dd><p>Called before a new incarnation, if supervision restarts the actor.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="behavior">
+<h2>Behavior<a class="headerlink" href="#behavior" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="Behavior">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Behavior</span></span><a class="headerlink" href="#Behavior" title="Link to this definition"></a></dt>
+<dd><p>Immutable message handler table.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="Behavior.on">
+<span class="sig-name descname"><span class="pre">on</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handler</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Behavior.on" title="Link to this definition"></a></dt>
+<dd><p>Register <em>handler</em> for a protobuf message class.</p>
+<p>Handler signature: <code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">handler(msg,</span> <span class="pre">ctx)</span></code> where <em>msg</em> is
+the deserialized protobuf message and <em>ctx</em> is an <code class="docutils literal notranslate"><span class="pre">ActorContext</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Behavior.on_request">
+<span class="sig-name descname"><span class="pre">on_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">response_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">handler</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Behavior.on_request" title="Link to this definition"></a></dt>
+<dd><p>Register a request-response handler.  Handler must return a
+protobuf response message or raise an error.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="actorcontext">
+<h2>ActorContext<a class="headerlink" href="#actorcontext" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="ActorContext">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ActorContext</span></span><a class="headerlink" href="#ActorContext" title="Link to this definition"></a></dt>
+<dd><p>Handler-scoped context providing message-passing primitives.</p>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">reply(message)</span></span></dt>
+<dd><p>Reply to the current sender.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">reply_error(code,</span> <span class="pre">detail=&quot;&quot;)</span></span></dt>
+<dd><p>Reply with a structured error.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">send(target,</span> <span class="pre">message,</span> <span class="pre">*,</span> <span class="pre">options=None)</span></span></dt>
+<dd><p>Send a message to another actor.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">spawn(actor_class,</span> <span class="pre">*,</span> <span class="pre">args=None,</span> <span class="pre">messages)</span></span></dt>
+<dd><p>Spawn a child actor.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">async</span> <span class="pre">schedule(delay,</span> <span class="pre">message)</span></span></dt>
+<dd><p>Schedule a self-delivery after <em>delay</em> seconds.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ActorContext.sender">
+<span class="sig-name descname"><span class="pre">sender</span></span><a class="headerlink" href="#ActorContext.sender" title="Link to this definition"></a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code> of the current message sender (read-only).</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ActorContext.self_address">
+<span class="sig-name descname"><span class="pre">self_address</span></span><a class="headerlink" href="#ActorContext.self_address" title="Link to this definition"></a></dt>
+<dd><p>This actor’s own <code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code> (read-only).</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="delivery">
+<h2>Delivery<a class="headerlink" href="#delivery" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="DeliveryOptions">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DeliveryOptions</span></span><a class="headerlink" href="#DeliveryOptions" title="Link to this definition"></a></dt>
+<dd><p>Configure delivery semantics for a send or ask.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="DeliveryOptions.mode">
+<span class="sig-name descname"><span class="pre">mode</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DeliveryMode</span></span><a class="headerlink" href="#DeliveryOptions.mode" title="Link to this definition"></a></dt>
+<dd><p>One of <code class="docutils literal notranslate"><span class="pre">BEST_EFFORT</span></code>, <code class="docutils literal notranslate"><span class="pre">OBSERVABLE</span></code>, <code class="docutils literal notranslate"><span class="pre">AT_LEAST_ONCE</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">DURABLE_AT_LEAST_ONCE</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="DeliveryOptions.deadline_ms">
+<span class="sig-name descname"><span class="pre">deadline_ms</span></span><a class="headerlink" href="#DeliveryOptions.deadline_ms" title="Link to this definition"></a></dt>
+<dd><p>Delivery deadline in milliseconds.  Messages not delivered before
+the deadline are dropped and recorded.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="DeliveryOptions.no_drop">
+<span class="sig-name descname"><span class="pre">no_drop</span></span><a class="headerlink" href="#DeliveryOptions.no_drop" title="Link to this definition"></a></dt>
+<dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the mailbox will reject the enqueue instead of
+dropping when full.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="DeliveryReceipt">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DeliveryReceipt</span></span><a class="headerlink" href="#DeliveryReceipt" title="Link to this definition"></a></dt>
+<dd><p>Returned from <code class="docutils literal notranslate"><span class="pre">send()</span></code> with <em>observable</em> delivery mode.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="DeliveryReceipt.status">
+<span class="sig-name descname"><span class="pre">status</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#DeliveryStatus" title="DeliveryStatus"><span class="pre">DeliveryStatus</span></a></span><a class="headerlink" href="#DeliveryReceipt.status" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="DeliveryReceipt.message_id">
+<span class="sig-name descname"><span class="pre">message_id</span></span><a class="headerlink" href="#DeliveryReceipt.message_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="DeliveryStatus">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DeliveryStatus</span></span><a class="headerlink" href="#DeliveryStatus" title="Link to this definition"></a></dt>
+<dd><p>Enum: <code class="docutils literal notranslate"><span class="pre">ACCEPTED</span></code>, <code class="docutils literal notranslate"><span class="pre">REJECTED</span></code>, <code class="docutils literal notranslate"><span class="pre">DROPPED</span></code>, <code class="docutils literal notranslate"><span class="pre">DEAD_LETTER</span></code>,
+<code class="docutils literal notranslate"><span class="pre">EXPIRED</span></code>, <code class="docutils literal notranslate"><span class="pre">CIRCUIT_OPEN</span></code>, <code class="docutils literal notranslate"><span class="pre">QUARANTINED</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="addresses">
+<h2>Addresses<a class="headerlink" href="#addresses" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="ActorAddress">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ActorAddress</span></span><a class="headerlink" href="#ActorAddress" title="Link to this definition"></a></dt>
+<dd><p>Opaque identifier for an actor.  Constructed internally; user code
+receives addresses from <code class="docutils literal notranslate"><span class="pre">spawn()</span></code>, <code class="docutils literal notranslate"><span class="pre">resolve()</span></code>, or <code class="docutils literal notranslate"><span class="pre">ctx.self_address</span></code>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ActorAddress.actor_id">
+<span class="sig-name descname"><span class="pre">actor_id</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><a class="headerlink" href="#ActorAddress.actor_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="ActorAddress.incarnation">
+<span class="sig-name descname"><span class="pre">incarnation</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><a class="headerlink" href="#ActorAddress.incarnation" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="ActorRef">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">ActorRef</span></span><a class="headerlink" href="#ActorRef" title="Link to this definition"></a></dt>
+<dd><p>Unified reference: a local <code class="docutils literal notranslate"><span class="pre">ActorAddress</span></code> or a remote proxy.
+Used as the target for <code class="docutils literal notranslate"><span class="pre">send()</span></code> and <code class="docutils literal notranslate"><span class="pre">ask()</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="errors">
+<h2>Errors<a class="headerlink" href="#errors" title="Link to this heading"></a></h2>
+<p>All binding errors inherit from <code class="docutils literal notranslate"><span class="pre">HPActorError</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ActorError</span></code> — an actor replied with an explicit error</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ActorNotReadyError</span></code> — operation on an actor not yet started</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AskTimeoutError</span></code> — <code class="docutils literal notranslate"><span class="pre">ask()</span></code> timed out</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AskCancelledError</span></code> — <code class="docutils literal notranslate"><span class="pre">ask()</span></code> was cancelled</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RegistrationError</span></code> — protobuf registry conflict</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SerializationError</span></code> — protobuf encode/decode failure</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ResourceExhaustedError</span></code> — queue or lease pool exhausted</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SystemClosedError</span></code> — operation after system shutdown</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TopologyError</span></code> — declarative topology failure</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="your-first-actor.html" class="btn btn-neutral float-left" title="Your First Python Actor" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="topology.html" class="btn btn-neutral float-right" title="Python Declarative Topology" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -75,7 +75,12 @@ monitoring, and operating HPActor-based systems.
    :maxdepth: 2
    :caption: Python Binding
 
+   python/index
+   python/installation
+   python/your-first-actor
+   python/actor-api
    python/topology
+   python/external-sdk
 
 .. toctree::
    :maxdepth: 2
