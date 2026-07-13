@@ -31,7 +31,9 @@ add_library(hpactor_python_native STATIC
     src/python_topology_provider.cpp)
 set_target_properties(hpactor_python_native PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(hpactor_python_native PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_BINARY_DIR})
 
 # Wheel builds keep linkage private so the extension is self-contained.
 # Normal SDK builds keep public linkage for downstream consumers.
