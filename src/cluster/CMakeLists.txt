@@ -32,6 +32,7 @@ add_library(hpactor_cluster STATIC
     name/name_directory.cpp
     name/name_resolve_cache.cpp
     name/consistent_hash_ring.cpp
+    name/name_resolver.cpp
 )
 target_link_libraries(hpactor_cluster PUBLIC hpactor hpactor_etcd)
 target_include_directories(hpactor_cluster PUBLIC
