@@ -1,0 +1,45 @@
+// Copyright 2026 HPActor Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package hpactor.cluster.name;
+
+// ── Registration protocol ──────────────────────────────────────────────────
+
+message PbNameRegisterRequest {
+    string name = 1;
+    uint64 actor_id = 2;
+    string endpoint = 3;    // endpoint_ops::to_string format
+    uint64 generation = 4;
+}
+
+message PbNameRegisterResponse {
+    enum Result {
+        OK = 0;
+        DUPLICATE_NAME = 1;
+        INVALID_REQUEST = 2;
+        STALE_GENERATION = 3;
+    }
+    Result result = 1;
+}
+
+// ── Resolution protocol ────────────────────────────────────────────────────
+
+message PbNameResolveQuery {
+    string name = 1;
+}
+
+message PbNameResolveResponse {
+    bool found = 1;
+    uint64 actor_id = 2;
+    string endpoint = 3;
+    uint64 generation = 4;
+}
+
+// ── Unregistration protocol ────────────────────────────────────────────────
+
+message PbNameUnregisterRequest {
+    string name = 1;
+    uint64 generation = 2;
+}
