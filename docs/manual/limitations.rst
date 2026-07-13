@@ -176,23 +176,34 @@ Wire Protocol
 Language Bindings
 -----------------
 
-Python (Alpha — Phase 1D)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Python (Phases 1A–2)
+~~~~~~~~~~~~~~~~~~~~~
 
-HPActor provides an official alpha Python binding for CPython 3.11 and
+HPActor provides an official Python binding for CPython 3.11 and
 newer on manylinux_2_28 x86_64/ARM64 and macOS 12.0 x86_64/ARM64.
-The binding uses generated protobuf messages and explicit TypeTags.
+The binding has two complementary surfaces:
 
-**In scope (Phase 1D):** in-process actor API, asyncio execution,
+1. **In-process actor API** — pybind11-based ``_hpactor`` native
+   extension backed by the full HPActor C++ runtime.  Define, spawn,
+   send, ask, schedule, and supervise actors from Python with
+   asyncio-native interfaces.  Mixed C++/Python actor trees via
+   declarative TOML topology.
+
+2. **External client SDK** (``hpactor.client``) — pure-Python
+   sync/async ``HealthClient``, ``MetricsClient``, ``GatewayClient``,
+   and ``CliClient`` for consuming HPActor health, metrics, HTTP
+   gateway, and CLI surfaces without importing the native runtime.
+
+**In scope (Phase 2):** in-process actor API, asyncio execution,
 delivery semantics, supervision, metrics, tracing, CLI, health checks,
-and graceful shutdown.
+graceful shutdown, declarative TOML topology, and external SDK clients.
 
 **Not yet supported:** Windows, musllinux, PyPy, free-threaded
-CPython, native remote-node participation, declarative topology
-(Phase 1E), and external SDK clients (Phase 2).
+CPython, native remote-node participation, authenticated CLI,
+automatic capability discovery, and an automatic metrics listener.
 
-Install with ``pip install hpactor``.  See the Python manual at
-``docs/manual/python/`` for the quick-start guide and API reference.
+Install with ``pip install hpactor``.  See :doc:`python/index`
+for the quick-start guide and API reference.
 
 Other Languages
 ~~~~~~~~~~~~~~~

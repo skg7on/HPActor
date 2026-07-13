@@ -385,6 +385,20 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 1D plan refined: `docs/superpowers/plans/2026-07-05-python-binding-phase1d-packaging-release.md` (pybind11 vendoring, `pybind11_add_module`, exception boundary, binary audit updates).
 - Umbrella spec updated: `docs/superpowers/specs/2026-07-03-python-language-binding-design.md` (Section 1, Section 20).
 
+**Python Binding Phase 2 External SDK:** ✅ Tasks 1-8 Complete (2026-07-12), Tasks 9-11 in progress
+- Issue: #426 — Pure-Python external SDK for health, metrics, gateway, and CLI surfaces.
+- Design spec: `docs/superpowers/specs/2026-07-06-python-binding-phase2-external-sdk-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-07-06-python-binding-phase2-external-sdk.md` (11 tasks).
+- Branch: `feature/426-python-binding-phase2` (worktree: `.claude/worktrees/phase2-external-sdk/`).
+- Tasks 1-8 complete: lazy native imports, frozen config types (10 dataclasses), sync/async HTTP transports with bounded streaming and retry, health client with conservative parser, metrics client with ETag/304, gateway client with URL safety, HPAC protocol codec (byte-compatible with C++), generated CLI protobuf modules, sync/async CLI clients with 6 structured RPC methods, capability bundles with deterministic close, redacted request events.
+- 81 new Python unit tests pass (16 config/contract + 20 transport + 11 health + 6 metrics + 6 gateway + 9 HPAC + 7 CLI + 6 bundle/events). 22 existing Phase 1 tests pass. Total: 103 tests green.
+- New files: `hpactor/client/` package (14 modules: __init__, config, errors, models, _deadline, _http, _sync_stream, _async_stream, _hpac, _events, health, metrics, gateway, cli, bundle), `_proto/` (generated cli_pb2.py, cli_messages_pb2.py), `tools/generate_client_protos.py`.
+- Modified: `pyproject.toml` (added httpx>=0.28.1,<0.29), `hpactor/__init__.py` (lazy ActorSystem via __getattr__), `hpactor/_errors.py` (added NativeBindingUnavailable).
+- Key invariants: importing `hpactor.client` never loads `_hpactor`; all config is frozen/validated; HTTP response bodies bounded at 16 MiB; CLI HPAC framing matches C++ byte-for-byte; one-in-flight CLI requests; CLI TCP non-loopback requires explicit opt-in; bundles close deterministically; hook failures are isolated.
+- Remaining: Task 9 (C++ interop fixture), Task 10 (universal wheel CI), Task 11 (manual pages, acceptance evidence).
+- Package dependencies: `httpx>=0.28.1,<0.29`, `protobuf>=7.35.0,<8`.
+- 6 commits on the branch; 81 new tests, 103 total Python tests passing.
+
 **Python Binding Phase 1E Declarative Topology** ✅ Complete (2026-07-12)
 - Issue: #426 — add `python:<module>:<qualname>` actors to HPActor TOML topology.
 - Design spec: `docs/superpowers/specs/2026-07-06-python-binding-phase1e-declarative-topology-design.md`.
