@@ -36,6 +36,17 @@ TEST(ProtoGeneration, AllMessagesInstantiable) {
     hpactor::PbDeviceSnapshotUpdate r9;
     hpactor::PbDeviceCapacitySummary r10;
     hpactor::PbNodeResourceSummary r11;
+    (void)r1;
+    (void)r2;
+    (void)r3;
+    (void)r4;
+    (void)r5;
+    (void)r6;
+    (void)r7;
+    (void)r8;
+    (void)r9;
+    (void)r10;
+    (void)r11;
     SUCCEED();
 }
 
