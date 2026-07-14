@@ -34,13 +34,19 @@ class PythonRuntimeHealthCheck final {
   public:
     /// \brief Construct with a pointer to the Python runtime.
     ///
-    /// A null pointer means the binding is disabled; returns Healthy.
+    /// \param[in] runtime Pointer to the Python runtime. A null pointer means
+    ///                    the binding is disabled; all health checks return
+    ///                    healthy.
     explicit PythonRuntimeHealthCheck(const PythonRuntime* runtime) noexcept;
 
     /// \brief Name of this health check.
+    ///
+    /// \return The string \c "python-runtime".
     [[nodiscard]] std::string name() const noexcept;
 
-    /// \brief Whether this check is critical.
+    /// \brief Whether this check is critical for node readiness.
+    ///
+    /// \return \c false — queue pressure alone does not make the node unready.
     [[nodiscard]] bool is_critical() const noexcept;
 
     /// \brief Execute the health check.
