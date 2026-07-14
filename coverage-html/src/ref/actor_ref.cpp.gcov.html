@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-13 07:11:19</td>
+            <td class="headerValue">2026-07-14 05:32:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -103,16 +103,16 @@
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           6 : }</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : mailbox::DeliveryResult</span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      126798 : ActorRef::try_send(const ActorAddress&amp; target, TypedMessage msg,</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      126795 : ActorRef::try_send(const ActorAddress&amp; target, TypedMessage msg,</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :                    mailbox::DeliveryOptions options) {</span>
-<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 126796 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">      126798 :     if (is_local()) {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">      126796 :         Actor* actor = get_actor();</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 126796 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      126796 :         if (actor != nullptr) {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">      253592 :             auto er = actor-&gt;get()-&gt;system().try_deliver_local(</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">      126796 :                 target.id, std::move(msg), /*priority=*/0,</span></span>
+<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 126793 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">      126795 :     if (is_local()) {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">      126793 :         Actor* actor = get_actor();</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 126793 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      126793 :         if (actor != nullptr) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">      253586 :             auto er = actor-&gt;get()-&gt;system().try_deliver_local(</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">      126793 :                 target.id, std::move(msg), /*priority=*/0,</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :                 /*deadline_ns=*/INT64_MAX, options);</span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      253592 :             return mailbox::DeliveryResult::from_enqueue(</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      126796 :                 er, target, MessageId{options.message_id});</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      253586 :             return mailbox::DeliveryResult::from_enqueue(</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      126793 :                 er, target, MessageId{options.message_id});</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :         }</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :         return {mailbox::DeliveryStatus::NoRoute, target,</span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 MessageId{options.message_id}, 0};</span></span>

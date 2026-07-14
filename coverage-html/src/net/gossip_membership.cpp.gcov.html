@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-13 07:11:19</td>
+            <td class="headerValue">2026-07-14 05:32:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">91.3&nbsp;%</td>
@@ -360,14 +360,14 @@
 <span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">          10 :     return result;</span></span>
 <span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">          10 : }</span></span>
 <span id="L284"><span class="lineNum">     284</span>                 :             : </span>
-<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaGNC">           5 : const Member* GossipMembership::discover(EndPoint ep) const {</span></span>
-<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">           5 :     std::shared_lock&lt;std::shared_mutex&gt; lock(members_mutex_);</span></span>
-<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">           5 :     auto it = members_.find(ep);</span></span>
-<span id="L288"><span class="lineNum">     288</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :     if (it != members_.end()) {</span></span>
-<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC">           3 :         return &amp;it-&gt;second;</span></span>
+<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaGNC">           6 : const Member* GossipMembership::discover(EndPoint ep) const {</span></span>
+<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">           6 :     std::shared_lock&lt;std::shared_mutex&gt; lock(members_mutex_);</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">           6 :     auto it = members_.find(ep);</span></span>
+<span id="L288"><span class="lineNum">     288</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           6 :     if (it != members_.end()) {</span></span>
+<span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC">           4 :         return &amp;it-&gt;second;</span></span>
 <span id="L290"><span class="lineNum">     290</span>                 :             :     }</span>
 <span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">           2 :     return nullptr;</span></span>
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">           5 : }</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">           6 : }</span></span>
 <span id="L293"><span class="lineNum">     293</span>                 :             : </span>
 <span id="L294"><span class="lineNum">     294</span>                 :             : // =============================================================================</span>
 <span id="L295"><span class="lineNum">     295</span>                 :             : // IServiceDiscovery — announce / callback</span>

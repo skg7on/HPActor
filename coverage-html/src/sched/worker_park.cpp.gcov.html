@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-13 07:11:19</td>
+            <td class="headerValue">2026-07-14 05:32:52</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -87,44 +87,44 @@
 <span id="L9"><span class="lineNum">       9</span>                 :             : #    include &lt;sys/syscall.h&gt;</span>
 <span id="L10"><span class="lineNum">      10</span>                 :             : #    include &lt;unistd.h&gt;</span>
 <span id="L11"><span class="lineNum">      11</span>                 :             : </span>
-<span id="L12"><span class="lineNum">      12</span>                 :<span class="tlaGNC tlaBgGNC">         316 : static void futex_wake_one(std::atomic&lt;uint32_t&gt;* addr) noexcept {</span></span>
-<span id="L13"><span class="lineNum">      13</span>                 :<span class="tlaGNC">         316 :     ::syscall(SYS_futex, reinterpret_cast&lt;uint32_t*&gt;(addr), FUTEX_WAKE_PRIVATE,</span></span>
+<span id="L12"><span class="lineNum">      12</span>                 :<span class="tlaGNC tlaBgGNC">         287 : static void futex_wake_one(std::atomic&lt;uint32_t&gt;* addr) noexcept {</span></span>
+<span id="L13"><span class="lineNum">      13</span>                 :<span class="tlaGNC">         287 :     ::syscall(SYS_futex, reinterpret_cast&lt;uint32_t*&gt;(addr), FUTEX_WAKE_PRIVATE,</span></span>
 <span id="L14"><span class="lineNum">      14</span>                 :             :               1, nullptr, nullptr, 0);</span>
-<span id="L15"><span class="lineNum">      15</span>                 :<span class="tlaGNC">         316 : }</span></span>
+<span id="L15"><span class="lineNum">      15</span>                 :<span class="tlaGNC">         287 : }</span></span>
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
-<span id="L17"><span class="lineNum">      17</span>                 :<span class="tlaGNC">         316 : static void futex_wait(std::atomic&lt;uint32_t&gt;* addr, uint32_t expected,</span></span>
+<span id="L17"><span class="lineNum">      17</span>                 :<span class="tlaGNC">         297 : static void futex_wait(std::atomic&lt;uint32_t&gt;* addr, uint32_t expected,</span></span>
 <span id="L18"><span class="lineNum">      18</span>                 :             :                        int64_t timeout_ns) noexcept {</span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC">         316 :     struct timespec ts{timeout_ns / 1'000'000'000LL, timeout_ns % 1'000'000'000LL};</span></span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">         316 :     ::syscall(SYS_futex, reinterpret_cast&lt;uint32_t*&gt;(addr), FUTEX_WAIT_PRIVATE,</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC">         297 :     struct timespec ts{timeout_ns / 1'000'000'000LL, timeout_ns % 1'000'000'000LL};</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">         297 :     ::syscall(SYS_futex, reinterpret_cast&lt;uint32_t*&gt;(addr), FUTEX_WAIT_PRIVATE,</span></span>
 <span id="L21"><span class="lineNum">      21</span>                 :             :               expected, &amp;ts, nullptr, 0);</span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">         316 : }</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">         297 : }</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : namespace hpactor::sched {</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : </span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">       12775 : void WorkerPark::wake() noexcept {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       12775 :     seq.fetch_add(1, std::memory_order_acq_rel);</span></span>
-<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 316 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12459 times"> + </span>]:<span class="tlaGNC">       12775 :     if (parked.load(std::memory_order_acquire)) {</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         316 :         futex_wake_one(&amp;seq);</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">       12764 : void WorkerPark::wake() noexcept {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       12764 :     seq.fetch_add(1, std::memory_order_acq_rel);</span></span>
+<span id="L28"><span class="lineNum">      28</span>         [<span class="tlaGBC" title="Branch 0 was taken 287 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12477 times"> + </span>]:<span class="tlaGNC">       12764 :     if (parked.load(std::memory_order_acquire)) {</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         287 :         futex_wake_one(&amp;seq);</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             :     }</span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">       12775 : }</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">       12764 : }</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         316 : uint32_t WorkerPark::begin_park() noexcept {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         298 : uint32_t WorkerPark::begin_park() noexcept {</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     // Read snap BEFORE storing parked.  If a producer increments seq</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     // between snap and parked=true, the recheck finds the work.  If</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     // the producer runs between parked=true and wait(), seq != snap</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     // and wait() returns immediately.</span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         316 :     uint32_t snap = seq.load(std::memory_order_acquire);</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         316 :     parked.store(true, std::memory_order_seq_cst);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         316 :     return snap;</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         298 :     uint32_t snap = seq.load(std::memory_order_acquire);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         298 :     parked.store(true, std::memory_order_seq_cst);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         298 :     return snap;</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : }</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">         316 : void WorkerPark::wait(uint32_t expected, int64_t timeout_ns) noexcept {</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         316 :     futex_wait(&amp;seq, expected, timeout_ns);</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">         316 : }</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">         297 : void WorkerPark::wait(uint32_t expected, int64_t timeout_ns) noexcept {</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         297 :     futex_wait(&amp;seq, expected, timeout_ns);</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">         297 : }</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : </span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">         316 : void WorkerPark::end_park() noexcept {</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         316 :     parked.store(false, std::memory_order_release);</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         316 : }</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">         298 : void WorkerPark::end_park() noexcept {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         298 :     parked.store(false, std::memory_order_release);</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         298 : }</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : } // namespace hpactor::sched</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : #endif // __linux__</span>
