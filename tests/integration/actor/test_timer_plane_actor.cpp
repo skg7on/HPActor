@@ -52,9 +52,12 @@ TEST_F(TimerPlaneIntegrationTest, ScheduleDeliversMessage) {
 
 TEST_F(TimerPlaneIntegrationTest, CancelPreventsDelivery) {
     std::atomic<bool> fired{false};
+    // Use a generous delay (500 ms) so the test thread always reaches
+    // cancel_timer() before the timer thread fires the callback, even under
+    // coverage-instrumentation or heavily contended CI runners.
     auto handle =
         system_->scheduler()->schedule_after([&fired]() { fired.store(true); },
-                                             5'000'000LL); // 5ms
+                                             500'000'000LL); // 500ms
     system_->scheduler()->cancel_timer(handle);
 
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
