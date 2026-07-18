@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-14 05:32:52</td>
+            <td class="headerValue">2026-07-18 00:57:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -215,11 +215,11 @@
 <span id="L132"><span class="lineNum">     132</span>                 :             :     // Run system parsers on [system] table (entrypoint only)</span>
 <span id="L133"><span class="lineNum">     133</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          94 :     if (is_entrypoint) {</span></span>
 <span id="L134"><span class="lineNum">     134</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          92 :         auto system_view = root_view.table(&quot;system&quot;);</span></span>
-<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaGBC" title="Branch 0 was taken 1398 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 86 times"> + </span>]:<span class="tlaGNC">        1484 :         for (const auto&amp; parser : system_parsers) {</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 1398 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1398 :             auto parsed = parser-&gt;parse(system_view, data.system, ctx);</span></span>
-<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1392 times"> + </span>]:<span class="tlaGNC">        1398 :             if (!parsed.has_value())</span></span>
+<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaGBC" title="Branch 0 was taken 1484 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 86 times"> + </span>]:<span class="tlaGNC">        1570 :         for (const auto&amp; parser : system_parsers) {</span></span>
+<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 1484 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1484 :             auto parsed = parser-&gt;parse(system_view, data.system, ctx);</span></span>
+<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1478 times"> + </span>]:<span class="tlaGNC">        1484 :             if (!parsed.has_value())</span></span>
 <span id="L138"><span class="lineNum">     138</span>   [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           6 :                 return result&lt;TomlFileData&gt;::make(parsed.error());</span></span>
-<span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 1392 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">        1398 :         }</span></span>
+<span id="L139"><span class="lineNum">     139</span>         [<span class="tlaGBC" title="Branch 0 was taken 1478 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">        1484 :         }</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :     }</span>
 <span id="L141"><span class="lineNum">     141</span>                 :             : </span>
 <span id="L142"><span class="lineNum">     142</span>         [<span class="tlaGBC" title="Branch 0 was taken 88 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          88 :     return result&lt;TomlFileData&gt;::make(std::move(data));</span></span>

@@ -1,0 +1,180 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - HPActor Coverage - include/hpactor/cluster/name/consistent_hash_ring.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../../../../index.html">top level</a> - <a href="index.html">include/hpactor/cluster/name</a> - consistent_hash_ring.hpp<span style="font-size: 80%;"> (source / <a href="consistent_hash_ring.hpp.func-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">HPActor Coverage</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">3</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-07-18 00:57:16</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">3</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            | Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryHi">-</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">0</td>
+          </tr>
+                  <tr><td><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : // Copyright 2026 HPActor Contributors</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : //</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : // you may not use this file except in compliance with the License.</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : // You may obtain a copy of the License at</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : //</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : //     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : //</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : // Unless required by applicable law or agreed to in writing, software</span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : // distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : // See the License for the specific language governing permissions and</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : // limitations under the License.</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : #pragma once</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : </span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : #include &lt;cstdint&gt;</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;map&gt;</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;optional&gt;</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;set&gt;</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;string_view&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : </span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/ref/actor_address.hpp&gt;</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : </span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : namespace hpactor::cluster::name {</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : </span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : /// \brief Comparator for deterministic ordering of EndPoint in std::set.</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : ///</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : /// EndPoint (\c std::variant&lt;Ipv4Endpoint, Ipv6Endpoint&gt;) has no</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : /// \c operator&lt;. This comparator uses \c endpoint_ops::to_string() for</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : /// lexicographic ordering, enabling use in ordered containers.</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : ///</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : /// \note Not a hot-path operation — called only during ring rebuilds on</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : ///       membership change events.</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : struct EndPointCompare {</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :     /// \brief Lexicographic comparison of two endpoints via their string</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :     ///        representations.</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :     /// \param[in] a First endpoint.</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :     /// \param[in] b Second endpoint.</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :     /// \return \c true if \p a &lt; \p b by string ordering.</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :     bool operator()(const EndPoint&amp; a, const EndPoint&amp; b) const noexcept;</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : };</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : /// \brief Hash token type used for ring position.</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : using HashToken = uint64_t;</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : /// \brief Deterministic consistent hash ring from IServiceDiscovery membership.</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             : ///</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             : /// Builds a ring from the live node set with N virtual nodes per physical</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : /// node. Every node with the same membership view produces identical rings,</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : /// so all nodes agree on the home node for any name without coordination.</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : ///</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : /// Hash function: FNV-1a 64-bit (reused from HPActor fingerprint code).</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : class ConsistentHashRing {</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :   public:</span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC tlaBgGNC">          18 :     ConsistentHashRing() = default;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : </span>
+<span id="L57"><span class="lineNum">      57</span>                 :             :     /// \brief Rebuild the ring from the live membership set.</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :     ///</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     /// \param[in] live_members Set of alive node endpoints.</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     /// \param[in] virtual_nodes Virtual nodes per physical node (default 100).</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :     void build(const std::set&lt;EndPoint, EndPointCompare&gt;&amp; live_members,</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :                uint32_t virtual_nodes = 100);</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : </span>
+<span id="L64"><span class="lineNum">      64</span>                 :             :     /// \brief Find the home node for a name.</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     ///</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     /// \param[in] name Actor name to resolve.</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     /// \return The owning EndPoint, or std::nullopt if the ring is empty.</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :     std::optional&lt;EndPoint&gt; lookup(std::string_view name) const;</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             : </span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :     /// \brief True when the ring has no nodes.</span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           6 :     [[nodiscard]] bool empty() const noexcept { return ring_.empty(); }</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :     /// \brief Number of physical nodes in the ring.</span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           4 :     [[nodiscard]] size_t size() const noexcept { return physical_nodes_.size(); }</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :             : </span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :   private:</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :     /// Compute FNV-1a 64-bit hash of a string_view.</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     static HashToken hash(std::string_view s) noexcept;</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             : </span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     /// Compute hash of (physical_node, virtual_index) for virtual node</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             :     /// placement.</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             :     static HashToken virtual_node_hash(EndPoint node, uint32_t vn) noexcept;</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             : </span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :     std::map&lt;HashToken, EndPoint&gt; ring_;              // token → node (sorted)</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :     std::set&lt;EndPoint, EndPointCompare&gt; physical_nodes_; // track count</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             : };</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : </span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : } // namespace hpactor::cluster::name</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../../../../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

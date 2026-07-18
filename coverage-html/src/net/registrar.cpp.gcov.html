@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-14 05:32:52</td>
+            <td class="headerValue">2026-07-18 00:57:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">55.0&nbsp;%</td>
@@ -516,14 +516,14 @@
 <span id="L436"><span class="lineNum">     436</span>                 :<span class="tlaUNC">           0 :     return endpoints_.erase(endpoint) &gt; 0;</span></span>
 <span id="L437"><span class="lineNum">     437</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L438"><span class="lineNum">     438</span>                 :             : </span>
-<span id="L439"><span class="lineNum">     439</span>                 :<span class="tlaGNC tlaBgGNC">          20 : NodeEndpoint* NodeRegistry::get(EndPoint endpoint) {</span></span>
-<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaGNC">          20 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L441"><span class="lineNum">     441</span>                 :<span class="tlaGNC">          20 :     auto it = endpoints_.find(endpoint);</span></span>
-<span id="L442"><span class="lineNum">     442</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span>]:<span class="tlaGNC">          20 :     if (it != endpoints_.end()) {</span></span>
+<span id="L439"><span class="lineNum">     439</span>                 :<span class="tlaGNC tlaBgGNC">          22 : NodeEndpoint* NodeRegistry::get(EndPoint endpoint) {</span></span>
+<span id="L440"><span class="lineNum">     440</span>                 :<span class="tlaGNC">          22 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L441"><span class="lineNum">     441</span>                 :<span class="tlaGNC">          22 :     auto it = endpoints_.find(endpoint);</span></span>
+<span id="L442"><span class="lineNum">     442</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">          22 :     if (it != endpoints_.end()) {</span></span>
 <span id="L443"><span class="lineNum">     443</span>                 :<span class="tlaGNC">           2 :         return &amp;it-&gt;second;</span></span>
 <span id="L444"><span class="lineNum">     444</span>                 :             :     }</span>
-<span id="L445"><span class="lineNum">     445</span>                 :<span class="tlaGNC">          18 :     return nullptr;</span></span>
-<span id="L446"><span class="lineNum">     446</span>                 :<span class="tlaGNC">          20 : }</span></span>
+<span id="L445"><span class="lineNum">     445</span>                 :<span class="tlaGNC">          20 :     return nullptr;</span></span>
+<span id="L446"><span class="lineNum">     446</span>                 :<span class="tlaGNC">          22 : }</span></span>
 <span id="L447"><span class="lineNum">     447</span>                 :             : </span>
 <span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaGNC">           1 : bool NodeRegistry::has(EndPoint endpoint) const {</span></span>
 <span id="L449"><span class="lineNum">     449</span>                 :<span class="tlaGNC">           1 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
@@ -591,12 +591,12 @@
 <span id="L511"><span class="lineNum">     511</span>                 :<span class="tlaGNC">          53 :         addr.sin_port = htons(config_.tcp_port);</span></span>
 <span id="L512"><span class="lineNum">     512</span>                 :             : </span>
 <span id="L513"><span class="lineNum">     513</span>                 :<span class="tlaGNC">          53 :         if (bind(test_sock, reinterpret_cast&lt;struct sockaddr*&gt;(&amp;addr),</span></span>
-<span id="L514"><span class="lineNum">     514</span>         [<span class="tlaGBC" title="Branch 0 was taken 38 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          53 :                  sizeof(addr)) == 0) {</span></span>
-<span id="L515"><span class="lineNum">     515</span>                 :<span class="tlaGNC">          38 :             close(test_sock);</span></span>
-<span id="L516"><span class="lineNum">     516</span>                 :<span class="tlaGNC">          38 :             start_server_mode_async();</span></span>
+<span id="L514"><span class="lineNum">     514</span>         [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          53 :                  sizeof(addr)) == 0) {</span></span>
+<span id="L515"><span class="lineNum">     515</span>                 :<span class="tlaGNC">          36 :             close(test_sock);</span></span>
+<span id="L516"><span class="lineNum">     516</span>                 :<span class="tlaGNC">          36 :             start_server_mode_async();</span></span>
 <span id="L517"><span class="lineNum">     517</span>                 :             :         } else {</span>
-<span id="L518"><span class="lineNum">     518</span>                 :<span class="tlaGNC">          15 :             close(test_sock);</span></span>
-<span id="L519"><span class="lineNum">     519</span>                 :<span class="tlaGNC">          15 :             start_client_mode_async();</span></span>
+<span id="L518"><span class="lineNum">     518</span>                 :<span class="tlaGNC">          17 :             close(test_sock);</span></span>
+<span id="L519"><span class="lineNum">     519</span>                 :<span class="tlaGNC">          17 :             start_client_mode_async();</span></span>
 <span id="L520"><span class="lineNum">     520</span>                 :             :         }</span>
 <span id="L521"><span class="lineNum">     521</span>                 :<span class="tlaGNC">          53 :         return;</span></span>
 <span id="L522"><span class="lineNum">     522</span>                 :             :     }</span>
@@ -632,13 +632,13 @@
 <span id="L552"><span class="lineNum">     552</span>                 :<span class="tlaGNC">         124 :     client_.reset();</span></span>
 <span id="L553"><span class="lineNum">     553</span>                 :<span class="tlaGNC">         124 :     client_registry_.reset();</span></span>
 <span id="L554"><span class="lineNum">     554</span>                 :             : </span>
-<span id="L555"><span class="lineNum">     555</span>         [<span class="tlaGBC" title="Branch 0 was taken 38 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 86 times"> + </span>]:<span class="tlaGNC">         124 :     if (udp_socket_ &gt;= 0) {</span></span>
-<span id="L556"><span class="lineNum">     556</span>         [<span class="tlaGBC" title="Branch 0 was taken 38 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          38 :         if (loop_) {</span></span>
-<span id="L557"><span class="lineNum">     557</span>                 :<span class="tlaGNC">          38 :             loop_-&gt;clear_read_handler(udp_socket_);</span></span>
-<span id="L558"><span class="lineNum">     558</span>                 :<span class="tlaGNC">          38 :             loop_-&gt;remove_fd(udp_socket_);</span></span>
+<span id="L555"><span class="lineNum">     555</span>         [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 88 times"> + </span>]:<span class="tlaGNC">         124 :     if (udp_socket_ &gt;= 0) {</span></span>
+<span id="L556"><span class="lineNum">     556</span>         [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          36 :         if (loop_) {</span></span>
+<span id="L557"><span class="lineNum">     557</span>                 :<span class="tlaGNC">          36 :             loop_-&gt;clear_read_handler(udp_socket_);</span></span>
+<span id="L558"><span class="lineNum">     558</span>                 :<span class="tlaGNC">          36 :             loop_-&gt;remove_fd(udp_socket_);</span></span>
 <span id="L559"><span class="lineNum">     559</span>                 :             :         }</span>
-<span id="L560"><span class="lineNum">     560</span>                 :<span class="tlaGNC">          38 :         close(udp_socket_);</span></span>
-<span id="L561"><span class="lineNum">     561</span>                 :<span class="tlaGNC">          38 :         udp_socket_ = -1;</span></span>
+<span id="L560"><span class="lineNum">     560</span>                 :<span class="tlaGNC">          36 :         close(udp_socket_);</span></span>
+<span id="L561"><span class="lineNum">     561</span>                 :<span class="tlaGNC">          36 :         udp_socket_ = -1;</span></span>
 <span id="L562"><span class="lineNum">     562</span>                 :             :     }</span>
 <span id="L563"><span class="lineNum">     563</span>                 :<span class="tlaGNC">         124 : }</span></span>
 <span id="L564"><span class="lineNum">     564</span>                 :             : </span>
@@ -675,51 +675,51 @@
 <span id="L595"><span class="lineNum">     595</span>                 :<span class="tlaUNC">           0 :     client_-&gt;start();</span></span>
 <span id="L596"><span class="lineNum">     596</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L597"><span class="lineNum">     597</span>                 :             : </span>
-<span id="L598"><span class="lineNum">     598</span>                 :<span class="tlaGNC tlaBgGNC">          38 : void UdpRegistrar::setup_udp_socket() {</span></span>
-<span id="L599"><span class="lineNum">     599</span>                 :<span class="tlaGNC">          38 :     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);</span></span>
-<span id="L600"><span class="lineNum">     600</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 38 times"> + </span>]:<span class="tlaGNC">          38 :     if (udp_socket_ &lt; 0)</span></span>
+<span id="L598"><span class="lineNum">     598</span>                 :<span class="tlaGNC tlaBgGNC">          36 : void UdpRegistrar::setup_udp_socket() {</span></span>
+<span id="L599"><span class="lineNum">     599</span>                 :<span class="tlaGNC">          36 :     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);</span></span>
+<span id="L600"><span class="lineNum">     600</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 36 times"> + </span>]:<span class="tlaGNC">          36 :     if (udp_socket_ &lt; 0)</span></span>
 <span id="L601"><span class="lineNum">     601</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L602"><span class="lineNum">     602</span>                 :             : </span>
-<span id="L603"><span class="lineNum">     603</span>                 :<span class="tlaGNC tlaBgGNC">          38 :     int reuse = 1;</span></span>
-<span id="L604"><span class="lineNum">     604</span>                 :<span class="tlaGNC">          38 :     setsockopt(udp_socket_, SOL_SOCKET, SO_REUSEADDR, &amp;reuse, sizeof(reuse));</span></span>
+<span id="L603"><span class="lineNum">     603</span>                 :<span class="tlaGNC tlaBgGNC">          36 :     int reuse = 1;</span></span>
+<span id="L604"><span class="lineNum">     604</span>                 :<span class="tlaGNC">          36 :     setsockopt(udp_socket_, SOL_SOCKET, SO_REUSEADDR, &amp;reuse, sizeof(reuse));</span></span>
 <span id="L605"><span class="lineNum">     605</span>                 :             : </span>
 <span id="L606"><span class="lineNum">     606</span>                 :             :     struct sockaddr_in udp_addr;</span>
-<span id="L607"><span class="lineNum">     607</span>                 :<span class="tlaGNC">          38 :     memset(&amp;udp_addr, 0, sizeof(udp_addr));</span></span>
-<span id="L608"><span class="lineNum">     608</span>                 :<span class="tlaGNC">          38 :     udp_addr.sin_family = AF_INET;</span></span>
-<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">          38 :     udp_addr.sin_addr.s_addr = INADDR_ANY;</span></span>
-<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">          38 :     udp_addr.sin_port = htons(config_.udp_port);</span></span>
-<span id="L611"><span class="lineNum">     611</span>                 :<span class="tlaGNC">          38 :     if (bind(udp_socket_, reinterpret_cast&lt;struct sockaddr*&gt;(&amp;udp_addr),</span></span>
-<span id="L612"><span class="lineNum">     612</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 38 times"> + </span>]:<span class="tlaGNC">          38 :              sizeof(udp_addr)) &lt; 0) {</span></span>
+<span id="L607"><span class="lineNum">     607</span>                 :<span class="tlaGNC">          36 :     memset(&amp;udp_addr, 0, sizeof(udp_addr));</span></span>
+<span id="L608"><span class="lineNum">     608</span>                 :<span class="tlaGNC">          36 :     udp_addr.sin_family = AF_INET;</span></span>
+<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">          36 :     udp_addr.sin_addr.s_addr = INADDR_ANY;</span></span>
+<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">          36 :     udp_addr.sin_port = htons(config_.udp_port);</span></span>
+<span id="L611"><span class="lineNum">     611</span>                 :<span class="tlaGNC">          36 :     if (bind(udp_socket_, reinterpret_cast&lt;struct sockaddr*&gt;(&amp;udp_addr),</span></span>
+<span id="L612"><span class="lineNum">     612</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 36 times"> + </span>]:<span class="tlaGNC">          36 :              sizeof(udp_addr)) &lt; 0) {</span></span>
 <span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         close(udp_socket_);</span></span>
 <span id="L614"><span class="lineNum">     614</span>                 :<span class="tlaUNC">           0 :         udp_socket_ = -1;</span></span>
 <span id="L615"><span class="lineNum">     615</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L616"><span class="lineNum">     616</span>                 :             :     }</span>
 <span id="L617"><span class="lineNum">     617</span>                 :             : </span>
-<span id="L618"><span class="lineNum">     618</span>         [<span class="tlaGBC" title="Branch 0 was taken 38 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">          38 :     if (loop_) {</span></span>
-<span id="L619"><span class="lineNum">     619</span>                 :<span class="tlaGNC">          38 :         loop_-&gt;add_fd(udp_socket_, EventLoop::Event::Read);</span></span>
-<span id="L620"><span class="lineNum">     620</span>                 :<span class="tlaGNC">          38 :         loop_-&gt;set_read_handler(udp_socket_,</span></span>
-<span id="L621"><span class="lineNum">     621</span>                 :<span class="tlaGNC">          76 :                                 [this](int /*fd*/) { handle_udp_read_ready(); });</span></span>
+<span id="L618"><span class="lineNum">     618</span>         [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">          36 :     if (loop_) {</span></span>
+<span id="L619"><span class="lineNum">     619</span>                 :<span class="tlaGNC">          36 :         loop_-&gt;add_fd(udp_socket_, EventLoop::Event::Read);</span></span>
+<span id="L620"><span class="lineNum">     620</span>                 :<span class="tlaGNC">          36 :         loop_-&gt;set_read_handler(udp_socket_,</span></span>
+<span id="L621"><span class="lineNum">     621</span>                 :<span class="tlaGNC">          72 :                                 [this](int /*fd*/) { handle_udp_read_ready(); });</span></span>
 <span id="L622"><span class="lineNum">     622</span>                 :             :     }</span>
 <span id="L623"><span class="lineNum">     623</span>                 :             : }</span>
 <span id="L624"><span class="lineNum">     624</span>                 :             : </span>
-<span id="L625"><span class="lineNum">     625</span>                 :<span class="tlaGNC">          38 : void UdpRegistrar::start_server_mode_async() {</span></span>
-<span id="L626"><span class="lineNum">     626</span>                 :<span class="tlaGNC">          38 :     server_ = std::make_unique&lt;RegistrarServer&gt;(config_, local_endpoint_, loop_);</span></span>
-<span id="L627"><span class="lineNum">     627</span>                 :<span class="tlaGNC">          38 :     server_-&gt;start();</span></span>
+<span id="L625"><span class="lineNum">     625</span>                 :<span class="tlaGNC">          36 : void UdpRegistrar::start_server_mode_async() {</span></span>
+<span id="L626"><span class="lineNum">     626</span>                 :<span class="tlaGNC">          36 :     server_ = std::make_unique&lt;RegistrarServer&gt;(config_, local_endpoint_, loop_);</span></span>
+<span id="L627"><span class="lineNum">     627</span>                 :<span class="tlaGNC">          36 :     server_-&gt;start();</span></span>
 <span id="L628"><span class="lineNum">     628</span>                 :             : </span>
-<span id="L629"><span class="lineNum">     629</span>                 :<span class="tlaGNC">          38 :     setup_udp_socket();</span></span>
-<span id="L630"><span class="lineNum">     630</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 38 times"> + </span>]:<span class="tlaGNC">          38 :     if (udp_socket_ &lt; 0)</span></span>
+<span id="L629"><span class="lineNum">     629</span>                 :<span class="tlaGNC">          36 :     setup_udp_socket();</span></span>
+<span id="L630"><span class="lineNum">     630</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 36 times"> + </span>]:<span class="tlaGNC">          36 :     if (udp_socket_ &lt; 0)</span></span>
 <span id="L631"><span class="lineNum">     631</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L632"><span class="lineNum">     632</span>                 :             : </span>
-<span id="L633"><span class="lineNum">     633</span>                 :<span class="tlaGNC tlaBgGNC">          38 :     udp_recv_buffer_.resize(kUdpRecvBufferSize);</span></span>
-<span id="L634"><span class="lineNum">     634</span>                 :<span class="tlaGNC">          38 :     issue_async_recvfrom();</span></span>
+<span id="L633"><span class="lineNum">     633</span>                 :<span class="tlaGNC tlaBgGNC">          36 :     udp_recv_buffer_.resize(kUdpRecvBufferSize);</span></span>
+<span id="L634"><span class="lineNum">     634</span>                 :<span class="tlaGNC">          36 :     issue_async_recvfrom();</span></span>
 <span id="L635"><span class="lineNum">     635</span>                 :             : }</span>
 <span id="L636"><span class="lineNum">     636</span>                 :             : </span>
-<span id="L637"><span class="lineNum">     637</span>                 :<span class="tlaGNC">          15 : void UdpRegistrar::start_client_mode_async() {</span></span>
+<span id="L637"><span class="lineNum">     637</span>                 :<span class="tlaGNC">          17 : void UdpRegistrar::start_client_mode_async() {</span></span>
 <span id="L638"><span class="lineNum">     638</span>                 :             :     // Create registry populated with static routes</span>
-<span id="L639"><span class="lineNum">     639</span>                 :<span class="tlaGNC">          15 :     client_registry_ = std::make_unique&lt;NodeRegistry&gt;(config_);</span></span>
+<span id="L639"><span class="lineNum">     639</span>                 :<span class="tlaGNC">          17 :     client_registry_ = std::make_unique&lt;NodeRegistry&gt;(config_);</span></span>
 <span id="L640"><span class="lineNum">     640</span>                 :             : </span>
 <span id="L641"><span class="lineNum">     641</span>                 :             :     // Populate with static routes</span>
-<span id="L642"><span class="lineNum">     642</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          15 :     for (const auto&amp; route : config_.static_routes) {</span></span>
+<span id="L642"><span class="lineNum">     642</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     for (const auto&amp; route : config_.static_routes) {</span></span>
 <span id="L643"><span class="lineNum">     643</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         NodeEndpoint ep;</span></span>
 <span id="L644"><span class="lineNum">     644</span>                 :<span class="tlaUNC">           0 :         ep.identity.endpoint = route.endpoint;</span></span>
 <span id="L645"><span class="lineNum">     645</span>                 :<span class="tlaUNC">           0 :         ep.identity.host = route.address;</span></span>
@@ -729,24 +729,24 @@
 <span id="L649"><span class="lineNum">     649</span>                 :<span class="tlaUNC">           0 :     }</span></span>
 <span id="L650"><span class="lineNum">     650</span>                 :             : </span>
 <span id="L651"><span class="lineNum">     651</span>                 :             :     // Use first static route as server if available</span>
-<span id="L652"><span class="lineNum">     652</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     EndPoint server_endpoint;</span></span>
-<span id="L653"><span class="lineNum">     653</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          15 :     if (!config_.static_routes.empty()) {</span></span>
+<span id="L652"><span class="lineNum">     652</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     EndPoint server_endpoint;</span></span>
+<span id="L653"><span class="lineNum">     653</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     if (!config_.static_routes.empty()) {</span></span>
 <span id="L654"><span class="lineNum">     654</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         server_endpoint = config_.static_routes[0].endpoint;</span></span>
 <span id="L655"><span class="lineNum">     655</span>                 :             :     }</span>
 <span id="L656"><span class="lineNum">     656</span>                 :             : </span>
-<span id="L657"><span class="lineNum">     657</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     client_ = std::make_unique&lt;RegistrarClient&gt;(</span></span>
-<span id="L658"><span class="lineNum">     658</span>                 :<span class="tlaGNC">          15 :         config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);</span></span>
-<span id="L659"><span class="lineNum">     659</span>                 :<span class="tlaGNC">          15 :     client_-&gt;set_failover_callback([this]() { failover(); });</span></span>
-<span id="L660"><span class="lineNum">     660</span>                 :<span class="tlaGNC">          15 :     client_-&gt;start();</span></span>
-<span id="L661"><span class="lineNum">     661</span>                 :<span class="tlaGNC">          15 : }</span></span>
+<span id="L657"><span class="lineNum">     657</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     client_ = std::make_unique&lt;RegistrarClient&gt;(</span></span>
+<span id="L658"><span class="lineNum">     658</span>                 :<span class="tlaGNC">          17 :         config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);</span></span>
+<span id="L659"><span class="lineNum">     659</span>                 :<span class="tlaGNC">          17 :     client_-&gt;set_failover_callback([this]() { failover(); });</span></span>
+<span id="L660"><span class="lineNum">     660</span>                 :<span class="tlaGNC">          17 :     client_-&gt;start();</span></span>
+<span id="L661"><span class="lineNum">     661</span>                 :<span class="tlaGNC">          17 : }</span></span>
 <span id="L662"><span class="lineNum">     662</span>                 :             : </span>
-<span id="L663"><span class="lineNum">     663</span>                 :<span class="tlaGNC">          38 : void UdpRegistrar::issue_async_recvfrom() {</span></span>
-<span id="L664"><span class="lineNum">     664</span>   [<span class="tlaGBC" title="Branch 0 was taken 38 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 38 times"> + </span>]:<span class="tlaGNC">          38 :     if (udp_socket_ &lt; 0 || !loop_)</span></span>
+<span id="L663"><span class="lineNum">     663</span>                 :<span class="tlaGNC">          36 : void UdpRegistrar::issue_async_recvfrom() {</span></span>
+<span id="L664"><span class="lineNum">     664</span>   [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 36 times"> + </span>]:<span class="tlaGNC">          36 :     if (udp_socket_ &lt; 0 || !loop_)</span></span>
 <span id="L665"><span class="lineNum">     665</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L666"><span class="lineNum">     666</span>                 :             : </span>
 <span id="L667"><span class="lineNum">     667</span>                 :             :     // Clear address storage for next recvfrom</span>
-<span id="L668"><span class="lineNum">     668</span>                 :<span class="tlaGNC tlaBgGNC">          38 :     memset(&amp;udp_src_addr_, 0, sizeof(udp_src_addr_));</span></span>
-<span id="L669"><span class="lineNum">     669</span>                 :<span class="tlaGNC">          38 :     udp_src_addr_len_ = sizeof(udp_src_addr_);</span></span>
+<span id="L668"><span class="lineNum">     668</span>                 :<span class="tlaGNC tlaBgGNC">          36 :     memset(&amp;udp_src_addr_, 0, sizeof(udp_src_addr_));</span></span>
+<span id="L669"><span class="lineNum">     669</span>                 :<span class="tlaGNC">          36 :     udp_src_addr_len_ = sizeof(udp_src_addr_);</span></span>
 <span id="L670"><span class="lineNum">     670</span>                 :             : }</span>
 <span id="L671"><span class="lineNum">     671</span>                 :             : </span>
 <span id="L672"><span class="lineNum">     672</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void UdpRegistrar::handle_udp_read_ready() {</span></span>
