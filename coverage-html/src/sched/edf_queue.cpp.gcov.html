@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-18 00:57:16</td>
+            <td class="headerValue">2026-07-18 15:06:08</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -113,9 +113,9 @@
 <span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          26 :     sift_up(items_.size() - 1);</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          26 : }</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         624 : bool EDFQueue::pop(WorkItem&amp; out) {</span></span>
-<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 601 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         624 :     if (items_.empty()) {</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         601 :         return false;</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         586 : bool EDFQueue::pop(WorkItem&amp; out) {</span></span>
+<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 563 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         586 :     if (items_.empty()) {</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         563 :         return false;</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     }</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">          23 :     out = std::move(items_[0].item);</span></span>
@@ -133,9 +133,9 @@
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          10 :     return true;</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : }</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         584 : bool EDFQueue::peek(int64_t&amp; deadline_ns_out) const {</span></span>
-<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaGBC" title="Branch 0 was taken 576 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">         584 :     if (items_.empty()) {</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         576 :         return false;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         544 : bool EDFQueue::peek(int64_t&amp; deadline_ns_out) const {</span></span>
+<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaGBC" title="Branch 0 was taken 536 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">         544 :     if (items_.empty()) {</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         536 :         return false;</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     }</span>
 <span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           8 :     deadline_ns_out = items_[0].deadline;</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           8 :     return true;</span></span>
