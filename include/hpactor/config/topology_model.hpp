@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/cli/config/cli_config.hpp>
+#include <hpactor/config/name_resolution_config.hpp>
 #include <hpactor/config/python_binding_config.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
@@ -205,6 +206,10 @@ struct SystemDef {
     process::ProcessConfig process;
     /// \brief Python language binding configuration.
     config::PythonBindingConfig python;
+
+    /// \brief Distributed name resolution configuration from
+    ///        [system.name_resolution].
+    config::NameResolutionConfig name_resolution;
 };
 
 /// \brief The complete, validated, topologically sorted topology model.

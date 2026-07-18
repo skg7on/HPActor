@@ -136,6 +136,24 @@ class ActorRef {
         return address().endpoint;
     }
 
+    /// \brief Globally-unique actor identifier.
+    ///
+    /// Delegates to the underlying \c Actor or \c ActorProxy address.
+    ActorId id() const {
+        return address().id;
+    }
+
+    /// \brief Access the underlying \c AbstractActor pointer.
+    ///
+    /// Returns \c nullptr for remote references.
+    /// Provides compatibility with the \c Actor API.
+    std::shared_ptr<AbstractActor> get() const {
+        if (is_local()) {
+            return std::get<Actor>(ref_).get();
+        }
+        return nullptr;
+    }
+
     /// \brief Send a message to this actor.
     ///
     /// For local actors, delivers directly to the mailbox. For remote actors,

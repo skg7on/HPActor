@@ -42,6 +42,11 @@ ActorDirectory::publish(ActorDirectoryEntry entry,
     entries_.emplace(id, std::move(entry));
     if (name.has_value()) {
         names_.emplace(std::string{*name}, address);
+        if (name_reg_port_.on_register != nullptr) {
+            name_reg_port_.on_register(name_reg_port_.context,
+                                       *name, address,
+                                       /*generation=*/0);
+        }
     }
     return PublishStatus::Published;
 }
@@ -158,6 +163,10 @@ bool ActorDirectory::erase(ActorId id) {
     bool erased = entries_.erase(id) > 0;
     for (auto it = names_.begin(); it != names_.end();) {
         if (it->second.id == id) {
+            if (name_reg_port_.on_unregister != nullptr) {
+                name_reg_port_.on_unregister(name_reg_port_.context,
+                                             it->first);
+            }
             it = names_.erase(it);
         } else {
             ++it;

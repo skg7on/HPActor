@@ -317,9 +317,12 @@ class ActorSystem {
 
     /// \brief Resolve a named actor.
     ///
+    /// Searches the local \c ActorDirectory first. If not found and a
+    /// \c NameResolver is configured, queries cross-node name resolution.
     /// \param[in] name Actor name registered via \c register_actor().
-    /// \return The resolved \c Actor, or an empty handle if not found.
-    Actor resolve_actor(const std::string& name);
+    /// \return The resolved \c ActorRef (local \c Actor or remote
+    ///         \c ActorProxy), or an empty handle if not found.
+    ActorRef resolve_actor(const std::string& name);
 
     /// \brief Unregister a named actor.
     void unregister_actor(const std::string& name);

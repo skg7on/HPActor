@@ -4,6 +4,7 @@
 #include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/msg/type_tag.hpp>
+#include <hpactor/msg/name_directory_tags.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 
 #include <hpactor/runtime/messaging_runtime.hpp>
@@ -11,6 +12,92 @@
 namespace hpactor::net {
 
 namespace {
+
+// ── Protobuf wire-format constants ──────────────────────────────────────
+// See: https://protobuf.dev/programming-guides/encoding/
+// These constants describe the binary encoding used by protobuf wire format
+// and are stable across all protobuf versions.  Field numbers derive from
+// protos/hpactor/name_directory.proto and MUST match that file.
+
+namespace pb {
+// Wire types (3-bit, lower bits of each tag)
+constexpr uint8_t kVarint          = 0;
+constexpr uint8_t kFixed64         = 1;
+constexpr uint8_t kLengthDelimited = 2;
+constexpr uint8_t kFixed32         = 5;
+
+// Tag decoding
+constexpr uint8_t  kTagWireTypeMask    = 0x07;
+constexpr uint8_t  kTagFieldNumberShift = 3;
+
+// Varint encoding
+constexpr uint8_t  kVarintContinuationBit = 0x80;
+constexpr uint64_t kVarintPayloadMask     = 0x7FULL;
+constexpr int      kVarintShiftIncrement  = 7;
+constexpr int      kVarintMaxShift        = 64;
+
+// Fixed-size field widths (bytes)
+constexpr size_t kFixed64Size = 8;
+constexpr size_t kFixed32Size = 4;
+
+// ── Field numbers from name_directory.proto ─────────────────────────────
+// Messages and their field assignments:
+//   PbNameRegisterRequest:   name=1, actor_id=2, endpoint=3, generation=4
+//   PbNameResolveQuery:      name=1
+//   PbNameUnregisterRequest: name=1, generation=2
+namespace name_dir {
+constexpr uint32_t kFieldName       = 1;
+constexpr uint32_t kFieldActorId    = 2; // PbNameRegisterRequest
+constexpr uint32_t kFieldEndpoint   = 3; // PbNameRegisterRequest
+constexpr uint32_t kFieldGeneration = 4; // PbNameRegisterRequest
+constexpr uint32_t kUnregFieldGeneration = 2; // PbNameUnregisterRequest
+} // namespace name_dir
+} // namespace pb
+
+// ── Minimal protobuf wire-format reader for name-protocol messages ──────
+// Protobuf codegen for name_directory.proto is not yet wired (Task 12).
+// These helpers extract fields needed by InboundNamePort from raw bytes.
+
+inline bool decode_varint(const uint8_t*& p, const uint8_t* end,
+                          uint64_t& out) noexcept {
+    out = 0;
+    int shift = 0;
+    while (p < end) {
+        uint64_t byte = *p++;
+        out |= (byte & pb::kVarintPayloadMask) << shift;
+        if ((byte & pb::kVarintContinuationBit) == 0) return true;
+        shift += pb::kVarintShiftIncrement;
+        if (shift >= pb::kVarintMaxShift) return false;
+    }
+    return false;
+}
+
+inline bool skip_field_value(const uint8_t*& p, const uint8_t* end,
+                             uint8_t wire_type) noexcept {
+    switch (wire_type) {
+    case pb::kVarint:
+        while (p < end && (*p & pb::kVarintContinuationBit)) ++p;
+        if (p < end) ++p;
+        return true;
+    case pb::kLengthDelimited: {
+        uint64_t len;
+        if (!decode_varint(p, end, len)) return false;
+        if (len > static_cast<uint64_t>(end - p)) return false;
+        p += len;
+        return true;
+    }
+    case pb::kFixed64:
+        if (static_cast<uint64_t>(end - p) < pb::kFixed64Size) return false;
+        p += pb::kFixed64Size;
+        return true;
+    case pb::kFixed32:
+        if (static_cast<uint64_t>(end - p) < pb::kFixed32Size) return false;
+        p += pb::kFixed32Size;
+        return true;
+    default:
+        return false;
+    }
+}
 
 FrameDispatchResult
 make_result(FrameDispatchCode code, WireFrame::PayloadType pt) noexcept {
@@ -36,7 +123,8 @@ constexpr bool is_python_binding_control_tag(uint32_t tag) noexcept {
 
 InboundFrameRouter::InboundFrameRouter(Dependencies dependencies, Config config) noexcept
     : config_(config), messaging_(dependencies.messaging), rpc_(dependencies.rpc),
-      streams_(dependencies.streams), metrics_(dependencies.metrics) {}
+      streams_(dependencies.streams), metrics_(dependencies.metrics),
+      name_port_(dependencies.name_port) {}
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -183,6 +271,166 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
         messaging_.backpressure().handle_remote_signal(frame);
         return make_result(FrameDispatchCode::BackpressureHandled,
                            WireFrame::PayloadType::Data);
+    }
+
+    // ── Name protocol dispatch ─────────────────────────────────────────────
+    // Short-circuit name-protocol request frames to InboundNamePort before
+    // normal message delivery. Response tags pass through to the
+    // requesting NameResolver via ordinary delivery.
+    {
+        uint32_t tag_raw = data.type_tag();
+        auto tag = static_cast<TypeTag>(tag_raw);
+        if (cluster::name::is_name_protocol_tag(tag) && name_port_.active()) {
+            switch (tag_raw) {
+            case static_cast<uint32_t>(cluster::name::kNameRegisterRequestTag): {
+                if (!name_port_.on_register_request) break;
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                std::string_view name;
+                uint64_t actor_id = 0;
+                std::string_view endpoint_str;
+                uint64_t generation = 0;
+                bool has_name = false, has_actor_id = false;
+                bool has_endpoint = false, has_generation = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                    uint32_t fn = static_cast<uint32_t>(
+                        tag_val >> pb::kTagFieldNumberShift);
+
+                    if (fn == pb::name_dir::kFieldName &&
+                        wt == pb::kLengthDelimited) {
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
+                        name = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                        has_name = true;
+                    } else if (fn == pb::name_dir::kFieldActorId &&
+                               wt == pb::kVarint) {
+                        if (!decode_varint(p, end, actor_id)) break;
+                        has_actor_id = true;
+                    } else if (fn == pb::name_dir::kFieldEndpoint &&
+                               wt == pb::kLengthDelimited) {
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
+                        endpoint_str = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                        has_endpoint = true;
+                    } else if (fn == pb::name_dir::kFieldGeneration &&
+                               wt == pb::kVarint) {
+                        if (!decode_varint(p, end, generation)) break;
+                        has_generation = true;
+                    } else {
+                        if (!skip_field_value(p, end, wt)) break;
+                    }
+                }
+
+                if (has_name && has_actor_id && has_endpoint &&
+                    has_generation) {
+                    ActorAddress addr{
+                        endpoint_ops::parse_endpoint(endpoint_str),
+                        ActorType{0}, ActorId{actor_id}, 0};
+                    name_port_.on_register_request(name_port_.context,
+                                                    ictx.peer, name, addr,
+                                                    generation);
+                }
+                return make_result(FrameDispatchCode::ActorRejected,
+                                   WireFrame::PayloadType::Data);
+            }
+            case static_cast<uint32_t>(cluster::name::kNameResolveQueryTag): {
+                if (!name_port_.on_resolve_query) break;
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                std::string_view name;
+                bool has_name = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                    uint32_t fn = static_cast<uint32_t>(
+                        tag_val >> pb::kTagFieldNumberShift);
+
+                    if (fn == pb::name_dir::kFieldName &&
+                        wt == pb::kLengthDelimited) {
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
+                        name = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        has_name = true;
+                        break;
+                    }
+                    if (!skip_field_value(p, end, wt)) break;
+                }
+
+                if (has_name) {
+                    name_port_.on_resolve_query(name_port_.context,
+                                                 ictx.peer, name);
+                }
+                return make_result(FrameDispatchCode::ActorRejected,
+                                   WireFrame::PayloadType::Data);
+            }
+            case static_cast<uint32_t>(cluster::name::kNameUnregisterRequestTag): {
+                if (!name_port_.on_unregister_request) break;
+                const auto& pl = data.payload();
+                const uint8_t* p =
+                    reinterpret_cast<const uint8_t*>(pl.data());
+                const uint8_t* end = p + pl.size();
+
+                std::string_view name;
+                uint64_t generation = 0;
+                bool has_name = false, has_generation = false;
+
+                while (p < end) {
+                    uint64_t tag_val;
+                    if (!decode_varint(p, end, tag_val)) break;
+                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                    uint32_t fn = static_cast<uint32_t>(
+                        tag_val >> pb::kTagFieldNumberShift);
+
+                    if (fn == pb::name_dir::kFieldName &&
+                        wt == pb::kLengthDelimited) {
+                        uint64_t len;
+                        if (!decode_varint(p, end, len)) break;
+                        if (len > static_cast<uint64_t>(end - p)) break;
+                        name = std::string_view(
+                            reinterpret_cast<const char*>(p), len);
+                        p += len;
+                        has_name = true;
+                    } else if (fn == pb::name_dir::kUnregFieldGeneration &&
+                               wt == pb::kVarint) {
+                        if (!decode_varint(p, end, generation)) break;
+                        has_generation = true;
+                    } else {
+                        if (!skip_field_value(p, end, wt)) break;
+                    }
+                }
+
+                if (has_name && has_generation) {
+                    name_port_.on_unregister_request(name_port_.context,
+                                                      ictx.peer, name,
+                                                      generation);
+                }
+                return make_result(FrameDispatchCode::ActorRejected,
+                                   WireFrame::PayloadType::Data);
+            }
+            default:
+                break; // Response tags pass through to ordinary delivery
+            }
+        }
     }
 
     // Ordinary data — AckRequested only (or no control flags).

@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/cluster/name/name_registration_port.hpp>
 #include <hpactor/mailbox/disruptor_mailbox_interface.hpp>
 #include <hpactor/mailbox/mailbox_kind.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
@@ -195,11 +196,22 @@ class ActorDirectory {
     /// \return Number of actors in the directory.
     std::size_t size() const noexcept;
 
+    /// \brief Install a name registration callback port.
+    ///
+    /// When set, ActorDirectory calls port.on_register() after
+    /// successful publish() with a name, and port.on_unregister()
+    /// during erase() for each removed name.
+    void set_name_registration_port(
+        cluster::name::NameRegistrationPort port) {
+        name_reg_port_ = port;
+    }
+
   private:
     mutable std::mutex mutex_;
     uint64_t next_actor_id_{1};
     std::unordered_map<ActorId, ActorDirectoryEntry> entries_;
     std::unordered_map<std::string, ActorAddress> names_;
+    cluster::name::NameRegistrationPort name_reg_port_;
 };
 
 } // namespace hpactor
