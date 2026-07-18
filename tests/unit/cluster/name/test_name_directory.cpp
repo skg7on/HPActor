@@ -13,6 +13,8 @@
 // limitations under the License.
 #include <gtest/gtest.h>
 
+#include <thread>
+
 #include <hpactor/cluster/name/name_directory.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
@@ -21,8 +23,8 @@ namespace hpactor::cluster::name {
 namespace {
 
 // Helper: build a NameEntry for testing.
-NameEntry make_entry(uint64_t actor_id_val, const std::string& ep_str,
-                     uint64_t gen = 1) {
+NameEntry
+make_entry(uint64_t actor_id_val, const std::string& ep_str, uint64_t gen = 1) {
     NameEntry e;
     e.actor_id = ActorId{actor_id_val};
     e.endpoint = endpoint_ops::parse_endpoint(ep_str);
@@ -167,15 +169,18 @@ TEST(NameDirectoryTest, ConcurrentRegisterResolve) {
             for (int i = 0; i < kPerThread; ++i) {
                 auto name = "name_" + std::to_string(t) + "_" + std::to_string(i);
                 auto ep_str = "192.168.1." + std::to_string(t + 1) + ":9000";
-                auto entry = make_entry(static_cast<uint64_t>(t * kPerThread + i),
-                                        ep_str);
+                auto entry =
+                    make_entry(static_cast<uint64_t>(t * kPerThread + i), ep_str);
                 auto result = dir.register_entry(name, entry);
-                if (result == RegisterResult::Ok) ok_count++;
-                else if (result == RegisterResult::DuplicateName) dup_count++;
+                if (result == RegisterResult::Ok)
+                    ok_count++;
+                else if (result == RegisterResult::DuplicateName)
+                    dup_count++;
             }
         });
     }
-    for (auto& th : threads) th.join();
+    for (auto& th : threads)
+        th.join();
 
     EXPECT_GT(ok_count.load(), 0);
     EXPECT_EQ(dir.size(), static_cast<size_t>(ok_count.load()));
