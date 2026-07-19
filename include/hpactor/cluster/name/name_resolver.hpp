@@ -14,9 +14,13 @@
 #pragma once
 
 #include <chrono>
+#include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <hpactor/cluster/name/consistent_hash_ring.hpp>
 #include <hpactor/cluster/name/inbound_name_port.hpp>
@@ -163,6 +167,29 @@ class NameResolver {
                                     std::string_view name,
                                     uint64_t generation);
 
+    /// \brief Handle an incoming name registration response from a peer.
+    ///
+    /// Currently a no-op (register is fire-and-forget from the sender
+    /// perspective). Reserved for future delivery-status observability.
+    ///
+    /// \param[in] from Peer endpoint that sent the response.
+    /// \param[in] result_code Registration result (0=OK, 1=dup, 2=invalid, 3=stale).
+    void on_name_register_response(EndPoint from, uint32_t result_code);
+
+    /// \brief Handle an incoming name resolution response from a peer.
+    ///
+    /// Signals the pending resolve request for any waiting \c resolve() call.
+    ///
+    /// \param[in] from Peer endpoint that sent the response.
+    /// \param[in] found True if the name was found on the home node.
+    /// \param[in] actor_id Actor ID if found.
+    /// \param[in] endpoint_str Serialized endpoint if found.
+    /// \param[in] generation Monotonic generation counter if found.
+    void on_name_resolve_response(EndPoint from, bool found,
+                                  uint64_t actor_id,
+                                  std::string_view endpoint_str,
+                                  uint64_t generation);
+
     // ── Observability ──────────────────────────────────────────────────────
 
     /// \brief Current number of names homed on this node.
@@ -181,6 +208,22 @@ class NameResolver {
     InboundNamePort inbound_port_;
     ConsistentHashRing ring_;
     mutable std::mutex mutex_;
+
+    // ── Pending resolve tracking ───────────────────────────────────────────
+    // Guarded by pending_mutex_.  Entries are added by resolve() and removed
+    // when the response arrives or the call times out.
+
+    /// \brief Per-request state for a pending cross-node resolve.
+    struct PendingResolve {
+        std::mutex mtx;
+        std::condition_variable cv;
+        std::optional<ActorAddress> result;
+        bool ready{false};
+    };
+
+    mutable std::mutex pending_mutex_;
+    std::unordered_map<std::string, std::shared_ptr<PendingResolve>>
+        pending_resolves_;
 };
 
 } // namespace hpactor::cluster::name
