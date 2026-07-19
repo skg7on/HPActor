@@ -21,4 +21,24 @@ add_subdirectory(
 
 set(CMAKE_CXX_CLANG_TIDY "${_hpactor_saved_clang_tidy}")
 
+# The vendored gtest (v1.14.0) uses SYSTEM INTERFACE for its include dirs,
+# producing -isystem paths. On systems with a homebrew-installed gtest
+# (v1.17.0+), /opt/homebrew/include (also -isystem from imported dep targets)
+# can shadow the vendored headers. v1.17.0 changed MakeAndRegisterTestInfo's
+# first parameter from const char* to std::string, causing linker errors.
+#
+# Fix: demote the vendored gtest include dirs from SYSTEM to regular so they
+# produce -I instead of -isystem. -I is always searched before -isystem.
+# To suppress -Wsign-compare warnings that now escape from gtest macros under
+# -Werror, we add -Wno-sign-compare as an INTERFACE option on the gtest
+# targets so it propagates to all test consumers.
+get_target_property(_gtest_inc_dirs gtest INTERFACE_INCLUDE_DIRECTORIES)
+set_target_properties(gtest PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "")
+target_include_directories(gtest BEFORE INTERFACE ${_gtest_inc_dirs})
+target_compile_options(gtest INTERFACE -Wno-sign-compare)
+get_target_property(_gtest_main_inc_dirs gtest_main INTERFACE_INCLUDE_DIRECTORIES)
+set_target_properties(gtest_main PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "")
+target_include_directories(gtest_main BEFORE INTERFACE ${_gtest_main_inc_dirs})
+target_compile_options(gtest_main INTERFACE -Wno-sign-compare)
+
 include(GoogleTest)
