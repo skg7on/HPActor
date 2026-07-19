@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-19 01:18:50</td>
+            <td class="headerValue">2026-07-19 02:41:39</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -143,14 +143,14 @@
 <span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       18050 :             const bool escalation = severity &gt; last_severity;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
 <span id="L67"><span class="lineNum">      67</span>   [<span class="tlaGBC" title="Branch 0 was taken 18044 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 18022 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 22 times"> + </span> :<span class="tlaGNC">       18050 :             if (!force &amp;&amp; !first &amp;&amp; !interval_elapsed &amp;&amp; !escalation)</span></span>
-<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 18010 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 18001 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 9 times"> + </span>]
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       18001 :                 return std::nullopt;</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 18015 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 18006 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 9 times"> + </span>]
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       18006 :                 return std::nullopt;</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : </span>
-<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaGBC" title="Branch 0 was taken 49 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          98 :             if (last_signal_ns_.compare_exchange_weak(last, now_ns,</span></span>
+<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          88 :             if (last_signal_ns_.compare_exchange_weak(last, now_ns,</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :                                                       std::memory_order_acq_rel,</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :                                                       std::memory_order_acquire)) {</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">          49 :                 last_severity_.store(severity, std::memory_order_release);</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">          98 :                 return sequence_.fetch_add(1, std::memory_order_acq_rel) + 1;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">          44 :                 last_severity_.store(severity, std::memory_order_release);</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">          88 :                 return sequence_.fetch_add(1, std::memory_order_acq_rel) + 1;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :             }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
 <span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             last_severity = last_severity_.load(std::memory_order_acquire);</span></span>
