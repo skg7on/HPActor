@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">44.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">44.8&nbsp;%</td>
             <td class="headerCovTableEntry">524</td>
-            <td class="headerCovTableEntry">231</td>
+            <td class="headerCovTableEntry">235</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-19 00:13:40</td>
+            <td class="headerValue">2026-07-19 01:18:50</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">55.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">33.2&nbsp;%</td>
+            <td class="headerCovTableEntryLo">34.2&nbsp;%</td>
             <td class="headerCovTableEntry">199</td>
-            <td class="headerCovTableEntry">66</td>
+            <td class="headerCovTableEntry">68</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -846,10 +846,10 @@
 <span id="L766"><span class="lineNum">     766</span>                 :             : }</span>
 <span id="L767"><span class="lineNum">     767</span>                 :             : </span>
 <span id="L768"><span class="lineNum">     768</span>                 :<span class="tlaGNC tlaBgGNC">           7 : std::vector&lt;NodeEndpoint&gt; UdpRegistrar::get_all_endpoints() const {</span></span>
-<span id="L769"><span class="lineNum">     769</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           7 :     if (server_) {</span></span>
-<span id="L770"><span class="lineNum">     770</span>                 :<span class="tlaGNC">           5 :         return server_-&gt;registry()-&gt;all();</span></span>
+<span id="L769"><span class="lineNum">     769</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           7 :     if (server_) {</span></span>
+<span id="L770"><span class="lineNum">     770</span>                 :<span class="tlaGNC">           4 :         return server_-&gt;registry()-&gt;all();</span></span>
 <span id="L771"><span class="lineNum">     771</span>                 :             :     }</span>
-<span id="L772"><span class="lineNum">     772</span>                 :<span class="tlaGNC">           2 :     return {};</span></span>
+<span id="L772"><span class="lineNum">     772</span>                 :<span class="tlaGNC">           3 :     return {};</span></span>
 <span id="L773"><span class="lineNum">     773</span>                 :             : }</span>
 <span id="L774"><span class="lineNum">     774</span>                 :             : </span>
 <span id="L775"><span class="lineNum">     775</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void UdpRegistrar::set_node_callback(node_callback cb) {</span></span>
@@ -971,14 +971,14 @@
 <span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         result.push_back(to_member(ep));</span></span>
 <span id="L892"><span class="lineNum">     892</span>                 :             : </span>
 <span id="L893"><span class="lineNum">     893</span>                 :             :     // Also collect from client registry (static routes)</span>
-<span id="L894"><span class="lineNum">     894</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           7 :     if (client_registry_) {</span></span>
-<span id="L895"><span class="lineNum">     895</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto client_eps = client_registry_-&gt;all();</span></span>
-<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaUNC">           0 :         result.reserve(result.size() + client_eps.size());</span></span>
-<span id="L897"><span class="lineNum">     897</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (const auto&amp; ep : client_eps)</span></span>
-<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaUNC">           0 :             result.push_back(to_member(ep));</span></span>
-<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L894"><span class="lineNum">     894</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           7 :     if (client_registry_) {</span></span>
+<span id="L895"><span class="lineNum">     895</span>                 :<span class="tlaGNC">           1 :         auto client_eps = client_registry_-&gt;all();</span></span>
+<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaGNC">           1 :         result.reserve(result.size() + client_eps.size());</span></span>
+<span id="L897"><span class="lineNum">     897</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         for (const auto&amp; ep : client_eps)</span></span>
+<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             result.push_back(to_member(ep));</span></span>
+<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     }</span></span>
 <span id="L900"><span class="lineNum">     900</span>                 :             : </span>
-<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     return result;</span></span>
+<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC">           7 :     return result;</span></span>
 <span id="L902"><span class="lineNum">     902</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L903"><span class="lineNum">     903</span>                 :             : </span>
 <span id="L904"><span class="lineNum">     904</span>                 :<span class="tlaGNC">           4 : const Member* UdpRegistrar::discover(EndPoint ep) const {</span></span>
