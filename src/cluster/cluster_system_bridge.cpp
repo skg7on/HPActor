@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "cluster_runtime_impl.hpp"
+#include <arpa/inet.h>
 #include <hpactor/runtime/actor_system_impl.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
 
@@ -48,7 +49,8 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
     }
 
     impl_->name_directory_ = std::make_unique<cluster::name::NameDirectory>();
-    impl_->name_resolve_cache_ = std::make_unique<cluster::name::NameResolveCache>();
+    impl_->name_resolve_cache_ =
+        std::make_unique<cluster::name::NameResolveCache>();
 
     // ── Outbound port: wired to transport ─────────────────────────────────
     // Uses Impl* as context — the send callback extracts transport and local
@@ -58,20 +60,46 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
     outbound_port.send = [](void* ctx, EndPoint target, TypedMessage msg) {
         auto* impl = static_cast<ActorSystem::Impl*>(ctx);
         auto* transport = impl->network_->transport();
-        if (!transport) return;
+        if (!transport)
+            return;
+
+        // Ensure a TCP connection exists before sending.
+        // ConnectionPool::try_send() silently queues when no connection
+        // exists, so on first use we must explicitly connect.
+        if (!transport->is_connected(target)) {
+            std::string host;
+            uint16_t port = 0;
+            if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&target)) {
+                uint32_t addr_nw = ipv4->addr;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+                addr_nw = __builtin_bswap32(addr_nw);
+#endif
+                char buf[INET_ADDRSTRLEN];
+                struct in_addr in{};
+                in.s_addr = addr_nw;
+                inet_ntop(AF_INET, &in, buf, sizeof(buf));
+                host = buf;
+                port = ipv4->port();
+            } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&target)) {
+                char buf[INET6_ADDRSTRLEN];
+                inet_ntop(AF_INET6, ipv6->addr.data(), buf, sizeof(buf));
+                host = buf;
+                port = ipv6->port();
+            }
+            if (!host.empty() && port > 0) {
+                (void)transport->connect(target, host, port);
+            }
+        }
 
         // Build ActorMsgFrame protobuf: sender=local node, receiver=target.
-        ActorAddress sender_addr{impl->core.endpoint, ActorType{0},
-                                 ActorId{0}, 0};
+        ActorAddress sender_addr{impl->core.endpoint, ActorType{0}, ActorId{0}, 0};
         ActorAddress receiver_addr{target, ActorType{0}, ActorId{0}, 0};
 
         net::WireFrame frame;
-        net::to_proto(
-            frame.pb_envelope.mutable_data_frame()->mutable_sender(),
-            sender_addr);
-        net::to_proto(
-            frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
-            receiver_addr);
+        net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                      sender_addr);
+        net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                      receiver_addr);
         frame.pb_envelope.mutable_data_frame()->set_type_tag(
             static_cast<uint32_t>(msg.type_id()));
         frame.pb_envelope.mutable_data_frame()->set_payload(
@@ -95,34 +123,34 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
     // Wire the inbound port — InboundFrameRouter dispatches name-protocol
     // frames to the NameResolver via these function pointers.
     inbound_port.context = impl_->name_resolver.get();
-    inbound_port.on_register_request =
-        [](void* ctx, EndPoint from, std::string_view name,
-           ActorAddress addr, uint64_t gen) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_name_register_request(from, name, addr, gen);
-        };
-    inbound_port.on_register_response =
-        [](void* ctx, EndPoint from, uint32_t result_code) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_name_register_response(from, result_code);
-        };
-    inbound_port.on_resolve_query =
-        [](void* ctx, EndPoint from, std::string_view name) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_name_resolve_query(from, name);
-        };
-    inbound_port.on_resolve_response =
-        [](void* ctx, EndPoint from, bool found, uint64_t actor_id,
-           std::string_view endpoint_str, uint64_t generation) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_name_resolve_response(from, found, actor_id,
-                                           endpoint_str, generation);
-        };
-    inbound_port.on_unregister_request =
-        [](void* ctx, EndPoint from, std::string_view name, uint64_t gen) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_name_unregister_request(from, name, gen);
-        };
+    inbound_port.on_register_request = [](void* ctx, EndPoint from,
+                                          std::string_view name,
+                                          ActorAddress addr, uint64_t gen) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_name_register_request(
+            from, name, addr, gen);
+    };
+    inbound_port.on_register_response = [](void* ctx, EndPoint from,
+                                           uint32_t result_code) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_name_register_response(
+            from, result_code);
+    };
+    inbound_port.on_resolve_query = [](void* ctx, EndPoint from,
+                                       std::string_view name) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_name_resolve_query(
+            from, name);
+    };
+    inbound_port.on_resolve_response = [](void* ctx, EndPoint from, bool found,
+                                          uint64_t actor_id,
+                                          std::string_view endpoint_str,
+                                          uint64_t generation) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_name_resolve_response(
+            from, found, actor_id, endpoint_str, generation);
+    };
+    inbound_port.on_unregister_request = [](void* ctx, EndPoint from,
+                                            std::string_view name, uint64_t gen) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_name_unregister_request(
+            from, name, gen);
+    };
     if (impl_->inbound_frame_router_) {
         impl_->inbound_frame_router_->set_name_port(inbound_port);
     }
@@ -131,25 +159,21 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
     // when names are published (register) or erased (unregister).
     cluster::name::NameRegistrationPort reg_port;
     reg_port.context = impl_->name_resolver.get();
-    reg_port.on_register =
-        [](void* ctx, std::string_view name, ActorAddress addr,
-           uint64_t gen) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_local_register(name, addr, gen);
-        };
-    reg_port.on_unregister =
-        [](void* ctx, std::string_view name) {
-            static_cast<cluster::name::NameResolver*>(ctx)
-                ->on_local_unregister(name);
-        };
+    reg_port.on_register = [](void* ctx, std::string_view name,
+                              ActorAddress addr, uint64_t gen) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_local_register(
+            name, addr, gen);
+    };
+    reg_port.on_unregister = [](void* ctx, std::string_view name) {
+        static_cast<cluster::name::NameResolver*>(ctx)->on_local_unregister(name);
+    };
     impl_->actors.directory.set_name_registration_port(reg_port);
 
     // Bind the bridge so ActorSystem::resolve_actor() can query the
     // name resolver without linking hpactor_lib against NameResolver.
-    impl_->resolve_name_fn =
-        [nr = impl_->name_resolver.get()](std::string_view name) {
-            return nr->resolve(name);
-        };
+    impl_->resolve_name_fn = [nr = impl_->name_resolver.get()](std::string_view name) {
+        return nr->resolve(name);
+    };
 }
 
 } // namespace hpactor
