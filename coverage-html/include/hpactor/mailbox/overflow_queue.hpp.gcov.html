@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-18 15:06:08</td>
+            <td class="headerValue">2026-07-19 00:13:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.1&nbsp;%</td>
@@ -187,14 +187,14 @@
 <span id="L107"><span class="lineNum">     107</span>                 :             :     /// \retval true A message was popped; \p out holds the moved value.</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :     /// \retval false The queue is empty; \p out is unchanged.</span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :     /// \note Thread safety: acquires internal mutex.</span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">        1043 :     bool try_pop(T&amp; out) noexcept {</span></span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">        1043 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L112"><span class="lineNum">     112</span>         [<span class="tlaGBC" title="Branch 0 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1023 times"> + </span>]:<span class="tlaGNC">        1043 :         if (queue_.empty()) return false;</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">        1044 :     bool try_pop(T&amp; out) noexcept {</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">        1044 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L112"><span class="lineNum">     112</span>         [<span class="tlaGBC" title="Branch 0 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1023 times"> + </span>]:<span class="tlaGNC">        1044 :         if (queue_.empty()) return false;</span></span>
 <span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        1023 :         out = std::move(queue_.front());</span></span>
 <span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">        1023 :         queue_.pop_front();</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">        1023 :         total_popped_++;</span></span>
 <span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">        1023 :         return true;</span></span>
-<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        1043 :     }</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        1044 :     }</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : </span>
 <span id="L119"><span class="lineNum">     119</span>                 :             :     /// \brief Check whether the overflow queue is empty.</span>
 <span id="L120"><span class="lineNum">     120</span>                 :             :     ///</span>

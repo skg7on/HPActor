@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-18 15:06:08</td>
+            <td class="headerValue">2026-07-19 00:13:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">88.9&nbsp;%</td>
@@ -176,9 +176,9 @@
 <span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaUNC">           0 :     domain_ticks_[idx]++;</span></span>
 <span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L100"><span class="lineNum">     100</span>                 :             : </span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC tlaBgGNC">     1260298 : bool FaultController::check(std::string_view path,</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC tlaBgGNC">     1260615 : bool FaultController::check(std::string_view path,</span></span>
 <span id="L102"><span class="lineNum">     102</span>                 :             :                              std::optional&lt;ActorId&gt; target) {</span>
-<span id="L103"><span class="lineNum">     103</span>         [<span class="tlaGBC" title="Branch 0 was taken 1258670 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1628 times"> + </span>]:<span class="tlaGNC">     1260298 :     if (HPACTOR_UNLIKELY(!enabled_.load(std::memory_order_acquire))) return false;</span></span>
+<span id="L103"><span class="lineNum">     103</span>         [<span class="tlaGBC" title="Branch 0 was taken 1258987 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1628 times"> + </span>]:<span class="tlaGNC">     1260615 :     if (HPACTOR_UNLIKELY(!enabled_.load(std::memory_order_acquire))) return false;</span></span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : </span>
 <span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">        1628 :     auto&amp; registry = FaultPointRegistry::instance();</span></span>
 <span id="L106"><span class="lineNum">     106</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1626 times"> + </span>]:<span class="tlaGNC">        1628 :     if (!registry.matches_prefix(path, active_scope_)) return false;</span></span>
@@ -310,8 +310,8 @@
 <span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        1297 :     tls_instance_ = nullptr;</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">        1297 : }</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :             : </span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">     2023888 : FaultController* FaultController::instance() {</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">     2023888 :     return tls_instance_;</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaGNC">     2013040 : FaultController* FaultController::instance() {</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">     2013040 :     return tls_instance_;</span></span>
 <span id="L234"><span class="lineNum">     234</span>                 :             : }</span>
 <span id="L235"><span class="lineNum">     235</span>                 :             : </span>
 <span id="L236"><span class="lineNum">     236</span>                 :             : } // namespace hpactor::fault</span>
