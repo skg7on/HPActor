@@ -1165,7 +1165,13 @@ void GossipMembership::merge_member(const Member& remote) {
         existing.identity.acceptors = remote.identity.acceptors;
     }
 
-    existing.last_seen = std::chrono::steady_clock::now();
+    // Only update last_seen for Alive members — Suspicious/Dead/Left
+    // state transitions are driven by local timers (suspicion_timeout,
+    // dead_timeout).  Resetting last_seen on every piggyback would prevent
+    // those timers from ever expiring.
+    if (existing.status == MemberStatus::Alive) {
+        existing.last_seen = std::chrono::steady_clock::now();
+    }
 }
 
 void GossipMembership::apply_piggyback(const std::vector<PiggybackEntry>& entries) {
