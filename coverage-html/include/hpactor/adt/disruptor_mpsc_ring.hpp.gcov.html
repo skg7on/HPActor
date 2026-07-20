@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-19 02:41:39</td>
+            <td class="headerValue">2026-07-20 13:11:58</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">81.2&nbsp;%</td>
@@ -251,7 +251,7 @@
 <span id="L173"><span class="lineNum">     173</span>                 :             :     /// thread may own a lease.</span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :     class ReadLease {</span>
 <span id="L175"><span class="lineNum">     175</span>                 :             :       public:</span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC tlaBgGNC">       23935 :         ReadLease() noexcept = default;</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC tlaBgGNC">       23795 :         ReadLease() noexcept = default;</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :             : </span>
 <span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">         132 :         ReadLease(DisruptorMpscRing* ring, uint64_t sequence, T* value) noexcept</span></span>
 <span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">         132 :             : ring_(ring), sequence_(sequence), value_(value) {}</span></span>
@@ -278,9 +278,9 @@
 <span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">           1 :             return *this;</span></span>
 <span id="L201"><span class="lineNum">     201</span>                 :             :         }</span>
 <span id="L202"><span class="lineNum">     202</span>                 :             : </span>
-<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">       24068 :         ~ReadLease() {</span></span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">       24068 :             release();</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">       24068 :         }</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">       23928 :         ~ReadLease() {</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">       23928 :             release();</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">       23928 :         }</span></span>
 <span id="L206"><span class="lineNum">     206</span>                 :             : </span>
 <span id="L207"><span class="lineNum">     207</span>                 :             :         /// \brief Explicitly release the slot without waiting for</span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :         ///        destruction.</span>
@@ -289,8 +289,8 @@
 <span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">           5 :         }</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :             : </span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :         /// \brief True if the lease owns a slot.</span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">       24070 :         [[nodiscard]] explicit operator bool() const noexcept {</span></span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">       24070 :             return value_ != nullptr;</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">       23930 :         [[nodiscard]] explicit operator bool() const noexcept {</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">       23930 :             return value_ != nullptr;</span></span>
 <span id="L216"><span class="lineNum">     216</span>                 :             :         }</span>
 <span id="L217"><span class="lineNum">     217</span>                 :             : </span>
 <span id="L218"><span class="lineNum">     218</span>                 :             :         /// \brief Reference to the leased value.</span>
@@ -300,12 +300,12 @@
 <span id="L222"><span class="lineNum">     222</span>                 :             :         }</span>
 <span id="L223"><span class="lineNum">     223</span>                 :             : </span>
 <span id="L224"><span class="lineNum">     224</span>                 :             :       private:</span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">       24074 :         void release() noexcept {</span></span>
-<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaGBC" title="Branch 0 was taken 132 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23942 times"> + </span>]:<span class="tlaGNC">       24074 :             if (value_) {</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">       23934 :         void release() noexcept {</span></span>
+<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaGBC" title="Branch 0 was taken 132 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23802 times"> + </span>]:<span class="tlaGNC">       23934 :             if (value_) {</span></span>
 <span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         132 :                 ring_-&gt;release_slot(sequence_);</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         132 :                 value_ = nullptr;</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :             }</span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">       24074 :         }</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">       23934 :         }</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :             : </span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :         DisruptorMpscRing* ring_{nullptr};</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             :         uint64_t sequence_{0};</span>
@@ -323,17 +323,17 @@
 <span id="L245"><span class="lineNum">     245</span>                 :             :     /// claimed-but-not-published producer gap).</span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :     ///</span>
 <span id="L247"><span class="lineNum">     247</span>                 :             :     /// \pre Only the consumer may call this method.</span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">       24067 :     [[nodiscard]] ReadLease try_acquire() noexcept {</span></span>
-<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">       24067 :         uint64_t c = consumer_mirror_.load(std::memory_order_acquire);</span></span>
-<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">       24067 :         Slot&amp; slot = slots_[c &amp; kMask];</span></span>
-<span id="L251"><span class="lineNum">     251</span>         [<span class="tlaGBC" title="Branch 0 was taken 23935 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132 times"> + </span>]:<span class="tlaGNC">       48134 :         if (slot.sequence.load(std::memory_order_acquire) != c + 1) {</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">       23927 :     [[nodiscard]] ReadLease try_acquire() noexcept {</span></span>
+<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">       23927 :         uint64_t c = consumer_mirror_.load(std::memory_order_acquire);</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">       23927 :         Slot&amp; slot = slots_[c &amp; kMask];</span></span>
+<span id="L251"><span class="lineNum">     251</span>         [<span class="tlaGBC" title="Branch 0 was taken 23795 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132 times"> + </span>]:<span class="tlaGNC">       47854 :         if (slot.sequence.load(std::memory_order_acquire) != c + 1) {</span></span>
 <span id="L252"><span class="lineNum">     252</span>                 :             :             // Gap detection: next slot not ready, but later slots may be</span>
 <span id="L253"><span class="lineNum">     253</span>                 :             :             // published.  This occurs when a producer is preempted after</span>
 <span id="L254"><span class="lineNum">     254</span>                 :             :             // claim and before publication.</span>
-<span id="L255"><span class="lineNum">     255</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 23935 times"> + </span>]:<span class="tlaGNC">       47870 :             if (published_cursor_.load(std::memory_order_acquire) &gt; c + 1) {</span></span>
+<span id="L255"><span class="lineNum">     255</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 23795 times"> + </span>]:<span class="tlaGNC">       47590 :             if (published_cursor_.load(std::memory_order_acquire) &gt; c + 1) {</span></span>
 <span id="L256"><span class="lineNum">     256</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 gap_observations_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L257"><span class="lineNum">     257</span>                 :             :             }</span>
-<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC tlaBgGNC">       23935 :             return {};</span></span>
+<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC tlaBgGNC">       23795 :             return {};</span></span>
 <span id="L259"><span class="lineNum">     259</span>                 :             :         }</span>
 <span id="L260"><span class="lineNum">     260</span>                 :             :         // Advance the consumer mirror so this slot cannot be re-acquired</span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :         // while the lease is held.  The physical slot remains reserved</span>
