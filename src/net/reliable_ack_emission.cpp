@@ -14,8 +14,6 @@
 
 #include <hpactor/net/reliable_ack_emission.hpp>
 
-#include <hpactor/frame.pb.h>
-
 namespace hpactor::net {
 
 AckEmitDecision compute_ack_emission(const mailbox::EnqueueResult& result,
@@ -33,21 +31,24 @@ AckEmitDecision compute_ack_emission(const mailbox::EnqueueResult& result,
         return decision;
     }
 
-    // Map EnqueueResultCode to NackReason via AckStatus.
+    // Map EnqueueResultCode to AckStatus.
+    // send_ack() uses status == 1 (AckStatus::Rejected) to distinguish
+    // NACK from ACK on the wire. All NACK reasons map to AckStatus::Rejected.
+    // The retry_after_ms field distinguishes retryable (MailboxFull, >0)
+    // from non-retryable (ActorDead, RejectedByPolicy, 0).
+    decision.status = AckStatus::Rejected;
+
     switch (result.code) {
         case mailbox::EnqueueResultCode::Rejected:
-            decision.status = static_cast<AckStatus>(NackReason::NACK_MAILBOX_FULL);
+            // Retryable: mailbox full — sender should back off and retry.
             decision.retry_after_ms = static_cast<uint32_t>(
                 std::chrono::duration_cast<std::chrono::milliseconds>(result.retry_after)
                     .count());
             break;
-        case mailbox::EnqueueResultCode::ActorNotFound:
-        case mailbox::EnqueueResultCode::MailboxClosed:
-            decision.status = static_cast<AckStatus>(NackReason::NACK_ACTOR_DEAD);
-            break;
         default:
-            decision.status =
-                static_cast<AckStatus>(NackReason::NACK_REJECTED_BY_POLICY);
+            // Non-retryable: actor dead, mailbox closed, policy rejection,
+            // or otherwise undeliverable — sender should route to DLQ.
+            decision.retry_after_ms = 0;
             break;
     }
 

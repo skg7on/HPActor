@@ -14,11 +14,8 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/frame.pb.h>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/net/reliable_ack.hpp>
-
-// compute_ack_emission() will be declared here:
 #include <hpactor/net/reliable_ack_emission.hpp>
 
 namespace {
@@ -50,61 +47,58 @@ TEST(ReliableAckEmissionTest, EmitAckOnAcceptedDelivery) {
 }
 
 TEST(ReliableAckEmissionTest, EmitNackMailboxFullOnRejected) {
-    // Rejected at capacity → NACK_MAILBOX_FULL (retryable).
+    // Rejected at capacity → NACK (retryable with backoff hint).
     EnqueueResult rejected;
     rejected.code = EnqueueResultCode::Rejected;
     rejected.retry_after = std::chrono::milliseconds(250);
 
     auto decision = compute_ack_emission(rejected, true);
     EXPECT_TRUE(decision.should_emit);
-    EXPECT_EQ(decision.status,
-              static_cast<AckStatus>(NackReason::NACK_MAILBOX_FULL));
+    EXPECT_EQ(decision.status, AckStatus::Rejected);
     EXPECT_EQ(decision.retry_after_ms, 250);
 }
 
-TEST(ReliableAckEmissionTest, EmitNackActorDeadOnActorNotFound) {
-    // Actor not found → NACK_ACTOR_DEAD (non-retryable).
+TEST(ReliableAckEmissionTest, EmitNackOnActorNotFound) {
+    // Actor not found → NACK (non-retryable).
     EnqueueResult not_found;
     not_found.code = EnqueueResultCode::ActorNotFound;
 
     auto decision = compute_ack_emission(not_found, true);
     EXPECT_TRUE(decision.should_emit);
-    EXPECT_EQ(decision.status, static_cast<AckStatus>(NackReason::NACK_ACTOR_DEAD));
+    EXPECT_EQ(decision.status, AckStatus::Rejected);
     EXPECT_EQ(decision.retry_after_ms, 0);
 }
 
-TEST(ReliableAckEmissionTest, EmitNackActorDeadOnMailboxClosed) {
-    // Mailbox closed → actor is gone, NACK_ACTOR_DEAD.
+TEST(ReliableAckEmissionTest, EmitNackOnMailboxClosed) {
+    // Mailbox closed → NACK (non-retryable).
     EnqueueResult closed;
     closed.code = EnqueueResultCode::MailboxClosed;
 
     auto decision = compute_ack_emission(closed, true);
     EXPECT_TRUE(decision.should_emit);
-    EXPECT_EQ(decision.status, static_cast<AckStatus>(NackReason::NACK_ACTOR_DEAD));
+    EXPECT_EQ(decision.status, AckStatus::Rejected);
     EXPECT_EQ(decision.retry_after_ms, 0);
 }
 
-TEST(ReliableAckEmissionTest, EmitNackRejectedByPolicyOnOtherRejection) {
-    // Generic rejection (e.g., DroppedNewest) → NACK_REJECTED_BY_POLICY.
+TEST(ReliableAckEmissionTest, EmitNackOnOtherRejection) {
+    // Generic rejection (e.g., DroppedNewest) → NACK (non-retryable).
     EnqueueResult dropped;
     dropped.code = EnqueueResultCode::DroppedNewest;
 
     auto decision = compute_ack_emission(dropped, true);
     EXPECT_TRUE(decision.should_emit);
-    EXPECT_EQ(decision.status,
-              static_cast<AckStatus>(NackReason::NACK_REJECTED_BY_POLICY));
+    EXPECT_EQ(decision.status, AckStatus::Rejected);
     EXPECT_EQ(decision.retry_after_ms, 0);
 }
 
-TEST(ReliableAckEmissionTest, EmitNackRejectedByPolicyOnReroutedToDeadLetter) {
-    // Rerouted to DLQ → NACK_REJECTED_BY_POLICY (non-retryable).
+TEST(ReliableAckEmissionTest, EmitNackOnReroutedToDeadLetter) {
+    // Rerouted to DLQ → NACK (non-retryable).
     EnqueueResult dlq_routed;
     dlq_routed.code = EnqueueResultCode::ReroutedToDeadLetter;
 
     auto decision = compute_ack_emission(dlq_routed, true);
     EXPECT_TRUE(decision.should_emit);
-    EXPECT_EQ(decision.status,
-              static_cast<AckStatus>(NackReason::NACK_REJECTED_BY_POLICY));
+    EXPECT_EQ(decision.status, AckStatus::Rejected);
     EXPECT_EQ(decision.retry_after_ms, 0);
 }
 

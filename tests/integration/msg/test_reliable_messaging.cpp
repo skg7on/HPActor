@@ -105,20 +105,17 @@ TEST_F(ReliableMessagingIntegrationTest, BestEffortReturnsImmediateReceipt) {
     EXPECT_TRUE(receipt.get().accepted());
 }
 
-TEST_F(ReliableMessagingIntegrationTest,
-       AtLeastOnceReturnsReceiptNotImmediatelyReady) {
+TEST_F(ReliableMessagingIntegrationTest, AtLeastOnceReturnsValidReceipt) {
     ActorContext ctx(sender_, system_.get());
 
     auto receipt = ctx.try_send(target_.address(), make_test_message(),
                                 at_least_once_opts());
 
-    // For local delivery with AtLeastOnce, the receipt may resolve
-    // immediately since the message is already in the receiver's mailbox.
-    // The receipt should at minimum be valid and eventually resolve.
-    EXPECT_TRUE(receipt.ready() || !receipt.ready());
-    if (receipt.ready()) {
-        EXPECT_TRUE(receipt.get().accepted());
-    }
+    // AtLeastOnce returns a DeliveryReceipt. For local delivery the
+    // message is already in the receiver's mailbox so the receipt
+    // resolves immediately with Accepted.
+    EXPECT_TRUE(receipt.ready());
+    EXPECT_TRUE(receipt.get().accepted());
 }
 
 TEST_F(ReliableMessagingIntegrationTest,
@@ -456,8 +453,7 @@ TEST_F(ReliableMessagingIntegrationTest, AckDecisionRejectedMailboxFull) {
 
     auto decision = net::compute_ack_emission(result, true);
     EXPECT_TRUE(decision.should_emit);
-    EXPECT_EQ(decision.status,
-              static_cast<net::AckStatus>(net::NackReason::NACK_MAILBOX_FULL));
+    EXPECT_EQ(decision.status, net::AckStatus::Rejected);
     EXPECT_EQ(decision.retry_after_ms, 500);
 }
 

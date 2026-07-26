@@ -16,15 +16,15 @@
 
 #include <functional>
 
+#include <hpactor/actor/stream/stream_runtime.hpp>
+#include <hpactor/cluster/name/name_resolver.hpp>
+#include <hpactor/net/inbound_frame_router.hpp>
 #include <hpactor/runtime/actor_spawner.hpp>
 #include <hpactor/runtime/cluster_runtime.hpp>
 #include <hpactor/runtime/messaging_network_emitters.hpp>
 #include <hpactor/runtime/messaging_runtime.hpp>
 #include <hpactor/runtime/network_runtime.hpp>
 #include <hpactor/runtime/observability_runtime.hpp>
-#include <hpactor/actor/stream/stream_runtime.hpp>
-#include <hpactor/cluster/name/name_resolver.hpp>
-#include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
@@ -160,13 +160,15 @@ class ActorSystem::Impl final : public ReliableAckTarget,
     /// \brief Phase 4: cohesive stream session state owner.
     /// Constructed before InboundFrameRouter so it outlives the router.
     std::unique_ptr<class StreamRuntime> stream_runtime_;
-    /// \brief Phase 4: sole inbound frame classifier.
-    /// Routes stream frames to stream_runtime_, data to messaging_, RPC to rpc_channel_.
-    std::unique_ptr<class net::InboundFrameRouter> inbound_frame_router_;
     /// \brief Fixed network-control output ports used by messaging.
-    /// Constructed before messaging components; targets reach transport
-    /// via impl->network_->transport().
+    /// Declared before InboundFrameRouter so it is destroyed after the
+    /// router — the router holds a raw pointer &messaging_ports.reliable_ack
+    /// that must remain valid for the router's lifetime.
     MessagingNetworkEmitters messaging_ports;
+    /// \brief Phase 4: sole inbound frame classifier.
+    /// Routes stream frames to stream_runtime_, data to messaging_, RPC to
+    /// rpc_channel_.
+    std::unique_ptr<class net::InboundFrameRouter> inbound_frame_router_;
     /// \brief Phase 5: sole network resource owner.
     /// Null when networking is disabled.
     std::unique_ptr<NetworkRuntime> network_;

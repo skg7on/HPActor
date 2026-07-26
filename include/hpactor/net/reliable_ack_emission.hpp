@@ -27,8 +27,10 @@ struct AckEmitDecision {
     /// Whether an ACK/NACK should be emitted.
     bool should_emit = false;
 
-    /// The ACK/NACK status to emit (AckStatus::Accepted or a NackReason
-    /// value cast to AckStatus).
+    /// The ACK/NACK status to emit.
+    /// AckStatus::Accepted (0) = ACK.
+    /// AckStatus::Rejected (1) = NACK (all NACK reasons).
+    /// AckStatus::Duplicate (2) = duplicate suppressed (treated as ACK).
     AckStatus status = AckStatus::Accepted;
 
     /// Suggested retry delay in milliseconds (NACK only, 0 = sender decides).

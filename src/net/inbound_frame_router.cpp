@@ -591,7 +591,8 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
     }
 
     uint32_t flags = data.flags();
-    if (has_flag(flags, WireFrame::AckRequested)) {
+    const bool ack_requested = has_flag(flags, WireFrame::AckRequested);
+    if (ack_requested) {
         msg.set_ack_requested(true);
     }
     msg.set_message_id(data.message_id());
@@ -605,13 +606,12 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
     // ── Reliable ACK/NACK emission ─────────────────────────────────────
     // If the sender requested acknowledgement and we have an emitter port
     // wired, emit the appropriate ACK or NACK frame.
-    if (reliable_ack_ != nullptr && has_flag(flags, WireFrame::AckRequested)) {
-        auto decision = compute_ack_emission(result, /*ack_requested=*/true);
+    if (reliable_ack_ != nullptr) {
+        auto decision = compute_ack_emission(result, ack_requested);
 
         if (decision.should_emit) {
             const auto& sender_addr = from_proto(data.sender());
-            const auto& acker_addr = from_proto(data.receiver());
-            (*reliable_ack_)(sender_addr, acker_addr, data.message_id(),
+            (*reliable_ack_)(sender_addr, receiver_addr, data.message_id(),
                              static_cast<uint8_t>(decision.status),
                              decision.retry_after_ms);
         }
