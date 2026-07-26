@@ -43,7 +43,20 @@ MessagingRuntime::MessagingRuntime(Dependencies deps, const Config& config)
                                                            // member, not
                                                            // parameter
       }),
-      local_delivery_engine_(deps.actors) {}
+      local_delivery_engine_(deps.actors) {
+    // Wire metrics emission from the outbound tracker.
+    if (deps.metrics != nullptr) {
+        outbound_tracker_.set_metrics_callback(
+            [ring = deps.metrics](uint64_t ts, metrics::MetricEventType type,
+                                  uint8_t code) {
+                metrics::MetricEvent ev{};
+                ev.timestamp_ns = ts;
+                ev.event_type = type;
+                ev.code = code;
+                ring->try_push(ev);
+            });
+    }
+}
 
 MessagingRuntime::~MessagingRuntime() = default;
 

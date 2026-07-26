@@ -181,6 +181,27 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
                                                 priority, deadline_ns, options);
             auto dr = mailbox::DeliveryResult::from_enqueue(
                 er, target, MessageId{options.message_id});
+
+            // AtLeastOnce tracking for local delivery: message is already
+            // in the receiver's mailbox — track and immediately resolve.
+            if (dr.accepted() &&
+                mailbox::is_tracked_delivery(options.delivery_mode) &&
+                options.retry_policy.has_value() &&
+                options.retry_policy->is_enabled()) {
+                auto* tracker = system->outbound_tracker();
+                if (tracker != nullptr) {
+                    StreamBuffer empty_frame; // local: no network resend needed
+                    auto receipt = tracker->track(
+                        std::move(empty_frame), system->endpoint(),
+                        *options.retry_policy,
+                        deadline_ns > 0 ? static_cast<uint64_t>(deadline_ns) : 0);
+                    // Resolve immediately — message is already delivered
+                    // locally.
+                    tracker->on_ack(receipt.message_id(), system->endpoint());
+                    return receipt;
+                }
+            }
+
             return msg::DeliveryReceipt(std::move(dr));
         }
         return msg::DeliveryReceipt(
@@ -188,6 +209,8 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
                                     MessageId{options.message_id}, 0});
     }
 
+    // Remote delivery: delegate to ActorRef/ActorProxy.
+    // AtLeastOnce tracking is handled by the proxy after transport send.
     return msg::DeliveryReceipt(ref.try_send(ref.address(), std::move(msg), options));
 }
 

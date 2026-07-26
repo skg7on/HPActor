@@ -165,6 +165,16 @@ class MessagingRuntime final {
         outbound_tracker_.process_retries(now_ns, std::forward<ResendFn>(resend));
     }
 
+    /// \brief Non-template overload for periodic timer callbacks.
+    ///
+    /// Uses \c std::function for the resend callback.  Acceptable overhead
+    /// for the 100ms retry-poll timer (not a per-message hot path).
+    void process_retries(
+        uint64_t now_ns,
+        std::function<void(const msg::OutboundDeliveryTracker::PendingSend&)> resend) noexcept {
+        outbound_tracker_.process_retries(now_ns, std::move(resend));
+    }
+
     // ── Reconfiguration ────────────────────────────────────────────────
 
     /// \brief Apply live-reloadable configuration changes.

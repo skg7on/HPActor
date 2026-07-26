@@ -135,7 +135,8 @@ struct StreamRuntimeState final {
 // ── ActorSystem::Impl ──────────────────────────────────────────────────────
 
 class ActorSystem::Impl final : public ReliableAckTarget,
-                                public BackpressureSignalTarget {
+                                public BackpressureSignalTarget,
+                                public OutboundRetryTarget {
   public:
     Impl(ActorSystem& f, const Config& config);
     /// \brief Construct from a RuntimeBlueprint — construction only, no
@@ -208,6 +209,10 @@ class ActorSystem::Impl final : public ReliableAckTarget,
     void send_ack(const ActorAddress& target, const ActorAddress& acker,
                   uint64_t message_id, uint8_t status,
                   uint32_t retry_after_ms) noexcept override;
+
+    // ── OutboundRetryTarget ──────────────────────────────────────────────
+
+    void process_due(uint64_t now_ns) noexcept override;
 
     // ── BackpressureSignalTarget ──────────────────────────────────────────
 

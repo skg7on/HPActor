@@ -117,6 +117,20 @@ bool ActorSystem::Impl::send_signal(const ActorAddress& target,
     return false;
 }
 
+void ActorSystem::Impl::process_due(uint64_t now_ns) noexcept {
+    if (!messaging_ || !network_)
+        return;
+    auto* transport = network_->transport();
+    if (!transport)
+        return;
+
+    messaging_->process_retries(
+        now_ns, [transport](const msg::OutboundDeliveryTracker::PendingSend& ps) {
+            ActorAddress target{ps.remote_endpoint, ActorType{0}, ActorId{0}, 0};
+            transport->try_send(target, ps.serialized_frame);
+        });
+}
+
 // -----------------------------------------------------------------------------
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
@@ -471,7 +485,7 @@ ActorSystem::ActorSystem(const Config& config)
         net_deps.node_events = NodeEventSink{};
 
         // Retry port — wired via MessagingRuntime when available.
-        net_deps.retry_port = OutboundRetryHandler{};
+        net_deps.retry_port = OutboundRetryHandler{impl_.get()};
 
         // Spawn port — wired via RuntimeBuilder in Phase 6+.
         net_deps.spawn_port = RemoteSpawnHandler{};
