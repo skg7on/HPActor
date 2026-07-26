@@ -24,27 +24,28 @@ void ActorRef::send(const ActorAddress& target, TypedMessage msg) {
     (void)try_send(target, std::move(msg));
 }
 
-mailbox::DeliveryResult
-ActorRef::try_send(const ActorAddress& target, TypedMessage msg,
-                   mailbox::DeliveryOptions options) {
+msg::DeliveryReceipt ActorRef::try_send(const ActorAddress& target, TypedMessage msg,
+                                        mailbox::DeliveryOptions options) {
     if (is_local()) {
         Actor* actor = get_actor();
         if (actor != nullptr) {
             auto er = actor->get()->system().try_deliver_local(
                 target.id, std::move(msg), /*priority=*/0,
                 /*deadline_ns=*/INT64_MAX, options);
-            return mailbox::DeliveryResult::from_enqueue(
-                er, target, MessageId{options.message_id});
+            return msg::DeliveryReceipt(mailbox::DeliveryResult::from_enqueue(
+                er, target, MessageId{options.message_id}));
         }
-        return {mailbox::DeliveryStatus::NoRoute, target,
-                MessageId{options.message_id}, 0};
+        return msg::DeliveryReceipt(
+            mailbox::DeliveryResult{mailbox::DeliveryStatus::NoRoute, target,
+                                    MessageId{options.message_id}, 0});
     } else {
         ActorProxy* proxy = get_proxy();
         if (proxy != nullptr) {
             return proxy->try_send(target, std::move(msg), options);
         }
-        return {mailbox::DeliveryStatus::NoRoute, target,
-                MessageId{options.message_id}, 0};
+        return msg::DeliveryReceipt(
+            mailbox::DeliveryResult{mailbox::DeliveryStatus::NoRoute, target,
+                                    MessageId{options.message_id}, 0});
     }
 }
 

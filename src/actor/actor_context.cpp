@@ -150,7 +150,7 @@ ActorContext::try_send(const ActorAddress& target, TypedMessage msg,
             system->trace_manager()->config().create_roots_for_actor_context_sends);
     }
 
-    return msg::DeliveryReceipt(ref.try_send(ref.address(), std::move(msg), options));
+    return ref.try_send(ref.address(), std::move(msg), options);
 }
 
 msg::DeliveryReceipt
@@ -211,7 +211,7 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
 
     // Remote delivery: delegate to ActorRef/ActorProxy.
     // AtLeastOnce tracking is handled by the proxy after transport send.
-    return msg::DeliveryReceipt(ref.try_send(ref.address(), std::move(msg), options));
+    return ref.try_send(ref.address(), std::move(msg), options);
 }
 
 void ActorContext::send_edf(ActorAddress target, TypedMessage msg,
