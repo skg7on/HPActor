@@ -459,6 +459,7 @@ ActorSystem::ActorSystem(const Config& config)
                         .rpc = *impl_->rpc_channel_,
                         .streams = *impl_->stream_runtime_,
                         .metrics = impl_->observability_->metrics_ring_buffer(),
+                        .reliable_ack = &impl_->messaging_ports.reliable_ack,
                     },
                     router_cfg);
 

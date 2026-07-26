@@ -15,6 +15,7 @@
 
 #include <hpactor/actor/stream/stream_runtime.hpp>
 #include <hpactor/cluster/name/inbound_name_port.hpp>
+#include <hpactor/runtime/messaging_network_emitters.hpp>
 #include <hpactor/runtime/messaging_runtime.hpp>
 
 namespace hpactor {
@@ -47,6 +48,14 @@ class InboundFrameRouter final : public InboundFrameTarget {
         StreamRuntime& streams;
         metrics::MpscRingBuffer<metrics::MetricEvent>* metrics{nullptr};
         cluster::name::InboundNamePort name_port{};
+
+        /// \\brief Fixed ACK/NACK emission port for reliable messaging.
+        ///
+        /// When non-null and an inbound data frame has \\c AckRequested set,
+        /// \\c deliver_ordinary_data() emits an ACK or NACK via this port
+        /// after pipeline delivery completes. \\c nullptr = reliable ACK/NACK
+        /// disabled (safe no-op for backward compatibility).
+        ReliableAckEmitter* reliable_ack{nullptr};
     };
 
     InboundFrameRouter(Dependencies dependencies, Config config) noexcept;
@@ -102,6 +111,7 @@ class InboundFrameRouter final : public InboundFrameTarget {
     StreamRuntime& streams_;
     [[maybe_unused]] metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_;
     cluster::name::InboundNamePort name_port_;
+    ReliableAckEmitter* reliable_ack_{nullptr};
     std::atomic<bool> accepting_{true};
 };
 
