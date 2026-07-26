@@ -16,6 +16,9 @@ from ._delivery import (
     DeliveryResult,
     DeliveryStatus,
     FailureReason,
+    RetryBackoff,
+    RetryPolicy,
+    is_tracked_delivery,
     FailureSource,
 )
 from ._errors import (
@@ -84,6 +87,9 @@ __all__ = [
     "DeliveryResult",
     "DeliveryStatus",
     "FailureReason",
+    "RetryBackoff",
+    "RetryPolicy",
+    "is_tracked_delivery",
     "FailureSource",
     "HPActorError",
     "MessageRegistry",

@@ -21,6 +21,56 @@ class DeliveryMode(enum.IntEnum):
     DurableAtLeastOnce = 3
 
 
+class RetryBackoff(enum.IntEnum):
+    """Backoff algorithm for computing retry delays."""
+
+    Fixed = 0
+    Linear = 1
+    Exponential = 2
+
+
+@dataclass(frozen=True, slots=True)
+class RetryPolicy:
+    """Per-message retry configuration for AtLeastOnce/DurableAtLeastOnce.
+
+    Mirrors the C++ ``msg::RetryPolicy`` struct in
+    ``include/hpactor/msg/retry_policy.hpp``.
+    """
+
+    max_attempts: int = 1
+    """Maximum delivery attempts. 1 = try once, no retry."""
+
+    per_attempt_timeout_ms: int = 5000
+    """Timeout for each individual send attempt in milliseconds."""
+
+    initial_backoff_ms: int = 100
+    """Backoff delay before the first retry in milliseconds."""
+
+    max_backoff_ms: int = 30000
+    """Maximum backoff delay (ceiling for exponential growth)."""
+
+    backoff: RetryBackoff = RetryBackoff.Exponential
+    """Backoff algorithm: Fixed, Linear, or Exponential."""
+
+    jitter: bool = True
+    """Whether to apply +-25% random jitter to backoff delays."""
+
+    def __post_init__(self) -> None:
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be >= 1")
+        if self.per_attempt_timeout_ms < 0:
+            raise ValueError("per_attempt_timeout_ms must be >= 0")
+        if self.initial_backoff_ms < 0:
+            raise ValueError("initial_backoff_ms must be >= 0")
+        if self.max_backoff_ms < 0:
+            raise ValueError("max_backoff_ms must be >= 0")
+
+
+def is_tracked_delivery(mode: DeliveryMode) -> bool:
+    """Return True if the delivery mode uses outbound tracking."""
+    return mode >= DeliveryMode.AtLeastOnce
+
+
 class DeliveryStatus(enum.IntEnum):
     """Outcome of a tracked delivery."""
 
@@ -104,6 +154,11 @@ class DeliveryOptions:
     deadline_ns: int = 0
     message_id: int = 0
     flags: int = 0
+    retry_policy: Optional[RetryPolicy] = None
+    """Retry policy for AtLeastOnce/DurableAtLeastOnce modes.
+    When None and delivery_mode >= AtLeastOnce, a system-default policy
+    is used (max 5 attempts, 5s timeout, exponential backoff with jitter).
+    """
 
     def __post_init__(self) -> None:
         if not (0 <= self.priority <= 3):
@@ -129,12 +184,17 @@ class DeliveryResult:
 
     @property
     def retryable(self) -> bool:
+        """True if a retry has a reasonable chance of success.
+
+        Matches the C++ ``retryable(FailureReason)`` function.
+        Non-retryable: ActorDead, Expired, Duplicate, Cancelled, etc.
+        """
         return self.status in (
             DeliveryStatus.NoRoute,
-            DeliveryStatus.ActorDead,
             DeliveryStatus.MailboxFull,
             DeliveryStatus.RemoteUnavailable,
             DeliveryStatus.TransportError,
+            DeliveryStatus.AcceptedWithPressure,
         )
 
     @property
