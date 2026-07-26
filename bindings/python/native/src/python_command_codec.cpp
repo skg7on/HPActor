@@ -72,6 +72,12 @@ result<StreamBuffer> encode_actor_command(const PythonCommand& command) noexcept
     pb.set_delivery_mode(command.delivery_mode);
     pb.set_no_drop(command.no_drop);
     pb.set_emit_backpressure(command.emit_backpressure);
+    pb.set_retry_max_attempts(command.retry_max_attempts);
+    pb.set_retry_per_attempt_timeout_ms(command.retry_per_attempt_timeout_ms);
+    pb.set_retry_initial_backoff_ms(command.retry_initial_backoff_ms);
+    pb.set_retry_max_backoff_ms(command.retry_max_backoff_ms);
+    pb.set_retry_backoff(command.retry_backoff);
+    pb.set_retry_jitter(command.retry_jitter);
 
     std::string serialized;
     if (!pb.SerializeToString(&serialized)) {
@@ -156,6 +162,12 @@ result<PythonCommand> decode_actor_command(const StreamBuffer& buffer) noexcept 
     cmd.delivery_mode = pb.delivery_mode();
     cmd.no_drop = pb.no_drop();
     cmd.emit_backpressure = pb.emit_backpressure();
+    cmd.retry_max_attempts = static_cast<uint8_t>(pb.retry_max_attempts());
+    cmd.retry_per_attempt_timeout_ms = pb.retry_per_attempt_timeout_ms();
+    cmd.retry_initial_backoff_ms = pb.retry_initial_backoff_ms();
+    cmd.retry_max_backoff_ms = pb.retry_max_backoff_ms();
+    cmd.retry_backoff = static_cast<uint8_t>(pb.retry_backoff());
+    cmd.retry_jitter = pb.retry_jitter();
 
     return result<PythonCommand>::make(std::move(cmd));
 }
