@@ -188,10 +188,11 @@ TEST(ActorProxyTest, TrySendWithNullTransportReturnsNoRoute) {
     // Create a minimal TypedMessage for try_send
     TypedMessage msg(TypeTag::User, StreamBuffer{});
 
-    auto result = proxy.try_send(addr, std::move(msg));
+    auto receipt = proxy.try_send(addr, std::move(msg));
     // With null transport, should return NoRoute (dead-letter path)
-    EXPECT_EQ(result.status, mailbox::DeliveryStatus::NoRoute);
-    EXPECT_FALSE(result.ok());
+    EXPECT_TRUE(receipt.ready());
+    EXPECT_EQ(receipt.get().status, mailbox::DeliveryStatus::NoRoute);
+    EXPECT_FALSE(receipt.get().ok());
 }
 
 TEST(ActorProxyTest, SetDiscoveryAndLocationCache) {
@@ -269,9 +270,10 @@ TEST(ActorRefTest, ProxyTrySendReturnsNoRouteOnNullTransport) {
     ASSERT_NE(ref.get_proxy(), nullptr);
 
     TypedMessage msg(TypeTag::User, StreamBuffer(1, static_cast<uint8_t>(0)));
-    auto result = ref.try_send(addr, std::move(msg));
-    EXPECT_EQ(result.status, mailbox::DeliveryStatus::NoRoute);
-    EXPECT_FALSE(result.ok());
+    auto receipt = ref.try_send(addr, std::move(msg));
+    EXPECT_TRUE(receipt.ready());
+    EXPECT_EQ(receipt.get().status, mailbox::DeliveryStatus::NoRoute);
+    EXPECT_FALSE(receipt.get().ok());
 }
 
 // ============================================================================
