@@ -44,7 +44,7 @@ TEST_F(ActorProxyDeadLettersTest, RemoteNodeUnreachableGeneratesDeadLetter) {
 
     auto result =
         proxy.try_send(remote, TypedMessage(TypeTag::User, StreamBuffer{9}));
-    EXPECT_FALSE(result.accepted());
+    EXPECT_FALSE(result.get().accepted());
 
     // Verify dead letter was captured with RemoteNodeUnreachable
     mailbox::DeadLetterRecord dl;
