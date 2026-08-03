@@ -98,13 +98,27 @@ enum class MetricEventType : uint8_t {
     kBatchMessagesSent = 62,     ///< Total messages sent via batch frames.
 
     // Stream protocol metric events
-    kStreamOpened = 63,         ///< Stream session opened.
-    kStreamClosed = 64,         ///< Stream session closed.
-    kStreamBytesSent = 65,      ///< Stream bytes sent count.
-    kStreamBytesReceived = 66,  ///< Stream bytes received count.
-    kStreamChunkSent = 67,      ///< Stream chunk sent.
-    kStreamChunkReceived = 68,  ///< Stream chunk received.
-    kStreamWindowBytes = 69,    ///< Stream window size in bytes.
+    kStreamOpened = 63,        ///< Stream session opened.
+    kStreamClosed = 64,        ///< Stream session closed.
+    kStreamBytesSent = 65,     ///< Stream bytes sent count.
+    kStreamBytesReceived = 66, ///< Stream bytes received count.
+    kStreamChunkSent = 67,     ///< Stream chunk sent.
+    kStreamChunkReceived = 68, ///< Stream chunk received.
+    kStreamWindowBytes = 69,   ///< Stream window size in bytes.
+
+    // ── Mailbox observability gauge events (MBX-007) ──────────────────
+    kMailboxCapacity = 70,        ///< Configured mailbox message capacity.
+                                  ///< \c value_hi carries the capacity.
+    kMailboxPressureState = 71,   ///< Mailbox pressure state.
+                                  ///< \c code: 0=Low, 1=High, 2=Critical.
+    kMailboxPressureRatio = 72,   ///< Mailbox pressure ratio in PPM.
+                                  ///< \c value_hi carries ratio (0–1,000,000).
+    kMailboxQueuedBytes = 73,     ///< Current queued payload bytes.
+                                  ///< \c value_hi carries the byte count.
+    kMailboxMaxDepth = 74,        ///< Peak observed mailbox depth.
+                                  ///< \c value_hi carries the peak depth.
+    kMailboxSystemLaneDepth = 75, ///< Current depth of the system lane.
+                                  ///< \c value_hi carries the depth.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

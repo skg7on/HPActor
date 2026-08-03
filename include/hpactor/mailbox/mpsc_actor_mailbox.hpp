@@ -204,6 +204,15 @@ template <typename T> class MPSCActorMailbox {
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
         lanes_.set_num_user_lanes(config_.priority_levels);
+
+        // MBX-007: emit capacity gauge event on config change
+        if (metrics_ring_buffer_) [[unlikely]] {
+            metrics::MetricEvent evt{};
+            evt.actor_id = actor_id_;
+            evt.event_type = metrics::MetricEventType::kMailboxCapacity;
+            evt.value_hi = config_.capacity.max_messages;
+            metrics_ring_buffer_->try_push(evt);
+        }
     }
 
     /// \brief Read the current mailbox configuration.
@@ -611,6 +620,21 @@ template <typename T> class MPSCActorMailbox {
             evt.event_type = metrics::MetricEventType::kMailboxEnqueue;
             evt.value_hi = 1;
             metrics_ring_buffer_->try_push(evt);
+
+            // MBX-007: emit queued_bytes gauge after enqueue
+            metrics::MetricEvent qb_evt{};
+            qb_evt.actor_id = actor_id_;
+            qb_evt.event_type = metrics::MetricEventType::kMailboxQueuedBytes;
+            qb_evt.value_hi = static_cast<uint32_t>(reservation_.queued_bytes());
+            metrics_ring_buffer_->try_push(qb_evt);
+
+            // MBX-007: emit system lane depth gauge
+            metrics::MetricEvent sl_evt{};
+            sl_evt.actor_id = actor_id_;
+            sl_evt.event_type = metrics::MetricEventType::kMailboxSystemLaneDepth;
+            sl_evt.value_hi = static_cast<uint32_t>(
+                lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
+            metrics_ring_buffer_->try_push(sl_evt);
         }
 
         // Edge-triggered wakeup: always attempt to claim the wakeup right.
@@ -762,6 +786,21 @@ template <typename T> class MPSCActorMailbox {
             evt.event_type = metrics::MetricEventType::kMailboxDequeue;
             evt.value_hi = 1;
             metrics_ring_buffer_->try_push(evt);
+
+            // MBX-007: emit queued_bytes gauge after dequeue
+            metrics::MetricEvent qb_evt{};
+            qb_evt.actor_id = actor_id_;
+            qb_evt.event_type = metrics::MetricEventType::kMailboxQueuedBytes;
+            qb_evt.value_hi = static_cast<uint32_t>(reservation_.queued_bytes());
+            metrics_ring_buffer_->try_push(qb_evt);
+
+            // MBX-007: emit system lane depth gauge
+            metrics::MetricEvent sl_evt{};
+            sl_evt.actor_id = actor_id_;
+            sl_evt.event_type = metrics::MetricEventType::kMailboxSystemLaneDepth;
+            sl_evt.value_hi = static_cast<uint32_t>(
+                lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
+            metrics_ring_buffer_->try_push(sl_evt);
         }
         return node;
     }
@@ -1209,9 +1248,33 @@ template <typename T> class MPSCActorMailbox {
     /// \note Thread safety: the \c PressureStateMachine uses internal
     ///       atomics and is safe to call from any thread.
     void update_pressure_state(bool hard_failure = false) noexcept {
+        auto old_state = pressure_state_.current_state();
         pressure_state_.update(pressure_ratio(), hard_failure,
                                config_.high_watermark, config_.low_watermark,
                                config_.critical_watermark);
+        auto new_state = pressure_state_.current_state();
+
+        // MBX-007: emit pressure state/ratio gauge events
+        if (metrics_ring_buffer_) [[unlikely]] {
+            // Emit pressure ratio on every update (gauge, idempotent)
+            metrics::MetricEvent ratio_evt{};
+            ratio_evt.actor_id = actor_id_;
+            ratio_evt.event_type = metrics::MetricEventType::kMailboxPressureRatio;
+            ratio_evt.value_hi =
+                static_cast<uint32_t>(pressure_ratio() * 1'000'000.0);
+            metrics_ring_buffer_->try_push(ratio_evt);
+
+            // Only emit pressure state on actual transition
+            if (old_state != new_state) {
+                metrics::MetricEvent state_evt{};
+                state_evt.actor_id = actor_id_;
+                state_evt.event_type =
+                    metrics::MetricEventType::kMailboxPressureState;
+                state_evt.code = static_cast<uint8_t>(
+                    detail::PressureStateMachine::severity(new_state));
+                metrics_ring_buffer_->try_push(state_evt);
+            }
+        }
     }
 
     /// \brief Update the peak-depth counter if the current depth exceeds
@@ -1227,6 +1290,14 @@ template <typename T> class MPSCActorMailbox {
         while (depth > prev) {
             if (max_depth_.compare_exchange_weak(prev, depth, std::memory_order_acq_rel,
                                                  std::memory_order_acquire)) {
+                // MBX-007: emit max_depth gauge on new peak
+                if (metrics_ring_buffer_) [[unlikely]] {
+                    metrics::MetricEvent evt{};
+                    evt.actor_id = actor_id_;
+                    evt.event_type = metrics::MetricEventType::kMailboxMaxDepth;
+                    evt.value_hi = static_cast<uint32_t>(depth);
+                    metrics_ring_buffer_->try_push(evt);
+                }
                 break;
             }
         }
@@ -1328,9 +1399,9 @@ template <typename T> class MPSCActorMailbox {
     EventBasedActor* actor_ptr_{nullptr}; ///< Direct actor pointer for fast
                                           ///< wakeup. Set via set_actor_ptr()
                                           ///< after spawn.
-    MultiLaneQueue<T> lanes_{1};      ///< System + user lane storage.
-    OverflowQueue<T> overflow_queue_; ///< Spill-overflow queue.
-    MailboxConfig config_;            ///< Active mailbox configuration.
+    MultiLaneQueue<T> lanes_{1};          ///< System + user lane storage.
+    OverflowQueue<T> overflow_queue_;     ///< Spill-overflow queue.
+    MailboxConfig config_;                ///< Active mailbox configuration.
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for
                                                         ///< consumer
                                                         ///< serialization.
