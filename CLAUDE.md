@@ -9,24 +9,27 @@ At the start of a substantive task, read these files first:
 1. `AGENTS.md` — Codex-facing working instructions for this repo.
 2. `CLAUDE.md` — Claude-facing instructions; keep shared build and architecture guidance in sync when it changes.
 3. `CLAUDE_MEMORY.md` — project memory summary with current feature status, implementation history, docs, and recent test counts.
-4. `.claude/rules` — authoritative behavioral rules: worktree isolation, TDDFlow, architecture principles, implementation constraints, configuration, testing, and build verification.
+4. `.claude/rules/` — authoritative behavioral rules (one file per rule): worktree isolation, TDDFlow, architecture principles, implementation constraints, configuration, testing, and build verification.
 
 Treat `CLAUDE_MEMORY.md` as the high-level project memory source in this checkout. If persistent memory directories are introduced later, add their exact path here instead of relying on wildcard paths.
 
 ## Project Rules
 
 Behavioral rules for all Claude Code sessions in this repo are defined in
-`.claude/rules`. That file is the single source of truth for:
+`.claude/rules/`. That directory is the single source of truth — each rule lives
+in its own file:
 
-- **Worktree Isolation** — every design/implementation job in `.claude/worktrees/<name>/`; never leak writes to the main checkout.
-- **TDDFlow** — RED → GREEN → REFACTOR cycle before production code.
-- **Architecture Principles** — actor boundaries, reliability planes (data/control/operations), production design flow.
-- **Implementation Constraints** — no RTTI/exceptions, bounded capacity, explicit contracts, allocator ownership.
-- **Configuration** — subsystem-owned extension points, self-registering parsers, opaque `TomlTableView`.
-- **Testing** — deterministic tests, no timing/thread-order assumptions, platform-portable assertions.
-- **Build Verification** — narrowest verification first, targeted ninja/ctest; full rebuild only when needed.
+| File | Rule |
+|------|------|
+| `01-worktree-isolation.md` | Worktree isolation, branch naming, CWD verification |
+| `02-tddflow.md` | RED → GREEN → REFACTOR cycle |
+| `03-architecture.md` | Actor boundaries, reliability planes, design flow |
+| `04-implementation.md` | C++20 constraints, actor contracts, memory, concurrency |
+| `05-configuration.md` | Subsystem-owned TOML parsers, opaque interfaces |
+| `06-testing.md` | Determinism, resource isolation, meaningful tests |
+| `07-build-verification.md` | Narrowest verification first, build commands |
 
-The sections below contain project-specific reference information not covered by `.claude/rules`.
+The sections below contain project-specific reference information not covered by `.claude/rules/`.
 
 ## Build Commands
 
