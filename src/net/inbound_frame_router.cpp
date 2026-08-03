@@ -4,6 +4,7 @@
 #include <hpactor/net/inbound_frame_router.hpp>
 
 #include <hpactor/cluster/name/name_directory_codec.hpp>
+#include <hpactor/msg/delivery_mode.hpp>
 #include <hpactor/msg/name_directory_tags.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/net/reliable_ack_emission.hpp>
@@ -600,7 +601,15 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
     auto receiver_addr = from_proto(data.receiver());
     ActorId target = receiver_addr.id;
 
+    // MSG-006: Propagate message_id and delivery_mode for reliable
+    // (ack_requested) messages so that the receiver-side dedup cache
+    // in the DeliveryPipeline is checked. Without this, remote
+    // at-least-once messages would never be deduplicated.
     mailbox::DeliveryOptions opts{};
+    if (ack_requested) {
+        opts.message_id = data.message_id();
+        opts.delivery_mode = mailbox::DeliveryMode::AtLeastOnce;
+    }
     auto result = messaging_.try_deliver(target, std::move(msg), 0, 0, opts);
 
     // ── Reliable ACK/NACK emission ─────────────────────────────────────

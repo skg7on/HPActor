@@ -414,6 +414,94 @@ TEST_F(ReliableMessagingIntegrationTest, DedupCacheSuppressesDuplicateDelivery) 
     EXPECT_FALSE(dedup.is_duplicate(src_ep, ActorId{2}, msg_id));
 }
 
+// ── Receiver Dedup Through Delivery Pipeline (MSG-006) ───────────────────
+
+TEST_F(ReliableMessagingIntegrationTest, AtLeastOnceDeliveryCreatesDedupEntry) {
+    // MSG-006: Verifies that sending an AtLeastOnce message with an explicit
+    // message_id populates the receiver dedup cache via the delivery pipeline.
+    ActorContext ctx(sender_, system_.get());
+
+    DeliveryOptions opts = at_least_once_opts();
+    opts.message_id = 42;
+
+    auto receipt = ctx.try_send(target_.address(), make_test_message(), opts);
+    EXPECT_TRUE(receipt.ready());
+    EXPECT_TRUE(receipt.get().accepted());
+
+    // The dedup cache should have recorded this message.
+    auto& dedup = *system_->dedup_cache();
+    EXPECT_GE(dedup.insertions(), 1);
+}
+
+TEST_F(ReliableMessagingIntegrationTest, AtLeastOnceDuplicateMessageIsSuppressed) {
+    // MSG-006: Sending the same message (same sender, same message_id) twice
+    // with AtLeastOnce mode should detect the duplicate via the dedup cache
+    // in the delivery pipeline.
+    ActorContext ctx(sender_, system_.get());
+
+    DeliveryOptions opts = at_least_once_opts();
+    opts.message_id = 42;
+
+    // First send: accepted and dedup entry created.
+    auto receipt1 = ctx.try_send(target_.address(), make_test_message(), opts);
+    EXPECT_TRUE(receipt1.ready());
+    EXPECT_TRUE(receipt1.get().accepted());
+
+    auto& dedup = *system_->dedup_cache();
+    uint64_t hits_before = dedup.duplicate_hits();
+
+    // Second send: same sender, same message_id → duplicate suppressed.
+    auto receipt2 = ctx.try_send(target_.address(), make_test_message(), opts);
+    EXPECT_TRUE(receipt2.ready());
+    EXPECT_TRUE(receipt2.get().accepted()); // ACK-like result for duplicates
+
+    // The dedup cache should have recorded a duplicate hit.
+    EXPECT_GT(dedup.duplicate_hits(), hits_before);
+}
+
+TEST_F(ReliableMessagingIntegrationTest, DifferentSourceEndpointsAreNotDuplicates) {
+    // MSG-006: Messages from different source nodes with the same
+    // (actor_id, message_id) must NOT be treated as duplicates.
+    // The dedup key includes the source endpoint for isolation.
+    auto& dedup = *system_->dedup_cache();
+    EndPoint ep1 = endpoint_ops::parse_endpoint("192.168.1.1:9000");
+    EndPoint ep2 = endpoint_ops::parse_endpoint("10.0.0.1:9000");
+    ActorId actor{1};
+    MessageId msg_id{42};
+
+    // Insert with first endpoint.
+    EXPECT_FALSE(dedup.is_duplicate(ep1, actor, msg_id));
+
+    // Same (actor_id, message_id) but different source endpoint → NOT
+    // duplicate.
+    EXPECT_FALSE(dedup.is_duplicate(ep2, actor, msg_id));
+
+    // But the original key IS still a duplicate.
+    EXPECT_TRUE(dedup.is_duplicate(ep1, actor, msg_id));
+
+    EXPECT_EQ(dedup.insertions(), 2);
+}
+
+TEST_F(ReliableMessagingIntegrationTest, BestEffortMessagesSkipDedupCheck) {
+    // MSG-006: BestEffort messages should NOT go through the dedup cache.
+    // Only AtLeastOnce and DurableAtLeastOnce modes trigger dedup.
+    ActorContext ctx(sender_, system_.get());
+
+    auto& dedup = *system_->dedup_cache();
+    uint64_t insertions_before = dedup.insertions();
+
+    DeliveryOptions opts;
+    opts.delivery_mode = DeliveryMode::BestEffort;
+    opts.message_id = 99;
+
+    auto receipt = ctx.try_send(target_.address(), make_test_message(), opts);
+    EXPECT_TRUE(receipt.ready());
+    EXPECT_TRUE(receipt.get().accepted());
+
+    // BestEffort messages skip dedup — no new insertions expected.
+    EXPECT_EQ(dedup.insertions(), insertions_before);
+}
+
 TEST_F(ReliableMessagingIntegrationTest, DedupCacheDuplicateHitsCounter) {
     auto& dedup = *system_->dedup_cache();
     EndPoint src_ep = endpoint_ops::parse_endpoint("127.0.0.1:9000");
