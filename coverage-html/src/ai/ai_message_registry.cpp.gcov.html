@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -86,32 +86,32 @@
 <span id="L8"><span class="lineNum">       8</span>                 :             : namespace hpactor::ai {</span>
 <span id="L9"><span class="lineNum">       9</span>                 :             : namespace {</span>
 <span id="L10"><span class="lineNum">      10</span>                 :             : </span>
-<span id="L11"><span class="lineNum">      11</span>                 :<span class="tlaGNC tlaBgGNC">         872 : void register_ai_message_types(ProtoTypeRegistry&amp; reg) {</span></span>
-<span id="L12"><span class="lineNum">      12</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceLeaseRequest&gt;(kAiLeaseRequestTag,</span></span>
+<span id="L11"><span class="lineNum">      11</span>                 :<span class="tlaGNC tlaBgGNC">         876 : void register_ai_message_types(ProtoTypeRegistry&amp; reg) {</span></span>
+<span id="L12"><span class="lineNum">      12</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceLeaseRequest&gt;(kAiLeaseRequestTag,</span></span>
 <span id="L13"><span class="lineNum">      13</span>                 :             :                                             &quot;hpactor.PbDeviceLeaseRequest&quot;);</span>
-<span id="L14"><span class="lineNum">      14</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceLeaseReply&gt;(kAiLeaseReplyTag,</span></span>
+<span id="L14"><span class="lineNum">      14</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceLeaseReply&gt;(kAiLeaseReplyTag,</span></span>
 <span id="L15"><span class="lineNum">      15</span>                 :             :                                           &quot;hpactor.PbDeviceLeaseReply&quot;);</span>
-<span id="L16"><span class="lineNum">      16</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceLeaseActivate&gt;(kAiLeaseActivateTag,</span></span>
+<span id="L16"><span class="lineNum">      16</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceLeaseActivate&gt;(kAiLeaseActivateTag,</span></span>
 <span id="L17"><span class="lineNum">      17</span>                 :             :                                              &quot;hpactor.PbDeviceLeaseActivate&quot;);</span>
-<span id="L18"><span class="lineNum">      18</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceLeaseRenew&gt;(kAiLeaseRenewTag,</span></span>
+<span id="L18"><span class="lineNum">      18</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceLeaseRenew&gt;(kAiLeaseRenewTag,</span></span>
 <span id="L19"><span class="lineNum">      19</span>                 :             :                                           &quot;hpactor.PbDeviceLeaseRenew&quot;);</span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceLeaseRelease&gt;(kAiLeaseReleaseTag,</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceLeaseRelease&gt;(kAiLeaseReleaseTag,</span></span>
 <span id="L21"><span class="lineNum">      21</span>                 :             :                                             &quot;hpactor.PbDeviceLeaseRelease&quot;);</span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceLeaseRevoked&gt;(kAiLeaseRevokedTag,</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceLeaseRevoked&gt;(kAiLeaseRevokedTag,</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             :                                             &quot;hpactor.PbDeviceLeaseRevoked&quot;);</span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbResourceSnapshotRequest&gt;(</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbResourceSnapshotRequest&gt;(</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :         kAiResourceSnapshotRequestTag, &quot;hpactor.PbResourceSnapshotRequest&quot;);</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbResourceSnapshotReply&gt;(kAiResourceSnapshotReplyTag,</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbResourceSnapshotReply&gt;(kAiResourceSnapshotReplyTag,</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             :                                                &quot;hpactor.PbResourceSnapshotReply&quot;);</span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        1744 :     reg.register_type&lt;PbDeviceSnapshotUpdate&gt;(kAiDeviceSnapshotUpdateTag,</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        1752 :     reg.register_type&lt;PbDeviceSnapshotUpdate&gt;(kAiDeviceSnapshotUpdateTag,</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :                                               &quot;hpactor.PbDeviceSnapshotUpdate&quot;);</span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         872 :     reg.register_type&lt;PbNodeResourceSummary&gt;(kAiNodeResourceSummaryTag,</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         876 :     reg.register_type&lt;PbNodeResourceSummary&gt;(kAiNodeResourceSummaryTag,</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :                                              &quot;hpactor.PbNodeResourceSummary&quot;);</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         872 : }</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         876 : }</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        3591 : const bool kAiTypesRegistered = [] {</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3591 :     ProtoTypeRegistry::register_subsystem(&amp;register_ai_message_types);</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        3591 :     return true;</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        3595 : const bool kAiTypesRegistered = [] {</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3595 :     ProtoTypeRegistry::register_subsystem(&amp;register_ai_message_types);</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        3595 :     return true;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : }();</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : } // namespace</span>

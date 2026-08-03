@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -129,12 +129,12 @@
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           6 :     return f;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : }</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      105828 : inline LogField field(const char* name, uint64_t value) noexcept {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">      105828 :     LogField f{};</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      105828 :     f.name = name;</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">      105828 :     f.type = LogFieldType::kUInt64;</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">      105828 :     f.value.u64 = value;</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">      105828 :     return f;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">       95065 : inline LogField field(const char* name, uint64_t value) noexcept {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">       95065 :     LogField f{};</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">       95065 :     f.name = name;</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">       95065 :     f.type = LogFieldType::kUInt64;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">       95065 :     f.value.u64 = value;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">       95065 :     return f;</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : }</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : </span>
 <span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           1 : inline LogField field(const char* name, double value) noexcept {</span></span>
@@ -153,12 +153,12 @@
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           1 :     return f;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">        6950 : inline LogField field_lit(const char* name, const char* value) noexcept {</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">        6950 :     LogField f{};</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">        6950 :     f.name = name;</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">        6950 :     f.type = LogFieldType::kStringLiteral;</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">        6950 :     f.value.str = value;</span></span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">        6950 :     return f;</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">        6966 : inline LogField field_lit(const char* name, const char* value) noexcept {</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">        6966 :     LogField f{};</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">        6966 :     f.name = name;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">        6966 :     f.type = LogFieldType::kStringLiteral;</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">        6966 :     f.value.str = value;</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">        6966 :     return f;</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             : }</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             : </span>
 <span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">           1 : inline LogField field_ptr(const char* name, const void* value) noexcept {</span></span>

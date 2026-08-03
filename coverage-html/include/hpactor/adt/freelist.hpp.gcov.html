@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -114,22 +114,22 @@
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      505520 :         uint64_t old = top_.load(std::memory_order_acquire);</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :         uint64_t desired;</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :         do {</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      252967 :             node-&gt;next = extract_ptr(old);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">      252967 :             desired = pack(node, next_tag(old));</span></span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 207 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 252760 times"> + </span>]:<span class="tlaGNC">      505934 :         } while (!top_.compare_exchange_weak(</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      252793 :             node-&gt;next = extract_ptr(old);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">      252793 :             desired = pack(node, next_tag(old));</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 33 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 252760 times"> + </span>]:<span class="tlaGNC">      505586 :         } while (!top_.compare_exchange_weak(</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :             old, desired, std::memory_order_acq_rel, std::memory_order_acquire));</span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">      252760 :     }</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      312112 :     T* pop() noexcept {</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      312112 :         uint64_t old = top_.load(std::memory_order_acquire);</span></span>
-<span id="L47"><span class="lineNum">      47</span>         [<span class="tlaGBC" title="Branch 0 was taken 145324 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 166924 times"> + </span>]:<span class="tlaGNC">      312248 :         while (extract_ptr(old) != nullptr) {</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">      145324 :             uint64_t desired = pack(extract_ptr(old)-&gt;next, next_tag(old));</span></span>
-<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 145188 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 136 times"> + </span>]:<span class="tlaGNC">      290648 :             if (top_.compare_exchange_weak(old, desired, std::memory_order_acq_rel,</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      311313 :     T* pop() noexcept {</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">      311313 :         uint64_t old = top_.load(std::memory_order_acquire);</span></span>
+<span id="L47"><span class="lineNum">      47</span>         [<span class="tlaGBC" title="Branch 0 was taken 145221 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 166125 times"> + </span>]:<span class="tlaGNC">      311346 :         while (extract_ptr(old) != nullptr) {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">      145221 :             uint64_t desired = pack(extract_ptr(old)-&gt;next, next_tag(old));</span></span>
+<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 145188 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">      290442 :             if (top_.compare_exchange_weak(old, desired, std::memory_order_acq_rel,</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :                                            std::memory_order_acquire)) {</span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      145188 :                 return extract_ptr(old);</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :             }</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :         }</span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      166924 :         return nullptr;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">      166125 :         return nullptr;</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     }</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
 <span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           4 :     bool empty() const noexcept {</span></span>
@@ -142,25 +142,25 @@
 <span id="L64"><span class="lineNum">      64</span>                 :             :     static constexpr uint64_t kPtrMask = (1ULL &lt;&lt; 48) - 1;</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     static constexpr int kTagShift = 48;</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      855731 :     static T* extract_ptr(uint64_t packed) noexcept {</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      855731 :         constexpr uint64_t kSignBit = 1ULL &lt;&lt; 47;</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">      855731 :         uint64_t ptr = packed &amp; kPtrMask;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      854552 :     static T* extract_ptr(uint64_t packed) noexcept {</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      854552 :         constexpr uint64_t kSignBit = 1ULL &lt;&lt; 47;</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">      854552 :         uint64_t ptr = packed &amp; kPtrMask;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :         // Sign-extend bit 47 so canonical addresses with the high bit set</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :         // (e.g. on systems that place user-space mappings above 47-bit</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :         // boundary) remain valid after the mask clears the upper 16 bits.</span>
-<span id="L73"><span class="lineNum">      73</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 855731 times"> + </span>]:<span class="tlaGNC">      855731 :         if (ptr &amp; kSignBit) {</span></span>
+<span id="L73"><span class="lineNum">      73</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 854552 times"> + </span>]:<span class="tlaGNC">      854552 :         if (ptr &amp; kSignBit) {</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ptr |= ~kPtrMask;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :         }</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC tlaBgGNC">      855731 :         return reinterpret_cast&lt;T*&gt;(static_cast&lt;uintptr_t&gt;(ptr));</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC tlaBgGNC">      854552 :         return reinterpret_cast&lt;T*&gt;(static_cast&lt;uintptr_t&gt;(ptr));</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     }</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : </span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">      398291 :     static uint16_t next_tag(uint64_t packed) noexcept {</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      398291 :         return static_cast&lt;uint16_t&gt;((packed &gt;&gt; kTagShift) + 1);</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">      398014 :     static uint16_t next_tag(uint64_t packed) noexcept {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      398014 :         return static_cast&lt;uint16_t&gt;((packed &gt;&gt; kTagShift) + 1);</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     }</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      398291 :     static uint64_t pack(T* ptr, uint16_t tag) noexcept {</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">      398291 :         return (reinterpret_cast&lt;uint64_t&gt;(ptr) &amp; kPtrMask) |</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">      398291 :                (static_cast&lt;uint64_t&gt;(tag) &lt;&lt; kTagShift);</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      398014 :     static uint64_t pack(T* ptr, uint16_t tag) noexcept {</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">      398014 :         return (reinterpret_cast&lt;uint64_t&gt;(ptr) &amp; kPtrMask) |</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">      398014 :                (static_cast&lt;uint64_t&gt;(tag) &lt;&lt; kTagShift);</span></span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     }</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : </span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :     std::atomic&lt;uint64_t&gt; top_;</span>

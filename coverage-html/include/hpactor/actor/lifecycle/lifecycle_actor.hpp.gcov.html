@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.0&nbsp;%</td>
@@ -146,8 +146,8 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///         \c transition() call, or \c kStarting if no transition</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     ///         has occurred.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \note Thread safety: lock-free atomic load with acquire ordering.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2510 :     LifecycleState state() const noexcept {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5020 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        2532 :     LifecycleState state() const noexcept {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        5064 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Whether the actor accepts user (data-plane) messages in</span>
@@ -156,8 +156,8 @@
 <span id="L78"><span class="lineNum">      78</span>                 :             :     /// \return \c true when the state is \c kActive.</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     /// \note Used by the mailbox admission path to reject messages</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :     ///       before enqueue.</span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         134 :     bool accepts_user_msgs() const noexcept {</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">         134 :         return kStateMachine[static_cast&lt;int&gt;(state())].accepts_user_msgs;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         138 :     bool accepts_user_msgs() const noexcept {</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">         138 :         return kStateMachine[static_cast&lt;int&gt;(state())].accepts_user_msgs;</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     }</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             : </span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     /// \brief Whether the actor accepts system messages in its current</span>

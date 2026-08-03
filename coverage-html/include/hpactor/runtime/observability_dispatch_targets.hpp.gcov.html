@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
@@ -111,7 +111,7 @@
 <span id="L33"><span class="lineNum">      33</span>                 :             : /// sink address never changes across reload or enable/disable transitions.</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : class MetricsTarget {</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :   public:</span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC tlaBgGNC">         873 :     virtual ~MetricsTarget() = default;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC tlaBgGNC">         877 :     virtual ~MetricsTarget() = default;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     /// \brief Emit a metric event.  Called from any thread.</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     ///</span>
@@ -134,7 +134,7 @@
 <span id="L56"><span class="lineNum">      56</span>                 :             : /// target pointer is null.</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : class LogTarget {</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :   public:</span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         873 :     virtual ~LogTarget() = default;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         877 :     virtual ~LogTarget() = default;</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     /// \brief Emit a log event.  Called from any thread.</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :     ///</span>
@@ -154,7 +154,7 @@
 <span id="L76"><span class="lineNum">      76</span>                 :             : /// target pointer is null.</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : class TraceTarget {</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :   public:</span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">         873 :     virtual ~TraceTarget() = default;</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">         877 :     virtual ~TraceTarget() = default;</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     /// \brief Record a new span.  Called from any thread.</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     ///</span>

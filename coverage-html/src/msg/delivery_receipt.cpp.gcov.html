@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,29 +94,29 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::msg {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      126823 : DeliveryReceipt::DeliveryReceipt(mailbox::DeliveryResult result)</span></span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">      126823 :     : state_(std::make_shared&lt;SharedState&gt;()) {</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      126823 :     state_-&gt;msg_id = result.message_id;</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      126823 :     state_-&gt;result = std::move(result);</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">      126823 : }</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      126858 : DeliveryReceipt::DeliveryReceipt(mailbox::DeliveryResult result)</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">      126858 :     : state_(std::make_shared&lt;SharedState&gt;()) {</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      126858 :     state_-&gt;msg_id = result.message_id;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      126858 :     state_-&gt;result = std::move(result);</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">      126858 : }</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          59 : DeliveryReceipt::DeliveryReceipt(std::shared_ptr&lt;SharedState&gt; state)</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          59 :     : state_(std::move(state)) {}</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          36 : bool DeliveryReceipt::ready() const noexcept {</span></span>
-<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 35 times"> + </span>]:<span class="tlaGNC">          36 :     if (!state_)</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          40 : bool DeliveryReceipt::ready() const noexcept {</span></span>
+<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 39 times"> + </span>]:<span class="tlaGNC">          40 :     if (!state_)</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :         return false;</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          35 :     std::lock_guard&lt;std::mutex&gt; lk(state_-&gt;mtx);</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          35 :     return state_-&gt;result.has_value();</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          35 : }</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          39 :     std::lock_guard&lt;std::mutex&gt; lk(state_-&gt;mtx);</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          39 :     return state_-&gt;result.has_value();</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          39 : }</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          71 : mailbox::DeliveryResult DeliveryReceipt::get() const {</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 71 times"> + </span>]:<span class="tlaGNC">          71 :     if (!state_)</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          75 : mailbox::DeliveryResult DeliveryReceipt::get() const {</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 75 times"> + </span>]:<span class="tlaGNC">          75 :     if (!state_)</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return {};</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">          71 :     std::unique_lock&lt;std::mutex&gt; lk(state_-&gt;mtx);</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         142 :     state_-&gt;cv.wait(lk, [this] { return state_-&gt;result.has_value(); });</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">          71 :     return *state_-&gt;result;</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          71 : }</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">          75 :     std::unique_lock&lt;std::mutex&gt; lk(state_-&gt;mtx);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         150 :     state_-&gt;cv.wait(lk, [this] { return state_-&gt;result.has_value(); });</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">          75 :     return *state_-&gt;result;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          75 : }</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           2 : std::optional&lt;mailbox::DeliveryResult&gt; DeliveryReceipt::try_get() const noexcept {</span></span>
 <span id="L44"><span class="lineNum">      44</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :     if (!state_)</span></span>

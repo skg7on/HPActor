@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 00:53:04</td>
+            <td class="headerValue">2026-08-03 04:20:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -240,9 +240,9 @@
 <span id="L162"><span class="lineNum">     162</span>                 :             :         size_t offset{0};</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :         uint32_t ref_count{0}; // atomic not needed; protected by mutex_</span>
 <span id="L164"><span class="lineNum">     164</span>                 :             : </span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">         500 :         void inc_ref() {</span></span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">         500 :             ++ref_count;</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">         500 :         }</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">         502 :         void inc_ref() {</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">         502 :             ++ref_count;</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">         502 :         }</span></span>
 <span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">         586 :         uint32_t dec_ref() {</span></span>
 <span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">         586 :             return --ref_count;</span></span>
 <span id="L170"><span class="lineNum">     170</span>                 :             :         }</span>
