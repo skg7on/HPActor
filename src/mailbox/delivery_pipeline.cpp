@@ -257,7 +257,13 @@ DeliveryPipeline::check_duplicate(ActorId target, const TypedMessage& msg,
         return std::nullopt;
     }
     ActorId sender_id = msg.sender_address().id;
-    if (!config_.dedup_cache->is_duplicate(config_.endpoint, sender_id,
+    // MSG-006: Use the sender's endpoint for the dedup key so that
+    // messages from different source nodes with the same (actor_id,
+    // message_id) are correctly treated as distinct. For local sends,
+    // sender_address().endpoint is the loopback endpoint, matching
+    // config_.endpoint — no behavior change.
+    EndPoint source_node = msg.sender_address().endpoint;
+    if (!config_.dedup_cache->is_duplicate(source_node, sender_id,
                                            MessageId{options.message_id})) {
         return std::nullopt;
     }
