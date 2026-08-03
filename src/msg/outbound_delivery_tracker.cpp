@@ -101,7 +101,6 @@ void OutboundDeliveryTracker::process_retries(
     // without re-looking-up entries that were already erased.
     std::vector<std::pair<mailbox::DeliveryResult, std::shared_ptr<DeliveryReceipt::SharedState>>>
         to_resolve;
-    std::vector<PendingSend> to_resend;
 
     {
         std::lock_guard<std::mutex> lk(mutex_);
@@ -137,9 +136,12 @@ void OutboundDeliveryTracker::process_retries(
                 }
                 ps.next_retry_ns = now_ns + delay_ns;
                 uint8_t count = ps.retry_count;
-                to_resend.push_back(std::move(ps));
                 emit_metric(::hpactor::metrics::MetricEventType::kReliableRetry,
                             count);
+                // Call resend callback directly inside the lock.
+                // transport->try_send() is non-blocking edge-triggered I/O
+                // — no mutex acquisition, safe to call under our lock.
+                resend_callback(ps);
             } else if (ps.next_retry_ns == 0 &&
                        ps.policy.per_attempt_timeout.count() > 0) {
                 // First send: start the per-attempt timeout.
@@ -166,9 +168,6 @@ void OutboundDeliveryTracker::process_retries(
         if (state) {
             state->resolve(result);
         }
-    }
-    for (const auto& ps : to_resend) {
-        resend_callback(ps);
     }
 }
 

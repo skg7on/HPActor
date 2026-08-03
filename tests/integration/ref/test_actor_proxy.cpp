@@ -97,7 +97,7 @@ TEST_F(ActorProxyTest, TrySendNoTransport) {
     ActorAddress target(ep_, 0, ActorId{4}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.status, mailbox::DeliveryStatus::NoRoute);
+    EXPECT_EQ(result.get().status, mailbox::DeliveryStatus::NoRoute);
 }
 
 TEST_F(ActorProxyTest, SendFireAndForget) {

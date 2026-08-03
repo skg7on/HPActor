@@ -76,6 +76,12 @@ message PbPythonActorCommand {
   uint32  delivery_mode   = 21;
   bool    no_drop         = 22;
   bool    emit_backpressure = 23;
+  uint32  retry_max_attempts           = 24;
+  uint32  retry_per_attempt_timeout_ms = 25;
+  uint32  retry_initial_backoff_ms     = 26;
+  uint32  retry_max_backoff_ms         = 27;
+  uint32  retry_backoff                = 28;
+  bool    retry_jitter                 = 29;
 }
 
 /// \brief Bounded actor-failure metadata pushed by an unhandled Python

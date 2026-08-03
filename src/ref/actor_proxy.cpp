@@ -37,7 +37,7 @@ void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
     (void)try_send(target, std::move(msg));
 }
 
-mailbox::DeliveryResult
+msg::DeliveryReceipt
 ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
                      mailbox::DeliveryOptions options) {
     if (transport_ == nullptr) {
@@ -54,8 +54,9 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
             dl.payload_sample = msg.payload();
             (void)system_->dead_letter(std::move(dl));
         }
-        return {mailbox::DeliveryStatus::NoRoute, target,
-                MessageId{options.message_id}, 0};
+        return msg::DeliveryReceipt(
+            mailbox::DeliveryResult{mailbox::DeliveryStatus::NoRoute, target,
+                                    MessageId{options.message_id}, 0});
     }
 
     // Resolve via location cache or discovery
@@ -82,8 +83,9 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
                 dl.payload_sample = msg.payload();
                 (void)system_->dead_letter(std::move(dl));
             }
-            return {mailbox::DeliveryStatus::NoRoute, target,
-                    MessageId{options.message_id}, 0};
+            return msg::DeliveryReceipt(
+                mailbox::DeliveryResult{mailbox::DeliveryStatus::NoRoute, target,
+                                        MessageId{options.message_id}, 0});
         }
         resolved_target.endpoint = member->identity.endpoint;
         if (location_cache_) {
@@ -111,7 +113,16 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
                       msg.trace_context());
     }
 
-    auto tsr = transport_->try_send(resolved_target, frame.encode());
+    // Set AckRequested flag for AtLeastOnce/DurableAtLeastOnce modes so the
+    // receiver knows to emit an ACK/NACK after delivery.
+    if (mailbox::is_tracked_delivery(options.delivery_mode)) {
+        frame.pb_envelope.mutable_data_frame()->set_flags(
+            frame.pb_envelope.mutable_data_frame()->flags() |
+            net::WireFrame::AckRequested);
+    }
+
+    auto serialized = frame.encode();
+    auto tsr = transport_->try_send(resolved_target, serialized);
     if (tsr != TransportSendResult::Sent) {
         // Capture dead letter: transport refused the message
         if (system_) {
@@ -126,9 +137,26 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
             dl.payload_sample = msg.payload();
             (void)system_->dead_letter(std::move(dl));
         }
-        return mailbox::DeliveryResult::from_transport(tsr, target, msg_id);
+        return msg::DeliveryReceipt(
+            mailbox::DeliveryResult::from_transport(tsr, target, msg_id));
     }
-    return mailbox::DeliveryResult::from_transport(tsr, target, msg_id);
+
+    // AtLeastOnce tracking: register with outbound tracker for retry/ACK.
+    if (mailbox::is_tracked_delivery(options.delivery_mode) &&
+        options.retry_policy.has_value() &&
+        options.retry_policy->is_enabled() && system_ != nullptr) {
+        auto* tracker = system_->outbound_tracker();
+        if (tracker != nullptr) {
+            uint64_t deadline = msg.deadline_ns() > 0
+                                    ? static_cast<uint64_t>(msg.deadline_ns())
+                                    : 0;
+            return tracker->track(std::move(serialized), resolved_target.endpoint,
+                                  *options.retry_policy, deadline);
+        }
+    }
+
+    return msg::DeliveryReceipt(
+        mailbox::DeliveryResult::from_transport(tsr, target, msg_id));
 }
 
 mailbox::DeliveryResult

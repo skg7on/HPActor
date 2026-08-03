@@ -3,9 +3,10 @@
 
 #include <hpactor/net/inbound_frame_router.hpp>
 
-#include <hpactor/msg/type_tag.hpp>
-#include <hpactor/msg/name_directory_tags.hpp>
 #include <hpactor/cluster/name/name_directory_codec.hpp>
+#include <hpactor/msg/name_directory_tags.hpp>
+#include <hpactor/msg/type_tag.hpp>
+#include <hpactor/net/reliable_ack_emission.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 
 #include <hpactor/runtime/messaging_runtime.hpp>
@@ -45,9 +46,10 @@ constexpr bool is_python_binding_control_tag(uint32_t tag) noexcept {
 } // namespace
 
 InboundFrameRouter::InboundFrameRouter(Dependencies dependencies, Config config) noexcept
-    : config_(config), messaging_(dependencies.messaging), rpc_(dependencies.rpc),
-      streams_(dependencies.streams), metrics_(dependencies.metrics),
-      name_port_(dependencies.name_port) {}
+    : config_(config), messaging_(dependencies.messaging),
+      rpc_(dependencies.rpc), streams_(dependencies.streams),
+      metrics_(dependencies.metrics), name_port_(dependencies.name_port),
+      reliable_ack_(dependencies.reliable_ack) {}
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -204,243 +206,258 @@ InboundFrameRouter::route_data_payload(const InboundFrameContext& ictx,
         auto tag = static_cast<TypeTag>(tag_raw);
         if (cluster::name::is_name_protocol_tag(tag) && name_port_.active()) {
             switch (tag_raw) {
-            case static_cast<uint32_t>(cluster::name::kNameRegisterRequestTag): {
-                if (!name_port_.on_register_request) break;
-                const auto& pl = data.payload();
-                const uint8_t* p =
-                    reinterpret_cast<const uint8_t*>(pl.data());
-                const uint8_t* end = p + pl.size();
-
-                std::string_view name;
-                uint64_t actor_id = 0;
-                std::string_view endpoint_str;
-                uint64_t generation = 0;
-                bool has_name = false, has_actor_id = false;
-                bool has_endpoint = false, has_generation = false;
-
-                while (p < end) {
-                    uint64_t tag_val;
-                    if (!decode_varint(p, end, tag_val)) break;
-                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
-                    uint32_t fn = static_cast<uint32_t>(
-                        tag_val >> pb::kTagFieldNumberShift);
-
-                    if (fn == nd::kFieldName &&
-                        wt == pb::kLengthDelimited) {
-                        uint64_t len;
-                        if (!decode_varint(p, end, len)) break;
-                        if (len > static_cast<uint64_t>(end - p)) break;
-                        name = std::string_view(
-                            reinterpret_cast<const char*>(p), len);
-                        p += len;
-                        has_name = true;
-                    } else if (fn == nd::kFieldActorId &&
-                               wt == pb::kVarint) {
-                        if (!decode_varint(p, end, actor_id)) break;
-                        has_actor_id = true;
-                    } else if (fn == nd::kFieldEndpoint &&
-                               wt == pb::kLengthDelimited) {
-                        uint64_t len;
-                        if (!decode_varint(p, end, len)) break;
-                        if (len > static_cast<uint64_t>(end - p)) break;
-                        endpoint_str = std::string_view(
-                            reinterpret_cast<const char*>(p), len);
-                        p += len;
-                        has_endpoint = true;
-                    } else if (fn == nd::kFieldGeneration &&
-                               wt == pb::kVarint) {
-                        if (!decode_varint(p, end, generation)) break;
-                        has_generation = true;
-                    } else {
-                        if (!skip_field_value(p, end, wt)) break;
-                    }
-                }
-
-                if (has_name && has_actor_id && has_endpoint &&
-                    has_generation) {
-                    ActorAddress addr{
-                        endpoint_ops::parse_endpoint(endpoint_str),
-                        ActorType{0}, ActorId{actor_id}, 0};
-                    name_port_.on_register_request(name_port_.context,
-                                                    ictx.peer, name, addr,
-                                                    generation);
-                }
-                return make_result(FrameDispatchCode::ActorRejected,
-                                   WireFrame::PayloadType::Data);
-            }
-            case static_cast<uint32_t>(cluster::name::kNameResolveQueryTag): {
-                if (!name_port_.on_resolve_query) break;
-                const auto& pl = data.payload();
-                const uint8_t* p =
-                    reinterpret_cast<const uint8_t*>(pl.data());
-                const uint8_t* end = p + pl.size();
-
-                std::string_view name;
-                bool has_name = false;
-
-                while (p < end) {
-                    uint64_t tag_val;
-                    if (!decode_varint(p, end, tag_val)) break;
-                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
-                    uint32_t fn = static_cast<uint32_t>(
-                        tag_val >> pb::kTagFieldNumberShift);
-
-                    if (fn == nd::kFieldName &&
-                        wt == pb::kLengthDelimited) {
-                        uint64_t len;
-                        if (!decode_varint(p, end, len)) break;
-                        if (len > static_cast<uint64_t>(end - p)) break;
-                        name = std::string_view(
-                            reinterpret_cast<const char*>(p), len);
-                        has_name = true;
+                case static_cast<uint32_t>(cluster::name::kNameRegisterRequestTag): {
+                    if (!name_port_.on_register_request)
                         break;
+                    const auto& pl = data.payload();
+                    const uint8_t* p = reinterpret_cast<const uint8_t*>(pl.data());
+                    const uint8_t* end = p + pl.size();
+
+                    std::string_view name;
+                    uint64_t actor_id = 0;
+                    std::string_view endpoint_str;
+                    uint64_t generation = 0;
+                    bool has_name = false, has_actor_id = false;
+                    bool has_endpoint = false, has_generation = false;
+
+                    while (p < end) {
+                        uint64_t tag_val;
+                        if (!decode_varint(p, end, tag_val))
+                            break;
+                        uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                        uint32_t fn = static_cast<uint32_t>(
+                            tag_val >> pb::kTagFieldNumberShift);
+
+                        if (fn == nd::kFieldName && wt == pb::kLengthDelimited) {
+                            uint64_t len;
+                            if (!decode_varint(p, end, len))
+                                break;
+                            if (len > static_cast<uint64_t>(end - p))
+                                break;
+                            name = std::string_view(
+                                reinterpret_cast<const char*>(p), len);
+                            p += len;
+                            has_name = true;
+                        } else if (fn == nd::kFieldActorId && wt == pb::kVarint) {
+                            if (!decode_varint(p, end, actor_id))
+                                break;
+                            has_actor_id = true;
+                        } else if (fn == nd::kFieldEndpoint &&
+                                   wt == pb::kLengthDelimited) {
+                            uint64_t len;
+                            if (!decode_varint(p, end, len))
+                                break;
+                            if (len > static_cast<uint64_t>(end - p))
+                                break;
+                            endpoint_str = std::string_view(
+                                reinterpret_cast<const char*>(p), len);
+                            p += len;
+                            has_endpoint = true;
+                        } else if (fn == nd::kFieldGeneration && wt == pb::kVarint) {
+                            if (!decode_varint(p, end, generation))
+                                break;
+                            has_generation = true;
+                        } else {
+                            if (!skip_field_value(p, end, wt))
+                                break;
+                        }
                     }
-                    if (!skip_field_value(p, end, wt)) break;
-                }
 
-                if (has_name) {
-                    name_port_.on_resolve_query(name_port_.context,
-                                                 ictx.peer, name);
-                }
-                return make_result(FrameDispatchCode::ActorRejected,
-                                   WireFrame::PayloadType::Data);
-            }
-            case static_cast<uint32_t>(cluster::name::kNameUnregisterRequestTag): {
-                if (!name_port_.on_unregister_request) break;
-                const auto& pl = data.payload();
-                const uint8_t* p =
-                    reinterpret_cast<const uint8_t*>(pl.data());
-                const uint8_t* end = p + pl.size();
-
-                std::string_view name;
-                uint64_t generation = 0;
-                bool has_name = false, has_generation = false;
-
-                while (p < end) {
-                    uint64_t tag_val;
-                    if (!decode_varint(p, end, tag_val)) break;
-                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
-                    uint32_t fn = static_cast<uint32_t>(
-                        tag_val >> pb::kTagFieldNumberShift);
-
-                    if (fn == nd::kFieldName &&
-                        wt == pb::kLengthDelimited) {
-                        uint64_t len;
-                        if (!decode_varint(p, end, len)) break;
-                        if (len > static_cast<uint64_t>(end - p)) break;
-                        name = std::string_view(
-                            reinterpret_cast<const char*>(p), len);
-                        p += len;
-                        has_name = true;
-                    } else if (fn == nd::kUnregFieldGeneration &&
-                               wt == pb::kVarint) {
-                        if (!decode_varint(p, end, generation)) break;
-                        has_generation = true;
-                    } else {
-                        if (!skip_field_value(p, end, wt)) break;
+                    if (has_name && has_actor_id && has_endpoint && has_generation) {
+                        ActorAddress addr{endpoint_ops::parse_endpoint(endpoint_str),
+                                          ActorType{0}, ActorId{actor_id}, 0};
+                        name_port_.on_register_request(name_port_.context, ictx.peer,
+                                                       name, addr, generation);
                     }
+                    return make_result(FrameDispatchCode::ActorRejected,
+                                       WireFrame::PayloadType::Data);
                 }
+                case static_cast<uint32_t>(cluster::name::kNameResolveQueryTag): {
+                    if (!name_port_.on_resolve_query)
+                        break;
+                    const auto& pl = data.payload();
+                    const uint8_t* p = reinterpret_cast<const uint8_t*>(pl.data());
+                    const uint8_t* end = p + pl.size();
 
-                if (has_name && has_generation) {
-                    name_port_.on_unregister_request(name_port_.context,
-                                                      ictx.peer, name,
-                                                      generation);
-                }
-                return make_result(FrameDispatchCode::ActorRejected,
-                                   WireFrame::PayloadType::Data);
-            }
-            case static_cast<uint32_t>(cluster::name::kNameRegisterResponseTag): {
-                if (!name_port_.on_register_response) break;
-                const auto& pl = data.payload();
-                const uint8_t* p =
-                    reinterpret_cast<const uint8_t*>(pl.data());
-                const uint8_t* end = p + pl.size();
+                    std::string_view name;
+                    bool has_name = false;
 
-                uint64_t result_code = 0;
-                bool has_result = false;
+                    while (p < end) {
+                        uint64_t tag_val;
+                        if (!decode_varint(p, end, tag_val))
+                            break;
+                        uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                        uint32_t fn = static_cast<uint32_t>(
+                            tag_val >> pb::kTagFieldNumberShift);
 
-                while (p < end) {
-                    uint64_t tag_val;
-                    if (!decode_varint(p, end, tag_val)) break;
-                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
-                    uint32_t fn = static_cast<uint32_t>(
-                        tag_val >> pb::kTagFieldNumberShift);
-
-                    if (fn == nd::kFieldResult &&
-                        wt == pb::kVarint) {
-                        if (!decode_varint(p, end, result_code)) break;
-                        has_result = true;
-                    } else {
-                        if (!skip_field_value(p, end, wt)) break;
+                        if (fn == nd::kFieldName && wt == pb::kLengthDelimited) {
+                            uint64_t len;
+                            if (!decode_varint(p, end, len))
+                                break;
+                            if (len > static_cast<uint64_t>(end - p))
+                                break;
+                            name = std::string_view(
+                                reinterpret_cast<const char*>(p), len);
+                            has_name = true;
+                            break;
+                        }
+                        if (!skip_field_value(p, end, wt))
+                            break;
                     }
-                }
 
-                if (has_result) {
-                    name_port_.on_register_response(name_port_.context,
-                                                    ictx.peer,
-                                                    static_cast<uint32_t>(result_code));
-                }
-                return make_result(FrameDispatchCode::ActorRejected,
-                                   WireFrame::PayloadType::Data);
-            }
-            case static_cast<uint32_t>(cluster::name::kNameResolveResponseTag): {
-                if (!name_port_.on_resolve_response) break;
-                const auto& pl = data.payload();
-                const uint8_t* p =
-                    reinterpret_cast<const uint8_t*>(pl.data());
-                const uint8_t* end = p + pl.size();
-
-                bool found = false;
-                uint64_t actor_id = 0;
-                std::string_view endpoint_str;
-                uint64_t generation = 0;
-                bool has_found = false;
-
-                while (p < end) {
-                    uint64_t tag_val;
-                    if (!decode_varint(p, end, tag_val)) break;
-                    uint8_t wt = tag_val & pb::kTagWireTypeMask;
-                    uint32_t fn = static_cast<uint32_t>(
-                        tag_val >> pb::kTagFieldNumberShift);
-
-                    // PbNameResolveResponse: found=1, actor_id=2, endpoint=3, generation=4
-                    if (fn == nd::kFieldFound &&
-                        wt == pb::kVarint) {
-                        uint64_t v;
-                        if (!decode_varint(p, end, v)) break;
-                        found = (v != 0);
-                        has_found = true;
-                    } else if (fn == nd::kFieldActorId &&
-                               wt == pb::kVarint) {
-                        if (!decode_varint(p, end, actor_id)) break;
-                    } else if (fn == nd::kFieldEndpoint &&
-                               wt == pb::kLengthDelimited) {
-                        uint64_t len;
-                        if (!decode_varint(p, end, len)) break;
-                        if (len > static_cast<uint64_t>(end - p)) break;
-                        endpoint_str = std::string_view(
-                            reinterpret_cast<const char*>(p), len);
-                        p += len;
-                    } else if (fn == nd::kFieldGeneration &&
-                               wt == pb::kVarint) {
-                        if (!decode_varint(p, end, generation)) break;
-                    } else {
-                        if (!skip_field_value(p, end, wt)) break;
+                    if (has_name) {
+                        name_port_.on_resolve_query(name_port_.context,
+                                                    ictx.peer, name);
                     }
+                    return make_result(FrameDispatchCode::ActorRejected,
+                                       WireFrame::PayloadType::Data);
                 }
+                case static_cast<uint32_t>(
+                    cluster::name::kNameUnregisterRequestTag): {
+                    if (!name_port_.on_unregister_request)
+                        break;
+                    const auto& pl = data.payload();
+                    const uint8_t* p = reinterpret_cast<const uint8_t*>(pl.data());
+                    const uint8_t* end = p + pl.size();
 
-                if (has_found) {
-                    name_port_.on_resolve_response(name_port_.context,
-                                                   ictx.peer, found,
-                                                   actor_id, endpoint_str,
-                                                   generation);
+                    std::string_view name;
+                    uint64_t generation = 0;
+                    bool has_name = false, has_generation = false;
+
+                    while (p < end) {
+                        uint64_t tag_val;
+                        if (!decode_varint(p, end, tag_val))
+                            break;
+                        uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                        uint32_t fn = static_cast<uint32_t>(
+                            tag_val >> pb::kTagFieldNumberShift);
+
+                        if (fn == nd::kFieldName && wt == pb::kLengthDelimited) {
+                            uint64_t len;
+                            if (!decode_varint(p, end, len))
+                                break;
+                            if (len > static_cast<uint64_t>(end - p))
+                                break;
+                            name = std::string_view(
+                                reinterpret_cast<const char*>(p), len);
+                            p += len;
+                            has_name = true;
+                        } else if (fn == nd::kUnregFieldGeneration &&
+                                   wt == pb::kVarint) {
+                            if (!decode_varint(p, end, generation))
+                                break;
+                            has_generation = true;
+                        } else {
+                            if (!skip_field_value(p, end, wt))
+                                break;
+                        }
+                    }
+
+                    if (has_name && has_generation) {
+                        name_port_.on_unregister_request(
+                            name_port_.context, ictx.peer, name, generation);
+                    }
+                    return make_result(FrameDispatchCode::ActorRejected,
+                                       WireFrame::PayloadType::Data);
                 }
-                return make_result(FrameDispatchCode::ActorRejected,
-                                   WireFrame::PayloadType::Data);
-            }
-            default:
-                break; // Unknown name-protocol tag — pass through
-                        // to ordinary delivery.
+                case static_cast<uint32_t>(cluster::name::kNameRegisterResponseTag): {
+                    if (!name_port_.on_register_response)
+                        break;
+                    const auto& pl = data.payload();
+                    const uint8_t* p = reinterpret_cast<const uint8_t*>(pl.data());
+                    const uint8_t* end = p + pl.size();
+
+                    uint64_t result_code = 0;
+                    bool has_result = false;
+
+                    while (p < end) {
+                        uint64_t tag_val;
+                        if (!decode_varint(p, end, tag_val))
+                            break;
+                        uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                        uint32_t fn = static_cast<uint32_t>(
+                            tag_val >> pb::kTagFieldNumberShift);
+
+                        if (fn == nd::kFieldResult && wt == pb::kVarint) {
+                            if (!decode_varint(p, end, result_code))
+                                break;
+                            has_result = true;
+                        } else {
+                            if (!skip_field_value(p, end, wt))
+                                break;
+                        }
+                    }
+
+                    if (has_result) {
+                        name_port_.on_register_response(
+                            name_port_.context, ictx.peer,
+                            static_cast<uint32_t>(result_code));
+                    }
+                    return make_result(FrameDispatchCode::ActorRejected,
+                                       WireFrame::PayloadType::Data);
+                }
+                case static_cast<uint32_t>(cluster::name::kNameResolveResponseTag): {
+                    if (!name_port_.on_resolve_response)
+                        break;
+                    const auto& pl = data.payload();
+                    const uint8_t* p = reinterpret_cast<const uint8_t*>(pl.data());
+                    const uint8_t* end = p + pl.size();
+
+                    bool found = false;
+                    uint64_t actor_id = 0;
+                    std::string_view endpoint_str;
+                    uint64_t generation = 0;
+                    bool has_found = false;
+
+                    while (p < end) {
+                        uint64_t tag_val;
+                        if (!decode_varint(p, end, tag_val))
+                            break;
+                        uint8_t wt = tag_val & pb::kTagWireTypeMask;
+                        uint32_t fn = static_cast<uint32_t>(
+                            tag_val >> pb::kTagFieldNumberShift);
+
+                        // PbNameResolveResponse: found=1, actor_id=2,
+                        // endpoint=3, generation=4
+                        if (fn == nd::kFieldFound && wt == pb::kVarint) {
+                            uint64_t v;
+                            if (!decode_varint(p, end, v))
+                                break;
+                            found = (v != 0);
+                            has_found = true;
+                        } else if (fn == nd::kFieldActorId && wt == pb::kVarint) {
+                            if (!decode_varint(p, end, actor_id))
+                                break;
+                        } else if (fn == nd::kFieldEndpoint &&
+                                   wt == pb::kLengthDelimited) {
+                            uint64_t len;
+                            if (!decode_varint(p, end, len))
+                                break;
+                            if (len > static_cast<uint64_t>(end - p))
+                                break;
+                            endpoint_str = std::string_view(
+                                reinterpret_cast<const char*>(p), len);
+                            p += len;
+                        } else if (fn == nd::kFieldGeneration && wt == pb::kVarint) {
+                            if (!decode_varint(p, end, generation))
+                                break;
+                        } else {
+                            if (!skip_field_value(p, end, wt))
+                                break;
+                        }
+                    }
+
+                    if (has_found) {
+                        name_port_.on_resolve_response(name_port_.context,
+                                                       ictx.peer, found, actor_id,
+                                                       endpoint_str, generation);
+                    }
+                    return make_result(FrameDispatchCode::ActorRejected,
+                                       WireFrame::PayloadType::Data);
+                }
+                default:
+                    break; // Unknown name-protocol tag — pass through
+                           // to ordinary delivery.
             }
         }
     }
@@ -574,7 +591,8 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
     }
 
     uint32_t flags = data.flags();
-    if (has_flag(flags, WireFrame::AckRequested)) {
+    const bool ack_requested = has_flag(flags, WireFrame::AckRequested);
+    if (ack_requested) {
         msg.set_ack_requested(true);
     }
     msg.set_message_id(data.message_id());
@@ -584,6 +602,20 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
 
     mailbox::DeliveryOptions opts{};
     auto result = messaging_.try_deliver(target, std::move(msg), 0, 0, opts);
+
+    // ── Reliable ACK/NACK emission ─────────────────────────────────────
+    // If the sender requested acknowledgement and we have an emitter port
+    // wired, emit the appropriate ACK or NACK frame.
+    if (reliable_ack_ != nullptr) {
+        auto decision = compute_ack_emission(result, ack_requested);
+
+        if (decision.should_emit) {
+            const auto& sender_addr = from_proto(data.sender());
+            (*reliable_ack_)(sender_addr, receiver_addr, data.message_id(),
+                             static_cast<uint8_t>(decision.status),
+                             decision.retry_after_ms);
+        }
+    }
 
     if (result.accepted()) {
         return make_result(FrameDispatchCode::ActorDelivered,

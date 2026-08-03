@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
@@ -83,12 +84,13 @@ class ActorProxy {
     // Send a message to this actor (fire-and-forget)
     void send(const ActorAddress& target, TypedMessage msg);
 
-    // Try-send returning a unified delivery result.
+    // Try-send returning a delivery receipt.
     // Returns Accepted if the message was handed to the transport layer,
     // or a descriptive status if delivery failed locally.
-    // The remote node's admission outcome is not known locally.
-    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
-                                     mailbox::DeliveryOptions options = {});
+    // For AtLeastOnce/DurableAtLeastOnce with retry policy, returns a
+    // tracked receipt that resolves on remote ACK/NACK.
+    msg::DeliveryReceipt try_send(const ActorAddress& target, TypedMessage msg,
+                                  mailbox::DeliveryOptions options = {});
 
     /// \brief Batch-send messages to a remote actor.
     ///

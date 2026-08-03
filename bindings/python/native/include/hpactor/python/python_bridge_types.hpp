@@ -102,12 +102,12 @@ enum class PythonCompletionKind : uint8_t {
 
 /// \brief Outcomes for a topology actor install.
 enum class TopologyActorOutcome : uint8_t {
-    Ready = 0,              ///< Constructor, behavior, and on_start() succeeded.
-    ConstructorFailed = 1,  ///< Constructor raised an exception.
-    BehaviorFailed = 2,     ///< Behavior freeze failed.
-    StartFailed = 3,        ///< on_start() raised an exception.
-    RolledBack = 4,         ///< Actor was rolled back before ready.
-    Cancelled = 5,          ///< Startup was cancelled (timeout).
+    Ready = 0,             ///< Constructor, behavior, and on_start() succeeded.
+    ConstructorFailed = 1, ///< Constructor raised an exception.
+    BehaviorFailed = 2,    ///< Behavior freeze failed.
+    StartFailed = 3,       ///< on_start() raised an exception.
+    RolledBack = 4,        ///< Actor was rolled back before ready.
+    Cancelled = 5,         ///< Startup was cancelled (timeout).
 };
 
 /// \brief Envelope dispatched to a Python-bound actor for handling.
@@ -130,9 +130,9 @@ struct PythonDispatchEnvelope final {
     // Bounded failure metadata for non-message dispatch kinds.
     PythonFailureMetadata failure;
     // ── Phase 1E topology fields ───────────────────────────────────────
-    size_t topology_index{0};      ///< Index in the topology model.
-    uint64_t factory_token{0};     ///< Token from the frozen factory manifest.
-    uint64_t args_fingerprint{0};  ///< Fingerprint of constructor args.
+    size_t topology_index{0};     ///< Index in the topology model.
+    uint64_t factory_token{0};    ///< Token from the frozen factory manifest.
+    uint64_t args_fingerprint{0}; ///< Fingerprint of constructor args.
 };
 
 /// \brief Command sent from the Python interpreter thread to the native bridge
@@ -162,6 +162,21 @@ struct PythonCommand final {
     uint32_t delivery_mode{0};
     bool no_drop{false};
     bool emit_backpressure{false};
+
+    // ── Reliable messaging (MSG-005) ───────────────────────────────────────
+    /// \brief Max delivery attempts (1 = try once, no retry). 0 means use
+    ///        system default.
+    uint8_t retry_max_attempts{0};
+    /// \brief Per-attempt timeout in milliseconds.
+    uint32_t retry_per_attempt_timeout_ms{5000};
+    /// \brief Initial backoff before first retry in milliseconds.
+    uint32_t retry_initial_backoff_ms{100};
+    /// \brief Maximum backoff ceiling in milliseconds.
+    uint32_t retry_max_backoff_ms{30000};
+    /// \brief Backoff algorithm: 0=Fixed, 1=Linear, 2=Exponential.
+    uint8_t retry_backoff{2};
+    /// \brief Whether to apply +-25% random jitter.
+    bool retry_jitter{true};
 };
 
 /// \brief Completion sent from the native bridge actor back to the Python

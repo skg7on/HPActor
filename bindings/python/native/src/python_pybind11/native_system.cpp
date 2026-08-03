@@ -233,8 +233,7 @@ int NativeSystemObject::completion_fd() const noexcept {
 // Topology (Phase 1E)
 // ═══════════════════════════════════════════════════════════════════════
 
-py::object
-NativeSystemObject::prepare_topology(const std::string& path) noexcept {
+py::object NativeSystemObject::prepare_topology(const std::string& path) noexcept {
     return guard([&]() -> py::object {
         auto result = native_->prepare_topology(path);
         if (!result.ok()) {
@@ -246,13 +245,12 @@ NativeSystemObject::prepare_topology(const std::string& path) noexcept {
         for (const auto& desc : result.value()) {
             py::tuple args_tuple(desc.args.size());
             for (size_t i = 0; i < desc.args.size(); ++i) {
-                args_tuple[i] = py::make_tuple(desc.args[i].first,
-                                                desc.args[i].second);
+                args_tuple[i] =
+                    py::make_tuple(desc.args[i].first, desc.args[i].second);
             }
             descriptors.append(py::make_tuple(
-                desc.topology_index, desc.actor_id, desc.behavior,
-                desc.module, desc.qualname, args_tuple,
-                desc.args_fingerprint));
+                desc.topology_index, desc.actor_id, desc.behavior, desc.module,
+                desc.qualname, args_tuple, desc.args_fingerprint));
         }
         return descriptors;
     });
@@ -304,8 +302,8 @@ bool NativeSystemObject::complete_topology_actor(py::dict outcome) noexcept {
         std::string detail = outcome["detail"].cast<std::string>();
 
         auto result = native_->complete_topology_actor(
-            factory_token, system_generation, actor_generation,
-            topo_outcome, error_code, detail);
+            factory_token, system_generation, actor_generation, topo_outcome,
+            error_code, detail);
         if (!result.ok()) {
             PyErr_SetString(PyExc_RuntimeError, "complete_topology_actor failed");
             throw py::error_already_set();
@@ -528,6 +526,24 @@ NativeSystemObject::dict_to_command(py::dict cmd_dict) noexcept {
             cmd.no_drop = cmd_dict["no_drop"].cast<bool>();
         if (cmd_dict.contains("emit_backpressure"))
             cmd.emit_backpressure = cmd_dict["emit_backpressure"].cast<bool>();
+
+        // ── Reliable messaging (MSG-005) ──────────────────────────────────
+        if (cmd_dict.contains("retry_max_attempts"))
+            cmd.retry_max_attempts =
+                cmd_dict["retry_max_attempts"].cast<uint8_t>();
+        if (cmd_dict.contains("retry_per_attempt_timeout_ms"))
+            cmd.retry_per_attempt_timeout_ms =
+                cmd_dict["retry_per_attempt_timeout_ms"].cast<uint32_t>();
+        if (cmd_dict.contains("retry_initial_backoff_ms"))
+            cmd.retry_initial_backoff_ms =
+                cmd_dict["retry_initial_backoff_ms"].cast<uint32_t>();
+        if (cmd_dict.contains("retry_max_backoff_ms"))
+            cmd.retry_max_backoff_ms =
+                cmd_dict["retry_max_backoff_ms"].cast<uint32_t>();
+        if (cmd_dict.contains("retry_backoff"))
+            cmd.retry_backoff = cmd_dict["retry_backoff"].cast<uint8_t>();
+        if (cmd_dict.contains("retry_jitter"))
+            cmd.retry_jitter = cmd_dict["retry_jitter"].cast<bool>();
 
         return cmd;
     } catch (const py::error_already_set&) {

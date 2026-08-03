@@ -22,6 +22,7 @@ target_sources(hpactor_lib PRIVATE
     registrar_client.cpp
     registrar_server.cpp
     reliable_ack.cpp
+    reliable_ack_emission.cpp
     static_discovery.cpp
     tcp_transport.cpp
     tls_connection.cpp

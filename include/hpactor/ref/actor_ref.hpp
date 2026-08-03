@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
@@ -162,18 +163,21 @@ class ActorRef {
     /// \param[in] msg Message to send (moved).
     void send(const ActorAddress& target, TypedMessage msg);
 
-    /// \brief Try-send returning a unified delivery result.
+    /// \brief Try-send returning a delivery receipt.
     ///
     /// For local actors, delegates to \c ActorSystem::try_deliver_local()
     /// and maps the result. For remote actors, delegates to
     /// \c ActorProxy::try_send().
     ///
+    /// For AtLeastOnce/DurableAtLeastOnce modes with an enabled retry
+    /// policy, returns a tracked receipt that resolves on remote ACK/NACK.
+    ///
     /// \param[in] target Destination address.
     /// \param[in] msg Message to send.
     /// \param[in] options Delivery options (deadline, priority, idempotency).
-    /// \return \c DeliveryResult describing the delivery outcome.
-    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
-                                     mailbox::DeliveryOptions options = {});
+    /// \return \c DeliveryReceipt wrapping the eventual delivery outcome.
+    msg::DeliveryReceipt try_send(const ActorAddress& target, TypedMessage msg,
+                                  mailbox::DeliveryOptions options = {});
 
     /// \brief Access underlying \c Actor (internal use).
     ///
