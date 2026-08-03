@@ -73,6 +73,17 @@ class DedupCache {
     /// \brief Number of insertions (non-duplicates) since creation.
     [[nodiscard]] uint64_t insertions() const noexcept;
 
+    /// \brief Roll back a prior insertion.
+    ///
+    /// Removes the entry for (source_node, source_actor, message_id) if
+    /// present. Used when a message was admitted by the dedup check but
+    /// subsequently rejected (e.g., expired or mailbox full), so that
+    /// a retry is not permanently suppressed.
+    ///
+    /// No-op if the key is not found.
+    void remove(EndPoint source_node, ActorId source_actor,
+                MessageId message_id) noexcept;
+
   private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

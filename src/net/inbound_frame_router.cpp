@@ -536,7 +536,16 @@ InboundFrameRouter::route_batch(const InboundFrameContext& /*ictx*/,
         }
 
         ActorId target = from_proto(batch.receiver()).id;
+
+        // MSG-006: Propagate message_id and delivery_mode for reliable
+        // batch entries so the receiver DedupCache is checked.
+        // Without this, retransmitted batch entries would never be
+        // deduplicated.
         mailbox::DeliveryOptions opts{};
+        if (has_flag(entry.flags(), WireFrame::AckRequested)) {
+            opts.message_id = entry.message_id();
+            opts.delivery_mode = mailbox::DeliveryMode::AtLeastOnce;
+        }
         auto result = messaging_.try_deliver(target, std::move(msg), 0, 0, opts);
         if (result.accepted()) {
             ++accepted;
@@ -605,8 +614,11 @@ InboundFrameRouter::deliver_ordinary_data(const InboundFrameContext& /*ictx*/,
     // (ack_requested) messages so that the receiver-side dedup cache
     // in the DeliveryPipeline is checked. Without this, remote
     // at-least-once messages would never be deduplicated.
+    // Guard against zero message_id with AckRequested set (buggy or
+    // malicious sender) — check_duplicate short-circuits on
+    // message_id==0 so setting AtLeastOnce would be pointless.
     mailbox::DeliveryOptions opts{};
-    if (ack_requested) {
+    if (ack_requested && data.message_id() != 0) {
         opts.message_id = data.message_id();
         opts.delivery_mode = mailbox::DeliveryMode::AtLeastOnce;
     }

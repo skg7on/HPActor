@@ -147,4 +147,11 @@ uint64_t DedupCache::insertions() const noexcept {
     return impl_->inserts;
 }
 
+void DedupCache::remove(EndPoint source_node, ActorId source_actor,
+                        MessageId message_id) noexcept {
+    DedupKey key{source_node, source_actor, message_id.value()};
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    impl_->entries.erase(key);
+}
+
 } // namespace hpactor::adt

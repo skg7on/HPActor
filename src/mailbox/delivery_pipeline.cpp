@@ -477,12 +477,24 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
     deadline_ns = apply_default_ttl(deadline_ns);
     msg.set_deadline_ns(deadline_ns);
 
-    if (auto dup = check_duplicate(target, msg, options)) {
-        return *dup;
-    }
-
+    // MSG-006: Check expiration BEFORE dedup so that expired messages
+    // don't permanently consume a dedup slot (is_duplicate is check-and-set).
+    // If we dedup first and then fail expiration, the committed entry
+    // would suppress legitimate retries for the TTL duration.
     if (auto expired = check_expired(target, msg, options, priority, deadline_ns)) {
         return *expired;
+    }
+
+    bool dedup_inserted = false;
+    if (!is_tracked_delivery(options.delivery_mode) || !config_.dedup_cache ||
+        options.message_id == 0) {
+        // No dedup check needed.
+    } else {
+        dedup_inserted = true; // check_duplicate inserts if not a dup
+        if (auto dup = check_duplicate(target, msg, options)) {
+            dedup_inserted = false; // was a dup, not a new insertion
+            return *dup;
+        }
     }
 
     MailboxEnvelopeMeta meta;
@@ -517,6 +529,15 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
         // ACK/NACK emission for rejected enqueue is handled by the caller
         // (deliver_ordinary_data in InboundFrameRouter for remote frames;
         // local frames resolve the DeliveryReceipt immediately).
+
+        // MSG-006: Roll back the dedup entry if we inserted one before
+        // enqueue failed. Otherwise the committed entry would permanently
+        // suppress retries of this message for the TTL duration.
+        if (dedup_inserted && config_.dedup_cache) {
+            config_.dedup_cache->remove(msg.sender_address().endpoint,
+                                        msg.sender_address().id,
+                                        MessageId{options.message_id});
+        }
 
         emit_rejection_observability(target, msg_payload, msg_trace,
                                      msg_has_trace, meta, result, options,
