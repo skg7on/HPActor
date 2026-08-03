@@ -19,24 +19,23 @@
 // A full-featured demo app that exercises EVERY CLI command in the HPActor
 // interactive CLI by creating actors configured with production features:
 //
-//   11 actors across 9 types:
-//     - 4 x WorkerActor        — periodic task processing (every 100ms)
-//     - 1 x AggregatorActor    — collects results, running stats
-//     - 1 x HealthCheckActor   — pings workers (every 500ms)
-//     - 1 x BroadcastActor     — config broadcasts (every 1s)
-//     - 1 x ClockActor         — logical clock, time queries
-//     - 1 x LogActor           — ring-buffer event log
+//   10 actors across 8 types:
+//     - 4 x WorkerActor       — periodic task processing (every 100ms)
+//     - 1 x AggregatorActor   — collects results, running stats
+//     - 1 x HealthCheckActor  — pings workers (every 500ms)
+//     - 1 x BroadcastActor    — config broadcasts (every 1s)
+//     - 1 x ClockActor        — logical clock, time queries
+//     - 1 x LogActor          — ring-buffer event log
 //     - 1 x SystemMonitorActor — system-wide stats (every 2s)
-//     - 1 x DlqDemoActor       — generates DLQ records (every 3s)
-//     - 1 x MailboxLoadActor   — mailbox pressure demo (MBX-007)
+//     - 1 x DlqDemoActor      — generates DLQ records (every 3s)
 //
 //   Production features demonstrated per-actor:
 //     Worker-1: rate_limiter=100msg/s
 //     Worker-2: rate_limiter=500msg/s
 //     Worker-3: circuit_breaker + quarantine enabled
 //     Worker-4: delivery failure generation + quarantine enabled
-//     MailboxLoadActor: bounded mailbox (64 msg), pressure cycles (MBX-007)
 //     DlqDemoActor: DLQ record generation + circuit breaker
+//     All: bounded mailboxes (256 msg) — /actor <id> show, /metrics show
 //
 //   CLI commands exercised (all produce meaningful output):
 //     /actor <id> show       — metadata, mailbox, state for any actor
@@ -71,20 +70,10 @@
 //     /ask pending           — list in-flight ask requests
 //     /ask cancel            — cancel an ask request
 //     /ask stats             — ask manager statistics
-//     /metrics show          — metrics snapshot (incl. hpactor_mailbox_*)
+//     /metrics show          — metrics snapshot (hpactor_mailbox_* gauges)
 //     /topology show         — topology tree
 //     /help                  — show available commands
 //     /quit                  — exit CLI and trigger graceful shutdown
-//
-//   Mailbox observability (MBX-007) demonstrated:
-//     /actor <id> show       — full MboxSnapshot per-actor (depth, capacity,
-//                              pressure, drop/reject counts, per-lane depths)
-//     /metrics show          — hpactor_mailbox_capacity, _pressure_state,
-//                              _pressure_ratio, _queued_bytes, _max_depth,
-//                              _system_lane_depth, _depth, _rejected_total,
-//                              _dropped_total, _dead_letters_total
-//     MailboxLoadActor       — cycles through Burst/Drain/Steady modes to
-//                              exercise pressure state transitions
 //
 // =============================================================================
 
@@ -94,7 +83,6 @@
 #include "actors/dlq_demo_actor.hpp"
 #include "actors/health_check_actor.hpp"
 #include "actors/log_actor.hpp"
-#include "actors/mailbox_load_actor.hpp"
 #include "actors/query_actor.hpp"
 #include "actors/system_monitor_actor.hpp"
 #include "actors/worker_actor.hpp"
@@ -135,7 +123,7 @@ static void print_splash() {
         << "╠══════════════════════════════════════════════════════════════╣\n"
         << "║                                                              ║\n"
         << "║  Architecture:                                               ║\n"
-        << "║    11 actors across 9 types                                  ║\n"
+        << "║    10 actors across 8 types                                  ║\n"
         << "║    4 scheduler threads with A2WS work-stealing               ║\n"
         << "║                                                              ║\n"
         << "║  Production Features Enabled:                                ║\n"
@@ -145,18 +133,16 @@ static void print_splash() {
         << "║    • DLQ record generation (DlqDemoActor)                    ║\n"
         << "║    • Fault injection hooks (80 sites across 14 domains)      ║\n"
         << "║    • Bounded mailboxes (256 msg, DeadLetter overflow)        ║\n"
-        << "║    • Mailbox pressure demo — Burst/Drain/Steady cycles       ║\n"
-        << "║      (MailboxLoadActor: 64 msg capacity, Reject overflow)    ║\n"
         << "║    • Graceful shutdown (30s drain timeout)                   ║\n"
         << "║                                                              ║\n"
         << "║  Try these CLI commands:                                     ║\n"
         << "║    /help                — see all available commands         ║\n"
-        << "║    /actor list          — list all 11 actors                 ║\n"
-        << "║    /actor <id> show     — inspect any actor (mailbox, state) ║\n"
+        << "║    /actor list          — list all 10 actors                 ║\n"
+        << "║    /actor <id> show     — inspect any actor                  ║\n"
         << "║    /actor <id> circuit  — circuit breaker (Worker-3, DLQ)    ║\n"
         << "║    /actor <id> rate     — rate limiter (Worker-1, Worker-2)  ║\n"
         << "║    /actor <id> delivery — delivery counters (Worker-4)       ║\n"
-        << "║    /metrics show        — Prometheus gauges + mailbox obs    ║\n"
+        << "║    /metrics show        — Prometheus metrics + mailbox obs   ║\n"
         << "║    /dlq list            — dead-letter queue records          ║\n"
         << "║    /fault status        — fault injection system status      ║\n"
         << "║    /failure reasons     — canonical failure reasons          ║\n"
@@ -164,12 +150,6 @@ static void print_splash() {
         << "║    /system uptime       — actor system uptime                ║\n"
         << "║    /scheduler workers   — threads & idle model (polling/CV)  ║\n"
         << "║    /quit                — graceful shutdown                  ║\n"
-        << "║                                                              ║\n"
-        << "║  Mailbox Observation (MBX-007):                               ║\n"
-        << "║    Watch MailboxLoadActor cycle through pressure states.      ║\n"
-        << "║    Run '/metrics show' to see hpactor_mailbox_* gauges.       ║\n"
-        << "║    Run '/actor <id> show' on the MailboxLoadActor for a       ║\n"
-        << "║    full MboxSnapshot (depth, pressure, per-lane, overflow).   ║\n"
         << "║                                                              ║\n"
         << "╚══════════════════════════════════════════════════════════════╝\n"
         << std::endl;
@@ -221,14 +201,6 @@ int main() {
     auto broadcast = system.spawn<cli_demo::BroadcastActor>();
     auto dlq_demo = system.spawn<cli_demo::DlqDemoActor>();
     auto query_actor = system.spawn<cli_demo::QueryActor>();
-
-    // ── Spawn MailboxLoadActor (MBX-007 pressure demo) ──────────────────
-    //
-    // Uses a small 64-message bounded mailbox with RejectNewest overflow so
-    // pressure transitions happen quickly. The actor cycles through:
-    //   Burst → Drain → Steady → (repeat)
-    // Visible via: /actor <id> show, /metrics show
-    auto mailbox_load = system.spawn<cli_demo::MailboxLoadActor>();
 
     // ── Spawn 4 workers with different configurations ────────────────────
 
@@ -336,7 +308,6 @@ int main() {
     send_to_actor(system, clock.id(), cli_demo::PeriodicTickTag);
     send_to_actor(system, dlq_demo.id(), cli_demo::StartTag);
     send_to_actor(system, query_actor.id(), cli_demo::StartTag);
-    send_to_actor(system, mailbox_load.id(), cli_demo::StartTag);
 
     // Let the actors initialize before the user starts typing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
