@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">16.7&nbsp;%</td>
@@ -96,10 +96,10 @@
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor::metrics {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">         803 : MetricsActor::MetricsActor(ActorContext* ctx, ActorSystem&amp; system,</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">         803 :                            std::shared_ptr&lt;MpscRingBuffer&lt;MetricEvent&gt;&gt; ring_buffer)</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         803 :     : EventBasedActor(ctx, system), ring_buffer_(std::move(ring_buffer)),</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        1606 :       aggregator_(registry_, system) {}</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">         840 : MetricsActor::MetricsActor(ActorContext* ctx, ActorSystem&amp; system,</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">         840 :                            std::shared_ptr&lt;MpscRingBuffer&lt;MetricEvent&gt;&gt; ring_buffer)</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         840 :     : EventBasedActor(ctx, system), ring_buffer_(std::move(ring_buffer)),</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">        1680 :       aggregator_(registry_, system) {}</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : </span>
 <span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC tlaBgUNC">           0 : std::string MetricsActor::format_snapshot() {</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 :     aggregator_.begin_drain();</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
@@ -128,8 +128,8 @@
 <span id="L50"><span class="lineNum">      50</span>                 :             :     /// \brief Check whether this port holds a valid callback.</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     ///</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     /// \return true if both \ref context and \ref complete are non-null.</span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC tlaBgGNC">          40 :     [[nodiscard]] explicit operator bool() const noexcept {</span></span>
-<span id="L54"><span class="lineNum">      54</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 36 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          40 :         return context != nullptr &amp;&amp; complete != nullptr;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC tlaBgGNC">          48 :     [[nodiscard]] explicit operator bool() const noexcept {</span></span>
+<span id="L54"><span class="lineNum">      54</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          48 :         return context != nullptr &amp;&amp; complete != nullptr;</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     }</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     /// \brief Invoke the completion callback with a value.</span>

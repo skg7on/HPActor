@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">88.7&nbsp;%</td>
-            <td class="headerCovTableEntry">345</td>
-            <td class="headerCovTableEntry">306</td>
+            <td class="headerCovTableEntryHi">90.7&nbsp;%</td>
+            <td class="headerCovTableEntry">332</td>
+            <td class="headerCovTableEntry">301</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">94.1&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">68.8&nbsp;%</td>
-            <td class="headerCovTableEntry">176</td>
-            <td class="headerCovTableEntry">121</td>
+            <td class="headerCovTableEntryLo">72.0&nbsp;%</td>
+            <td class="headerCovTableEntry">164</td>
+            <td class="headerCovTableEntry">118</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -126,11 +126,11 @@
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           2 :            mode == BackpressureMode::LocalAndRemoteSignal;</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      132791 : bool pressure_result_should_signal(const EnqueueResult&amp; result) noexcept {</span></span>
-<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 18027 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 114764 times"> + </span>]:<span class="tlaGNC">      132791 :     if (result.code == EnqueueResultCode::AcceptedWithSoftPressure) {</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">      132788 : bool pressure_result_should_signal(const EnqueueResult&amp; result) noexcept {</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 18027 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 114761 times"> + </span>]:<span class="tlaGNC">      132788 :     if (result.code == EnqueueResultCode::AcceptedWithSoftPressure) {</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">       18027 :         return true;</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     }</span>
-<span id="L55"><span class="lineNum">      55</span>   [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 114733 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 25 times"> + </span>]:<span class="tlaGNC">      114764 :     return !result.accepted() &amp;&amp; result.retryable();</span></span>
+<span id="L55"><span class="lineNum">      55</span>   [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 114730 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 25 times"> + </span>]:<span class="tlaGNC">      114761 :     return !result.accepted() &amp;&amp; result.retryable();</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : }</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : } // namespace</span>
@@ -161,10 +161,10 @@
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : // ── Construction ───────────────────────────────────────────────────────────</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             : </span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC tlaBgGNC">         826 : DeliveryPipeline::DeliveryPipeline(Config config)</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">         826 :     : config_(std::move(config)) {}</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC tlaBgGNC">         863 : DeliveryPipeline::DeliveryPipeline(Config config)</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">         863 :     : config_(std::move(config)) {}</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : </span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         826 : DeliveryPipeline::~DeliveryPipeline() = default;</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         863 : DeliveryPipeline::~DeliveryPipeline() = default;</span></span>
 <span id="L89"><span class="lineNum">      89</span>                 :             : </span>
 <span id="L90"><span class="lineNum">      90</span>                 :             : // ── Pipeline stage: missing actor ──────────────────────────────────────────</span>
 <span id="L91"><span class="lineNum">      91</span>                 :             : </span>
@@ -247,22 +247,22 @@
 <span id="L168"><span class="lineNum">     168</span>                 :             : // ── Pipeline stage: circuit breaker admission gate ─────────────────────────</span>
 <span id="L169"><span class="lineNum">     169</span>                 :             : </span>
 <span id="L170"><span class="lineNum">     170</span>                 :             : std::optional&lt;EnqueueResult&gt;</span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">      132805 : DeliveryPipeline::check_circuit_breaker(ActorId target, const TypedMessage&amp; msg,</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">      132802 : DeliveryPipeline::check_circuit_breaker(ActorId target, const TypedMessage&amp; msg,</span></span>
 <span id="L172"><span class="lineNum">     172</span>                 :             :                                         const DeliveryOptions&amp; options,</span>
 <span id="L173"><span class="lineNum">     173</span>                 :             :                                         uint8_t priority, int64_t deadline_ns) {</span>
-<span id="L174"><span class="lineNum">     174</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 132805 times"> + </span>]:<span class="tlaGNC">      132805 :     if (!config_.actors) {</span></span>
+<span id="L174"><span class="lineNum">     174</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 132802 times"> + </span>]:<span class="tlaGNC">      132802 :     if (!config_.actors) {</span></span>
 <span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return std::nullopt;</span></span>
 <span id="L176"><span class="lineNum">     176</span>                 :             :     }</span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC tlaBgGNC">      132805 :     auto entry = config_.actors-&gt;find(target);</span></span>
-<span id="L178"><span class="lineNum">     178</span>         [<span class="tlaGBC" title="Branch 0 was taken 132805 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      132805 :     auto actor_ptr = entry.has_value() ? entry-&gt;instance : nullptr;</span></span>
-<span id="L179"><span class="lineNum">     179</span>   [<span class="tlaGBC" title="Branch 0 was taken 132805 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 132804 times"> + </span> :<span class="tlaGNC">      132805 :     if (!actor_ptr || !actor_ptr-&gt;is_event_based_actor()) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 132804 times"> + </span>]
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC tlaBgGNC">      132802 :     auto entry = config_.actors-&gt;find(target);</span></span>
+<span id="L178"><span class="lineNum">     178</span>         [<span class="tlaGBC" title="Branch 0 was taken 132802 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      132802 :     auto actor_ptr = entry.has_value() ? entry-&gt;instance : nullptr;</span></span>
+<span id="L179"><span class="lineNum">     179</span>   [<span class="tlaGBC" title="Branch 0 was taken 132802 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 132801 times"> + </span> :<span class="tlaGNC">      132802 :     if (!actor_ptr || !actor_ptr-&gt;is_event_based_actor()) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 132801 times"> + </span>]
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           1 :         return std::nullopt;</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :             :     }</span>
 <span id="L182"><span class="lineNum">     182</span>                 :             : </span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">      132804 :     auto* eba = static_cast&lt;EventBasedActor*&gt;(actor_ptr.get());</span></span>
-<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaGBC" title="Branch 0 was taken 132753 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 51 times"> + </span>]:<span class="tlaGNC">      132804 :     if (!eba-&gt;quarantine_enabled()) {</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">      132753 :         return std::nullopt;</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">      132801 :     auto* eba = static_cast&lt;EventBasedActor*&gt;(actor_ptr.get());</span></span>
+<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaGBC" title="Branch 0 was taken 132750 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 51 times"> + </span>]:<span class="tlaGNC">      132801 :     if (!eba-&gt;quarantine_enabled()) {</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">      132750 :         return std::nullopt;</span></span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :     }</span>
 <span id="L187"><span class="lineNum">     187</span>                 :             : </span>
 <span id="L188"><span class="lineNum">     188</span>                 :             :     // System messages (tag &lt; TypeTag::User) bypass the circuit breaker so</span>
@@ -307,14 +307,14 @@
 <span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">           1 :         cb-&gt;half_open_probe_in_flight = true;</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :             :     }</span>
 <span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">          35 :     return std::nullopt;</span></span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">      132805 : }</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">      132802 : }</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :             : </span>
 <span id="L232"><span class="lineNum">     232</span>                 :             : // ── Pipeline stage: default TTL application ────────────────────────────────</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
-<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">      132796 : int64_t DeliveryPipeline::apply_default_ttl(int64_t deadline_ns) const noexcept {</span></span>
-<span id="L235"><span class="lineNum">     235</span>   [<span class="tlaGBC" title="Branch 0 was taken 132789 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 132788 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">      132796 :     if (deadline_ns != INT64_MAX || config_.default_message_ttl_ms.count() == 0) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 132795 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span>]
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">      132795 :         return deadline_ns;</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">      132793 : int64_t DeliveryPipeline::apply_default_ttl(int64_t deadline_ns) const noexcept {</span></span>
+<span id="L235"><span class="lineNum">     235</span>   [<span class="tlaGBC" title="Branch 0 was taken 132786 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 132785 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">      132793 :     if (deadline_ns != INT64_MAX || config_.default_message_ttl_ms.count() == 0) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 132792 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span>]
+<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">      132792 :         return deadline_ns;</span></span>
 <span id="L237"><span class="lineNum">     237</span>                 :             :     }</span>
 <span id="L238"><span class="lineNum">     238</span>                 :             :     uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
 <span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">           1 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
@@ -331,335 +331,315 @@
 <span id="L250"><span class="lineNum">     250</span>                 :             : // ── Pipeline stage: duplicate detection ────────────────────────────────────</span>
 <span id="L251"><span class="lineNum">     251</span>                 :             : </span>
 <span id="L252"><span class="lineNum">     252</span>                 :             : std::optional&lt;EnqueueResult&gt;</span>
-<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">      132796 : DeliveryPipeline::check_duplicate(ActorId target, const TypedMessage&amp; msg,</span></span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">      132793 : DeliveryPipeline::check_duplicate(ActorId target, const TypedMessage&amp; msg,</span></span>
 <span id="L254"><span class="lineNum">     254</span>                 :             :                                   const DeliveryOptions&amp; options) {</span>
-<span id="L255"><span class="lineNum">     255</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132791 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      132801 :     if (!is_tracked_delivery(options.delivery_mode) || !config_.dedup_cache ||</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 132793 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 3 times"> + </span>]
-<span id="L256"><span class="lineNum">     256</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           5 :         options.message_id == 0) {</span></span>
-<span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC">      132793 :         return std::nullopt;</span></span>
+<span id="L255"><span class="lineNum">     255</span>   [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132784 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 9 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      132802 :     if (!is_tracked_delivery(options.delivery_mode) || !config_.dedup_cache ||</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 132789 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span>]
+<span id="L256"><span class="lineNum">     256</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           9 :         options.message_id == 0) {</span></span>
+<span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC">      132789 :         return std::nullopt;</span></span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :     }</span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">           3 :     ActorId sender_id = msg.sender_address().id;</span></span>
-<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :     if (!config_.dedup_cache-&gt;is_duplicate(config_.endpoint, sender_id,</span></span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">           3 :                                            MessageId{options.message_id})) {</span></span>
-<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaGNC">           2 :         return std::nullopt;</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">           4 :     ActorId sender_id = msg.sender_address().id;</span></span>
+<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           4 :     if (!config_.dedup_cache-&gt;is_duplicate(config_.endpoint, sender_id,</span></span>
+<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">           4 :                                            MessageId{options.message_id})) {</span></span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaGNC">           3 :         return std::nullopt;</span></span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :     }</span>
-<span id="L264"><span class="lineNum">     264</span>                 :             :     // ── Auto-ACK: duplicate detected → emit ACK(Duplicate) ──</span>
-<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           1 :     if (msg.ack_requested() &amp;&amp; config_.reliable_ack) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span>]
-<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         ActorAddress acker{config_.endpoint, ActorType{0}, ActorId{0}, 0};</span></span>
-<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaUNC">           0 :         (*config_.reliable_ack)(msg.sender_address(), acker, msg.message_id(),</span></span>
-<span id="L268"><span class="lineNum">     268</span>                 :             :                                 static_cast&lt;uint8_t&gt;(2), // AckStatus::Duplicate</span>
-<span id="L269"><span class="lineNum">     269</span>                 :             :                                 0);</span>
-<span id="L270"><span class="lineNum">     270</span>                 :             :     }</span>
-<span id="L271"><span class="lineNum">     271</span>                 :             : </span>
-<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">           1 :     if (config_.metrics) {</span></span>
-<span id="L273"><span class="lineNum">     273</span>                 :             :         uint64_t ts_ns = static_cast&lt;uint64_t&gt;(</span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">           1 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">           1 :                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">           1 :                 .count());</span></span>
-<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">           1 :         metrics::MetricEvent evt{};</span></span>
-<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaGNC">           1 :         evt.timestamp_ns = ts_ns;</span></span>
-<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaGNC">           1 :         evt.actor_id = target;</span></span>
-<span id="L280"><span class="lineNum">     280</span>                 :<span class="tlaGNC">           1 :         evt.event_type = metrics::MetricEventType::kDeliveryDuplicate;</span></span>
-<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">           1 :         evt.code = static_cast&lt;uint8_t&gt;(FailureReason::Duplicate);</span></span>
-<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">           1 :         evt.value_hi = 1;</span></span>
-<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">           1 :         config_.metrics-&gt;try_push(evt);</span></span>
-<span id="L284"><span class="lineNum">     284</span>                 :             :     }</span>
-<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaGNC">           1 :     return EnqueueResult{EnqueueResultCode::Accepted, target};</span></span>
-<span id="L286"><span class="lineNum">     286</span>                 :             : }</span>
-<span id="L287"><span class="lineNum">     287</span>                 :             : </span>
-<span id="L288"><span class="lineNum">     288</span>                 :             : // ── Pipeline stage: deadline expiration check ──────────────────────────────</span>
-<span id="L289"><span class="lineNum">     289</span>                 :             : </span>
-<span id="L290"><span class="lineNum">     290</span>                 :             : std::optional&lt;EnqueueResult&gt;</span>
-<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">      132795 : DeliveryPipeline::check_expired(ActorId target, const TypedMessage&amp; msg,</span></span>
-<span id="L292"><span class="lineNum">     292</span>                 :             :                                 const DeliveryOptions&amp; options,</span>
-<span id="L293"><span class="lineNum">     293</span>                 :             :                                 uint8_t priority, int64_t deadline_ns) {</span>
-<span id="L294"><span class="lineNum">     294</span>                 :             :     uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
-<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">      132795 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">      132795 :             std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">      132795 :             .count());</span></span>
-<span id="L298"><span class="lineNum">     298</span>         [<span class="tlaGBC" title="Branch 0 was taken 132792 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">      132795 :     if (!is_expired(deadline_ns, now_ns)) {</span></span>
-<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaGNC">      132792 :         return std::nullopt;</span></span>
-<span id="L300"><span class="lineNum">     300</span>                 :             :     }</span>
-<span id="L301"><span class="lineNum">     301</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (config_.metrics) {</span></span>
-<span id="L302"><span class="lineNum">     302</span>                 :<span class="tlaGNC">           6 :         FailureEnvelope env = make_failure_envelope(</span></span>
-<span id="L303"><span class="lineNum">     303</span>                 :             :             FailureReason::Expired, target, msg.sender_address(),</span>
-<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">           3 :             ActorAddress{config_.endpoint, ActorType{0}, target, 0},</span></span>
-<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">           3 :             MessageId{options.message_id}, msg.trace_context(),</span></span>
-<span id="L306"><span class="lineNum">     306</span>                 :             :             FailureSource::ActorRuntime, &quot;message deadline expired before enqueue&quot;);</span>
-<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">           3 :         metrics::MetricEvent evt{};</span></span>
-<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaGNC">           3 :         evt.timestamp_ns = env.timestamp_ns;</span></span>
-<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaGNC">           3 :         evt.actor_id = target;</span></span>
-<span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">           3 :         evt.event_type = metrics::MetricEventType::kDeliveryExpired;</span></span>
-<span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaGNC">           3 :         evt.code = static_cast&lt;uint8_t&gt;(FailureReason::Expired);</span></span>
-<span id="L312"><span class="lineNum">     312</span>                 :<span class="tlaGNC">           3 :         evt.value_hi = 1;</span></span>
-<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">           3 :         config_.metrics-&gt;try_push(evt);</span></span>
-<span id="L314"><span class="lineNum">     314</span>                 :             :     }</span>
-<span id="L315"><span class="lineNum">     315</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (should_dead_letter(config_.dlq, options.delivery_mode)) {</span></span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">           3 :         DeadLetterRecord dl;</span></span>
-<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">           3 :         dl.reason = DeadLetterReason::Expired;</span></span>
-<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">           3 :         dl.source = DeadLetterSource::LocalDelivery;</span></span>
-<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">           3 :         dl.sender = msg.sender_address();</span></span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">           3 :         dl.target = ActorAddress{config_.endpoint, ActorType{0}, target, 0};</span></span>
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">           3 :         dl.type_tag = msg.type_id();</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">           3 :         dl.message_id = options.message_id;</span></span>
-<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaGNC">           3 :         dl.frame_flags = options.flags;</span></span>
-<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">           3 :         dl.priority = priority;</span></span>
-<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC">           3 :         dl.deadline_ns = deadline_ns;</span></span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">           3 :         dl.payload_sample = msg.payload();</span></span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">           3 :         dl.timestamp_ns = now_ns;</span></span>
-<span id="L328"><span class="lineNum">     328</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :         if (msg.has_trace_context()) {</span></span>
-<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             set_dlq_trace_fields(dl, msg.trace_context());</span></span>
-<span id="L330"><span class="lineNum">     330</span>                 :             :         }</span>
-<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaGNC tlaBgGNC">           3 :         (void)config_.dlq-&gt;try_push(std::move(dl));</span></span>
-<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">           3 :     }</span></span>
-<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">           3 :     return EnqueueResult{EnqueueResultCode::Rejected, target};</span></span>
-<span id="L334"><span class="lineNum">     334</span>                 :             : }</span>
-<span id="L335"><span class="lineNum">     335</span>                 :             : </span>
-<span id="L336"><span class="lineNum">     336</span>                 :             : // ── Pipeline stage: rejection observability ────────────────────────────────</span>
-<span id="L337"><span class="lineNum">     337</span>                 :             : </span>
-<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">          31 : void DeliveryPipeline::emit_rejection_observability(</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :             :     ActorId target, const StreamBuffer&amp; msg_payload,</span>
-<span id="L340"><span class="lineNum">     340</span>                 :             :     const TraceContext&amp; msg_trace, bool msg_has_trace,</span>
-<span id="L341"><span class="lineNum">     341</span>                 :             :     const MailboxEnvelopeMeta&amp; meta, const EnqueueResult&amp; result,</span>
-<span id="L342"><span class="lineNum">     342</span>                 :             :     const DeliveryOptions&amp; options, OverflowPolicy overflow_policy) {</span>
-<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span>]:<span class="tlaGNC">          31 :     if (result.accepted()) {</span></span>
-<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L345"><span class="lineNum">     345</span>                 :             :     }</span>
-<span id="L346"><span class="lineNum">     346</span>                 :             : </span>
-<span id="L347"><span class="lineNum">     347</span>   [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 6 times"> + </span> :<span class="tlaGNC tlaBgGNC">          31 :     if (should_dead_letter(config_.dlq, options.delivery_mode) &amp;&amp;</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :             :     // ACK/NACK emission for duplicates is handled by the caller</span>
+<span id="L265"><span class="lineNum">     265</span>                 :             :     // (deliver_ordinary_data in InboundFrameRouter for remote frames;</span>
+<span id="L266"><span class="lineNum">     266</span>                 :             :     // local frames resolve the DeliveryReceipt immediately).</span>
+<span id="L267"><span class="lineNum">     267</span>                 :             : </span>
+<span id="L268"><span class="lineNum">     268</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (config_.metrics) {</span></span>
+<span id="L269"><span class="lineNum">     269</span>                 :             :         uint64_t ts_ns = static_cast&lt;uint64_t&gt;(</span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">           1 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">           1 :                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">           1 :                 .count());</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">           1 :         metrics::MetricEvent evt{};</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">           1 :         evt.timestamp_ns = ts_ns;</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">           1 :         evt.actor_id = target;</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">           1 :         evt.event_type = metrics::MetricEventType::kDeliveryDuplicate;</span></span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">           1 :         evt.code = static_cast&lt;uint8_t&gt;(FailureReason::Duplicate);</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaGNC">           1 :         evt.value_hi = 1;</span></span>
+<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaGNC">           1 :         config_.metrics-&gt;try_push(evt);</span></span>
+<span id="L280"><span class="lineNum">     280</span>                 :             :     }</span>
+<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">           1 :     return EnqueueResult{EnqueueResultCode::Accepted, target};</span></span>
+<span id="L282"><span class="lineNum">     282</span>                 :             : }</span>
+<span id="L283"><span class="lineNum">     283</span>                 :             : </span>
+<span id="L284"><span class="lineNum">     284</span>                 :             : // ── Pipeline stage: deadline expiration check ──────────────────────────────</span>
+<span id="L285"><span class="lineNum">     285</span>                 :             : </span>
+<span id="L286"><span class="lineNum">     286</span>                 :             : std::optional&lt;EnqueueResult&gt;</span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">      132792 : DeliveryPipeline::check_expired(ActorId target, const TypedMessage&amp; msg,</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :             :                                 const DeliveryOptions&amp; options,</span>
+<span id="L289"><span class="lineNum">     289</span>                 :             :                                 uint8_t priority, int64_t deadline_ns) {</span>
+<span id="L290"><span class="lineNum">     290</span>                 :             :     uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">      132792 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">      132792 :             std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">      132792 :             .count());</span></span>
+<span id="L294"><span class="lineNum">     294</span>         [<span class="tlaGBC" title="Branch 0 was taken 132789 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">      132792 :     if (!is_expired(deadline_ns, now_ns)) {</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">      132789 :         return std::nullopt;</span></span>
+<span id="L296"><span class="lineNum">     296</span>                 :             :     }</span>
+<span id="L297"><span class="lineNum">     297</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (config_.metrics) {</span></span>
+<span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">           6 :         FailureEnvelope env = make_failure_envelope(</span></span>
+<span id="L299"><span class="lineNum">     299</span>                 :             :             FailureReason::Expired, target, msg.sender_address(),</span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">           3 :             ActorAddress{config_.endpoint, ActorType{0}, target, 0},</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">           3 :             MessageId{options.message_id}, msg.trace_context(),</span></span>
+<span id="L302"><span class="lineNum">     302</span>                 :             :             FailureSource::ActorRuntime, &quot;message deadline expired before enqueue&quot;);</span>
+<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">           3 :         metrics::MetricEvent evt{};</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">           3 :         evt.timestamp_ns = env.timestamp_ns;</span></span>
+<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">           3 :         evt.actor_id = target;</span></span>
+<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">           3 :         evt.event_type = metrics::MetricEventType::kDeliveryExpired;</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">           3 :         evt.code = static_cast&lt;uint8_t&gt;(FailureReason::Expired);</span></span>
+<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaGNC">           3 :         evt.value_hi = 1;</span></span>
+<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaGNC">           3 :         config_.metrics-&gt;try_push(evt);</span></span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :     }</span>
+<span id="L311"><span class="lineNum">     311</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (should_dead_letter(config_.dlq, options.delivery_mode)) {</span></span>
+<span id="L312"><span class="lineNum">     312</span>                 :<span class="tlaGNC">           3 :         DeadLetterRecord dl;</span></span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">           3 :         dl.reason = DeadLetterReason::Expired;</span></span>
+<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaGNC">           3 :         dl.source = DeadLetterSource::LocalDelivery;</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">           3 :         dl.sender = msg.sender_address();</span></span>
+<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">           3 :         dl.target = ActorAddress{config_.endpoint, ActorType{0}, target, 0};</span></span>
+<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">           3 :         dl.type_tag = msg.type_id();</span></span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">           3 :         dl.message_id = options.message_id;</span></span>
+<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">           3 :         dl.frame_flags = options.flags;</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">           3 :         dl.priority = priority;</span></span>
+<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">           3 :         dl.deadline_ns = deadline_ns;</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">           3 :         dl.payload_sample = msg.payload();</span></span>
+<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaGNC">           3 :         dl.timestamp_ns = now_ns;</span></span>
+<span id="L324"><span class="lineNum">     324</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :         if (msg.has_trace_context()) {</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             set_dlq_trace_fields(dl, msg.trace_context());</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :             :         }</span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC tlaBgGNC">           3 :         (void)config_.dlq-&gt;try_push(std::move(dl));</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">           3 :     }</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">           3 :     return EnqueueResult{EnqueueResultCode::Rejected, target};</span></span>
+<span id="L330"><span class="lineNum">     330</span>                 :             : }</span>
+<span id="L331"><span class="lineNum">     331</span>                 :             : </span>
+<span id="L332"><span class="lineNum">     332</span>                 :             : // ── Pipeline stage: rejection observability ────────────────────────────────</span>
+<span id="L333"><span class="lineNum">     333</span>                 :             : </span>
+<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">          31 : void DeliveryPipeline::emit_rejection_observability(</span></span>
+<span id="L335"><span class="lineNum">     335</span>                 :             :     ActorId target, const StreamBuffer&amp; msg_payload,</span>
+<span id="L336"><span class="lineNum">     336</span>                 :             :     const TraceContext&amp; msg_trace, bool msg_has_trace,</span>
+<span id="L337"><span class="lineNum">     337</span>                 :             :     const MailboxEnvelopeMeta&amp; meta, const EnqueueResult&amp; result,</span>
+<span id="L338"><span class="lineNum">     338</span>                 :             :     const DeliveryOptions&amp; options, OverflowPolicy overflow_policy) {</span>
+<span id="L339"><span class="lineNum">     339</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span>]:<span class="tlaGNC">          31 :     if (result.accepted()) {</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L341"><span class="lineNum">     341</span>                 :             :     }</span>
+<span id="L342"><span class="lineNum">     342</span>                 :             : </span>
+<span id="L343"><span class="lineNum">     343</span>   [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 6 times"> + </span> :<span class="tlaGNC tlaBgGNC">          31 :     if (should_dead_letter(config_.dlq, options.delivery_mode) &amp;&amp;</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
-<span id="L348"><span class="lineNum">     348</span>                 :             :         overflow_policy == OverflowPolicy::DeadLetter) {</span>
-<span id="L349"><span class="lineNum">     349</span>                 :<span class="tlaGNC">          25 :         DeadLetterRecord dl;</span></span>
-<span id="L350"><span class="lineNum">     350</span>                 :<span class="tlaGNC">          25 :         dl.reason = DeadLetterReason::OverflowPolicy;</span></span>
-<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">          25 :         dl.source = DeadLetterSource::MailboxAdmission;</span></span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">          25 :         dl.sender = meta.sender;</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">          25 :         dl.target = ActorAddress{config_.endpoint, ActorType{0}, target, 0};</span></span>
-<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">          25 :         dl.type_tag = meta.type_tag;</span></span>
-<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">          25 :         dl.message_id = meta.message_id;</span></span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">          25 :         dl.frame_flags = meta.flags;</span></span>
-<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">          25 :         dl.priority = meta.priority;</span></span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">          25 :         dl.deadline_ns = meta.deadline_ns;</span></span>
-<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">          25 :         dl.mailbox_depth = result.depth;</span></span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">          25 :         dl.mailbox_capacity = result.capacity;</span></span>
-<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">          25 :         dl.timestamp_ns = static_cast&lt;uint64_t&gt;(</span></span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">          25 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">          25 :                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">          25 :                 .count());</span></span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">          25 :         dl.payload_sample = msg_payload;</span></span>
-<span id="L366"><span class="lineNum">     366</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">          25 :         if (msg_has_trace) {</span></span>
-<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             set_dlq_trace_fields(dl, msg_trace);</span></span>
-<span id="L368"><span class="lineNum">     368</span>                 :             :         }</span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC tlaBgGNC">          25 :         (void)config_.dlq-&gt;try_push(std::move(dl));</span></span>
-<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaGNC">          25 :     }</span></span>
-<span id="L371"><span class="lineNum">     371</span>                 :             : </span>
-<span id="L372"><span class="lineNum">     372</span>         [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          31 :     if (config_.metrics) {</span></span>
-<span id="L373"><span class="lineNum">     373</span>                 :<span class="tlaGNC">          62 :         FailureEnvelope env = make_failure_envelope(</span></span>
-<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">          31 :             result.failure_reason(), target, meta.sender,</span></span>
-<span id="L375"><span class="lineNum">     375</span>                 :<span class="tlaGNC">          31 :             ActorAddress{config_.endpoint, ActorType{0}, target, 0},</span></span>
-<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">          31 :             MessageId{options.message_id}, TraceContext{},</span></span>
-<span id="L377"><span class="lineNum">     377</span>                 :             :             FailureSource::Mailbox, &quot;mailbox admission rejected&quot;);</span>
-<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">          31 :         metrics::MetricEvent evt{};</span></span>
-<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">          31 :         evt.timestamp_ns = env.timestamp_ns;</span></span>
-<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">          31 :         evt.actor_id = target;</span></span>
-<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">          31 :         evt.event_type = metrics::MetricEventType::kDeliveryFailure;</span></span>
-<span id="L382"><span class="lineNum">     382</span>                 :<span class="tlaGNC">          31 :         evt.code = static_cast&lt;uint8_t&gt;(env.reason);</span></span>
-<span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaGNC">          31 :         evt.value_hi = 1;</span></span>
-<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">          31 :         config_.metrics-&gt;try_push(evt);</span></span>
-<span id="L385"><span class="lineNum">     385</span>                 :             :     }</span>
-<span id="L386"><span class="lineNum">     386</span>                 :             : }</span>
-<span id="L387"><span class="lineNum">     387</span>                 :             : </span>
-<span id="L388"><span class="lineNum">     388</span>                 :             : // ── Pipeline stage: backpressure signal emission ───────────────────────────</span>
-<span id="L389"><span class="lineNum">     389</span>                 :             : </span>
-<span id="L390"><span class="lineNum">     390</span>                 :<span class="tlaGNC">      132792 : void DeliveryPipeline::maybe_emit_backpressure(</span></span>
-<span id="L391"><span class="lineNum">     391</span>                 :             :     MPSCActorMailbox&lt;TypedMessage&gt;* mailbox, const EnqueueResult&amp; result,</span>
-<span id="L392"><span class="lineNum">     392</span>                 :             :     const MailboxEnvelopeMeta&amp; meta, bool emit_requested,</span>
-<span id="L393"><span class="lineNum">     393</span>                 :             :     BackpressureMode backpressure_mode, bool sender_is_remote) {</span>
-<span id="L394"><span class="lineNum">     394</span>   [<span class="tlaGBC" title="Branch 0 was taken 132791 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 132791 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      265583 :     if (!emit_requested || mailbox == nullptr ||</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 114759 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 18033 times"> + </span>]
-<span id="L395"><span class="lineNum">     395</span>         [<span class="tlaGBC" title="Branch 0 was taken 114758 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18033 times"> + </span>]:<span class="tlaGNC">      132791 :         !pressure_result_should_signal(result)) {</span></span>
-<span id="L396"><span class="lineNum">     396</span>                 :<span class="tlaGNC">      132763 :         return;</span></span>
-<span id="L397"><span class="lineNum">     397</span>                 :             :     }</span>
-<span id="L398"><span class="lineNum">     398</span>                 :             : </span>
-<span id="L399"><span class="lineNum">     399</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18031 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">       18033 :     if (sender_is_remote &amp;&amp; !remote_signal_enabled(backpressure_mode)) {</span></span>
+<span id="L344"><span class="lineNum">     344</span>                 :             :         overflow_policy == OverflowPolicy::DeadLetter) {</span>
+<span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaGNC">          25 :         DeadLetterRecord dl;</span></span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">          25 :         dl.reason = DeadLetterReason::OverflowPolicy;</span></span>
+<span id="L347"><span class="lineNum">     347</span>                 :<span class="tlaGNC">          25 :         dl.source = DeadLetterSource::MailboxAdmission;</span></span>
+<span id="L348"><span class="lineNum">     348</span>                 :<span class="tlaGNC">          25 :         dl.sender = meta.sender;</span></span>
+<span id="L349"><span class="lineNum">     349</span>                 :<span class="tlaGNC">          25 :         dl.target = ActorAddress{config_.endpoint, ActorType{0}, target, 0};</span></span>
+<span id="L350"><span class="lineNum">     350</span>                 :<span class="tlaGNC">          25 :         dl.type_tag = meta.type_tag;</span></span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">          25 :         dl.message_id = meta.message_id;</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">          25 :         dl.frame_flags = meta.flags;</span></span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">          25 :         dl.priority = meta.priority;</span></span>
+<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">          25 :         dl.deadline_ns = meta.deadline_ns;</span></span>
+<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">          25 :         dl.mailbox_depth = result.depth;</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">          25 :         dl.mailbox_capacity = result.capacity;</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">          25 :         dl.timestamp_ns = static_cast&lt;uint64_t&gt;(</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">          25 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">          25 :                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">          25 :                 .count());</span></span>
+<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">          25 :         dl.payload_sample = msg_payload;</span></span>
+<span id="L362"><span class="lineNum">     362</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">          25 :         if (msg_has_trace) {</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             set_dlq_trace_fields(dl, msg_trace);</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :             :         }</span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC tlaBgGNC">          25 :         (void)config_.dlq-&gt;try_push(std::move(dl));</span></span>
+<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">          25 :     }</span></span>
+<span id="L367"><span class="lineNum">     367</span>                 :             : </span>
+<span id="L368"><span class="lineNum">     368</span>         [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          31 :     if (config_.metrics) {</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">          62 :         FailureEnvelope env = make_failure_envelope(</span></span>
+<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaGNC">          31 :             result.failure_reason(), target, meta.sender,</span></span>
+<span id="L371"><span class="lineNum">     371</span>                 :<span class="tlaGNC">          31 :             ActorAddress{config_.endpoint, ActorType{0}, target, 0},</span></span>
+<span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaGNC">          31 :             MessageId{options.message_id}, TraceContext{},</span></span>
+<span id="L373"><span class="lineNum">     373</span>                 :             :             FailureSource::Mailbox, &quot;mailbox admission rejected&quot;);</span>
+<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">          31 :         metrics::MetricEvent evt{};</span></span>
+<span id="L375"><span class="lineNum">     375</span>                 :<span class="tlaGNC">          31 :         evt.timestamp_ns = env.timestamp_ns;</span></span>
+<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">          31 :         evt.actor_id = target;</span></span>
+<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">          31 :         evt.event_type = metrics::MetricEventType::kDeliveryFailure;</span></span>
+<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">          31 :         evt.code = static_cast&lt;uint8_t&gt;(env.reason);</span></span>
+<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">          31 :         evt.value_hi = 1;</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">          31 :         config_.metrics-&gt;try_push(evt);</span></span>
+<span id="L381"><span class="lineNum">     381</span>                 :             :     }</span>
+<span id="L382"><span class="lineNum">     382</span>                 :             : }</span>
+<span id="L383"><span class="lineNum">     383</span>                 :             : </span>
+<span id="L384"><span class="lineNum">     384</span>                 :             : // ── Pipeline stage: backpressure signal emission ───────────────────────────</span>
+<span id="L385"><span class="lineNum">     385</span>                 :             : </span>
+<span id="L386"><span class="lineNum">     386</span>                 :<span class="tlaGNC">      132789 : void DeliveryPipeline::maybe_emit_backpressure(</span></span>
+<span id="L387"><span class="lineNum">     387</span>                 :             :     MPSCActorMailbox&lt;TypedMessage&gt;* mailbox, const EnqueueResult&amp; result,</span>
+<span id="L388"><span class="lineNum">     388</span>                 :             :     const MailboxEnvelopeMeta&amp; meta, bool emit_requested,</span>
+<span id="L389"><span class="lineNum">     389</span>                 :             :     BackpressureMode backpressure_mode, bool sender_is_remote) {</span>
+<span id="L390"><span class="lineNum">     390</span>   [<span class="tlaGBC" title="Branch 0 was taken 132788 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 132788 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      265577 :     if (!emit_requested || mailbox == nullptr ||</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 114756 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 18033 times"> + </span>]
+<span id="L391"><span class="lineNum">     391</span>         [<span class="tlaGBC" title="Branch 0 was taken 114755 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18033 times"> + </span>]:<span class="tlaGNC">      132788 :         !pressure_result_should_signal(result)) {</span></span>
+<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">      132760 :         return;</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :             :     }</span>
+<span id="L394"><span class="lineNum">     394</span>                 :             : </span>
+<span id="L395"><span class="lineNum">     395</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18031 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">       18033 :     if (sender_is_remote &amp;&amp; !remote_signal_enabled(backpressure_mode)) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 18033 times"> + </span>]
-<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L401"><span class="lineNum">     401</span>                 :             :     }</span>
-<span id="L402"><span class="lineNum">     402</span>   [<span class="tlaGBC" title="Branch 0 was taken 18031 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 18030 times"> + </span> :<span class="tlaGNC tlaBgGNC">       18033 :     if (!sender_is_remote &amp;&amp; !local_signal_enabled(backpressure_mode)) {</span></span>
+<span id="L396"><span class="lineNum">     396</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L397"><span class="lineNum">     397</span>                 :             :     }</span>
+<span id="L398"><span class="lineNum">     398</span>   [<span class="tlaGBC" title="Branch 0 was taken 18031 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 18030 times"> + </span> :<span class="tlaGNC tlaBgGNC">       18033 :     if (!sender_is_remote &amp;&amp; !local_signal_enabled(backpressure_mode)) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 18032 times"> + </span>]
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
-<span id="L404"><span class="lineNum">     404</span>                 :             :     }</span>
-<span id="L405"><span class="lineNum">     405</span>                 :             : </span>
-<span id="L406"><span class="lineNum">     406</span>                 :             :     const uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
-<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">       18032 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaGNC">       18032 :             std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L409"><span class="lineNum">     409</span>                 :<span class="tlaGNC">       18032 :             .count());</span></span>
-<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">       18032 :     const bool is_rejection = !result.accepted();</span></span>
-<span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaGNC">       18032 :     auto sequence = mailbox-&gt;try_acquire_backpressure_signal(</span></span>
-<span id="L412"><span class="lineNum">     412</span>                 :<span class="tlaGNC">       18032 :         now_ns, result.pressure_state, is_rejection);</span></span>
-<span id="L413"><span class="lineNum">     413</span>         [<span class="tlaGBC" title="Branch 0 was taken 18003 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 29 times"> + </span>]:<span class="tlaGNC">       18032 :     if (!sequence.has_value()) {</span></span>
-<span id="L414"><span class="lineNum">     414</span>                 :<span class="tlaGNC">       18003 :         return;</span></span>
-<span id="L415"><span class="lineNum">     415</span>                 :             :     }</span>
-<span id="L416"><span class="lineNum">     416</span>                 :             : </span>
-<span id="L417"><span class="lineNum">     417</span>                 :<span class="tlaGNC">          29 :     BackpressureSignal signal;</span></span>
-<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">          29 :     signal.target = ActorAddress{config_.endpoint, ActorType{0}, result.target, 0};</span></span>
-<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">          29 :     signal.sender = meta.sender;</span></span>
-<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">          29 :     signal.reason = result.pressure_reason;</span></span>
-<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">          29 :     signal.depth = result.depth;</span></span>
-<span id="L422"><span class="lineNum">     422</span>                 :<span class="tlaGNC">          29 :     signal.capacity = result.capacity;</span></span>
-<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">          29 :     signal.bytes = result.bytes;</span></span>
-<span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaGNC">          29 :     signal.byte_capacity = result.byte_capacity;</span></span>
-<span id="L425"><span class="lineNum">     425</span>                 :<span class="tlaGNC">          29 :     signal.pressure_ratio = result.pressure_ratio;</span></span>
-<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">          29 :     signal.retry_after = result.retry_after;</span></span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">          29 :     signal.sequence = sequence.value();</span></span>
-<span id="L428"><span class="lineNum">     428</span>                 :             : </span>
-<span id="L429"><span class="lineNum">     429</span>         [<span class="tlaGBC" title="Branch 0 was taken 29 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          29 :     if (config_.backpressure) {</span></span>
-<span id="L430"><span class="lineNum">     430</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC">          29 :         if (sender_is_remote) {</span></span>
-<span id="L431"><span class="lineNum">     431</span>                 :<span class="tlaGNC">           2 :             config_.backpressure-&gt;emit_remote_signal(signal, result.pressure_state);</span></span>
-<span id="L432"><span class="lineNum">     432</span>                 :             :         } else {</span>
-<span id="L433"><span class="lineNum">     433</span>                 :<span class="tlaGNC">          27 :             config_.backpressure-&gt;emit_local_signal(signal, result.pressure_state);</span></span>
-<span id="L434"><span class="lineNum">     434</span>                 :             :         }</span>
-<span id="L435"><span class="lineNum">     435</span>                 :             :     }</span>
-<span id="L436"><span class="lineNum">     436</span>                 :             : }</span>
-<span id="L437"><span class="lineNum">     437</span>                 :             : </span>
-<span id="L438"><span class="lineNum">     438</span>                 :             : // ── Main entry point: try_deliver ──────────────────────────────────────────</span>
-<span id="L439"><span class="lineNum">     439</span>                 :             : </span>
-<span id="L440"><span class="lineNum">     440</span>                 :             : EnqueueResult</span>
-<span id="L441"><span class="lineNum">     441</span>                 :<span class="tlaGNC">      132819 : DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority,</span></span>
-<span id="L442"><span class="lineNum">     442</span>                 :             :                               int64_t deadline_ns, DeliveryOptions options) {</span>
-<span id="L443"><span class="lineNum">     443</span>                 :             :     auto* mailbox =</span>
-<span id="L444"><span class="lineNum">     444</span>   [<span class="tlaGBC" title="Branch 0 was taken 132819 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 132819 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      132819 :         config_.actors ? config_.actors-&gt;find_mailbox(target).get() : nullptr;</span></span>
-<span id="L445"><span class="lineNum">     445</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132805 times"> + </span>]:<span class="tlaGNC">      132819 :     if (mailbox == nullptr) {</span></span>
-<span id="L446"><span class="lineNum">     446</span>                 :             :         // Fallback: check for Disruptor-mailbox actor.</span>
-<span id="L447"><span class="lineNum">     447</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          14 :         if (config_.actors) {</span></span>
-<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaGNC">          14 :             auto fixed_binding = config_.actors-&gt;find_fixed_binding(target);</span></span>
-<span id="L449"><span class="lineNum">     449</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          14 :             if (fixed_binding.has_value() &amp;&amp; fixed_binding-&gt;valid()) {</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
+<span id="L400"><span class="lineNum">     400</span>                 :             :     }</span>
+<span id="L401"><span class="lineNum">     401</span>                 :             : </span>
+<span id="L402"><span class="lineNum">     402</span>                 :             :     const uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
+<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaGNC">       18032 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">       18032 :             std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">       18032 :             .count());</span></span>
+<span id="L406"><span class="lineNum">     406</span>                 :<span class="tlaGNC">       18032 :     const bool is_rejection = !result.accepted();</span></span>
+<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">       18032 :     auto sequence = mailbox-&gt;try_acquire_backpressure_signal(</span></span>
+<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaGNC">       18032 :         now_ns, result.pressure_state, is_rejection);</span></span>
+<span id="L409"><span class="lineNum">     409</span>         [<span class="tlaGBC" title="Branch 0 was taken 18003 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 29 times"> + </span>]:<span class="tlaGNC">       18032 :     if (!sequence.has_value()) {</span></span>
+<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">       18003 :         return;</span></span>
+<span id="L411"><span class="lineNum">     411</span>                 :             :     }</span>
+<span id="L412"><span class="lineNum">     412</span>                 :             : </span>
+<span id="L413"><span class="lineNum">     413</span>                 :<span class="tlaGNC">          29 :     BackpressureSignal signal;</span></span>
+<span id="L414"><span class="lineNum">     414</span>                 :<span class="tlaGNC">          29 :     signal.target = ActorAddress{config_.endpoint, ActorType{0}, result.target, 0};</span></span>
+<span id="L415"><span class="lineNum">     415</span>                 :<span class="tlaGNC">          29 :     signal.sender = meta.sender;</span></span>
+<span id="L416"><span class="lineNum">     416</span>                 :<span class="tlaGNC">          29 :     signal.reason = result.pressure_reason;</span></span>
+<span id="L417"><span class="lineNum">     417</span>                 :<span class="tlaGNC">          29 :     signal.depth = result.depth;</span></span>
+<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">          29 :     signal.capacity = result.capacity;</span></span>
+<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">          29 :     signal.bytes = result.bytes;</span></span>
+<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">          29 :     signal.byte_capacity = result.byte_capacity;</span></span>
+<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">          29 :     signal.pressure_ratio = result.pressure_ratio;</span></span>
+<span id="L422"><span class="lineNum">     422</span>                 :<span class="tlaGNC">          29 :     signal.retry_after = result.retry_after;</span></span>
+<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">          29 :     signal.sequence = sequence.value();</span></span>
+<span id="L424"><span class="lineNum">     424</span>                 :             : </span>
+<span id="L425"><span class="lineNum">     425</span>         [<span class="tlaGBC" title="Branch 0 was taken 29 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          29 :     if (config_.backpressure) {</span></span>
+<span id="L426"><span class="lineNum">     426</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC">          29 :         if (sender_is_remote) {</span></span>
+<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">           2 :             config_.backpressure-&gt;emit_remote_signal(signal, result.pressure_state);</span></span>
+<span id="L428"><span class="lineNum">     428</span>                 :             :         } else {</span>
+<span id="L429"><span class="lineNum">     429</span>                 :<span class="tlaGNC">          27 :             config_.backpressure-&gt;emit_local_signal(signal, result.pressure_state);</span></span>
+<span id="L430"><span class="lineNum">     430</span>                 :             :         }</span>
+<span id="L431"><span class="lineNum">     431</span>                 :             :     }</span>
+<span id="L432"><span class="lineNum">     432</span>                 :             : }</span>
+<span id="L433"><span class="lineNum">     433</span>                 :             : </span>
+<span id="L434"><span class="lineNum">     434</span>                 :             : // ── Main entry point: try_deliver ──────────────────────────────────────────</span>
+<span id="L435"><span class="lineNum">     435</span>                 :             : </span>
+<span id="L436"><span class="lineNum">     436</span>                 :             : EnqueueResult</span>
+<span id="L437"><span class="lineNum">     437</span>                 :<span class="tlaGNC">      132816 : DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority,</span></span>
+<span id="L438"><span class="lineNum">     438</span>                 :             :                               int64_t deadline_ns, DeliveryOptions options) {</span>
+<span id="L439"><span class="lineNum">     439</span>                 :             :     auto* mailbox =</span>
+<span id="L440"><span class="lineNum">     440</span>   [<span class="tlaGBC" title="Branch 0 was taken 132816 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 132816 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      132816 :         config_.actors ? config_.actors-&gt;find_mailbox(target).get() : nullptr;</span></span>
+<span id="L441"><span class="lineNum">     441</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132802 times"> + </span>]:<span class="tlaGNC">      132816 :     if (mailbox == nullptr) {</span></span>
+<span id="L442"><span class="lineNum">     442</span>                 :             :         // Fallback: check for Disruptor-mailbox actor.</span>
+<span id="L443"><span class="lineNum">     443</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          14 :         if (config_.actors) {</span></span>
+<span id="L444"><span class="lineNum">     444</span>                 :<span class="tlaGNC">          14 :             auto fixed_binding = config_.actors-&gt;find_fixed_binding(target);</span></span>
+<span id="L445"><span class="lineNum">     445</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          14 :             if (fixed_binding.has_value() &amp;&amp; fixed_binding-&gt;valid()) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 14 times"> + </span>]
-<span id="L450"><span class="lineNum">     450</span>                 :             :                 // Route system messages through the control port.</span>
-<span id="L451"><span class="lineNum">     451</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 if (is_system_message(msg.type_id())) {</span></span>
-<span id="L452"><span class="lineNum">     452</span>                 :<span class="tlaUNC">           0 :                     return fixed_binding-&gt;control.try_push(</span></span>
-<span id="L453"><span class="lineNum">     453</span>                 :<span class="tlaUNC">           0 :                         fixed_binding-&gt;control.context, std::move(msg));</span></span>
-<span id="L454"><span class="lineNum">     454</span>                 :             :                 }</span>
-<span id="L455"><span class="lineNum">     455</span>                 :             :                 // Route user-level TypedMessages through the dynamic lane</span>
-<span id="L456"><span class="lineNum">     456</span>                 :             :                 // (Phase 7) when available; fall back to rejection.</span>
-<span id="L457"><span class="lineNum">     457</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (fixed_binding-&gt;control.try_push_dynamic) {</span></span>
-<span id="L458"><span class="lineNum">     458</span>                 :<span class="tlaUNC">           0 :                     return fixed_binding-&gt;control.try_push_dynamic(</span></span>
-<span id="L459"><span class="lineNum">     459</span>                 :<span class="tlaUNC">           0 :                         fixed_binding-&gt;control.context, std::move(msg));</span></span>
-<span id="L460"><span class="lineNum">     460</span>                 :             :                 }</span>
-<span id="L461"><span class="lineNum">     461</span>                 :<span class="tlaUNC">           0 :                 EnqueueResult result;</span></span>
-<span id="L462"><span class="lineNum">     462</span>                 :<span class="tlaUNC">           0 :                 result.code = EnqueueResultCode::Rejected;</span></span>
-<span id="L463"><span class="lineNum">     463</span>                 :<span class="tlaUNC">           0 :                 result.target = target;</span></span>
-<span id="L464"><span class="lineNum">     464</span>                 :<span class="tlaUNC">           0 :                 return result;</span></span>
-<span id="L465"><span class="lineNum">     465</span>                 :             :             }</span>
-<span id="L466"><span class="lineNum">     466</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">          14 :         }</span></span>
-<span id="L467"><span class="lineNum">     467</span>                 :<span class="tlaGNC">          14 :         return reject_missing_actor(target, msg, options, priority, deadline_ns);</span></span>
-<span id="L468"><span class="lineNum">     468</span>                 :             :     }</span>
-<span id="L469"><span class="lineNum">     469</span>                 :             : </span>
-<span id="L470"><span class="lineNum">     470</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132796 times"> + </span>]:<span class="tlaGNC">      132805 :     if (auto blocked =</span></span>
-<span id="L471"><span class="lineNum">     471</span>                 :<span class="tlaGNC">      132805 :             check_circuit_breaker(target, msg, options, priority, deadline_ns)) {</span></span>
-<span id="L472"><span class="lineNum">     472</span>                 :<span class="tlaGNC">           9 :         return *blocked;</span></span>
-<span id="L473"><span class="lineNum">     473</span>                 :             :     }</span>
-<span id="L474"><span class="lineNum">     474</span>                 :             : </span>
-<span id="L475"><span class="lineNum">     475</span>                 :<span class="tlaGNC">      132796 :     deadline_ns = apply_default_ttl(deadline_ns);</span></span>
-<span id="L476"><span class="lineNum">     476</span>                 :<span class="tlaGNC">      132796 :     msg.set_deadline_ns(deadline_ns);</span></span>
+<span id="L446"><span class="lineNum">     446</span>                 :             :                 // Route system messages through the control port.</span>
+<span id="L447"><span class="lineNum">     447</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 if (is_system_message(msg.type_id())) {</span></span>
+<span id="L448"><span class="lineNum">     448</span>                 :<span class="tlaUNC">           0 :                     return fixed_binding-&gt;control.try_push(</span></span>
+<span id="L449"><span class="lineNum">     449</span>                 :<span class="tlaUNC">           0 :                         fixed_binding-&gt;control.context, std::move(msg));</span></span>
+<span id="L450"><span class="lineNum">     450</span>                 :             :                 }</span>
+<span id="L451"><span class="lineNum">     451</span>                 :             :                 // Route user-level TypedMessages through the dynamic lane</span>
+<span id="L452"><span class="lineNum">     452</span>                 :             :                 // (Phase 7) when available; fall back to rejection.</span>
+<span id="L453"><span class="lineNum">     453</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (fixed_binding-&gt;control.try_push_dynamic) {</span></span>
+<span id="L454"><span class="lineNum">     454</span>                 :<span class="tlaUNC">           0 :                     return fixed_binding-&gt;control.try_push_dynamic(</span></span>
+<span id="L455"><span class="lineNum">     455</span>                 :<span class="tlaUNC">           0 :                         fixed_binding-&gt;control.context, std::move(msg));</span></span>
+<span id="L456"><span class="lineNum">     456</span>                 :             :                 }</span>
+<span id="L457"><span class="lineNum">     457</span>                 :<span class="tlaUNC">           0 :                 EnqueueResult result;</span></span>
+<span id="L458"><span class="lineNum">     458</span>                 :<span class="tlaUNC">           0 :                 result.code = EnqueueResultCode::Rejected;</span></span>
+<span id="L459"><span class="lineNum">     459</span>                 :<span class="tlaUNC">           0 :                 result.target = target;</span></span>
+<span id="L460"><span class="lineNum">     460</span>                 :<span class="tlaUNC">           0 :                 return result;</span></span>
+<span id="L461"><span class="lineNum">     461</span>                 :             :             }</span>
+<span id="L462"><span class="lineNum">     462</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">          14 :         }</span></span>
+<span id="L463"><span class="lineNum">     463</span>                 :<span class="tlaGNC">          14 :         return reject_missing_actor(target, msg, options, priority, deadline_ns);</span></span>
+<span id="L464"><span class="lineNum">     464</span>                 :             :     }</span>
+<span id="L465"><span class="lineNum">     465</span>                 :             : </span>
+<span id="L466"><span class="lineNum">     466</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132793 times"> + </span>]:<span class="tlaGNC">      132802 :     if (auto blocked =</span></span>
+<span id="L467"><span class="lineNum">     467</span>                 :<span class="tlaGNC">      132802 :             check_circuit_breaker(target, msg, options, priority, deadline_ns)) {</span></span>
+<span id="L468"><span class="lineNum">     468</span>                 :<span class="tlaGNC">           9 :         return *blocked;</span></span>
+<span id="L469"><span class="lineNum">     469</span>                 :             :     }</span>
+<span id="L470"><span class="lineNum">     470</span>                 :             : </span>
+<span id="L471"><span class="lineNum">     471</span>                 :<span class="tlaGNC">      132793 :     deadline_ns = apply_default_ttl(deadline_ns);</span></span>
+<span id="L472"><span class="lineNum">     472</span>                 :<span class="tlaGNC">      132793 :     msg.set_deadline_ns(deadline_ns);</span></span>
+<span id="L473"><span class="lineNum">     473</span>                 :             : </span>
+<span id="L474"><span class="lineNum">     474</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 132792 times"> + </span>]:<span class="tlaGNC">      132793 :     if (auto dup = check_duplicate(target, msg, options)) {</span></span>
+<span id="L475"><span class="lineNum">     475</span>                 :<span class="tlaGNC">           1 :         return *dup;</span></span>
+<span id="L476"><span class="lineNum">     476</span>                 :             :     }</span>
 <span id="L477"><span class="lineNum">     477</span>                 :             : </span>
-<span id="L478"><span class="lineNum">     478</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 132795 times"> + </span>]:<span class="tlaGNC">      132796 :     if (auto dup = check_duplicate(target, msg, options)) {</span></span>
-<span id="L479"><span class="lineNum">     479</span>                 :<span class="tlaGNC">           1 :         return *dup;</span></span>
+<span id="L478"><span class="lineNum">     478</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132789 times"> + </span>]:<span class="tlaGNC">      132792 :     if (auto expired = check_expired(target, msg, options, priority, deadline_ns)) {</span></span>
+<span id="L479"><span class="lineNum">     479</span>                 :<span class="tlaGNC">           3 :         return *expired;</span></span>
 <span id="L480"><span class="lineNum">     480</span>                 :             :     }</span>
 <span id="L481"><span class="lineNum">     481</span>                 :             : </span>
-<span id="L482"><span class="lineNum">     482</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132792 times"> + </span>]:<span class="tlaGNC">      132795 :     if (auto expired = check_expired(target, msg, options, priority, deadline_ns)) {</span></span>
-<span id="L483"><span class="lineNum">     483</span>                 :<span class="tlaGNC">           3 :         return *expired;</span></span>
-<span id="L484"><span class="lineNum">     484</span>                 :             :     }</span>
-<span id="L485"><span class="lineNum">     485</span>                 :             : </span>
-<span id="L486"><span class="lineNum">     486</span>                 :<span class="tlaGNC">      132792 :     MailboxEnvelopeMeta meta;</span></span>
-<span id="L487"><span class="lineNum">     487</span>                 :<span class="tlaGNC">      132792 :     meta.sender = msg.sender_address();</span></span>
-<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaGNC">      132792 :     meta.type_tag = msg.type_id();</span></span>
-<span id="L489"><span class="lineNum">     489</span>                 :<span class="tlaGNC">      132792 :     meta.priority = priority;</span></span>
-<span id="L490"><span class="lineNum">     490</span>                 :<span class="tlaGNC">      132792 :     meta.deadline_ns = deadline_ns;</span></span>
-<span id="L491"><span class="lineNum">     491</span>                 :<span class="tlaGNC">      132792 :     meta.flags = options.flags;</span></span>
-<span id="L492"><span class="lineNum">     492</span>                 :<span class="tlaGNC">      132792 :     meta.message_id = options.message_id;</span></span>
-<span id="L493"><span class="lineNum">     493</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 132792 times"> + </span>]:<span class="tlaGNC">      132792 :     if (options.no_drop) {</span></span>
-<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         meta.flags |= net::WireFrame::NoDrop;</span></span>
-<span id="L495"><span class="lineNum">     495</span>                 :             :     }</span>
-<span id="L496"><span class="lineNum">     496</span>                 :<span class="tlaGNC tlaBgGNC">      132792 :     meta.schedule_edf = options.schedule_edf;</span></span>
-<span id="L497"><span class="lineNum">     497</span>                 :             : </span>
-<span id="L498"><span class="lineNum">     498</span>                 :<span class="tlaGNC">      132792 :     msg.set_delivery_priority(meta.priority);</span></span>
-<span id="L499"><span class="lineNum">     499</span>                 :<span class="tlaGNC">      132792 :     msg.set_delivery_flags(meta.flags);</span></span>
+<span id="L482"><span class="lineNum">     482</span>                 :<span class="tlaGNC">      132789 :     MailboxEnvelopeMeta meta;</span></span>
+<span id="L483"><span class="lineNum">     483</span>                 :<span class="tlaGNC">      132789 :     meta.sender = msg.sender_address();</span></span>
+<span id="L484"><span class="lineNum">     484</span>                 :<span class="tlaGNC">      132789 :     meta.type_tag = msg.type_id();</span></span>
+<span id="L485"><span class="lineNum">     485</span>                 :<span class="tlaGNC">      132789 :     meta.priority = priority;</span></span>
+<span id="L486"><span class="lineNum">     486</span>                 :<span class="tlaGNC">      132789 :     meta.deadline_ns = deadline_ns;</span></span>
+<span id="L487"><span class="lineNum">     487</span>                 :<span class="tlaGNC">      132789 :     meta.flags = options.flags;</span></span>
+<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaGNC">      132789 :     meta.message_id = options.message_id;</span></span>
+<span id="L489"><span class="lineNum">     489</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 132789 times"> + </span>]:<span class="tlaGNC">      132789 :     if (options.no_drop) {</span></span>
+<span id="L490"><span class="lineNum">     490</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         meta.flags |= net::WireFrame::NoDrop;</span></span>
+<span id="L491"><span class="lineNum">     491</span>                 :             :     }</span>
+<span id="L492"><span class="lineNum">     492</span>                 :<span class="tlaGNC tlaBgGNC">      132789 :     meta.schedule_edf = options.schedule_edf;</span></span>
+<span id="L493"><span class="lineNum">     493</span>                 :             : </span>
+<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaGNC">      132789 :     msg.set_delivery_priority(meta.priority);</span></span>
+<span id="L495"><span class="lineNum">     495</span>                 :<span class="tlaGNC">      132789 :     msg.set_delivery_flags(meta.flags);</span></span>
+<span id="L496"><span class="lineNum">     496</span>                 :             : </span>
+<span id="L497"><span class="lineNum">     497</span>                 :<span class="tlaGNC">      132789 :     const auto bp_mode = mailbox-&gt;config().backpressure_mode;</span></span>
+<span id="L498"><span class="lineNum">     498</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132785 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      132793 :     const bool sender_is_remote = meta.sender.endpoint != config_.endpoint &amp;&amp;</span></span>
+<span id="L499"><span class="lineNum">     499</span>                 :<span class="tlaGNC">           4 :                                   meta.sender.id != ActorId{0};</span></span>
 <span id="L500"><span class="lineNum">     500</span>                 :             : </span>
-<span id="L501"><span class="lineNum">     501</span>                 :<span class="tlaGNC">      132792 :     const auto bp_mode = mailbox-&gt;config().backpressure_mode;</span></span>
-<span id="L502"><span class="lineNum">     502</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132788 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      132796 :     const bool sender_is_remote = meta.sender.endpoint != config_.endpoint &amp;&amp;</span></span>
-<span id="L503"><span class="lineNum">     503</span>                 :<span class="tlaGNC">           4 :                                   meta.sender.id != ActorId{0};</span></span>
-<span id="L504"><span class="lineNum">     504</span>                 :             : </span>
-<span id="L505"><span class="lineNum">     505</span>                 :<span class="tlaGNC">      132792 :     const StreamBuffer&amp; msg_payload = msg.payload();</span></span>
-<span id="L506"><span class="lineNum">     506</span>                 :<span class="tlaGNC">      132792 :     TraceContext msg_trace;</span></span>
-<span id="L507"><span class="lineNum">     507</span>                 :<span class="tlaGNC">      132792 :     bool msg_has_trace = msg.has_trace_context();</span></span>
-<span id="L508"><span class="lineNum">     508</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 132791 times"> + </span>]:<span class="tlaGNC">      132792 :     if (msg_has_trace) {</span></span>
-<span id="L509"><span class="lineNum">     509</span>                 :<span class="tlaGNC">           1 :         msg_trace = msg.trace_context();</span></span>
-<span id="L510"><span class="lineNum">     510</span>                 :             :     }</span>
-<span id="L511"><span class="lineNum">     511</span>                 :             : </span>
-<span id="L512"><span class="lineNum">     512</span>                 :             :     // ── Capture auto-ACK state before the message is moved into the mailbox ──</span>
-<span id="L513"><span class="lineNum">     513</span>                 :<span class="tlaGNC">      132792 :     const bool needs_auto_ack = msg.ack_requested();</span></span>
-<span id="L514"><span class="lineNum">     514</span>                 :<span class="tlaGNC">      132792 :     const uint64_t ack_msg_id = msg.message_id();</span></span>
-<span id="L515"><span class="lineNum">     515</span>                 :<span class="tlaGNC">      132792 :     const ActorAddress ack_sender = msg.sender_address();</span></span>
-<span id="L516"><span class="lineNum">     516</span>                 :             : </span>
-<span id="L517"><span class="lineNum">     517</span>                 :<span class="tlaGNC">      132792 :     auto result = mailbox-&gt;try_push(std::move(msg), meta);</span></span>
-<span id="L518"><span class="lineNum">     518</span>                 :             : </span>
-<span id="L519"><span class="lineNum">     519</span>         [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132761 times"> + </span>]:<span class="tlaGNC">      132792 :     if (!result.accepted()) {</span></span>
-<span id="L520"><span class="lineNum">     520</span>                 :             :         // ── Auto-ACK: admission rejected → emit NACK(Rejected) ──</span>
-<span id="L521"><span class="lineNum">     521</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          31 :         if (needs_auto_ack &amp;&amp; config_.reliable_ack) {</span></span>
-<span id="L522"><span class="lineNum">     522</span>                 :             :             uint32_t retry_after = static_cast&lt;uint32_t&gt;(</span>
-<span id="L523"><span class="lineNum">     523</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(result.retry_after)</span></span>
-<span id="L524"><span class="lineNum">     524</span>                 :<span class="tlaUNC">           0 :                     .count());</span></span>
-<span id="L525"><span class="lineNum">     525</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (retry_after == 0) {</span></span>
-<span id="L526"><span class="lineNum">     526</span>                 :<span class="tlaUNC">           0 :                 retry_after = 500; // default retry-after for NACK</span></span>
-<span id="L527"><span class="lineNum">     527</span>                 :             :             }</span>
-<span id="L528"><span class="lineNum">     528</span>                 :<span class="tlaUNC">           0 :             ActorAddress acker{config_.endpoint, ActorType{0}, ActorId{0}, 0};</span></span>
-<span id="L529"><span class="lineNum">     529</span>                 :<span class="tlaUNC">           0 :             (*config_.reliable_ack)(ack_sender, acker, ack_msg_id,</span></span>
-<span id="L530"><span class="lineNum">     530</span>                 :             :                                     static_cast&lt;uint8_t&gt;(1), // AckStatus::Rejected</span>
-<span id="L531"><span class="lineNum">     531</span>                 :             :                                     retry_after);</span>
-<span id="L532"><span class="lineNum">     532</span>                 :             :         }</span>
-<span id="L533"><span class="lineNum">     533</span>                 :             : </span>
-<span id="L534"><span class="lineNum">     534</span>                 :<span class="tlaGNC tlaBgGNC">          31 :         emit_rejection_observability(target, msg_payload, msg_trace,</span></span>
-<span id="L535"><span class="lineNum">     535</span>                 :             :                                      msg_has_trace, meta, result, options,</span>
-<span id="L536"><span class="lineNum">     536</span>                 :<span class="tlaGNC">          31 :                                      mailbox-&gt;config().overflow_policy);</span></span>
-<span id="L537"><span class="lineNum">     537</span>                 :             :     }</span>
-<span id="L538"><span class="lineNum">     538</span>                 :             : </span>
-<span id="L539"><span class="lineNum">     539</span>                 :<span class="tlaGNC">      132792 :     maybe_emit_backpressure(mailbox, result, meta, options.emit_backpressure,</span></span>
-<span id="L540"><span class="lineNum">     540</span>                 :             :                             bp_mode, sender_is_remote);</span>
-<span id="L541"><span class="lineNum">     541</span>                 :             : </span>
-<span id="L542"><span class="lineNum">     542</span>                 :<span class="tlaGNC">      132792 :     return result;</span></span>
-<span id="L543"><span class="lineNum">     543</span>                 :             : }</span>
-<span id="L544"><span class="lineNum">     544</span>                 :             : </span>
-<span id="L545"><span class="lineNum">     545</span>                 :             : // ── deliver_with_result ────────────────────────────────────────────────────</span>
-<span id="L546"><span class="lineNum">     546</span>                 :             : </span>
-<span id="L547"><span class="lineNum">     547</span>                 :             : DeliveryResult</span>
-<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC">           2 : DeliveryPipeline::deliver_with_result(ActorId target, TypedMessage msg,</span></span>
-<span id="L549"><span class="lineNum">     549</span>                 :             :                                       uint8_t priority, int64_t deadline_ns,</span>
-<span id="L550"><span class="lineNum">     550</span>                 :             :                                       DeliveryOptions options) {</span>
-<span id="L551"><span class="lineNum">     551</span>                 :<span class="tlaGNC">           2 :     auto er = try_deliver(target, std::move(msg), priority, deadline_ns, options);</span></span>
-<span id="L552"><span class="lineNum">     552</span>                 :<span class="tlaGNC">           2 :     auto dr = DeliveryResult::from_enqueue(er, ActorAddress{}, {});</span></span>
-<span id="L553"><span class="lineNum">     553</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (config_.actors) {</span></span>
-<span id="L554"><span class="lineNum">     554</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         if (auto mbox = config_.actors-&gt;find_mailbox(target)) {</span></span>
-<span id="L555"><span class="lineNum">     555</span>                 :<span class="tlaGNC">           1 :             mbox-&gt;record_delivery_result(dr.status);</span></span>
-<span id="L556"><span class="lineNum">     556</span>                 :<span class="tlaGNC">           2 :         }</span></span>
-<span id="L557"><span class="lineNum">     557</span>                 :             :     }</span>
-<span id="L558"><span class="lineNum">     558</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (config_.metrics) {</span></span>
-<span id="L559"><span class="lineNum">     559</span>                 :             :         uint64_t ts_ns = static_cast&lt;uint64_t&gt;(</span>
-<span id="L560"><span class="lineNum">     560</span>                 :<span class="tlaGNC">           2 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L561"><span class="lineNum">     561</span>                 :<span class="tlaGNC">           2 :                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L562"><span class="lineNum">     562</span>                 :<span class="tlaGNC">           2 :                 .count());</span></span>
-<span id="L563"><span class="lineNum">     563</span>                 :<span class="tlaGNC">           2 :         metrics::MetricEvent evt{};</span></span>
-<span id="L564"><span class="lineNum">     564</span>                 :<span class="tlaGNC">           2 :         evt.timestamp_ns = ts_ns;</span></span>
-<span id="L565"><span class="lineNum">     565</span>                 :<span class="tlaGNC">           2 :         evt.actor_id = target;</span></span>
-<span id="L566"><span class="lineNum">     566</span>                 :<span class="tlaGNC">           2 :         evt.event_type = metrics::MetricEventType::kDeliveryResult;</span></span>
-<span id="L567"><span class="lineNum">     567</span>                 :<span class="tlaGNC">           2 :         evt.code = static_cast&lt;uint8_t&gt;(dr.status);</span></span>
-<span id="L568"><span class="lineNum">     568</span>                 :<span class="tlaGNC">           2 :         evt.value_hi = 1;</span></span>
-<span id="L569"><span class="lineNum">     569</span>                 :<span class="tlaGNC">           2 :         config_.metrics-&gt;try_push(evt);</span></span>
-<span id="L570"><span class="lineNum">     570</span>                 :             :     }</span>
-<span id="L571"><span class="lineNum">     571</span>                 :<span class="tlaGNC">           2 :     return dr;</span></span>
-<span id="L572"><span class="lineNum">     572</span>                 :             : }</span>
-<span id="L573"><span class="lineNum">     573</span>                 :             : </span>
-<span id="L574"><span class="lineNum">     574</span>                 :             : } // namespace hpactor::mailbox</span>
+<span id="L501"><span class="lineNum">     501</span>                 :<span class="tlaGNC">      132789 :     const StreamBuffer&amp; msg_payload = msg.payload();</span></span>
+<span id="L502"><span class="lineNum">     502</span>                 :<span class="tlaGNC">      132789 :     TraceContext msg_trace;</span></span>
+<span id="L503"><span class="lineNum">     503</span>                 :<span class="tlaGNC">      132789 :     bool msg_has_trace = msg.has_trace_context();</span></span>
+<span id="L504"><span class="lineNum">     504</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 132788 times"> + </span>]:<span class="tlaGNC">      132789 :     if (msg_has_trace) {</span></span>
+<span id="L505"><span class="lineNum">     505</span>                 :<span class="tlaGNC">           1 :         msg_trace = msg.trace_context();</span></span>
+<span id="L506"><span class="lineNum">     506</span>                 :             :     }</span>
+<span id="L507"><span class="lineNum">     507</span>                 :             : </span>
+<span id="L508"><span class="lineNum">     508</span>                 :<span class="tlaGNC">      132789 :     auto result = mailbox-&gt;try_push(std::move(msg), meta);</span></span>
+<span id="L509"><span class="lineNum">     509</span>                 :             : </span>
+<span id="L510"><span class="lineNum">     510</span>         [<span class="tlaGBC" title="Branch 0 was taken 31 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132758 times"> + </span>]:<span class="tlaGNC">      132789 :     if (!result.accepted()) {</span></span>
+<span id="L511"><span class="lineNum">     511</span>                 :             :         // ACK/NACK emission for rejected enqueue is handled by the caller</span>
+<span id="L512"><span class="lineNum">     512</span>                 :             :         // (deliver_ordinary_data in InboundFrameRouter for remote frames;</span>
+<span id="L513"><span class="lineNum">     513</span>                 :             :         // local frames resolve the DeliveryReceipt immediately).</span>
+<span id="L514"><span class="lineNum">     514</span>                 :             : </span>
+<span id="L515"><span class="lineNum">     515</span>                 :<span class="tlaGNC">          31 :         emit_rejection_observability(target, msg_payload, msg_trace,</span></span>
+<span id="L516"><span class="lineNum">     516</span>                 :             :                                      msg_has_trace, meta, result, options,</span>
+<span id="L517"><span class="lineNum">     517</span>                 :<span class="tlaGNC">          31 :                                      mailbox-&gt;config().overflow_policy);</span></span>
+<span id="L518"><span class="lineNum">     518</span>                 :             :     }</span>
+<span id="L519"><span class="lineNum">     519</span>                 :             : </span>
+<span id="L520"><span class="lineNum">     520</span>                 :<span class="tlaGNC">      132789 :     maybe_emit_backpressure(mailbox, result, meta, options.emit_backpressure,</span></span>
+<span id="L521"><span class="lineNum">     521</span>                 :             :                             bp_mode, sender_is_remote);</span>
+<span id="L522"><span class="lineNum">     522</span>                 :             : </span>
+<span id="L523"><span class="lineNum">     523</span>                 :<span class="tlaGNC">      132789 :     return result;</span></span>
+<span id="L524"><span class="lineNum">     524</span>                 :             : }</span>
+<span id="L525"><span class="lineNum">     525</span>                 :             : </span>
+<span id="L526"><span class="lineNum">     526</span>                 :             : // ── deliver_with_result ────────────────────────────────────────────────────</span>
+<span id="L527"><span class="lineNum">     527</span>                 :             : </span>
+<span id="L528"><span class="lineNum">     528</span>                 :             : DeliveryResult</span>
+<span id="L529"><span class="lineNum">     529</span>                 :<span class="tlaGNC">           2 : DeliveryPipeline::deliver_with_result(ActorId target, TypedMessage msg,</span></span>
+<span id="L530"><span class="lineNum">     530</span>                 :             :                                       uint8_t priority, int64_t deadline_ns,</span>
+<span id="L531"><span class="lineNum">     531</span>                 :             :                                       DeliveryOptions options) {</span>
+<span id="L532"><span class="lineNum">     532</span>                 :<span class="tlaGNC">           2 :     auto er = try_deliver(target, std::move(msg), priority, deadline_ns, options);</span></span>
+<span id="L533"><span class="lineNum">     533</span>                 :<span class="tlaGNC">           2 :     auto dr = DeliveryResult::from_enqueue(er, ActorAddress{}, {});</span></span>
+<span id="L534"><span class="lineNum">     534</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (config_.actors) {</span></span>
+<span id="L535"><span class="lineNum">     535</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         if (auto mbox = config_.actors-&gt;find_mailbox(target)) {</span></span>
+<span id="L536"><span class="lineNum">     536</span>                 :<span class="tlaGNC">           1 :             mbox-&gt;record_delivery_result(dr.status);</span></span>
+<span id="L537"><span class="lineNum">     537</span>                 :<span class="tlaGNC">           2 :         }</span></span>
+<span id="L538"><span class="lineNum">     538</span>                 :             :     }</span>
+<span id="L539"><span class="lineNum">     539</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (config_.metrics) {</span></span>
+<span id="L540"><span class="lineNum">     540</span>                 :             :         uint64_t ts_ns = static_cast&lt;uint64_t&gt;(</span>
+<span id="L541"><span class="lineNum">     541</span>                 :<span class="tlaGNC">           2 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L542"><span class="lineNum">     542</span>                 :<span class="tlaGNC">           2 :                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L543"><span class="lineNum">     543</span>                 :<span class="tlaGNC">           2 :                 .count());</span></span>
+<span id="L544"><span class="lineNum">     544</span>                 :<span class="tlaGNC">           2 :         metrics::MetricEvent evt{};</span></span>
+<span id="L545"><span class="lineNum">     545</span>                 :<span class="tlaGNC">           2 :         evt.timestamp_ns = ts_ns;</span></span>
+<span id="L546"><span class="lineNum">     546</span>                 :<span class="tlaGNC">           2 :         evt.actor_id = target;</span></span>
+<span id="L547"><span class="lineNum">     547</span>                 :<span class="tlaGNC">           2 :         evt.event_type = metrics::MetricEventType::kDeliveryResult;</span></span>
+<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC">           2 :         evt.code = static_cast&lt;uint8_t&gt;(dr.status);</span></span>
+<span id="L549"><span class="lineNum">     549</span>                 :<span class="tlaGNC">           2 :         evt.value_hi = 1;</span></span>
+<span id="L550"><span class="lineNum">     550</span>                 :<span class="tlaGNC">           2 :         config_.metrics-&gt;try_push(evt);</span></span>
+<span id="L551"><span class="lineNum">     551</span>                 :             :     }</span>
+<span id="L552"><span class="lineNum">     552</span>                 :<span class="tlaGNC">           2 :     return dr;</span></span>
+<span id="L553"><span class="lineNum">     553</span>                 :             : }</span>
+<span id="L554"><span class="lineNum">     554</span>                 :             : </span>
+<span id="L555"><span class="lineNum">     555</span>                 :             : } // namespace hpactor::mailbox</span>
         </pre>
               </td>
             </tr>

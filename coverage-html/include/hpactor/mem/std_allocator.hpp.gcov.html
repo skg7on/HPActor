@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">91.2&nbsp;%</td>
@@ -147,9 +147,9 @@
 <span id="L69"><span class="lineNum">      69</span>                 :             :     /// \param[in] owner The owning actor (copied by value).</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \param[in] region Memory region to charge allocations to (default</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     /// kActor).</span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">       14267 :     explicit MemStdAllocator(ActorId owner,</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">       14896 :     explicit MemStdAllocator(ActorId owner,</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :                              RegionType region = RegionType::kActor) noexcept</span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">       14267 :         : owner_val_(owner), region_(region) {}</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">       14896 :         : owner_val_(owner), region_(region) {}</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : </span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     /// \brief Pointer-based owner constructor. Use for actor member containers</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     /// so the allocator tracks the live ActorId (which may change via</span>
@@ -158,18 +158,18 @@
 <span id="L80"><span class="lineNum">      80</span>                 :             :     /// \param[in] owner_ptr Pointer to the actor's live ActorId.</span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     /// \param[in] region Memory region to charge allocations to (default</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     /// kActor).</span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">        6872 :     explicit MemStdAllocator(const ActorId* owner_ptr,</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">        7020 :     explicit MemStdAllocator(const ActorId* owner_ptr,</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :                              RegionType region = RegionType::kActor) noexcept</span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">        6872 :         : owner_ptr_(owner_ptr), region_(region) {}</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">        7020 :         : owner_ptr_(owner_ptr), region_(region) {}</span></span>
 <span id="L86"><span class="lineNum">      86</span>                 :             : </span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :     /// \brief Rebind constructor (required by STL allocator concept).</span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :     ///</span>
 <span id="L89"><span class="lineNum">      89</span>                 :             :     /// \tparam U Other element type.</span>
 <span id="L90"><span class="lineNum">      90</span>                 :             :     /// \param[in] other Allocator to copy owner and region from.</span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :     template &lt;typename U&gt;</span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">       35434 :     MemStdAllocator(const MemStdAllocator&lt;U&gt;&amp; other) noexcept</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">       35434 :         : owner_ptr_(other.owner_ptr_), owner_val_(other.owner_val_),</span></span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">       35434 :           region_(other.region_) {}</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">       36840 :     MemStdAllocator(const MemStdAllocator&lt;U&gt;&amp; other) noexcept</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">       36840 :         : owner_ptr_(other.owner_ptr_), owner_val_(other.owner_val_),</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">       36840 :           region_(other.region_) {}</span></span>
 <span id="L95"><span class="lineNum">      95</span>                 :             : </span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     /// \brief Allocate memory for \p n elements of type T.</span>
 <span id="L97"><span class="lineNum">      97</span>                 :             :     ///</span>
@@ -179,13 +179,13 @@
 <span id="L101"><span class="lineNum">     101</span>                 :             :     /// \param[in] n Number of elements to allocate.</span>
 <span id="L102"><span class="lineNum">     102</span>                 :             :     /// \return Pointer to uninitialized storage for \p n elements.</span>
 <span id="L103"><span class="lineNum">     103</span>                 :             :     /// \note Aborts via \c std::abort() if allocation fails.</span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">       14442 :     [[nodiscard]] T* allocate(size_t n) {</span></span>
-<span id="L105"><span class="lineNum">     105</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 14441 times"> + </span>]:<span class="tlaGNC">       14442 :         if (n == 0) {</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">       15071 :     [[nodiscard]] T* allocate(size_t n) {</span></span>
+<span id="L105"><span class="lineNum">     105</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 15070 times"> + </span>]:<span class="tlaGNC">       15071 :         if (n == 0) {</span></span>
 <span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">           1 :             return nullptr;</span></span>
 <span id="L107"><span class="lineNum">     107</span>                 :             :         }</span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">       14441 :         size_t bytes = n * sizeof(T);</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">       15070 :         size_t bytes = n * sizeof(T);</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             : </span>
-<span id="L110"><span class="lineNum">     110</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 14440 times"> + </span>]:<span class="tlaGNC">       14441 :         if (bytes &gt; size_for_class(SizeClass::k4KB)) {</span></span>
+<span id="L110"><span class="lineNum">     110</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 15069 times"> + </span>]:<span class="tlaGNC">       15070 :         if (bytes &gt; size_for_class(SizeClass::k4KB)) {</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :             // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)</span>
 <span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">           1 :             void* ptr = std::malloc(bytes);</span></span>
 <span id="L113"><span class="lineNum">     113</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :             if (!ptr) {</span></span>
@@ -194,31 +194,31 @@
 <span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             return static_cast&lt;T*&gt;(ptr);</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :             :         }</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : </span>
-<span id="L119"><span class="lineNum">     119</span>         [<span class="tlaGBC" title="Branch 0 was taken 86 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14354 times"> + </span>]:<span class="tlaGNC">       14440 :         ActorId owner = (owner_ptr_ != nullptr) ? *owner_ptr_ : owner_val_;</span></span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">       14440 :         void* ptr = mem::allocate(region_, bytes, owner);</span></span>
-<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14440 times"> + </span>]:<span class="tlaGNC">       14440 :         if (!ptr) {</span></span>
+<span id="L119"><span class="lineNum">     119</span>         [<span class="tlaGBC" title="Branch 0 was taken 86 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14983 times"> + </span>]:<span class="tlaGNC">       15069 :         ActorId owner = (owner_ptr_ != nullptr) ? *owner_ptr_ : owner_val_;</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">       15069 :         void* ptr = mem::allocate(region_, bytes, owner);</span></span>
+<span id="L121"><span class="lineNum">     121</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15069 times"> + </span>]:<span class="tlaGNC">       15069 :         if (!ptr) {</span></span>
 <span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             std::abort();</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :             :         }</span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC tlaBgGNC">       14440 :         return static_cast&lt;T*&gt;(ptr);</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC tlaBgGNC">       15069 :         return static_cast&lt;T*&gt;(ptr);</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :             :     }</span>
 <span id="L126"><span class="lineNum">     126</span>                 :             : </span>
 <span id="L127"><span class="lineNum">     127</span>                 :             :     /// \brief Deallocate memory for \p n elements of type T.</span>
 <span id="L128"><span class="lineNum">     128</span>                 :             :     ///</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :     /// \param[in] ptr Pointer previously returned by \c allocate().</span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     /// \param[in] n Number of elements (must match the allocation count).</span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">       14443 :     void deallocate(T* ptr, size_t n) noexcept {</span></span>
-<span id="L132"><span class="lineNum">     132</span>   [<span class="tlaGBC" title="Branch 0 was taken 14441 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 14441 times"> + </span>]:<span class="tlaGNC">       14443 :         if (!ptr || n == 0) {</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">       15072 :     void deallocate(T* ptr, size_t n) noexcept {</span></span>
+<span id="L132"><span class="lineNum">     132</span>   [<span class="tlaGBC" title="Branch 0 was taken 15070 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 15070 times"> + </span>]:<span class="tlaGNC">       15072 :         if (!ptr || n == 0) {</span></span>
 <span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           2 :             return;</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :         }</span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">       14441 :         size_t bytes = n * sizeof(T);</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">       15070 :         size_t bytes = n * sizeof(T);</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
-<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 14440 times"> + </span>]:<span class="tlaGNC">       14441 :         if (bytes &gt; size_for_class(SizeClass::k4KB)) {</span></span>
+<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 15069 times"> + </span>]:<span class="tlaGNC">       15070 :         if (bytes &gt; size_for_class(SizeClass::k4KB)) {</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :             // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)</span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           1 :             std::free(ptr);</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">           1 :             return;</span></span>
 <span id="L141"><span class="lineNum">     141</span>                 :             :         }</span>
 <span id="L142"><span class="lineNum">     142</span>                 :             : </span>
-<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">       14440 :         mem::deallocate(ptr);</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">       15069 :         mem::deallocate(ptr);</span></span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :     }</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             : </span>
 <span id="L146"><span class="lineNum">     146</span>                 :             :     /// \brief Return the effective owner ActorId.</span>
@@ -317,9 +317,9 @@
 <span id="L239"><span class="lineNum">     239</span>                 :             : /// \return A \c std::shared_ptr&lt;T&gt; (same return type as \c std::make_shared).</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             : template &lt;typename T, typename... Args&gt;</span>
 <span id="L241"><span class="lineNum">     241</span>                 :             : std::shared_ptr&lt;T&gt;</span>
-<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">       14243 : allocate_shared(ActorId owner, RegionType region, Args&amp;&amp;... args) {</span></span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">       28486 :     return std::allocate_shared&lt;T&gt;(MemStdAllocator&lt;T&gt;(owner, region),</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">       14243 :                                    std::forward&lt;Args&gt;(args)...);</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">       14872 : allocate_shared(ActorId owner, RegionType region, Args&amp;&amp;... args) {</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">       29744 :     return std::allocate_shared&lt;T&gt;(MemStdAllocator&lt;T&gt;(owner, region),</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">       14872 :                                    std::forward&lt;Args&gt;(args)...);</span></span>
 <span id="L245"><span class="lineNum">     245</span>                 :             : }</span>
 <span id="L246"><span class="lineNum">     246</span>                 :             : </span>
 <span id="L247"><span class="lineNum">     247</span>                 :             : /// \brief Create a \c std::shared_ptr with slab-allocated control block and</span>
@@ -413,15 +413,15 @@
 <span id="L335"><span class="lineNum">     335</span>                 :             :     /// \param[in] size Size of the object in bytes.</span>
 <span id="L336"><span class="lineNum">     336</span>                 :             :     /// \return Pointer to raw storage.</span>
 <span id="L337"><span class="lineNum">     337</span>                 :             :     // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)</span>
-<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">        1231 :     static void* operator new(size_t size) {</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">        1231 :         void* ptr = nullptr;</span></span>
-<span id="L340"><span class="lineNum">     340</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1231 times"> + </span>]:<span class="tlaGNC">        1231 :         if (t_tla) {</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">        1227 :     static void* operator new(size_t size) {</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">        1227 :         void* ptr = nullptr;</span></span>
+<span id="L340"><span class="lineNum">     340</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1227 times"> + </span>]:<span class="tlaGNC">        1227 :         if (t_tla) {</span></span>
 <span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ptr = t_tla-&gt;allocate_bytes(size, current_actor_id());</span></span>
 <span id="L342"><span class="lineNum">     342</span>                 :             :         }</span>
-<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaGBC" title="Branch 0 was taken 1231 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">        1231 :         if (!ptr) {</span></span>
-<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">        1231 :             ptr = ::operator new(size); // NOLINT</span></span>
+<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaGBC" title="Branch 0 was taken 1227 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">        1227 :         if (!ptr) {</span></span>
+<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">        1227 :             ptr = ::operator new(size); // NOLINT</span></span>
 <span id="L345"><span class="lineNum">     345</span>                 :             :         }</span>
-<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">        1231 :         return ptr;</span></span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">        1227 :         return ptr;</span></span>
 <span id="L347"><span class="lineNum">     347</span>                 :             :     }</span>
 <span id="L348"><span class="lineNum">     348</span>                 :             : </span>
 <span id="L349"><span class="lineNum">     349</span>                 :             :     /// \brief Deallocate a Derived object.</span>
@@ -431,19 +431,19 @@
 <span id="L353"><span class="lineNum">     353</span>                 :             :     /// to the origin SlabCache (handles cross-thread frees).</span>
 <span id="L354"><span class="lineNum">     354</span>                 :             :     ///</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             :     /// \param[in] ptr Pointer to the object to deallocate.</span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">        1231 :     static void operator delete(void* ptr) noexcept {</span></span>
-<span id="L357"><span class="lineNum">     357</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1231 times"> + </span>]:<span class="tlaGNC">        1231 :         if (!ptr)</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">        1227 :     static void operator delete(void* ptr) noexcept {</span></span>
+<span id="L357"><span class="lineNum">     357</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1227 times"> + </span>]:<span class="tlaGNC">        1227 :         if (!ptr)</span></span>
 <span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return;</span></span>
-<span id="L359"><span class="lineNum">     359</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1231 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        1231 :         if (t_tla) {</span></span>
+<span id="L359"><span class="lineNum">     359</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1227 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        1227 :         if (t_tla) {</span></span>
 <span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             t_tla-&gt;deallocate(ptr);</span></span>
 <span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
 <span id="L362"><span class="lineNum">     362</span>                 :             :         }</span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC tlaBgGNC">        1231 :         auto* header = AllocHeader::from_user_data(ptr);</span></span>
-<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">        1231 :         auto slab = SegmentProvider::instance().lookup_slab(header);</span></span>
-<span id="L365"><span class="lineNum">     365</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1231 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1231 :         if (slab.found &amp;&amp; slab.owner_cache) {</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC tlaBgGNC">        1227 :         auto* header = AllocHeader::from_user_data(ptr);</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">        1227 :         auto slab = SegmentProvider::instance().lookup_slab(header);</span></span>
+<span id="L365"><span class="lineNum">     365</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1227 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1227 :         if (slab.found &amp;&amp; slab.owner_cache) {</span></span>
 <span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             static_cast&lt;SlabCache*&gt;(slab.owner_cache)-&gt;deallocate(ptr);</span></span>
 <span id="L367"><span class="lineNum">     367</span>                 :             :         } else {</span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC tlaBgGNC">        1231 :             ::operator delete(ptr); // NOLINT</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC tlaBgGNC">        1227 :             ::operator delete(ptr); // NOLINT</span></span>
 <span id="L369"><span class="lineNum">     369</span>                 :             :         }</span>
 <span id="L370"><span class="lineNum">     370</span>                 :             :     }</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             : </span>

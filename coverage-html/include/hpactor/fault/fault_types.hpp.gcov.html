@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -129,15 +129,15 @@
 <span id="L51"><span class="lineNum">      51</span>                 :             : /// \param[in] d The domain value to convert.</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : /// \return A \c std::string_view of the enumerator name (e.g. \c &quot;kMailbox&quot;),</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : ///         or \c &quot;kUnknown&quot; for values outside the defined range.</span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">         225 : constexpr std::string_view to_string(FaultDomain d) noexcept {</span></span>
-<span id="L55"><span class="lineNum">      55</span>   [<span class="tlaGBC" title="Branch 0 was taken 16 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 13 times"> + </span> :<span class="tlaGNC">         225 :     switch (d) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">         233 : constexpr std::string_view to_string(FaultDomain d) noexcept {</span></span>
+<span id="L55"><span class="lineNum">      55</span>   [<span class="tlaGBC" title="Branch 0 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 36 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 13 times"> + </span> :<span class="tlaGNC">         233 :     switch (d) {</span></span>
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 8 was taken 26 times"> + </span> 
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 9 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 10 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 11 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 12 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 13 was taken 4 times"> + </span> 
 <span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 14 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 15 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 16 was not taken"> - </span>]
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          16 :         case FaultDomain::kMailbox:</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          16 :             return &quot;kMailbox&quot;;</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          34 :         case FaultDomain::kTransport:</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          34 :             return &quot;kTransport&quot;;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          22 :         case FaultDomain::kMailbox:</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          22 :             return &quot;kMailbox&quot;;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          36 :         case FaultDomain::kTransport:</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          36 :             return &quot;kTransport&quot;;</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          12 :         case FaultDomain::kScheduler:</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          12 :             return &quot;kScheduler&quot;;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          13 :         case FaultDomain::kAllocator:</span></span>
@@ -189,13 +189,13 @@
 <span id="L108"><span class="lineNum">     108</span>                 :             : /// \param[in] a The action value to convert.</span>
 <span id="L109"><span class="lineNum">     109</span>                 :             : /// \return A \c std::string_view of the action name (e.g. \c &quot;Fail&quot;),</span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : ///         or \c &quot;Unknown&quot; for values outside the defined range.</span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC tlaBgGNC">          11 : constexpr std::string_view to_string(FaultAction a) noexcept {</span></span>
-<span id="L112"><span class="lineNum">     112</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          11 :     switch (a) {</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC tlaBgGNC">          19 : constexpr std::string_view to_string(FaultAction a) noexcept {</span></span>
+<span id="L112"><span class="lineNum">     112</span>   [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          19 :     switch (a) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
-<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">           5 :         case FaultAction::kFail:</span></span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">           5 :             return &quot;Fail&quot;;</span></span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           3 :         case FaultAction::kDrop:</span></span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">           3 :             return &quot;Drop&quot;;</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">          11 :         case FaultAction::kFail:</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">          11 :             return &quot;Fail&quot;;</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           5 :         case FaultAction::kDrop:</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">           5 :             return &quot;Drop&quot;;</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">           1 :         case FaultAction::kDelay:</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">           1 :             return &quot;Delay&quot;;</span></span>
 <span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           1 :         case FaultAction::kCorrupt:</span></span>

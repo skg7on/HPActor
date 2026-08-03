@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.5&nbsp;%</td>
@@ -432,8 +432,8 @@
 <span id="L354"><span class="lineNum">     354</span>                 :             :     /// external consumers).</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             :     class ActorRegistry {</span>
 <span id="L356"><span class="lineNum">     356</span>                 :             :       public:</span>
-<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">         826 :         explicit ActorRegistry(ActorDirectory&amp; directory)</span></span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">         826 :             : directory_(directory) {}</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">         863 :         explicit ActorRegistry(ActorDirectory&amp; directory)</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">         863 :             : directory_(directory) {}</span></span>
 <span id="L359"><span class="lineNum">     359</span>                 :             : </span>
 <span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">          30 :         void put(const std::string&amp; name, ActorAddress addr) {</span></span>
 <span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">          30 :             (void)directory_.register_name(name, std::move(addr));</span></span>
@@ -1085,13 +1085,13 @@
 <span id="L1007"><span class="lineNum">    1007</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L1008"><span class="lineNum">    1008</span>                 :             : </span>
 <span id="L1009"><span class="lineNum">    1009</span>                 :             : template &lt;typename T, typename... Args&gt;</span>
-<span id="L1010"><span class="lineNum">    1010</span>                 :<span class="tlaGNC">        6601 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
-<span id="L1011"><span class="lineNum">    1011</span>                 :<span class="tlaGNC">        6601 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
+<span id="L1010"><span class="lineNum">    1010</span>                 :<span class="tlaGNC">        6749 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
+<span id="L1011"><span class="lineNum">    1011</span>                 :<span class="tlaGNC">        6749 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
 <span id="L1012"><span class="lineNum">    1012</span>                 :             :     if constexpr (requires { T::kActorTypeName; }) {</span>
-<span id="L1013"><span class="lineNum">    1013</span>                 :<span class="tlaGNC">         837 :         return adopt_preconstructed_actor(actor, T::kActorTypeName);</span></span>
+<span id="L1013"><span class="lineNum">    1013</span>                 :<span class="tlaGNC">         874 :         return adopt_preconstructed_actor(actor, T::kActorTypeName);</span></span>
 <span id="L1014"><span class="lineNum">    1014</span>                 :             :     }</span>
-<span id="L1015"><span class="lineNum">    1015</span>                 :<span class="tlaGNC">        5764 :     return adopt_preconstructed_actor(actor, &quot;unknown&quot;);</span></span>
-<span id="L1016"><span class="lineNum">    1016</span>                 :<span class="tlaGNC">        6601 : }</span></span>
+<span id="L1015"><span class="lineNum">    1015</span>                 :<span class="tlaGNC">        5875 :     return adopt_preconstructed_actor(actor, &quot;unknown&quot;);</span></span>
+<span id="L1016"><span class="lineNum">    1016</span>                 :<span class="tlaGNC">        6749 : }</span></span>
 <span id="L1017"><span class="lineNum">    1017</span>                 :             : </span>
 <span id="L1018"><span class="lineNum">    1018</span>                 :             : } // namespace hpactor</span>
         </pre>

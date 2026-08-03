@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -170,7 +170,7 @@
 <span id="L92"><span class="lineNum">      92</span>                 :             :     using handler_type = std::function&lt;void(TypedMessage&amp;)&gt;;</span>
 <span id="L93"><span class="lineNum">      93</span>                 :             : </span>
 <span id="L94"><span class="lineNum">      94</span>                 :             :     /// \brief Construct an empty behavior that drops all messages.</span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC tlaBgGNC">        7401 :     Behavior() = default;</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC tlaBgGNC">        7586 :     Behavior() = default;</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             : </span>
 <span id="L97"><span class="lineNum">      97</span>                 :             :     /// \brief Construct a behavior wrapping a raw fallback \p handler.</span>
 <span id="L98"><span class="lineNum">      98</span>                 :             :     ///</span>
@@ -231,9 +231,9 @@
 <span id="L153"><span class="lineNum">     153</span>                 :             : </span>
 <span id="L154"><span class="lineNum">     154</span>                 :             :     /// \brief Returns \c true if any handler (typed, fallback, or combinator)</span>
 <span id="L155"><span class="lineNum">     155</span>                 :             :     ///        is set.</span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">      132755 :     explicit operator bool() const {</span></span>
-<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaGBC" title="Branch 0 was taken 132746 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 132699 times"> + </span>]:<span class="tlaGNC">      132802 :         return !typed_handlers_.empty() || handler_ != nullptr ||</span></span>
-<span id="L158"><span class="lineNum">     158</span>         [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span>]:<span class="tlaGNC">      132802 :                compose_ != nullptr;</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">      132739 :     explicit operator bool() const {</span></span>
+<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaGBC" title="Branch 0 was taken 132730 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 132683 times"> + </span>]:<span class="tlaGNC">      132786 :         return !typed_handlers_.empty() || handler_ != nullptr ||</span></span>
+<span id="L158"><span class="lineNum">     158</span>         [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 34 times"> + </span>]:<span class="tlaGNC">      132786 :                compose_ != nullptr;</span></span>
 <span id="L159"><span class="lineNum">     159</span>                 :             :     }</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
 <span id="L161"><span class="lineNum">     161</span>                 :             :     /// \brief Dispatch \p msg to the matching typed handler, or fall back to</span>
@@ -246,20 +246,20 @@
 <span id="L168"><span class="lineNum">     168</span>                 :             :     /// completely empty.</span>
 <span id="L169"><span class="lineNum">     169</span>                 :             :     ///</span>
 <span id="L170"><span class="lineNum">     170</span>                 :             :     /// \param[in,out] msg The incoming typed message.</span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">      132784 :     void operator()(TypedMessage&amp; msg) const {</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">      132768 :     void operator()(TypedMessage&amp; msg) const {</span></span>
 <span id="L172"><span class="lineNum">     172</span>                 :             :         // Combinator path: delegate to the composition wrapper.</span>
-<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 43 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132741 times"> + </span>]:<span class="tlaGNC">      132784 :         if (compose_) {</span></span>
+<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 43 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132725 times"> + </span>]:<span class="tlaGNC">      132768 :         if (compose_) {</span></span>
 <span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">          43 :             compose_-&gt;invoke(msg, *this);</span></span>
 <span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">          65 :             return;</span></span>
 <span id="L176"><span class="lineNum">     176</span>                 :             :         }</span>
 <span id="L177"><span class="lineNum">     177</span>                 :             :         // Standard path: typed handlers first, then fallback.</span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">      132741 :         auto it = typed_handlers_.find(msg.type_id());</span></span>
-<span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132719 times"> + </span>]:<span class="tlaGNC">      132741 :         if (it != typed_handlers_.end()) {</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">      132725 :         auto it = typed_handlers_.find(msg.type_id());</span></span>
+<span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 132703 times"> + </span>]:<span class="tlaGNC">      132725 :         if (it != typed_handlers_.end()) {</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">          22 :             it-&gt;second(msg);</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          22 :             return;</span></span>
 <span id="L182"><span class="lineNum">     182</span>                 :             :         }</span>
-<span id="L183"><span class="lineNum">     183</span>         [<span class="tlaGBC" title="Branch 0 was taken 132715 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">      132719 :         if (handler_) {</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">      132715 :             handler_(msg);</span></span>
+<span id="L183"><span class="lineNum">     183</span>         [<span class="tlaGBC" title="Branch 0 was taken 132699 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">      132703 :         if (handler_) {</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">      132699 :             handler_(msg);</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :         }</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :     }</span>
 <span id="L187"><span class="lineNum">     187</span>                 :             : </span>
@@ -281,8 +281,8 @@
 <span id="L203"><span class="lineNum">     203</span>                 :             :     ///</span>
 <span id="L204"><span class="lineNum">     204</span>                 :             :     /// Equivalent to the default constructor. All messages are dropped.</span>
 <span id="L205"><span class="lineNum">     205</span>                 :             :     /// \return An empty \c Behavior that evaluates to \c false.</span>
-<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">         541 :     static Behavior empty() {</span></span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">         541 :         return Behavior{};</span></span>
+<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">         578 :     static Behavior empty() {</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">         578 :         return Behavior{};</span></span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :     }</span>
 <span id="L209"><span class="lineNum">     209</span>                 :             : </span>
 <span id="L210"><span class="lineNum">     210</span>                 :             :     /// \brief Signature for the passthrough callback used by</span>

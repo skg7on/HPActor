@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">87.5&nbsp;%</td>
-            <td class="headerCovTableEntry">16</td>
-            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntryMed">86.7&nbsp;%</td>
+            <td class="headerCovTableEntry">15</td>
+            <td class="headerCovTableEntry">13</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-07-20 13:11:58</td>
+            <td class="headerValue">2026-08-03 00:53:04</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -102,31 +102,32 @@
 <span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           6 :     (void)try_send(target, std::move(msg));</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           6 : }</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : mailbox::DeliveryResult</span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">      126793 : ActorRef::try_send(const ActorAddress&amp; target, TypedMessage msg,</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :             :                    mailbox::DeliveryOptions options) {</span>
-<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 126791 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">      126793 :     if (is_local()) {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">      126791 :         Actor* actor = get_actor();</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 126791 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      126791 :         if (actor != nullptr) {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">      253582 :             auto er = actor-&gt;get()-&gt;system().try_deliver_local(</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">      126791 :                 target.id, std::move(msg), /*priority=*/0,</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :             :                 /*deadline_ns=*/INT64_MAX, options);</span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      253582 :             return mailbox::DeliveryResult::from_enqueue(</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      126791 :                 er, target, MessageId{options.message_id});</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :             :         }</span>
-<span id="L39"><span class="lineNum">      39</span>                 :             :         return {mailbox::DeliveryStatus::NoRoute, target,</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 MessageId{options.message_id}, 0};</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      126794 : msg::DeliveryReceipt ActorRef::try_send(const ActorAddress&amp; target, TypedMessage msg,</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :             :                                         mailbox::DeliveryOptions options) {</span>
+<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaGBC" title="Branch 0 was taken 126792 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">      126794 :     if (is_local()) {</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">      126792 :         Actor* actor = get_actor();</span></span>
+<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 126792 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      126792 :         if (actor != nullptr) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">      253584 :             auto er = actor-&gt;get()-&gt;system().try_deliver_local(</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">      126792 :                 target.id, std::move(msg), /*priority=*/0,</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :             :                 /*deadline_ns=*/INT64_MAX, options);</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :             return msg::DeliveryReceipt(mailbox::DeliveryResult::from_enqueue(</span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">      126792 :                 er, target, MessageId{options.message_id}));</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :         }</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :         return msg::DeliveryReceipt(</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :             mailbox::DeliveryResult{mailbox::DeliveryStatus::NoRoute, target,</span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                                     MessageId{options.message_id}, 0});</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     } else {</span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC tlaBgGNC">           2 :         ActorProxy* proxy = get_proxy();</span></span>
 <span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :         if (proxy != nullptr) {</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           2 :             return proxy-&gt;try_send(target, std::move(msg), options);</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :         }</span>
-<span id="L46"><span class="lineNum">      46</span>                 :             :         return {mailbox::DeliveryStatus::NoRoute, target,</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 MessageId{options.message_id}, 0};</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :             :     }</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             : }</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :             : } // namespace hpactor</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             :         return msg::DeliveryReceipt(</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             :             mailbox::DeliveryResult{mailbox::DeliveryStatus::NoRoute, target,</span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                                     MessageId{options.message_id}, 0});</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : }</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : </span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
