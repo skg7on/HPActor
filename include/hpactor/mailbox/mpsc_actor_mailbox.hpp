@@ -620,21 +620,6 @@ template <typename T> class MPSCActorMailbox {
             evt.event_type = metrics::MetricEventType::kMailboxEnqueue;
             evt.value_hi = 1;
             metrics_ring_buffer_->try_push(evt);
-
-            // MBX-007: emit queued_bytes gauge after enqueue
-            metrics::MetricEvent qb_evt{};
-            qb_evt.actor_id = actor_id_;
-            qb_evt.event_type = metrics::MetricEventType::kMailboxQueuedBytes;
-            qb_evt.value_hi = static_cast<uint32_t>(reservation_.queued_bytes());
-            metrics_ring_buffer_->try_push(qb_evt);
-
-            // MBX-007: emit system lane depth gauge
-            metrics::MetricEvent sl_evt{};
-            sl_evt.actor_id = actor_id_;
-            sl_evt.event_type = metrics::MetricEventType::kMailboxSystemLaneDepth;
-            sl_evt.value_hi = static_cast<uint32_t>(
-                lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
-            metrics_ring_buffer_->try_push(sl_evt);
         }
 
         // Edge-triggered wakeup: always attempt to claim the wakeup right.
@@ -786,21 +771,6 @@ template <typename T> class MPSCActorMailbox {
             evt.event_type = metrics::MetricEventType::kMailboxDequeue;
             evt.value_hi = 1;
             metrics_ring_buffer_->try_push(evt);
-
-            // MBX-007: emit queued_bytes gauge after dequeue
-            metrics::MetricEvent qb_evt{};
-            qb_evt.actor_id = actor_id_;
-            qb_evt.event_type = metrics::MetricEventType::kMailboxQueuedBytes;
-            qb_evt.value_hi = static_cast<uint32_t>(reservation_.queued_bytes());
-            metrics_ring_buffer_->try_push(qb_evt);
-
-            // MBX-007: emit system lane depth gauge
-            metrics::MetricEvent sl_evt{};
-            sl_evt.actor_id = actor_id_;
-            sl_evt.event_type = metrics::MetricEventType::kMailboxSystemLaneDepth;
-            sl_evt.value_hi = static_cast<uint32_t>(
-                lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
-            metrics_ring_buffer_->try_push(sl_evt);
         }
         return node;
     }
@@ -1254,25 +1224,47 @@ template <typename T> class MPSCActorMailbox {
                                config_.critical_watermark);
         auto new_state = pressure_state_.current_state();
 
-        // MBX-007: emit pressure state/ratio gauge events
-        if (metrics_ring_buffer_) [[unlikely]] {
-            // Emit pressure ratio on every update (gauge, idempotent)
-            metrics::MetricEvent ratio_evt{};
-            ratio_evt.actor_id = actor_id_;
-            ratio_evt.event_type = metrics::MetricEventType::kMailboxPressureRatio;
-            ratio_evt.value_hi =
-                static_cast<uint32_t>(pressure_ratio() * 1'000'000.0);
-            metrics_ring_buffer_->try_push(ratio_evt);
-
-            // Only emit pressure state on actual transition
-            if (old_state != new_state) {
-                metrics::MetricEvent state_evt{};
-                state_evt.actor_id = actor_id_;
-                state_evt.event_type =
-                    metrics::MetricEventType::kMailboxPressureState;
-                state_evt.code = static_cast<uint8_t>(
+        // MBX-007: emit mailbox gauge events only on pressure state
+        // transitions to avoid flooding the metrics ring buffer. Gauges
+        // are point-in-time snapshots — emitting on every enqueue/dequeue
+        // (thousands/sec) would overflow the buffer. Emitting on state
+        // transitions (a few/sec) keeps the buffer healthy while still
+        // providing timely observability.
+        if (metrics_ring_buffer_ && old_state != new_state) [[unlikely]] {
+            // Pressure state
+            {
+                metrics::MetricEvent evt{};
+                evt.actor_id = actor_id_;
+                evt.event_type = metrics::MetricEventType::kMailboxPressureState;
+                evt.code = static_cast<uint8_t>(
                     detail::PressureStateMachine::severity(new_state));
-                metrics_ring_buffer_->try_push(state_evt);
+                metrics_ring_buffer_->try_push(evt);
+            }
+            // Pressure ratio (PPM)
+            {
+                metrics::MetricEvent evt{};
+                evt.actor_id = actor_id_;
+                evt.event_type = metrics::MetricEventType::kMailboxPressureRatio;
+                evt.value_hi =
+                    static_cast<uint32_t>(pressure_ratio() * 1'000'000.0);
+                metrics_ring_buffer_->try_push(evt);
+            }
+            // Queued bytes
+            {
+                metrics::MetricEvent evt{};
+                evt.actor_id = actor_id_;
+                evt.event_type = metrics::MetricEventType::kMailboxQueuedBytes;
+                evt.value_hi = static_cast<uint32_t>(reservation_.queued_bytes());
+                metrics_ring_buffer_->try_push(evt);
+            }
+            // System lane depth
+            {
+                metrics::MetricEvent evt{};
+                evt.actor_id = actor_id_;
+                evt.event_type = metrics::MetricEventType::kMailboxSystemLaneDepth;
+                evt.value_hi = static_cast<uint32_t>(
+                    lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
+                metrics_ring_buffer_->try_push(evt);
             }
         }
     }
