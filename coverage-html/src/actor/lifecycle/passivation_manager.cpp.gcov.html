@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 04:20:55</td>
+            <td class="headerValue">2026-08-04 02:00:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
@@ -108,13 +108,13 @@
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : namespace hpactor {</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">         845 : PassivationManager::PassivationManager(ActorSystem&amp; system,</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">         852 : PassivationManager::PassivationManager(ActorSystem&amp; system,</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :                                        DurableStateStore* durable_store,</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         845 :                                        PassivationConfig default_config)</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         845 :     : system_(system), durable_store_(durable_store),</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         845 :       default_config_(std::move(default_config)) {}</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         852 :                                        PassivationConfig default_config)</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         852 :     : system_(system), durable_store_(durable_store),</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         852 :       default_config_(std::move(default_config)) {}</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         845 : PassivationManager::~PassivationManager() = default;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         852 : PassivationManager::~PassivationManager() = default;</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>
 <span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           3 : bool PassivationManager::begin_passivation(ActorId actor_id,</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :                                            PassivationRecord::Trigger trigger) {</span>

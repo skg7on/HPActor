@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 04:20:55</td>
+            <td class="headerValue">2026-08-04 02:00:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -95,14 +95,14 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : namespace cli {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">      190971 : CommandRegistry&amp; CommandRegistry::instance() {</span></span>
-<span id="L21"><span class="lineNum">      21</span>   [<span class="tlaGBC" title="Branch 0 was taken 3595 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 187376 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3595 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      190971 :     static CommandRegistry reg;</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      190971 :     return reg;</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">      191448 : CommandRegistry&amp; CommandRegistry::instance() {</span></span>
+<span id="L21"><span class="lineNum">      21</span>   [<span class="tlaGBC" title="Branch 0 was taken 3604 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 187844 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3604 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      191448 :     static CommandRegistry reg;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      191448 :     return reg;</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : }</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">      190824 : void CommandRegistry::add(std::unique_ptr&lt;ICommand&gt; cmd) {</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      190824 :     commands_.push_back(std::move(cmd));</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      190824 : }</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">      191301 : void CommandRegistry::add(std::unique_ptr&lt;ICommand&gt; cmd) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      191301 :     commands_.push_back(std::move(cmd));</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      191301 : }</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         146 : const std::vector&lt;std::unique_ptr&lt;ICommand&gt;&gt;&amp; CommandRegistry::commands() const {</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         146 :     return commands_;</span></span>

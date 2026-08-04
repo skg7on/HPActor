@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 04:20:55</td>
+            <td class="headerValue">2026-08-04 02:00:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -199,7 +199,7 @@
 <span id="L121"><span class="lineNum">     121</span>                 :             :   public:</span>
 <span id="L122"><span class="lineNum">     122</span>                 :             :     using handle_type = std::coroutine_handle&lt;CoroutinePromise&gt;;</span>
 <span id="L123"><span class="lineNum">     123</span>                 :             : </span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">        6958 :     CoroutineTask() noexcept : handle_(nullptr) {}</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">        6972 :     CoroutineTask() noexcept : handle_(nullptr) {}</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          18 :     explicit CoroutineTask(handle_type handle) noexcept : handle_(handle) {}</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :             : </span>
 <span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          29 :     CoroutineTask(CoroutineTask&amp;&amp; other) noexcept : handle_(other.handle_) {</span></span>
@@ -219,10 +219,10 @@
 <span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">          16 :         return *this;</span></span>
 <span id="L142"><span class="lineNum">     142</span>                 :             :     }</span>
 <span id="L143"><span class="lineNum">     143</span>                 :             : </span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">        7005 :     ~CoroutineTask() {</span></span>
-<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6987 times"> + </span>]:<span class="tlaGNC">        7005 :         if (handle_)</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">        7019 :     ~CoroutineTask() {</span></span>
+<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7001 times"> + </span>]:<span class="tlaGNC">        7019 :         if (handle_)</span></span>
 <span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          18 :             handle_.destroy();</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">        7005 :     }</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">        7019 :     }</span></span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
 <span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">          93 :     explicit operator bool() const noexcept {</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">          93 :         return handle_ != nullptr;</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-03 04:20:55</td>
+            <td class="headerValue">2026-08-04 02:00:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
@@ -97,38 +97,38 @@
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : namespace hpactor::config {</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">       61471 : TomlParserRegistry&amp; TomlParserRegistry::instance() {</span></span>
-<span id="L23"><span class="lineNum">      23</span>   [<span class="tlaGBC" title="Branch 0 was taken 3595 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 57876 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3595 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       61471 :     static auto* reg = new TomlParserRegistry();</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">       61471 :     return *reg;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">       61624 : TomlParserRegistry&amp; TomlParserRegistry::instance() {</span></span>
+<span id="L23"><span class="lineNum">      23</span>   [<span class="tlaGBC" title="Branch 0 was taken 3604 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 58020 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3604 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       61624 :     static auto* reg = new TomlParserRegistry();</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">       61624 :     return *reg;</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : }</span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       57688 : bool TomlParserRegistry::add_system_parser(std::string_view name, int order,</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       57832 : bool TomlParserRegistry::add_system_parser(std::string_view name, int order,</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :                                            SystemParserFactory factory) {</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :     static std::mutex mutex;</span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">       57688 :     std::lock_guard&lt;std::mutex&gt; lock(mutex);</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">       57832 :     std::lock_guard&lt;std::mutex&gt; lock(mutex);</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 434172 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 57604 times"> + </span>]:<span class="tlaGNC">      491776 :     for (const auto&amp; entry : system_parsers_) {</span></span>
-<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaGBC" title="Branch 0 was taken 84 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 434088 times"> + </span>]:<span class="tlaGNC">      434172 :         if (entry.name == name)</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 435252 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 57748 times"> + </span>]:<span class="tlaGNC">      493000 :     for (const auto&amp; entry : system_parsers_) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaGBC" title="Branch 0 was taken 84 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 435168 times"> + </span>]:<span class="tlaGNC">      435252 :         if (entry.name == name)</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          84 :             return false;</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      115208 :     system_parsers_.push_back({std::string{name}, order, factory});</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">       57604 :     return true;</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">       57688 : }</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      115496 :     system_parsers_.push_back({std::string{name}, order, factory});</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">       57748 :     return true;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">       57832 : }</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        3595 : bool TomlParserRegistry::add_document_parser(std::string_view name, int order,</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        3604 : bool TomlParserRegistry::add_document_parser(std::string_view name, int order,</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :                                              DocumentParserFactory factory) {</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     static std::mutex mutex;</span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">        3595 :     std::lock_guard&lt;std::mutex&gt; lock(mutex);</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">        3604 :     std::lock_guard&lt;std::mutex&gt; lock(mutex);</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3595 times"> + </span>]:<span class="tlaGNC">        3595 :     for (const auto&amp; entry : document_parsers_) {</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3604 times"> + </span>]:<span class="tlaGNC">        3604 :     for (const auto&amp; entry : document_parsers_) {</span></span>
 <span id="L47"><span class="lineNum">      47</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (entry.name == name)</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC tlaBgGNC">        7190 :     document_parsers_.push_back({std::string{name}, order, factory});</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">        3595 :     return true;</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">        3595 : }</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC tlaBgGNC">        7208 :     document_parsers_.push_back({std::string{name}, order, factory});</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">        3604 :     return true;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">        3604 : }</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             : </span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : std::vector&lt;std::unique_ptr&lt;ITomlSystemConfigParser&gt;&gt;</span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          94 : TomlParserRegistry::create_system_parsers() const {</span></span>
