@@ -94,6 +94,14 @@ class Aggregator {
     MetricFamily* endpoint_circuit_transitions_family_ = nullptr;
     MetricFamily* delivery_results_family_ = nullptr;
 
+    // ── Mailbox observability gauge families (MBX-007) ────────────────
+    MetricFamily* mailbox_capacity_family_ = nullptr;
+    MetricFamily* mailbox_pressure_state_family_ = nullptr;
+    MetricFamily* mailbox_pressure_ratio_family_ = nullptr;
+    MetricFamily* mailbox_queued_bytes_family_ = nullptr;
+    MetricFamily* mailbox_max_depth_family_ = nullptr;
+    MetricFamily* mailbox_system_lane_depth_family_ = nullptr;
+
     int64_t active_actors_{0};
 
     /// \brief LRU-style cache mapping ActorId to actor type name for label

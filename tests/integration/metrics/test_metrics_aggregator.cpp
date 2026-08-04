@@ -259,3 +259,185 @@ TEST_F(MetricsAggregatorTest, DeliveryResultEvents) {
     EXPECT_TRUE(has_mailbox_full);
     EXPECT_TRUE(has_no_route);
 }
+
+TEST_F(MetricsAggregatorTest, MailboxCapacityGauge) {
+    agg().begin_drain();
+
+    // Set capacity for actor 42
+    MetricEvent cap{};
+    cap.actor_id = hpactor::ActorId{42};
+    cap.event_type = MetricEventType::kMailboxCapacity;
+    cap.value_hi = 2048;
+    agg().on_event(cap);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_capacity") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr) << "hpactor_mailbox_capacity family not found";
+    ASSERT_EQ(family->gauges.size(), 1u);
+    EXPECT_EQ(family->gauges.begin()->second, 2048);
+}
+
+TEST_F(MetricsAggregatorTest, MailboxPressureStateGauge) {
+    agg().begin_drain();
+
+    // Critical pressure (2)
+    MetricEvent ps{};
+    ps.actor_id = hpactor::ActorId{99};
+    ps.event_type = MetricEventType::kMailboxPressureState;
+    ps.code = 2; // Critical
+    agg().on_event(ps);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_pressure_state") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr) << "hpactor_mailbox_pressure_state family not found";
+    ASSERT_EQ(family->gauges.size(), 1u);
+    EXPECT_EQ(family->gauges.begin()->second, 2);
+}
+
+TEST_F(MetricsAggregatorTest, MailboxQueuedBytesGauge) {
+    agg().begin_drain();
+
+    MetricEvent qb{};
+    qb.actor_id = hpactor::ActorId{7};
+    qb.event_type = MetricEventType::kMailboxQueuedBytes;
+    qb.value_hi = 65536;
+    agg().on_event(qb);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_queued_bytes") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr) << "hpactor_mailbox_queued_bytes family not found";
+    ASSERT_EQ(family->gauges.size(), 1u);
+    EXPECT_EQ(family->gauges.begin()->second, 65536);
+}
+
+TEST_F(MetricsAggregatorTest, MailboxPressureRatioGauge) {
+    agg().begin_drain();
+
+    // 75% pressure = 750,000 PPM
+    MetricEvent pr{};
+    pr.actor_id = hpactor::ActorId{3};
+    pr.event_type = MetricEventType::kMailboxPressureRatio;
+    pr.value_hi = 750000;
+    agg().on_event(pr);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_pressure_ratio") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr) << "hpactor_mailbox_pressure_ratio family not found";
+    ASSERT_EQ(family->gauges.size(), 1u);
+    EXPECT_EQ(family->gauges.begin()->second, 750000);
+}
+
+TEST_F(MetricsAggregatorTest, MailboxGaugeStateUpdate) {
+    // Verify that gauge values are overwritten on subsequent events
+    agg().begin_drain();
+
+    MetricEvent cap1{};
+    cap1.actor_id = hpactor::ActorId{1};
+    cap1.event_type = MetricEventType::kMailboxCapacity;
+    cap1.value_hi = 1024;
+    agg().on_event(cap1);
+
+    // Update to new value
+    MetricEvent cap2{};
+    cap2.actor_id = hpactor::ActorId{1};
+    cap2.event_type = MetricEventType::kMailboxCapacity;
+    cap2.value_hi = 4096;
+    agg().on_event(cap2);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_capacity") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr);
+    ASSERT_EQ(family->gauges.size(), 1u);
+    // Last value wins for gauge
+    EXPECT_EQ(family->gauges.begin()->second, 4096);
+}
+
+TEST_F(MetricsAggregatorTest, MailboxMaxDepthGauge) {
+    agg().begin_drain();
+
+    // Peak depth observed at 500
+    MetricEvent md{};
+    md.actor_id = hpactor::ActorId{42};
+    md.event_type = MetricEventType::kMailboxMaxDepth;
+    md.value_hi = 500;
+    agg().on_event(md);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_max_depth") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr) << "hpactor_mailbox_max_depth family not found";
+    ASSERT_EQ(family->gauges.size(), 1u);
+    EXPECT_EQ(family->gauges.begin()->second, 500);
+}
+
+TEST_F(MetricsAggregatorTest, MailboxSystemLaneDepthGauge) {
+    agg().begin_drain();
+
+    MetricEvent sl{};
+    sl.actor_id = hpactor::ActorId{7};
+    sl.event_type = MetricEventType::kMailboxSystemLaneDepth;
+    sl.value_hi = 3;
+    agg().on_event(sl);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_mailbox_system_lane_depth") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr)
+        << "hpactor_mailbox_system_lane_depth family not found";
+    ASSERT_EQ(family->gauges.size(), 1u);
+    EXPECT_EQ(family->gauges.begin()->second, 3);
+}

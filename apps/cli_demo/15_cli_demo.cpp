@@ -35,6 +35,7 @@
 //     Worker-3: circuit_breaker + quarantine enabled
 //     Worker-4: delivery failure generation + quarantine enabled
 //     DlqDemoActor: DLQ record generation + circuit breaker
+//     All: bounded mailboxes (256 msg) — /actor <id> show, /metrics show
 //
 //   CLI commands exercised (all produce meaningful output):
 //     /actor <id> show       — metadata, mailbox, state for any actor
@@ -69,7 +70,7 @@
 //     /ask pending           — list in-flight ask requests
 //     /ask cancel            — cancel an ask request
 //     /ask stats             — ask manager statistics
-//     /metrics show          — metrics snapshot
+//     /metrics show          — metrics snapshot (hpactor_mailbox_* gauges)
 //     /topology show         — topology tree
 //     /help                  — show available commands
 //     /quit                  — exit CLI and trigger graceful shutdown
@@ -141,6 +142,7 @@ static void print_splash() {
         << "║    /actor <id> circuit  — circuit breaker (Worker-3, DLQ)    ║\n"
         << "║    /actor <id> rate     — rate limiter (Worker-1, Worker-2)  ║\n"
         << "║    /actor <id> delivery — delivery counters (Worker-4)       ║\n"
+        << "║    /metrics show        — Prometheus metrics + mailbox obs   ║\n"
         << "║    /dlq list            — dead-letter queue records          ║\n"
         << "║    /fault status        — fault injection system status      ║\n"
         << "║    /failure reasons     — canonical failure reasons          ║\n"

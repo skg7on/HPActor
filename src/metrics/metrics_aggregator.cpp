@@ -159,6 +159,54 @@ void Aggregator::ensure_families_registered() {
                                                           "Total delivery "
                                                           "results by status.",
                                                           MetricType::kCounter);
+
+    // ── Mailbox observability gauge families (MBX-007) ────────────────
+    mailbox_capacity_family_ = &registry_.register_family("hpactor_mailbox_"
+                                                          "capacity",
+                                                          "Configured mailbox "
+                                                          "message capacity.",
+                                                          MetricType::kGauge);
+    mailbox_pressure_state_family_ =
+        &registry_.register_family("hpactor_"
+                                   "mailbox_"
+                                   "pressure_"
+                                   "state",
+                                   "Mailbox "
+                                   "pressure state "
+                                   "(0=Low, 1=High, "
+                                   "2=Critical).",
+                                   MetricType::kGauge);
+    mailbox_pressure_ratio_family_ =
+        &registry_.register_family("hpactor_"
+                                   "mailbox_"
+                                   "pressure_ratio",
+                                   "Mailbox "
+                                   "pressure ratio "
+                                   "in parts-per-"
+                                   "million "
+                                   "(0-1,000,000).",
+                                   MetricType::kGauge);
+    mailbox_queued_bytes_family_ = &registry_.register_family("hpactor_mailbox_"
+                                                              "queued_bytes",
+                                                              "Current queued "
+                                                              "payload bytes in "
+                                                              "the mailbox.",
+                                                              MetricType::kGauge);
+    mailbox_max_depth_family_ = &registry_.register_family("hpactor_mailbox_"
+                                                           "max_depth",
+                                                           "Peak observed "
+                                                           "mailbox depth.",
+                                                           MetricType::kGauge);
+    mailbox_system_lane_depth_family_ =
+        &registry_.register_family("hpactor_"
+                                   "mailbox_"
+                                   "system_lane_"
+                                   "depth",
+                                   "Current "
+                                   "depth of "
+                                   "the system "
+                                   "lane.",
+                                   MetricType::kGauge);
 }
 
 LabelSet Aggregator::make_actor_labels(ActorId id) {
@@ -496,6 +544,48 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kStreamWindowBytes:
             // Stream metrics — full metric handlers wired in MSG-008 follow-up.
             break;
+        // ── Mailbox observability gauge events (MBX-007) ──────────────
+        case MetricEventType::kMailboxCapacity: {
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *mailbox_capacity_family_, make_actor_labels(e.actor_id));
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kMailboxPressureState: {
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *mailbox_pressure_state_family_, make_actor_labels(e.actor_id));
+            g.value.store(static_cast<int64_t>(e.code), std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kMailboxPressureRatio: {
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *mailbox_pressure_ratio_family_, make_actor_labels(e.actor_id));
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kMailboxQueuedBytes: {
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *mailbox_queued_bytes_family_, make_actor_labels(e.actor_id));
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kMailboxMaxDepth: {
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *mailbox_max_depth_family_, make_actor_labels(e.actor_id));
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kMailboxSystemLaneDepth: {
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *mailbox_system_lane_depth_family_, make_actor_labels(e.actor_id));
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
     }
 }
 
