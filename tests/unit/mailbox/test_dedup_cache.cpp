@@ -191,3 +191,37 @@ TEST(DedupCacheTest, ConcurrentAccess) {
     EXPECT_EQ(cache.insertions(), kThreads * kPerThread);
     EXPECT_EQ(cache.size(), kThreads * kPerThread);
 }
+
+TEST(DedupCacheTest, RemoveRollsBackInsertion) {
+    // MSG-006: Verifies that remove() correctly rolls back an insertion
+    // so that a retry after a rejected delivery is not suppressed.
+    DedupCache::Config cfg;
+    DedupCache cache(cfg);
+
+    EndPoint ep = make_test_endpoint();
+    ActorId actor{1};
+    MessageId msg_id{42};
+
+    // Insert via is_duplicate → returns false (new entry).
+    EXPECT_FALSE(cache.is_duplicate(ep, actor, msg_id));
+    EXPECT_EQ(cache.size(), 1);
+
+    // Roll back the insertion.
+    cache.remove(ep, actor, msg_id);
+    EXPECT_EQ(cache.size(), 0);
+
+    // After removal, re-inserting the same key should be a new insertion.
+    EXPECT_FALSE(cache.is_duplicate(ep, actor, msg_id));
+    EXPECT_EQ(cache.size(), 1);
+    EXPECT_EQ(cache.insertions(), 2); // both were non-duplicates
+}
+
+TEST(DedupCacheTest, RemoveNonExistentIsNoop) {
+    DedupCache::Config cfg;
+    DedupCache cache(cfg);
+
+    EndPoint ep = make_test_endpoint();
+    // Removing a key that was never inserted should be a safe no-op.
+    cache.remove(ep, ActorId{1}, MessageId{99});
+    EXPECT_EQ(cache.size(), 0);
+}
