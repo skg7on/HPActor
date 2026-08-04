@@ -22,6 +22,8 @@ add_executable(test_unit_cli
     test_cli_proto_server.cpp
     test_cli_http_server.cpp
     admin/test_admin_api_actor.cpp
+    admin/test_fuzz_regression_admin.cpp
+    test_fuzz_regression_lexer.cpp
 )
 target_include_directories(test_unit_cli PRIVATE ${PROJECT_SOURCE_DIR}/src/cli/commands)
 target_link_libraries(test_unit_cli hpactor hpactor_test_support GTest::gtest_main)

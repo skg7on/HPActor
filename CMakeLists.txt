@@ -42,6 +42,7 @@ option(ENABLE_FAULT_INJECTION "Enable deterministic fault injection hooks" ON)
 option(ENABLE_ACTOR_PASSIVATION "Enable actor passivation subsystem" ON)
 option(ENABLE_AI_ACCELERATORS "Enable AI accelerator resource plane (CPU/mock baseline, runtime opt-in)" ON)
 option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20 is available" OFF)
+option(ENABLE_FUZZ "Build fuzz test targets (requires Clang + libFuzzer)" OFF)
 option(ENABLE_FIXED_DISRUPTOR_MAILBOX
        "Enable experimental fixed-message Disruptor actor mailbox" OFF)
 option(ENABLE_PYTHON_BINDINGS "Build the native Python binding foundation" OFF)

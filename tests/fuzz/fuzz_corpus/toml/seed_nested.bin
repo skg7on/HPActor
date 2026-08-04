@@ -1,0 +1,4 @@
+[system]
+name = "test"
+[system.mailbox]
+capacity = 1024

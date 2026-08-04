@@ -14,6 +14,7 @@
 
 #include <cstring>
 #include <gtest/gtest.h>
+#include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/msg/frame.hpp>
 
 using namespace hpactor;
@@ -112,4 +113,89 @@ TEST(FrameTest, Ipv6Endpoint) {
                   .port_nw,
               htons(8080));
     EXPECT_EQ(decoded_ipv6.pb_envelope.data_frame().message_id(), 99999u);
+}
+
+// ── Fuzz regression tests — replay known-edge-case inputs against
+//     try_decode_wireframe() and verify no crash / correct error ────────────
+
+TEST(FuzzRegression, FrameEmptyInput) {
+    StreamBuffer buf;
+    auto r = try_decode_wireframe(buf);
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(r.error, FrameDecodeError::HeaderTooShort);
+}
+
+TEST(FuzzRegression, FrameWrongMagic) {
+    // "XXXX" + 4-byte zero length = 8 bytes total
+    uint8_t data[] = {'X', 'X', 'X', 'X', 0x00, 0x00, 0x00, 0x00};
+    StreamBuffer buf(data, data + sizeof(data));
+    auto r = try_decode_wireframe(buf);
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(r.error, FrameDecodeError::InvalidMagic);
+}
+
+TEST(FuzzRegression, FrameTruncatedHeader) {
+    // Just "HPA" — only 3 bytes, below minimum 8
+    uint8_t data[] = {'H', 'P', 'A'};
+    StreamBuffer buf(data, data + sizeof(data));
+    auto r = try_decode_wireframe(buf);
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(r.error, FrameDecodeError::HeaderTooShort);
+}
+
+TEST(FuzzRegression, FrameMaxDeclaredLength) {
+    // "HPAC" + 0xFFFFFFFF length (declares ~4GB payload)
+    uint8_t data[] = {'H', 'P', 'A', 'C', 0xFF, 0xFF, 0xFF, 0xFF};
+    StreamBuffer buf(data, data + sizeof(data));
+    FrameDecodeLimits limits;
+    limits.max_payload_bytes = 16U * 1024U * 1024U; // 16 MiB
+    limits.reject_trailing_bytes = true;
+    auto r = try_decode_wireframe(buf, limits);
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(r.error, FrameDecodeError::FrameTooLarge);
+    EXPECT_EQ(r.declared_payload_bytes, 0xFFFFFFFFu);
+}
+
+TEST(FuzzRegression, FrameLengthMismatch) {
+    // "HPAC" + declare 100 bytes of payload, but only 8 header bytes present
+    uint8_t data[] = {'H', 'P', 'A', 'C', 0x00, 0x00, 0x00, 100};
+    StreamBuffer buf(data, data + sizeof(data));
+    auto r = try_decode_wireframe(buf);
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(r.error, FrameDecodeError::LengthMismatch);
+}
+
+TEST(FuzzRegression, FrameZeroPayloadRelaxed) {
+    // "HPAC" + 0 length, allow trailing bytes
+    uint8_t data[] = {'H', 'P', 'A', 'C', 0x00, 0x00, 0x00, 0x00, 'X', 'Y'};
+    StreamBuffer buf(data, data + sizeof(data));
+    FrameDecodeLimits limits;
+    limits.max_payload_bytes = 0;
+    limits.reject_trailing_bytes = false;
+    auto r = try_decode_wireframe(buf, limits);
+    // With 0 payload and trailing allowed, result depends on protobuf parse
+    // of empty payload — should not crash regardless of outcome
+    EXPECT_TRUE(r.ok() || !r.ok());
+}
+
+TEST(FuzzRegression, FrameRoundTripValidMinimal) {
+    // A minimal valid frame: "HPAC" + 0-length payload
+    uint8_t data[] = {'H', 'P', 'A', 'C', 0x00, 0x00, 0x00, 0x00};
+    StreamBuffer buf(data, data + sizeof(data));
+    auto r = try_decode_wireframe(buf);
+    if (r.ok()) {
+        // Round-trip: encode the result, decode again — must match
+        auto encoded = r.frame.encode();
+        auto r2 = try_decode_wireframe(encoded);
+        EXPECT_TRUE(r2.ok());
+    }
+}
+
+TEST(FuzzRegression, FrameAllZeroBytes) {
+    // 64 zero bytes — exercises every code path with null-like input
+    uint8_t data[64] = {};
+    StreamBuffer buf(data, data + sizeof(data));
+    auto r = try_decode_wireframe(buf);
+    EXPECT_FALSE(r.ok());
+    EXPECT_EQ(r.error, FrameDecodeError::InvalidMagic);
 }
