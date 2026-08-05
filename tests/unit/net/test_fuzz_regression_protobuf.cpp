@@ -81,7 +81,7 @@ TEST(FuzzRegressionProtobuf, WireEnvelopeRoundTrip) {
     df->set_type_tag(42);
     df->set_message_id(12345);
     df->set_flags(1 << 5); // AckRequested
-    df->set_payload("test_payload", 12);
+    df->set_payload("test_payload", 12u);
     df->mutable_sender()->mutable_local_addr()->set_actor_id(100);
     df->mutable_receiver()->mutable_local_addr()->set_actor_id(200);
 
