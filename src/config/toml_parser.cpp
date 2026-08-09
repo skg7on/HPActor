@@ -18,9 +18,9 @@
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/config/toml_parser_registry.hpp>
 #include <hpactor/config/toml_table_view.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/log_category.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/fault/fault_macros.hpp>
 
 #include <toml.hpp>
 
@@ -84,8 +84,10 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
     toml::table root;
     try {
         root = toml::parse_file(filepath);
-    } catch (const toml::parse_error&) {
-        error err(errors::unknown);
+    } catch (const toml::parse_error& e) {
+        error err(errors::invalid_argument,
+                  std::string("TOML parse error in ") + filepath + ": " +
+                      std::string(e.what()));
         HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
                           "topology parse error",
                           log::field_lit("error", err.message().c_str()));
@@ -97,16 +99,16 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
 
     // Imported files must not contain [system]
     if (!is_entrypoint && root_view.contains("system")) {
-        error err(errors::unknown);
-        return result<TomlFileData>::make(std::move(err));
+        return result<TomlFileData>::make(
+            ctx.fail("imported file must not contain a [system] section").error());
     }
 
     // Entrypoint must have [system]
     if (is_entrypoint) {
         auto system_view = root_view.table("system");
         if (!system_view.valid()) {
-            error err(errors::unknown);
-            return result<TomlFileData>::make(std::move(err));
+            return result<TomlFileData>::make(
+                ctx.fail("entrypoint must contain a [system] section").error());
         }
     }
 
@@ -116,10 +118,10 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
     auto system_parsers = TomlParserRegistry::instance().create_system_parsers();
 
     if (document_parsers.empty() || (is_entrypoint && system_parsers.empty())) {
-        error err(errors::unknown);
         HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
                           "no registered TOML parsers found");
-        return result<TomlFileData>::make(std::move(err));
+        return result<TomlFileData>::make(
+            ctx.fail("no registered TOML parsers found").error());
     }
 
     // Run document parsers on the root table
@@ -191,8 +193,9 @@ resolve_templates(const std::vector<TomlRawActor>& raw_actors,
 
         auto tmpl_it = templates.find(raw.inherits);
         if (tmpl_it == templates.end()) {
-            error err(errors::unknown);
-            return result<std::vector<ActorDef>>::make(std::move(err));
+            return result<std::vector<ActorDef>>::make(error(
+                errors::invalid_argument,
+                "actor inherits from unknown template '" + raw.inherits + "'"));
         }
 
         ActorDef merged = tmpl_it->second;
@@ -260,8 +263,9 @@ topological_sort(std::vector<ActorDef> actors) {
         if (!sup.empty()) {
             auto it = id_to_idx.find(sup);
             if (it == id_to_idx.end()) {
-                error err(errors::unknown);
-                return result<std::vector<ActorDef>>::make(std::move(err));
+                return result<std::vector<ActorDef>>::make(
+                    error(errors::invalid_argument,
+                          "actor references unknown supervisor '" + sup + "'"));
             }
             children[sup].push_back(i);
             in_degree[i]++;
@@ -291,8 +295,9 @@ topological_sort(std::vector<ActorDef> actors) {
     }
 
     if (sorted.size() != actors.size()) {
-        error err(errors::unknown);
-        return result<std::vector<ActorDef>>::make(std::move(err));
+        return result<std::vector<ActorDef>>::make(error(
+            errors::invalid_argument, "circular supervisor dependency detected in actor "
+                                      "topology"));
     }
 
     return result<std::vector<ActorDef>>::make(std::move(sorted));
@@ -372,8 +377,8 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     // Phase 5: Validate
     std::string error_msg;
     if (!validate(model, error_msg)) {
-        error err(errors::unknown);
-        return result<TopologyModel>::make(std::move(err));
+        return result<TopologyModel>::make(error(
+            errors::invalid_argument, "topology validation failed: " + error_msg));
     }
 
     // Phase 6: Topological sort

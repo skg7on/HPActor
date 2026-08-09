@@ -27,7 +27,7 @@ namespace {
 class NameResolutionConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.name_resolution";
-    static constexpr int kOrder = 110;
+    static constexpr int kOrder = 60;
 
     std::string_view name() const noexcept override {
         return kName;
@@ -42,16 +42,14 @@ class NameResolutionConfigParser final : public ITomlSystemConfigParser {
         if (!nr.valid())
             return result<void>::make();
 
-        out.name_resolution.enabled =
-            nr.read_bool("enabled", false);
+        out.name_resolution.enabled = nr.read_bool("enabled", false);
         out.name_resolution.resolve_timeout_ms =
             nr.read_uint32("resolve_timeout_ms", 2000);
         out.name_resolution.register_timeout_ms =
             nr.read_uint32("register_timeout_ms", 5000);
         out.name_resolution.cache_ttl_seconds =
             nr.read_uint32("cache_ttl_seconds", 30);
-        out.name_resolution.virtual_nodes =
-            nr.read_uint32("virtual_nodes", 100);
+        out.name_resolution.virtual_nodes = nr.read_uint32("virtual_nodes", 100);
 
         if (!out.name_resolution.valid())
             return result<void>::make(
@@ -62,8 +60,7 @@ class NameResolutionConfigParser final : public ITomlSystemConfigParser {
     }
 };
 
-const TomlSystemParserRegistration<NameResolutionConfigParser>
-    kRegisterNameResolutionConfigParser;
+const TomlSystemParserRegistration<NameResolutionConfigParser> kRegisterNameResolutionConfigParser;
 
 } // anonymous namespace
 } // namespace hpactor::config

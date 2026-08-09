@@ -21,7 +21,7 @@ namespace {
 class PythonBindingConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.python";
-    static constexpr int kOrder = 105;
+    static constexpr int kOrder = 45;
 
     std::string_view name() const noexcept override {
         return kName;

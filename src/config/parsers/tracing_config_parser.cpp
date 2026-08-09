@@ -22,7 +22,7 @@ namespace {
 class TracingConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.tracing";
-    static constexpr int kOrder = 90;
+    static constexpr int kOrder = 25;
 
     std::string_view name() const noexcept override {
         return kName;

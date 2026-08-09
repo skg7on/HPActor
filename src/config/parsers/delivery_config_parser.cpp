@@ -34,7 +34,7 @@ static hpactor::mailbox::DeliveryMode parse_delivery_mode(const std::string& s) 
 class DeliveryConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.delivery";
-    static constexpr int kOrder = 95;
+    static constexpr int kOrder = 35;
 
     std::string_view name() const noexcept override {
         return kName;

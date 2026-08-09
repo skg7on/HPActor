@@ -21,7 +21,7 @@ namespace {
 class QuarantineConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.quarantine";
-    static constexpr int kOrder = 70;
+    static constexpr int kOrder = 10;
 
     std::string_view name() const noexcept override {
         return kName;

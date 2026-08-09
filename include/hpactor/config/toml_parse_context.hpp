@@ -52,8 +52,10 @@ class TomlParseContext {
     ///
     /// \param[in] message Human-readable error description.
     /// \return An error result.
-    result<void> fail(const char* /*message*/) const {
-        return result<void>::make(error(errors::unknown));
+    result<void> fail(const char* message) const {
+        return result<void>::make(error(errors::invalid_argument,
+                                        std::string("TOML parse error in ") +
+                                            filepath_ + ": " + message));
     }
 
   private:

@@ -56,7 +56,7 @@ parse_overflow_policy(const std::string& s) {
 class MailboxConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.mailbox";
-    static constexpr int kOrder = 90;
+    static constexpr int kOrder = 20;
 
     std::string_view name() const noexcept override {
         return kName;

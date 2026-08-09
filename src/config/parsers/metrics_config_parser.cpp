@@ -21,7 +21,7 @@ namespace {
 class MetricsConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.metrics";
-    static constexpr int kOrder = 100;
+    static constexpr int kOrder = 40;
 
     std::string_view name() const noexcept override {
         return kName;
