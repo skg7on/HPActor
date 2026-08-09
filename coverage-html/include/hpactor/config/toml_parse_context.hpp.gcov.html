@@ -32,17 +32,17 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">6</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">1</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryHi">-</td>
-            <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
+            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntry">5</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -130,16 +130,19 @@
 <span id="L52"><span class="lineNum">      52</span>                 :             :     ///</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// \param[in] message Human-readable error description.</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     /// \return An error result.</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             :     result&lt;void&gt; fail(const char* /*message*/) const {</span>
-<span id="L56"><span class="lineNum">      56</span>                 :             :         return result&lt;void&gt;::make(error(errors::unknown));</span>
-<span id="L57"><span class="lineNum">      57</span>                 :             :     }</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             : </span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :   private:</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             :     std::string filepath_;</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             :     bool entrypoint_{false};</span>
-<span id="L62"><span class="lineNum">      62</span>                 :             : };</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             : </span>
-<span id="L64"><span class="lineNum">      64</span>                 :             : } // namespace hpactor::config</span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           1 :     result&lt;void&gt; fail(const char* message) const {</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           2 :         return result&lt;void&gt;::make(error(errors::invalid_argument,</span></span>
+<span id="L57"><span class="lineNum">      57</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           2 :                                         std::string(&quot;TOML parse error in &quot;) +</span></span>
+<span id="L58"><span class="lineNum">      58</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           5 :                                             filepath_ + &quot;: &quot; + message));</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
+<span id="L59"><span class="lineNum">      59</span>                 :             :     }</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             : </span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :   private:</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :     std::string filepath_;</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :     bool entrypoint_{false};</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : };</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
+<span id="L66"><span class="lineNum">      66</span>                 :             : } // namespace hpactor::config</span>
         </pre>
               </td>
             </tr>

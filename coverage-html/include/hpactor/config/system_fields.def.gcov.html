@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">-</td>
@@ -92,19 +92,19 @@
 <span id="L14"><span class="lineNum">      14</span>                 :             : //   #include &quot;system_fields.def&quot;</span>
 <span id="L15"><span class="lineNum">      15</span>                 :             : //   #undef HPACTOR_SYSTEM_FIELD</span>
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : HPACTOR_SYSTEM_FIELD(scheduler_threads,       size_t,                        &quot;scheduler.threads&quot;,            4)</span>
-<span id="L18"><span class="lineNum">      18</span>                 :             : HPACTOR_SYSTEM_FIELD(max_queue_depth,         size_t,                        &quot;scheduler.max_queue_depth&quot;,    1024)</span>
-<span id="L19"><span class="lineNum">      19</span>                 :             : HPACTOR_SYSTEM_FIELD(enable_network,          bool,                          &quot;network.enabled&quot;,              false)</span>
-<span id="L20"><span class="lineNum">      20</span>                 :             : HPACTOR_SYSTEM_FIELD(tcp_port,                uint16_t,                      &quot;network.tcp_port&quot;,             0)</span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          14 : HPACTOR_SYSTEM_FIELD(spawn_timeout_ms,        std::chrono::milliseconds,     &quot;spawn.timeout_ms&quot;,             std::chrono::milliseconds{5000})</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          14 : HPACTOR_SYSTEM_FIELD(default_ask_timeout_ms,  std::chrono::milliseconds,     &quot;ask.default_timeout_ms&quot;,       std::chrono::milliseconds{5000})</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :             : HPACTOR_SYSTEM_FIELD(default_ask_max_retries, uint32_t,                      &quot;ask.max_retries&quot;,              uint32_t{3})</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : HPACTOR_SYSTEM_FIELD(enable_http_gateway,     bool,                          &quot;http.enable_gateway&quot;,          false)</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : HPACTOR_SYSTEM_FIELD(http_port,               uint16_t,                      &quot;http.port&quot;,                    8080)</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : HPACTOR_SYSTEM_FIELD(http_bind_host,           std::string,                   &quot;http.bind_host&quot;,               &quot;0.0.0.0&quot;)</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : HPACTOR_SYSTEM_FIELD(http_max_connections,    size_t,                        &quot;http.max_connections&quot;,         1000)</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             : HPACTOR_SYSTEM_FIELD(http_max_request_size,   size_t,                        &quot;http.max_request_size&quot;,        1048576)</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          14 : HPACTOR_SYSTEM_FIELD(http_reply_timeout_ms,   std::chrono::milliseconds,     &quot;http.reply_timeout_ms&quot;,        std::chrono::milliseconds{5000})</span></span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : HPACTOR_SYSTEM_FIELD(scheduler_threads,       size_t,                        &quot;scheduler_threads&quot;,            4)</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : HPACTOR_SYSTEM_FIELD(max_queue_depth,         size_t,                        &quot;max_queue_depth&quot;,              1024)</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : HPACTOR_SYSTEM_FIELD(enable_network,          bool,                          &quot;enable_network&quot;,               false)</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : HPACTOR_SYSTEM_FIELD(tcp_port,                uint16_t,                      &quot;tcp_port&quot;,                      0)</span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          14 : HPACTOR_SYSTEM_FIELD(spawn_timeout_ms,        std::chrono::milliseconds,     &quot;spawn_timeout_ms&quot;,             std::chrono::milliseconds{5000})</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          14 : HPACTOR_SYSTEM_FIELD(default_ask_timeout_ms,  std::chrono::milliseconds,     &quot;default_ask_timeout_ms&quot;,       std::chrono::milliseconds{5000})</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : HPACTOR_SYSTEM_FIELD(default_ask_max_retries, uint32_t,                      &quot;default_ask_max_retries&quot;,      uint32_t{3})</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : HPACTOR_SYSTEM_FIELD(enable_http_gateway,     bool,                          &quot;enable_http_gateway&quot;,          false)</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : HPACTOR_SYSTEM_FIELD(http_port,               uint16_t,                      &quot;http_port&quot;,                     8080)</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : HPACTOR_SYSTEM_FIELD(http_bind_host,           std::string,                   &quot;http_bind_host&quot;,               &quot;0.0.0.0&quot;)</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : HPACTOR_SYSTEM_FIELD(http_max_connections,    size_t,                        &quot;http_max_connections&quot;,          1000)</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : HPACTOR_SYSTEM_FIELD(http_max_request_size,   size_t,                        &quot;http_max_request_size&quot;,         1048576)</span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          14 : HPACTOR_SYSTEM_FIELD(http_reply_timeout_ms,   std::chrono::milliseconds,     &quot;http_reply_timeout_ms&quot;,        std::chrono::milliseconds{5000})</span></span>
         </pre>
               </td>
             </tr>

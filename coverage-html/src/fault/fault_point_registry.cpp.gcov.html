@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,15 +94,15 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::fault {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      354888 : FaultPointRegistry&amp; FaultPointRegistry::instance() {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 3604 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 351284 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3604 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      354888 :     static FaultPointRegistry reg;</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      354888 :     return reg;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      359102 : FaultPointRegistry&amp; FaultPointRegistry::instance() {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 3647 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 355455 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3647 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      359102 :     static FaultPointRegistry reg;</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      359102 :     return reg;</span></span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : }</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">      353198 : void FaultPointRegistry::register_point(std::string path, FaultDomain domain,</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">      357412 : void FaultPointRegistry::register_point(std::string path, FaultDomain domain,</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :                                          std::string description) {</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      353198 :     points_.push_back(FaultPoint{std::move(path), domain, std::move(description)});</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      353198 : }</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      357412 :     points_.push_back(FaultPoint{std::move(path), domain, std::move(description)});</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      357412 : }</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        1676 : const FaultPoint* FaultPointRegistry::lookup(std::string_view path) const {</span></span>
 <span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 17148 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">       17149 :     for (const auto&amp; pt : points_) {</span></span>

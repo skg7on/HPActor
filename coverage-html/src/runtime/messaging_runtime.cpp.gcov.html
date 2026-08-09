@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">68.8&nbsp;%</td>
@@ -139,11 +139,11 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         874 : MessagingRuntime::~MessagingRuntime() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : mailbox::EnqueueResult</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      132834 : MessagingRuntime::try_deliver(ActorId target, TypedMessage msg,</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      132841 : MessagingRuntime::try_deliver(ActorId target, TypedMessage msg,</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :                               uint8_t priority, int64_t deadline_ns,</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :                               mailbox::DeliveryOptions options) {</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      265668 :     return delivery_pipeline_.try_deliver(target, std::move(msg), priority,</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      132834 :                                           deadline_ns, options);</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      265682 :     return delivery_pipeline_.try_deliver(target, std::move(msg), priority,</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      132841 :                                           deadline_ns, options);</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : }</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             : </span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : mailbox::DeliveryResult</span>

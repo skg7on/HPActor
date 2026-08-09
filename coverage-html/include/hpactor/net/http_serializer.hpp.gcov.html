@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">79.6&nbsp;%</td>
+            <td class="headerCovTableEntryMed">84.9&nbsp;%</td>
             <td class="headerCovTableEntry">93</td>
-            <td class="headerCovTableEntry">74</td>
+            <td class="headerCovTableEntry">79</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">87.5&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">55.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">63.0&nbsp;%</td>
             <td class="headerCovTableEntry">100</td>
-            <td class="headerCovTableEntry">55</td>
+            <td class="headerCovTableEntry">63</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -110,7 +110,7 @@
 <span id="L32"><span class="lineNum">      32</span>                 :             : /// \c Content-Type (ingress) and \c Accept (egress) headers.</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : class HttpSerializer {</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :   public:</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     HttpSerializer() = default;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     HttpSerializer() = default;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     // -----------------------------------------------------------------------</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     // Ingress: HTTP request body → TypedMessage</span>
@@ -195,22 +195,22 @@
 <span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC tlaBgGNC">           2 : }</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : </span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : inline std::pair&lt;StreamBuffer, std::string&gt;</span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">           4 : HttpSerializer::serialize_response(const TypedMessage&amp; msg,</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">           6 : HttpSerializer::serialize_response(const TypedMessage&amp; msg,</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :             :                                    const std::string&amp; accept_header) {</span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           4 :     std::string response_type = negotiate_response_type(accept_header);</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           6 :     std::string response_type = negotiate_response_type(accept_header);</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :             : </span>
-<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (response_type == &quot;application/x-protobuf&quot;) {</span></span>
+<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     if (response_type == &quot;application/x-protobuf&quot;) {</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return {msg.payload(), &quot;application/x-protobuf&quot;};</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :             :     }</span>
 <span id="L127"><span class="lineNum">     127</span>                 :             : </span>
-<span id="L128"><span class="lineNum">     128</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           4 :     if (response_type == &quot;text/plain&quot;) {</span></span>
+<span id="L128"><span class="lineNum">     128</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC tlaBgGNC">           6 :     if (response_type == &quot;text/plain&quot;) {</span></span>
 <span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return {wrap_as_text_bytes(msg.payload()), &quot;text/plain; charset=utf-8&quot;};</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     }</span>
 <span id="L131"><span class="lineNum">     131</span>                 :             : </span>
 <span id="L132"><span class="lineNum">     132</span>                 :             :     // Default: JSON</span>
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC tlaBgGNC">           8 :     return {wrap_as_json_bytes(msg.payload()), &quot;application/json; &quot;</span></span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">           4 :                                                &quot;charset=utf-8&quot;};</span></span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           4 : }</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC tlaBgGNC">          12 :     return {wrap_as_json_bytes(msg.payload()), &quot;application/json; &quot;</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">           6 :                                                &quot;charset=utf-8&quot;};</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           6 : }</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
 <span id="L137"><span class="lineNum">     137</span>                 :             : inline std::pair&lt;StreamBuffer, std::string&gt;</span>
 <span id="L138"><span class="lineNum">     138</span>                 :             : HttpSerializer::serialize_request(const TypedMessage&amp; msg) {</span>
@@ -219,115 +219,115 @@
 <span id="L141"><span class="lineNum">     141</span>                 :             : }</span>
 <span id="L142"><span class="lineNum">     142</span>                 :             : </span>
 <span id="L143"><span class="lineNum">     143</span>                 :             : inline std::string</span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">           4 : HttpSerializer::negotiate_response_type(const std::string&amp; accept_header) const {</span></span>
-<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :     if (accept_header.empty()) {</span></span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">           2 :         return &quot;application/json&quot;;</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">           6 : HttpSerializer::negotiate_response_type(const std::string&amp; accept_header) const {</span></span>
+<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           6 :     if (accept_header.empty()) {</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">           4 :         return &quot;application/json&quot;;</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :             :     }</span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           3 :     auto accepted = parse_accept_header(accept_header);</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           4 :     auto accepted = parse_accept_header(accept_header);</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :             : </span>
-<span id="L151"><span class="lineNum">     151</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     for (const auto&amp; at : accepted) {</span></span>
-<span id="L152"><span class="lineNum">     152</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :         if (at.media_type == &quot;application/json&quot; ||</span></span>
-<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             at.media_type == &quot;application/x-protobuf&quot; ||</span></span>
-<span id="L154"><span class="lineNum">     154</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC tlaBgGNC">           3 :             at.media_type == &quot;text/plain&quot; || at.media_type == &quot;*/*&quot; ||</span></span>
-<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             at.media_type == &quot;text/*&quot;) {</span></span>
+<span id="L151"><span class="lineNum">     151</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :     for (const auto&amp; at : accepted) {</span></span>
+<span id="L152"><span class="lineNum">     152</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :         if (at.media_type == &quot;application/json&quot; ||</span></span>
+<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :             at.media_type == &quot;application/x-protobuf&quot; ||</span></span>
+<span id="L154"><span class="lineNum">     154</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           8 :             at.media_type == &quot;text/plain&quot; || at.media_type == &quot;*/*&quot; ||</span></span>
+<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 6 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 1 time"> + </span>]
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">           1 :             at.media_type == &quot;text/*&quot;) {</span></span>
 <span id="L156"><span class="lineNum">     156</span>                 :             :             // Return the first concrete match, or default to JSON for wildcards</span>
-<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC tlaBgGNC">           3 :             if (at.media_type == &quot;*/*&quot; || at.media_type == &quot;text/*&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 3 times"> + </span>]
+<span id="L157"><span class="lineNum">     157</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span> :<span class="tlaGNC">           4 :             if (at.media_type == &quot;*/*&quot; || at.media_type == &quot;text/*&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span>]
 <span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 return &quot;application/json&quot;;</span></span>
 <span id="L159"><span class="lineNum">     159</span>                 :             :             }</span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC tlaBgGNC">           3 :             return at.media_type;</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC tlaBgGNC">           4 :             return at.media_type;</span></span>
 <span id="L161"><span class="lineNum">     161</span>                 :             :         }</span>
 <span id="L162"><span class="lineNum">     162</span>                 :             :     }</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             : </span>
 <span id="L164"><span class="lineNum">     164</span>                 :             :     // No acceptable match — default to JSON</span>
 <span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return &quot;application/json&quot;;</span></span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC tlaBgGNC">           3 : }</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC tlaBgGNC">           4 : }</span></span>
 <span id="L167"><span class="lineNum">     167</span>                 :             : </span>
 <span id="L168"><span class="lineNum">     168</span>                 :             : inline std::vector&lt;HttpSerializer::AcceptedType&gt;</span>
-<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">           3 : HttpSerializer::parse_accept_header(const std::string&amp; header) const {</span></span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">           3 :     std::vector&lt;AcceptedType&gt; result;</span></span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaGNC">           4 : HttpSerializer::parse_accept_header(const std::string&amp; header) const {</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">           4 :     std::vector&lt;AcceptedType&gt; result;</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             : </span>
-<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">           3 :     size_t pos = 0;</span></span>
-<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           7 :     while (pos &lt; header.size()) {</span></span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">           4 :     size_t pos = 0;</span></span>
+<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          11 :     while (pos &lt; header.size()) {</span></span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :         // Skip whitespace</span>
-<span id="L175"><span class="lineNum">     175</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">           5 :         while (pos &lt; header.size() &amp;&amp; (header[pos] == ' ' || header[pos] == '\t')) {</span></span>
-<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 7 was taken 4 times"> + </span>]
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">           1 :             ++pos;</span></span>
+<span id="L175"><span class="lineNum">     175</span>   [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC">          10 :         while (pos &lt; header.size() &amp;&amp; (header[pos] == ' ' || header[pos] == '\t')) {</span></span>
+<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 7 times"> + </span>]
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">           3 :             ++pos;</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :             :         }</span>
 <span id="L178"><span class="lineNum">     178</span>                 :             : </span>
 <span id="L179"><span class="lineNum">     179</span>                 :             :         // Parse media type</span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           4 :         size_t end = header.find_first_of(&quot;,;&quot;, pos);</span></span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           4 :         std::string media_type = header.substr(pos, end - pos);</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           7 :         size_t end = header.find_first_of(&quot;,;&quot;, pos);</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           7 :         std::string media_type = header.substr(pos, end - pos);</span></span>
 <span id="L182"><span class="lineNum">     182</span>                 :             :         // Trim trailing whitespace from media type</span>
-<span id="L183"><span class="lineNum">     183</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :         while (!media_type.empty() &amp;&amp;</span></span>
-<span id="L184"><span class="lineNum">     184</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :                (media_type.back() == ' ' || media_type.back() == '\t')) {</span></span>
+<span id="L183"><span class="lineNum">     183</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 7 times"> + </span>]:<span class="tlaGNC">          14 :         while (!media_type.empty() &amp;&amp;</span></span>
+<span id="L184"><span class="lineNum">     184</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :                (media_type.back() == ' ' || media_type.back() == '\t')) {</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             media_type.pop_back();</span></span>
 <span id="L186"><span class="lineNum">     186</span>                 :             :         }</span>
 <span id="L187"><span class="lineNum">     187</span>                 :             :         // Trim leading whitespace</span>
-<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         size_t start = 0;</span></span>
-<span id="L189"><span class="lineNum">     189</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :         while (start &lt; media_type.size() &amp;&amp;</span></span>
-<span id="L190"><span class="lineNum">     190</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :                (media_type[start] == ' ' || media_type[start] == '\t')) {</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         size_t start = 0;</span></span>
+<span id="L189"><span class="lineNum">     189</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 7 times"> + </span>]:<span class="tlaGNC">          14 :         while (start &lt; media_type.size() &amp;&amp;</span></span>
+<span id="L190"><span class="lineNum">     190</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :                (media_type[start] == ' ' || media_type[start] == '\t')) {</span></span>
 <span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ++start;</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :             :         }</span>
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         media_type = media_type.substr(start);</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         media_type = media_type.substr(start);</span></span>
 <span id="L194"><span class="lineNum">     194</span>                 :             : </span>
-<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaGNC">           4 :         pos = end;</span></span>
+<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaGNC">           7 :         pos = end;</span></span>
 <span id="L196"><span class="lineNum">     196</span>                 :             : </span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :         // Parse optional quality parameter</span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">           4 :         float quality = 1.0f;</span></span>
-<span id="L199"><span class="lineNum">     199</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           4 :         if (pos &lt; header.size() &amp;&amp; header[pos] == ';') {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span>]
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">           2 :             ++pos; // skip ';'</span></span>
-<span id="L201"><span class="lineNum">     201</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :             while (pos &lt; header.size() &amp;&amp;</span></span>
-<span id="L202"><span class="lineNum">     202</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :                    (header[pos] == ' ' || header[pos] == '\t')) {</span></span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">           7 :         float quality = 1.0f;</span></span>
+<span id="L199"><span class="lineNum">     199</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">           7 :         if (pos &lt; header.size() &amp;&amp; header[pos] == ';') {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 3 times"> + </span>]
+<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">           4 :             ++pos; // skip ';'</span></span>
+<span id="L201"><span class="lineNum">     201</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :             while (pos &lt; header.size() &amp;&amp;</span></span>
+<span id="L202"><span class="lineNum">     202</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :                    (header[pos] == ' ' || header[pos] == '\t')) {</span></span>
 <span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 ++pos;</span></span>
 <span id="L204"><span class="lineNum">     204</span>                 :             :             }</span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC tlaBgGNC">           2 :             if (pos + 2 &lt; header.size() &amp;&amp;</span></span>
-<span id="L206"><span class="lineNum">     206</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">           4 :                 (header[pos] == 'q' || header[pos] == 'Q') &amp;&amp;</span></span>
-<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
-<span id="L207"><span class="lineNum">     207</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :                 header[pos + 1] == '=') {</span></span>
-<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">           2 :                 pos += 2;</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC tlaBgGNC">           4 :             if (pos + 2 &lt; header.size() &amp;&amp;</span></span>
+<span id="L206"><span class="lineNum">     206</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span> :<span class="tlaGNC">           8 :                 (header[pos] == 'q' || header[pos] == 'Q') &amp;&amp;</span></span>
+<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
+<span id="L207"><span class="lineNum">     207</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :                 header[pos + 1] == '=') {</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">           4 :                 pos += 2;</span></span>
 <span id="L209"><span class="lineNum">     209</span>                 :             :                 // Parse float</span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           2 :                 size_t qend = header.find_first_of(&quot;,;&quot;, pos);</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           4 :                 size_t qend = header.find_first_of(&quot;,;&quot;, pos);</span></span>
 <span id="L211"><span class="lineNum">     211</span>                 :             :                 std::string qstr = header.substr(</span>
-<span id="L212"><span class="lineNum">     212</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :                     pos, qend == std::string::npos ? qend : qend - pos);</span></span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           2 :                 quality = std::stof(qstr);</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">           2 :                 pos = qend;</span></span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">           2 :             }</span></span>
+<span id="L212"><span class="lineNum">     212</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :                     pos, qend == std::string::npos ? qend : qend - pos);</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           4 :                 quality = std::stof(qstr);</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">           4 :                 pos = qend;</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">           4 :             }</span></span>
 <span id="L216"><span class="lineNum">     216</span>                 :             :         }</span>
 <span id="L217"><span class="lineNum">     217</span>                 :             : </span>
-<span id="L218"><span class="lineNum">     218</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           4 :         if (pos &lt; header.size() &amp;&amp; header[pos] == ',') {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 3 times"> + </span>]
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">           1 :             ++pos; // skip ','</span></span>
+<span id="L218"><span class="lineNum">     218</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           7 :         if (pos &lt; header.size() &amp;&amp; header[pos] == ',') {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span>]
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">           3 :             ++pos; // skip ','</span></span>
 <span id="L220"><span class="lineNum">     220</span>                 :             :         }</span>
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
-<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">           4 :         result.push_back({std::move(media_type), quality});</span></span>
-<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">           4 :     }</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">           7 :         result.push_back({std::move(media_type), quality});</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">           7 :     }</span></span>
 <span id="L224"><span class="lineNum">     224</span>                 :             : </span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     // Sort by quality (descending)</span>
-<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">           3 :     std::sort(result.begin(), result.end(),</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">           1 :               [](const AcceptedType&amp; a, const AcceptedType&amp; b) {</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">           1 :                   return a.quality &gt; b.quality;</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">           4 :     std::sort(result.begin(), result.end(),</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">           5 :               [](const AcceptedType&amp; a, const AcceptedType&amp; b) {</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">           5 :                   return a.quality &gt; b.quality;</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :               });</span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">           3 :     return result;</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">           4 :     return result;</span></span>
 <span id="L232"><span class="lineNum">     232</span>                 :             : }</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
 <span id="L234"><span class="lineNum">     234</span>                 :             : inline StreamBuffer</span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">           4 : HttpSerializer::wrap_as_json_bytes(const StreamBuffer&amp; proto_payload) {</span></span>
+<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaGNC">           6 : HttpSerializer::wrap_as_json_bytes(const StreamBuffer&amp; proto_payload) {</span></span>
 <span id="L236"><span class="lineNum">     236</span>                 :             :     // Minimal JSON wrapper for protobuf payload.</span>
 <span id="L237"><span class="lineNum">     237</span>                 :             :     // Full JSON↔protobuf conversion is a future phase.</span>
-<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">           4 :     StreamBuffer result;</span></span>
-<span id="L239"><span class="lineNum">     239</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (proto_payload.size() == 0) {</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         const uint8_t empty_json[] = {'{', '}'};</span></span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaUNC">           0 :         result.append(empty_json, 2);</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaUNC">           0 :         return result;</span></span>
+<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">           6 :     StreamBuffer result;</span></span>
+<span id="L239"><span class="lineNum">     239</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           6 :     if (proto_payload.size() == 0) {</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">           2 :         const uint8_t empty_json[] = {'{', '}'};</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">           2 :         result.append(empty_json, 2);</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">           2 :         return result;</span></span>
 <span id="L243"><span class="lineNum">     243</span>                 :             :     }</span>
 <span id="L244"><span class="lineNum">     244</span>                 :             : </span>
 <span id="L245"><span class="lineNum">     245</span>                 :             :     static const char* prefix = &quot;{\&quot;data\&quot;:\&quot;&quot;;</span>
-<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     result.append(reinterpret_cast&lt;const uint8_t*&gt;(prefix), 9);</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC">           4 :     result.append(reinterpret_cast&lt;const uint8_t*&gt;(prefix), 9);</span></span>
 <span id="L247"><span class="lineNum">     247</span>                 :             : </span>
 <span id="L248"><span class="lineNum">     248</span>                 :             :     // Simple hex encoding for now (future: proper base64/JSON)</span>
 <span id="L249"><span class="lineNum">     249</span>                 :             :     static const char hex[] = &quot;0123456789abcdef&quot;;</span>

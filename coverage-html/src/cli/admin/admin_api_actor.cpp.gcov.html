@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">49.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">56.1&nbsp;%</td>
             <td class="headerCovTableEntry">57</td>
-            <td class="headerCovTableEntry">28</td>
+            <td class="headerCovTableEntry">32</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">87.5&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">43.5&nbsp;%</td>
+            <td class="headerCovTableEntryLo">52.2&nbsp;%</td>
             <td class="headerCovTableEntry">23</td>
-            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntry">12</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -98,39 +98,39 @@
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : namespace hpactor::cli::admin {</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC tlaBgGNC">           9 : AdminApiActor::AdminApiActor(ActorSystem* system) : system_(system) {}</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC tlaBgGNC">          19 : AdminApiActor::AdminApiActor(ActorSystem* system) : system_(system) {}</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           2 : void AdminApiActor::register_handler(AdminResource resource, Handler handler) {</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           2 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           2 :     handlers_[resource] = std::move(handler);</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           3 : void AdminApiActor::register_handler(AdminResource resource, Handler handler) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           3 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           3 :     handlers_[resource] = std::move(handler);</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           3 : }</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           4 : AdminResponse AdminApiActor::handle(const AdminRequest&amp; request) const {</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          10 : AdminResponse AdminApiActor::handle(const AdminRequest&amp; request) const {</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     {</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           4 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           4 :         auto it = handlers_.find(request.resource);</span></span>
-<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :         if (it != handlers_.end()) {</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           2 :             return it-&gt;second(request);</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          10 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          10 :         auto it = handlers_.find(request.resource);</span></span>
+<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">          10 :         if (it != handlers_.end()) {</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           3 :             return it-&gt;second(request);</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :         }</span>
-<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :     }</span></span>
-<span id="L38"><span class="lineNum">      38</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           2 :     switch (request.resource) {</span></span>
-<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span>]
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           1 :         case AdminResource::Health:</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           1 :             return health_check();</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case AdminResource::Actors:</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :             return list_actors();</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :         case AdminResource::ClusterNodes:</span></span>
+<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">          10 :     }</span></span>
+<span id="L38"><span class="lineNum">      38</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">           7 :     switch (request.resource) {</span></span>
+<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span>]
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           2 :         case AdminResource::Health:</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           2 :             return health_check();</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           2 :         case AdminResource::Actors:</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           2 :             return list_actors();</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case AdminResource::ClusterNodes:</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaUNC">           0 :             return list_cluster_nodes();</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaUNC">           0 :         case AdminResource::Shutdown:</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaUNC">           0 :             return do_shutdown();</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC tlaBgGNC">           1 :         default:</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           3 :             return AdminResponse{404, R&quot;({&quot;error&quot;:&quot;not_found&quot;})&quot;};</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC tlaBgGNC">           1 :         case AdminResource::Shutdown:</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           1 :             return do_shutdown();</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           2 :         default:</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           6 :             return AdminResponse{404, R&quot;({&quot;error&quot;:&quot;not_found&quot;})&quot;};</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           2 : AdminResponse AdminApiActor::health_check() const {</span></span>
-<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (system_ == nullptr) {</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           6 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           4 : AdminResponse AdminApiActor::health_check() const {</span></span>
+<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :     if (system_ == nullptr) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          12 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     }</span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     auto phase = system_-&gt;shutdown_phase();</span></span>
 <span id="L57"><span class="lineNum">      57</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (phase == ShutdownPhase::Running) {</span></span>
@@ -139,9 +139,9 @@
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC">           0 :     return AdminResponse{503, R&quot;({&quot;status&quot;:&quot;not_ready&quot;})&quot;};</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : }</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC tlaBgGNC">           1 : AdminResponse AdminApiActor::list_actors() const {</span></span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (system_ == nullptr) {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           3 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC tlaBgGNC">           4 : AdminResponse AdminApiActor::list_actors() const {</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :     if (system_ == nullptr) {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          12 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     std::ostringstream json;</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaUNC">           0 :     json &lt;&lt; R&quot;({&quot;actors&quot;:[)&quot;;</span></span>
@@ -157,9 +157,9 @@
 <span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaUNC">           0 :     return AdminResponse{200, json.str()};</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC tlaBgGNC">           1 : AdminResponse AdminApiActor::list_cluster_nodes() const {</span></span>
-<span id="L82"><span class="lineNum">      82</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (system_ == nullptr) {</span></span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">           3 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC tlaBgGNC">           2 : AdminResponse AdminApiActor::list_cluster_nodes() const {</span></span>
+<span id="L82"><span class="lineNum">      82</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (system_ == nullptr) {</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">           6 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     }</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     // Cluster failure model lives in hpactor_cluster (separate link unit).</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     // Cluster node introspection is provided via a registered handler by</span>
@@ -168,9 +168,9 @@
 <span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return AdminResponse{200, R&quot;({&quot;nodes&quot;:[],&quot;count&quot;:0,&quot;cluster&quot;:&quot;not_enabled&quot;})&quot;};</span></span>
 <span id="L90"><span class="lineNum">      90</span>                 :             : }</span>
 <span id="L91"><span class="lineNum">      91</span>                 :             : </span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC tlaBgGNC">           1 : AdminResponse AdminApiActor::do_shutdown() const {</span></span>
-<span id="L93"><span class="lineNum">      93</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (system_ == nullptr) {</span></span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           3 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC tlaBgGNC">           3 : AdminResponse AdminApiActor::do_shutdown() const {</span></span>
+<span id="L93"><span class="lineNum">      93</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (system_ == nullptr) {</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           9 :         return AdminResponse{500, R&quot;({&quot;status&quot;:&quot;error&quot;,&quot;reason&quot;:&quot;no_system&quot;})&quot;};</span></span>
 <span id="L95"><span class="lineNum">      95</span>                 :             :     }</span>
 <span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     auto result = system_-&gt;shutdown();</span></span>
 <span id="L97"><span class="lineNum">      97</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (result.ok()) {</span></span>

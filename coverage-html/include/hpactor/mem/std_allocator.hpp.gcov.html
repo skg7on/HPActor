@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">91.2&nbsp;%</td>
@@ -413,15 +413,15 @@
 <span id="L335"><span class="lineNum">     335</span>                 :             :     /// \param[in] size Size of the object in bytes.</span>
 <span id="L336"><span class="lineNum">     336</span>                 :             :     /// \return Pointer to raw storage.</span>
 <span id="L337"><span class="lineNum">     337</span>                 :             :     // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)</span>
-<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">        1235 :     static void* operator new(size_t size) {</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">        1235 :         void* ptr = nullptr;</span></span>
-<span id="L340"><span class="lineNum">     340</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1235 times"> + </span>]:<span class="tlaGNC">        1235 :         if (t_tla) {</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">        1238 :     static void* operator new(size_t size) {</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">        1238 :         void* ptr = nullptr;</span></span>
+<span id="L340"><span class="lineNum">     340</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1238 times"> + </span>]:<span class="tlaGNC">        1238 :         if (t_tla) {</span></span>
 <span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ptr = t_tla-&gt;allocate_bytes(size, current_actor_id());</span></span>
 <span id="L342"><span class="lineNum">     342</span>                 :             :         }</span>
-<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaGBC" title="Branch 0 was taken 1235 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">        1235 :         if (!ptr) {</span></span>
-<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">        1235 :             ptr = ::operator new(size); // NOLINT</span></span>
+<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaGBC" title="Branch 0 was taken 1238 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">        1238 :         if (!ptr) {</span></span>
+<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">        1238 :             ptr = ::operator new(size); // NOLINT</span></span>
 <span id="L345"><span class="lineNum">     345</span>                 :             :         }</span>
-<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">        1235 :         return ptr;</span></span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">        1238 :         return ptr;</span></span>
 <span id="L347"><span class="lineNum">     347</span>                 :             :     }</span>
 <span id="L348"><span class="lineNum">     348</span>                 :             : </span>
 <span id="L349"><span class="lineNum">     349</span>                 :             :     /// \brief Deallocate a Derived object.</span>
@@ -431,19 +431,19 @@
 <span id="L353"><span class="lineNum">     353</span>                 :             :     /// to the origin SlabCache (handles cross-thread frees).</span>
 <span id="L354"><span class="lineNum">     354</span>                 :             :     ///</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             :     /// \param[in] ptr Pointer to the object to deallocate.</span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">        1235 :     static void operator delete(void* ptr) noexcept {</span></span>
-<span id="L357"><span class="lineNum">     357</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1235 times"> + </span>]:<span class="tlaGNC">        1235 :         if (!ptr)</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">        1238 :     static void operator delete(void* ptr) noexcept {</span></span>
+<span id="L357"><span class="lineNum">     357</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1238 times"> + </span>]:<span class="tlaGNC">        1238 :         if (!ptr)</span></span>
 <span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return;</span></span>
-<span id="L359"><span class="lineNum">     359</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1235 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        1235 :         if (t_tla) {</span></span>
+<span id="L359"><span class="lineNum">     359</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1238 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        1238 :         if (t_tla) {</span></span>
 <span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             t_tla-&gt;deallocate(ptr);</span></span>
 <span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
 <span id="L362"><span class="lineNum">     362</span>                 :             :         }</span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC tlaBgGNC">        1235 :         auto* header = AllocHeader::from_user_data(ptr);</span></span>
-<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">        1235 :         auto slab = SegmentProvider::instance().lookup_slab(header);</span></span>
-<span id="L365"><span class="lineNum">     365</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1235 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1235 :         if (slab.found &amp;&amp; slab.owner_cache) {</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC tlaBgGNC">        1238 :         auto* header = AllocHeader::from_user_data(ptr);</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">        1238 :         auto slab = SegmentProvider::instance().lookup_slab(header);</span></span>
+<span id="L365"><span class="lineNum">     365</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1238 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1238 :         if (slab.found &amp;&amp; slab.owner_cache) {</span></span>
 <span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             static_cast&lt;SlabCache*&gt;(slab.owner_cache)-&gt;deallocate(ptr);</span></span>
 <span id="L367"><span class="lineNum">     367</span>                 :             :         } else {</span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC tlaBgGNC">        1235 :             ::operator delete(ptr); // NOLINT</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC tlaBgGNC">        1238 :             ::operator delete(ptr); // NOLINT</span></span>
 <span id="L369"><span class="lineNum">     369</span>                 :             :         }</span>
 <span id="L370"><span class="lineNum">     370</span>                 :             :     }</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             : </span>

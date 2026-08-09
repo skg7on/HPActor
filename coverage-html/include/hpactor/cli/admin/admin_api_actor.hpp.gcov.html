@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-04 02:00:59</td>
+            <td class="headerValue">2026-08-09 05:28:17</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -170,8 +170,8 @@
 <span id="L92"><span class="lineNum">      92</span>                 :             : </span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :   private:</span>
 <span id="L94"><span class="lineNum">      94</span>                 :             :     struct ResourceHash {</span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         size_t operator()(AdminResource r) const noexcept {</span></span>
-<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">           4 :             return std::hash&lt;int&gt;{}(static_cast&lt;int&gt;(r));</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC tlaBgGNC">           6 :         size_t operator()(AdminResource r) const noexcept {</span></span>
+<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">           6 :             return std::hash&lt;int&gt;{}(static_cast&lt;int&gt;(r));</span></span>
 <span id="L97"><span class="lineNum">      97</span>                 :             :         }</span>
 <span id="L98"><span class="lineNum">      98</span>                 :             :     };</span>
 <span id="L99"><span class="lineNum">      99</span>                 :             :     mutable std::mutex mutex_;</span>
