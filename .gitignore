@@ -12,6 +12,7 @@ Testing/
 # Worktrees
 .worktrees/
 .claude/worktrees
+.claude/skills/*-workspace/
 
 # Understand Anything Skill
 .understand-anything/
