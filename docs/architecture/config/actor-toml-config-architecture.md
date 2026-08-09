@@ -862,9 +862,12 @@ source file to the build.
 Two parser interfaces service different parse scopes:
 
 - **`ITomlSystemConfigParser`** — receives the entrypoint `[system]` table and
-  mutates `SystemDef`. Used for `[system.metrics]`, `[system.logging]`,
-  `[system.cli]`, `[system.discovery]`, `[system.mailbox]`, and
-  `[system.dead_letters]`.
+  mutates `SystemDef`. Used for subsystem config tables under `[system]`:
+  `[system.process]`, `[system.quarantine]`, `[system.ai.accelerators]`,
+  `[system.mailbox]`, `[system.tracing]`, `[system.dead_letters]`,
+  `[system.delivery]`, `[system.metrics]`, `[system.python]`,
+  `[system.logging]`, `[system.shutdown]`, `[system.name_resolution]`,
+  `[system.cli]`, `[system.discovery]`, and `[system.transport]`.
 - **`ITomlDocumentConfigParser`** — receives each TOML document root and appends
   dispatchers, templates, or actors to `TomlFileData`. Used for
   `[[dispatcher]]`, `[template.*]`, and `[[actor]]`.
@@ -874,13 +877,31 @@ Two parser interfaces service different parse scopes:
 | Parser | Category | Order | Source |
 |--------|----------|-------|--------|
 | `system.core` | System | 0 | `src/config/parsers/system_core_config_parser.cpp` |
-| `system.mailbox` | System | 90 | `src/config/parsers/mailbox_config_parser.cpp` |
-| `system.dead_letters` | System | 95 | `src/config/parsers/dead_letters_config_parser.cpp` |
-| `system.metrics` | System | 100 | `src/config/parsers/metrics_config_parser.cpp` |
-| `system.logging` | System | 110 | `src/config/parsers/logging_config_parser.cpp` |
-| `system.cli` | System | 120 | `src/config/parsers/cli_config_parser.cpp` |
-| `system.discovery` | System | 130 | `src/config/parsers/discovery_config_parser.cpp` |
 | `topology.document` | Document | 0 | `src/config/parsers/topology_config_parser.cpp` |
+| `system.process` | System | 5 | `src/config/parsers/process_config_parser.cpp` |
+| `system.quarantine` | System | 10 | `src/config/parsers/quarantine_parser.cpp` |
+| `system.ai.accelerators` | System | 15 | `src/config/parsers/ai_accelerator_config_parser.cpp` |
+| `system.mailbox` | System | 20 | `src/config/parsers/mailbox_config_parser.cpp` |
+| `system.tracing` | System | 25 | `src/config/parsers/tracing_config_parser.cpp` |
+| `system.dead_letters` | System | 30 | `src/config/parsers/dead_letters_config_parser.cpp` |
+| `system.delivery` | System | 35 | `src/config/parsers/delivery_config_parser.cpp` |
+| `system.metrics` | System | 40 | `src/config/parsers/metrics_config_parser.cpp` |
+| `system.python` | System | 45 | `src/config/parsers/python_binding_config_parser.cpp` |
+| `system.logging` | System | 50 | `src/config/parsers/logging_config_parser.cpp` |
+| `system.shutdown` | System | 55 | `src/config/parsers/shutdown_config_parser.cpp` |
+| `system.name_resolution` | System | 60 | `src/config/parsers/name_resolution_config_parser.cpp` |
+| `system.cli` | System | 65 | `src/config/parsers/cli_config_parser.cpp` |
+| `system.discovery` | System | 70 | `src/config/parsers/discovery_config_parser.cpp` |
+| `system.transport` | System | 75 | `src/config/parsers/transport_outbound_config_parser.cpp` |
+
+A single orphaned parser (`ask_config_parser.cpp`, order 85) exists on disk but
+is not yet compiled — it needs `SystemDef` field additions before it can be
+wired into the build.
+
+Three parsers were removed as dead stubs pending future implementation:
+`rate_limiting_config_parser.cpp` (deferred to Phase 8),
+`passivation_config_parser.cpp` (read keys but discarded all values), and
+`cluster_leadership_parser.cpp` (read keys but discarded all values).
 
 ### Static Self-Registration
 

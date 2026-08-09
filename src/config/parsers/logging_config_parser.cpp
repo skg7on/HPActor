@@ -23,7 +23,7 @@ namespace {
 class LoggingConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.logging";
-    static constexpr int kOrder = 110;
+    static constexpr int kOrder = 50;
 
     std::string_view name() const noexcept override {
         return kName;

@@ -33,7 +33,7 @@ parse_dl_overflow_policy(const std::string& s) {
 class DeadLettersConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.dead_letters";
-    static constexpr int kOrder = 95;
+    static constexpr int kOrder = 30;
 
     std::string_view name() const noexcept override {
         return kName;

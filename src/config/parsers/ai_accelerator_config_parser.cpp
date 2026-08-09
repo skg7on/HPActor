@@ -15,7 +15,7 @@ namespace {
 class AiAcceleratorConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.ai.accelerators";
-    static constexpr int kOrder = 75;
+    static constexpr int kOrder = 15;
 
     std::string_view name() const noexcept override {
         return kName;

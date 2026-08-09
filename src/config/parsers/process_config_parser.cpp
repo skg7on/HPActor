@@ -23,7 +23,7 @@ namespace {
 class ProcessConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.process";
-    static constexpr int kOrder = 10;
+    static constexpr int kOrder = 5;
 
     std::string_view name() const noexcept override {
         return kName;

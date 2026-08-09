@@ -21,7 +21,7 @@ namespace {
 class CliConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.cli";
-    static constexpr int kOrder = 120;
+    static constexpr int kOrder = 65;
 
     std::string_view name() const noexcept override {
         return kName;

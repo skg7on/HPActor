@@ -21,7 +21,7 @@ namespace {
 class DiscoveryConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.discovery";
-    static constexpr int kOrder = 130;
+    static constexpr int kOrder = 70;
 
     std::string_view name() const noexcept override {
         return kName;

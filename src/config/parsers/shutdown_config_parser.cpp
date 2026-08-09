@@ -21,7 +21,7 @@ namespace {
 class ShutdownConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.shutdown";
-    static constexpr int kOrder = 110;
+    static constexpr int kOrder = 55;
 
     std::string_view name() const noexcept override {
         return kName;

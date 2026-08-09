@@ -17,7 +17,7 @@ target_sources(hpactor_lib PRIVATE
     parsers/logging_config_parser.cpp
     parsers/mailbox_config_parser.cpp
     parsers/metrics_config_parser.cpp
-    parsers/passivation_config_parser.cpp
+
     parsers/process_config_parser.cpp
     parsers/python_binding_config_parser.cpp
     parsers/quarantine_parser.cpp
@@ -26,4 +26,5 @@ target_sources(hpactor_lib PRIVATE
     parsers/topology_config_parser.cpp
     parsers/name_resolution_config_parser.cpp
     parsers/tracing_config_parser.cpp
+    parsers/transport_outbound_config_parser.cpp
 )

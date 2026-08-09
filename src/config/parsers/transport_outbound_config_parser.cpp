@@ -25,7 +25,7 @@ namespace {
 class TransportOutboundConfigParser final : public ITomlSystemConfigParser {
   public:
     static constexpr std::string_view kName = "system.transport";
-    static constexpr int kOrder = 95;
+    static constexpr int kOrder = 75;
 
     std::string_view name() const noexcept override {
         return kName;
