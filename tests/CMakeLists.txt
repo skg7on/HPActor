@@ -13,3 +13,7 @@ add_subdirectory(architecture)
 add_subdirectory(unit)
 add_subdirectory(integration)
 add_subdirectory(system)
+
+if(ENABLE_FUZZ)
+    add_subdirectory(fuzz)
+endif()
