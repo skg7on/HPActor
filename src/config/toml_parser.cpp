@@ -78,7 +78,8 @@ static std::vector<std::string> expand_glob(const std::string& pattern) {
 // Parse a single TOML file using the registered parser pipeline
 // ---------------------------------------------------------------------------
 static result<TomlFileData>
-parse_file_data(const std::string& filepath, bool is_entrypoint) {
+parse_file_data(const std::string& filepath, bool is_entrypoint,
+                ValidationReport* report) {
     TomlFileData data;
 
     toml::table root;
@@ -95,6 +96,7 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
     }
 
     TomlParseContext ctx(filepath, is_entrypoint);
+    ctx.set_report(report);
     TomlTableView root_view = make_toml_table_view(&root);
 
     // Imported files must not contain [system]
@@ -208,24 +210,24 @@ resolve_templates(const std::vector<TomlRawActor>& raw_actors,
 }
 
 // ---------------------------------------------------------------------------
-// Validation
+// Validation — populates the report with all errors found (not just the first)
 // ---------------------------------------------------------------------------
-static bool validate(const TopologyModel& model, std::string& error_msg) {
-    // Duplicate/empty actor ids
+static void
+validate_and_report(const TopologyModel& model, ValidationReport& report) {
+    // Duplicate/empty actor ids, missing behaviors
     std::unordered_set<std::string> ids;
     for (const auto& actor : model.actors) {
         if (actor.id.empty()) {
-            error_msg = "actor has empty id";
-            return false;
+            report.add_error("actor", "actor has empty id");
+            continue;
         }
         if (ids.find(actor.id) != ids.end()) {
-            error_msg = "duplicate actor id '" + actor.id + "'";
-            return false;
+            report.add_error("actor." + actor.id, "duplicate actor id");
+            continue;
         }
         ids.insert(actor.id);
         if (actor.behavior.empty()) {
-            error_msg = "actor '" + actor.id + "' has no behavior";
-            return false;
+            report.add_error("actor." + actor.id, "actor has no behavior");
         }
     }
 
@@ -237,13 +239,10 @@ static bool validate(const TopologyModel& model, std::string& error_msg) {
     for (const auto& actor : model.actors) {
         if (!actor.dispatcher.empty() &&
             disp_names.find(actor.dispatcher) == disp_names.end()) {
-            error_msg = "actor '" + actor.id + "' references unknown dispatcher '" +
-                        actor.dispatcher + "'";
-            return false;
+            report.add_error("actor." + actor.id, "references unknown dispatcher '" +
+                                                      actor.dispatcher + "'");
         }
     }
-
-    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -317,8 +316,11 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     if (base_dir.empty())
         base_dir = ".";
 
+    // Create the validation report that all parse contexts will write into.
+    ValidationReport report;
+
     // Phase 1: Parse entrypoint
-    auto entry_parse = parse_file_data(entrypoint_path, true);
+    auto entry_parse = parse_file_data(entrypoint_path, true, &report);
     if (!entry_parse.has_value()) {
         return result<TopologyModel>::make(entry_parse.error());
     }
@@ -330,7 +332,7 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
         fs::path import_path = base_dir / import_pattern;
         auto files = expand_glob(import_path.string());
         for (const auto& file : files) {
-            auto fc = parse_file_data(file, false);
+            auto fc = parse_file_data(file, false, &report);
             if (!fc.has_value())
                 return result<TopologyModel>::make(fc.error());
             imported_data.push_back(std::move(fc.value()));
@@ -374,11 +376,13 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     model.dispatchers = std::move(all_dispatchers);
     model.actors = std::move(resolved_result.value());
 
-    // Phase 5: Validate
-    std::string error_msg;
-    if (!validate(model, error_msg)) {
-        return result<TopologyModel>::make(error(
-            errors::invalid_argument, "topology validation failed: " + error_msg));
+    // Phase 5: Validate — collects ALL errors into the report
+    validate_and_report(model, report);
+    if (report.has_errors()) {
+        return result<TopologyModel>::make(
+            error(errors::invalid_argument,
+                  "topology validation failed with " +
+                      std::to_string(report.error_count()) + " error(s)"));
     }
 
     // Phase 6: Topological sort
@@ -386,6 +390,9 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     if (!sorted_result.has_value())
         return result<TopologyModel>::make(sorted_result.error());
     model.actors = std::move(sorted_result.value());
+
+    // Move the report into the model before returning.
+    model.validation_report = std::move(report);
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0, "topology loaded",
                      log::field_lit("path", entrypoint_path.c_str()));

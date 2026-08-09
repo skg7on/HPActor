@@ -18,6 +18,7 @@
 #include <hpactor/cli/config/cli_config.hpp>
 #include <hpactor/config/name_resolution_config.hpp>
 #include <hpactor/config/python_binding_config.hpp>
+#include <hpactor/config/validation_report.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
@@ -222,6 +223,13 @@ struct TopologyModel {
     std::vector<DispatcherDef> dispatchers;
     /// \brief Actor definitions in topological (dependency) order.
     std::vector<ActorDef> actors;
+    /// \brief Validation findings collected during parsing.
+    ///
+    /// Subsystem parsers report non-fatal issues (type mismatches, value
+    /// clamping, deprecated keys) through TomlParseContext.  The report
+    /// is available even when the model is valid — callers should check
+    /// has_errors() / has_warnings() before bootstrapping.
+    ValidationReport validation_report;
 };
 
 } // namespace hpactor::config

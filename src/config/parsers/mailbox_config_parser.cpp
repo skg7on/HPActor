@@ -66,7 +66,7 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
     }
 
     result<void> parse(const TomlTableView& system, SystemDef& out,
-                       TomlParseContext& /*ctx*/) const override {
+                       TomlParseContext& ctx) const override {
         auto mt = system.table("mailbox");
         if (!mt.valid())
             return result<void>::make();
@@ -77,20 +77,37 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
         out.mailbox.default_policy =
             parse_overflow_policy(mt.read_string("default_policy", "reject_"
                                                                    "newest"));
-        out.mailbox.high_watermark = mt.read_double("high_watermark", 0.80);
-        out.mailbox.low_watermark = mt.read_double("low_watermark", 0.50);
-        out.mailbox.critical_watermark = mt.read_double("critical_watermark", 1.00);
 
-        if (out.mailbox.low_watermark < 0.0) {
-            out.mailbox.low_watermark = 0.50;
+        // Read watermarks with validation — report clamping as warnings.
+        auto low_val = mt.read_double("low_watermark", 0.50);
+        auto high_val = mt.read_double("high_watermark", 0.80);
+        auto crit_val = mt.read_double("critical_watermark", 1.00);
+
+        if (low_val < 0.0) {
+            ctx.add_finding(ConfigSeverity::Warning, "system.mailbox.low_watermark",
+                            "value " + std::to_string(low_val) +
+                                " clamped to 0.50 (minimum is 0.0)");
+            low_val = 0.50;
         }
-        if (out.mailbox.high_watermark < out.mailbox.low_watermark) {
-            out.mailbox.high_watermark = 0.80;
+        if (high_val < low_val) {
+            ctx.add_finding(ConfigSeverity::Warning, "system.mailbox.high_watermark",
+                            "value " + std::to_string(high_val) +
+                                " < low_watermark, clamped to 0.80");
+            high_val = 0.80;
         }
-        if (out.mailbox.critical_watermark < out.mailbox.high_watermark ||
-            out.mailbox.critical_watermark > 1.0) {
-            out.mailbox.critical_watermark = 1.00;
+        if (crit_val < high_val || crit_val > 1.0) {
+            ctx.add_finding(ConfigSeverity::Warning,
+                            "system.mailbox.critical_watermark",
+                            "value " + std::to_string(crit_val) +
+                                " out of range [high_watermark, 1.0], "
+                                "clamped to 1.00");
+            crit_val = 1.00;
         }
+
+        out.mailbox.low_watermark = low_val;
+        out.mailbox.high_watermark = high_val;
+        out.mailbox.critical_watermark = crit_val;
+
         out.mailbox.priority_aware = mt.read_bool("priority_aware", false);
         out.mailbox.priority_levels =
             static_cast<uint8_t>(mt.read_uint32("priority_levels", 4));
