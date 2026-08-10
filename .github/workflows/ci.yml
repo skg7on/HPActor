@@ -225,3 +225,76 @@ jobs:
           publish_dir: ${{ runner.temp }}/coverage-pages
           keep_files: true
           commit_message: "Update coverage report [skip ci]"
+
+  fuzz-smoke:
+    name: fuzz smoke (clang + libFuzzer)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    env:
+      BUILD_DIR: build/fuzz-smoke
+      CC: clang
+      CXX: clang++
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang \
+            cmake \
+            libabsl-dev \
+            libprotobuf-dev \
+            libssl-dev \
+            ninja-build \
+            pkg-config \
+            protobuf-compiler
+
+      - name: Configure
+        run: >
+          cmake
+          -S .
+          -B "$BUILD_DIR"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=clang++
+          -DENABLE_FUZZ=ON
+          -DENABLE_EXAMPLES=OFF
+          -DENABLE_PROACTOR=OFF
+
+      - name: Build fuzz targets
+        run: >
+          cmake --build "$BUILD_DIR"
+          --target
+          fuzz_frame
+          fuzz_protobuf_decode
+          fuzz_http_parser
+          fuzz_toml
+          fuzz_cli_lexer
+          fuzz_admin_api
+          --parallel
+
+      - name: Smoke (60 seconds per target)
+        run: |
+          cd "$BUILD_DIR"
+          targets=(frame protobuf_decode http_parser toml cli_lexer admin_api)
+          failed=0
+          for t in "${targets[@]}"; do
+            echo "=== fuzz_${t} (60s) ==="
+            if ! ./tests/fuzz/fuzz_${t} -max_total_time=60 -runs=100000; then
+              echo "FAIL: fuzz_${t}"
+              failed=1
+            fi
+          done
+          exit $failed
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: ${{ env.BUILD_DIR }}/crash-*
+          if-no-files-found: ignore
