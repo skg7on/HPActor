@@ -145,5 +145,7 @@ message WireEnvelope {
     StreamAckFrame stream_ack = 7;
     StreamCloseFrame stream_close = 8;
     StreamErrorFrame stream_error = 9;
+    HandshakeHello handshake_hello = 10;
+    HandshakeResponse handshake_response = 11;
   }
 }

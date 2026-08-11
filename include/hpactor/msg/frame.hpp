@@ -64,6 +64,8 @@ struct WireFrame {
         StreamAck,
         StreamClose,
         StreamError,
+        HandshakeHello,
+        HandshakeResponse,
         Unknown
     };
 
@@ -88,6 +90,10 @@ struct WireFrame {
                 return PayloadType::StreamClose;
             case ::hpactor::net::WireEnvelope::kStreamError:
                 return PayloadType::StreamError;
+            case ::hpactor::net::WireEnvelope::kHandshakeHello:
+                return PayloadType::HandshakeHello;
+            case ::hpactor::net::WireEnvelope::kHandshakeResponse:
+                return PayloadType::HandshakeResponse;
             default:
                 return PayloadType::Unknown;
         }
@@ -146,6 +152,19 @@ struct WireFrame {
     static WireFrame from_stream_error(::hpactor::net::StreamErrorFrame error) {
         WireFrame f;
         *f.pb_envelope.mutable_stream_error() = std::move(error);
+        return f;
+    }
+
+    static WireFrame from_handshake_hello(::hpactor::net::HandshakeHello hello) {
+        WireFrame f;
+        *f.pb_envelope.mutable_handshake_hello() = std::move(hello);
+        return f;
+    }
+
+    static WireFrame
+    from_handshake_response(::hpactor::net::HandshakeResponse resp) {
+        WireFrame f;
+        *f.pb_envelope.mutable_handshake_response() = std::move(resp);
         return f;
     }
 
@@ -263,13 +282,6 @@ trace_context_from_proto(const ::hpactor::net::PbTraceContext& pb,
 // ── Connection handshake types (NET-001)
 // ──────────────────────────────────────
 
-/// \brief Magic prefix for handshake messages: \c "HPAH" (0x48504148
-/// big-endian).
-constexpr uint32_t HandshakeMagic = 0x48504148;
-
-/// \brief Wire-format header size for handshake messages (4 magic + 4 length).
-constexpr size_t HandshakeHeaderSize = 8;
-
 /// \brief Protocol feature flags negotiated during the connection handshake.
 ///
 /// Each bit represents an optional feature that must be supported by both peers
@@ -299,35 +311,6 @@ inline HandshakeFeature operator&(HandshakeFeature a, HandshakeFeature b) {
 inline bool has_feature(uint64_t flags, HandshakeFeature f) {
     return (flags & static_cast<uint64_t>(f)) != 0;
 }
-
-/// \brief Encode a protobuf \c HandshakeHello to wire format.
-///
-/// Wire format: 4-byte magic \c "HPAH" + 4-byte big-endian length +
-/// protobuf-serialized \c HandshakeHello.
-/// \param[in] hello The hello message to encode.
-/// \return Wire-format bytes, or empty on serialization failure.
-StreamBuffer encode_handshake_hello(const ::hpactor::net::HandshakeHello& hello);
-
-/// \brief Decode a \c HandshakeHello from wire format.
-///
-/// \param[in] data Wire-format bytes (magic + length + protobuf).
-/// \return The decoded hello, or \c std::nullopt on decode failure.
-std::optional<::hpactor::net::HandshakeHello>
-decode_handshake_hello(const StreamBuffer& data);
-
-/// \brief Encode a protobuf \c HandshakeResponse to wire format.
-///
-/// \param[in] resp The response message to encode.
-/// \return Wire-format bytes, or empty on serialization failure.
-StreamBuffer
-encode_handshake_response(const ::hpactor::net::HandshakeResponse& resp);
-
-/// \brief Decode a \c HandshakeResponse from wire format.
-///
-/// \param[in] data Wire-format bytes (magic + length + protobuf).
-/// \return The decoded response, or \c std::nullopt on decode failure.
-std::optional<::hpactor::net::HandshakeResponse>
-decode_handshake_response(const StreamBuffer& data);
 
 /// \brief Negotiate a protocol version from two ranges.
 ///

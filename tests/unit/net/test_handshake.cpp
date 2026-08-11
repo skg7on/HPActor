@@ -37,34 +37,45 @@ TEST(HandshakeTest, HelloEncodeDecodeRoundTrip) {
     hello.set_feature_flags(0x0005); // ReliableDelivery + StreamProtocol
     hello.set_node_id(42);
 
-    StreamBuffer encoded = encode_handshake_hello(hello);
+    // Encode via WireFrame (uses "HPAC" framing like all other messages)
+    WireFrame frame = WireFrame::from_handshake_hello(hello);
+    StreamBuffer encoded = frame.encode();
     ASSERT_FALSE(encoded.empty());
-    EXPECT_GE(encoded.size(), HandshakeHeaderSize);
+    EXPECT_GE(encoded.size(), WireFrame::HeaderSize);
 
-    auto decoded = decode_handshake_hello(encoded);
-    ASSERT_TRUE(decoded.has_value());
-    EXPECT_EQ(decoded->min_version(), 1u);
-    EXPECT_EQ(decoded->max_version(), 3u);
-    EXPECT_EQ(decoded->feature_flags(), 0x0005ULL);
-    EXPECT_EQ(decoded->node_id(), 42ULL);
+    // Decode via try_decode_wireframe
+    auto decoded = try_decode_wireframe(encoded);
+    ASSERT_TRUE(decoded.ok());
+    EXPECT_EQ(decoded.frame.payload_type(), WireFrame::PayloadType::HandshakeHello);
+
+    const auto& decoded_hello = decoded.frame.pb_envelope.handshake_hello();
+    EXPECT_EQ(decoded_hello.min_version(), 1u);
+    EXPECT_EQ(decoded_hello.max_version(), 3u);
+    EXPECT_EQ(decoded_hello.feature_flags(), 0x0005ULL);
+    EXPECT_EQ(decoded_hello.node_id(), 42ULL);
 }
 
 TEST(HandshakeTest, ResponseEncodeDecodeRoundTrip) {
     ::hpactor::net::HandshakeResponse resp;
     resp.set_accepted_version(2);
-    resp.set_feature_flags(0x0001); // only ReliableDelivery
+    resp.set_feature_flags(0x0001);
     resp.set_node_id(99);
     resp.set_result(::hpactor::net::HANDSHAKE_ACCEPTED);
 
-    StreamBuffer encoded = encode_handshake_response(resp);
+    WireFrame frame = WireFrame::from_handshake_response(resp);
+    StreamBuffer encoded = frame.encode();
     ASSERT_FALSE(encoded.empty());
 
-    auto decoded = decode_handshake_response(encoded);
-    ASSERT_TRUE(decoded.has_value());
-    EXPECT_EQ(decoded->accepted_version(), 2u);
-    EXPECT_EQ(decoded->feature_flags(), 0x0001ULL);
-    EXPECT_EQ(decoded->node_id(), 99ULL);
-    EXPECT_EQ(decoded->result(), ::hpactor::net::HANDSHAKE_ACCEPTED);
+    auto decoded = try_decode_wireframe(encoded);
+    ASSERT_TRUE(decoded.ok());
+    EXPECT_EQ(decoded.frame.payload_type(),
+              WireFrame::PayloadType::HandshakeResponse);
+
+    const auto& decoded_resp = decoded.frame.pb_envelope.handshake_response();
+    EXPECT_EQ(decoded_resp.accepted_version(), 2u);
+    EXPECT_EQ(decoded_resp.feature_flags(), 0x0001ULL);
+    EXPECT_EQ(decoded_resp.node_id(), 99ULL);
+    EXPECT_EQ(decoded_resp.result(), ::hpactor::net::HANDSHAKE_ACCEPTED);
 }
 
 TEST(HandshakeTest, ResponseRejectedEncodeDecodeRoundTrip) {
@@ -74,33 +85,37 @@ TEST(HandshakeTest, ResponseRejectedEncodeDecodeRoundTrip) {
     resp.set_node_id(7);
     resp.set_result(::hpactor::net::HANDSHAKE_INCOMPATIBLE_VERSION);
 
-    StreamBuffer encoded = encode_handshake_response(resp);
+    WireFrame frame = WireFrame::from_handshake_response(resp);
+    StreamBuffer encoded = frame.encode();
     ASSERT_FALSE(encoded.empty());
 
-    auto decoded = decode_handshake_response(encoded);
-    ASSERT_TRUE(decoded.has_value());
-    EXPECT_EQ(decoded->result(), ::hpactor::net::HANDSHAKE_INCOMPATIBLE_VERSION);
-    EXPECT_EQ(decoded->accepted_version(), 0u);
+    auto decoded = try_decode_wireframe(encoded);
+    ASSERT_TRUE(decoded.ok());
+    const auto& decoded_resp = decoded.frame.pb_envelope.handshake_response();
+    EXPECT_EQ(decoded_resp.result(), ::hpactor::net::HANDSHAKE_INCOMPATIBLE_VERSION);
+    EXPECT_EQ(decoded_resp.accepted_version(), 0u);
 }
 
 TEST(HandshakeTest, DecodeRejectsInvalidMagic) {
-    // Build a buffer with wrong magic "XXXX"
+    // Build a buffer with wrong magic "XXXX" — try_decode_wireframe rejects it
     StreamBuffer buf;
     const std::array<uint8_t, 4> bad_magic = {'X', 'X', 'X', 'X'};
     buf.append(bad_magic.data(), 4);
     uint32_t zero_len = 0;
     buf.append(reinterpret_cast<const uint8_t*>(&zero_len), 4);
 
-    auto decoded = decode_handshake_hello(buf);
-    EXPECT_FALSE(decoded.has_value());
+    auto decoded = try_decode_wireframe(buf);
+    EXPECT_FALSE(decoded.ok());
+    EXPECT_EQ(decoded.error, FrameDecodeError::InvalidMagic);
 }
 
 TEST(HandshakeTest, DecodeRejectsTruncatedHeader) {
     StreamBuffer buf;
-    buf.append(reinterpret_cast<const uint8_t*>("HP"), 2); // Only 2 bytes
+    buf.append(reinterpret_cast<const uint8_t*>("HP"), 2);
 
-    auto decoded = decode_handshake_hello(buf);
-    EXPECT_FALSE(decoded.has_value());
+    auto decoded = try_decode_wireframe(buf);
+    EXPECT_FALSE(decoded.ok());
+    EXPECT_EQ(decoded.error, FrameDecodeError::HeaderTooShort);
 }
 
 // ── Version negotiation tests
@@ -395,12 +410,17 @@ TEST(HandshakeTest, CliProtoServerConfigPropagatesHandshake) {
 // ── Handshake magic constant test
 // ─────────────────────────────────────────────
 
-TEST(HandshakeTest, HandshakeMagicIsDistinct) {
-    // Handshake magic "HPAH" must differ from WireFrame magic "HPAC"
-    EXPECT_NE(HandshakeMagic, WireFrame::MagicHeader);
+TEST(HandshakeTest, HandshakePayloadTypeValues) {
+    // Verify handshake payload types are distinct from data payload types
+    EXPECT_NE(static_cast<int>(WireFrame::PayloadType::HandshakeHello),
+              static_cast<int>(WireFrame::PayloadType::Data));
+    EXPECT_NE(static_cast<int>(WireFrame::PayloadType::HandshakeResponse),
+              static_cast<int>(WireFrame::PayloadType::Data));
+    EXPECT_NE(static_cast<int>(WireFrame::PayloadType::HandshakeHello),
+              static_cast<int>(WireFrame::PayloadType::HandshakeResponse));
 }
 
-TEST(HandshakeTest, HandshakeHeaderSize) {
-    EXPECT_EQ(HandshakeHeaderSize, 8u);
-    EXPECT_EQ(WireFrame::HeaderSize, 8u); // Same framing, different magic
+TEST(HandshakeTest, WireFrameHeaderSize) {
+    // Handshake frames use the same "HPAC" framing as data frames
+    EXPECT_EQ(WireFrame::HeaderSize, 8u);
 }

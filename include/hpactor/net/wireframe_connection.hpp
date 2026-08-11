@@ -233,19 +233,13 @@ class WireFrameConnection
     bool handshake_complete_{false};
     bool handshake_hello_sent_{false};
 
-    /// \brief Start the handshake (client: send hello; server: wait for hello).
+    /// \brief Start the handshake (client: send HandshakeHello frame).
     void start_handshake();
 
-    /// \brief Handle handshake bytes during the Handshake state.
-    void handle_handshake_read();
-
-    /// \brief Send a HandshakeHello on this connection.
-    void send_handshake_hello();
-
-    /// \brief Send a HandshakeResponse on this connection.
+    /// \brief Send a HandshakeResponse frame on this connection.
     void send_handshake_response(const ::hpactor::net::HandshakeHello& hello);
 
-    /// \brief Transition from Handshake to Connected, registering frame reads.
+    /// \brief Transition from Handshake to Connected, firing ready_handler_.
     void complete_handshake();
 };
 
