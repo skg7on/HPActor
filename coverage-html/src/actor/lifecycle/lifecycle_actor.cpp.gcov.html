@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-11 06:36:50</td>
+            <td class="headerValue">2026-08-11 07:09:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -102,33 +102,33 @@
 <span id="L24"><span class="lineNum">      24</span>                 :             :     // Default no-op; subclasses override for failure-specific cleanup</span>
 <span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           9 : }</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         550 : bool LifecycleActor::transition(LifecycleState to) {</span></span>
-<span id="L28"><span class="lineNum">      28</span>   [<span class="tlaGBC" title="Branch 0 was taken 497 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 497 times"> + </span> :<span class="tlaGNC">         550 :     FAULT_INJECT(&quot;hpactor.actor.lifecycle.transition.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 550 times"> + </span>]
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         548 : bool LifecycleActor::transition(LifecycleState to) {</span></span>
+<span id="L28"><span class="lineNum">      28</span>   [<span class="tlaGBC" title="Branch 0 was taken 495 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 495 times"> + </span> :<span class="tlaGNC">         548 :     FAULT_INJECT(&quot;hpactor.actor.lifecycle.transition.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 548 times"> + </span>]
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             :     }</span>
-<span id="L31"><span class="lineNum">      31</span>   [<span class="tlaGBC" title="Branch 0 was taken 497 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 497 times"> + </span> :<span class="tlaGNC tlaBgGNC">         550 :     FAULT_INJECT(&quot;hpactor.actor.lifecycle.transition.corrupt&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 550 times"> + </span>]
+<span id="L31"><span class="lineNum">      31</span>   [<span class="tlaGBC" title="Branch 0 was taken 495 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 495 times"> + </span> :<span class="tlaGNC tlaBgGNC">         548 :     FAULT_INJECT(&quot;hpactor.actor.lifecycle.transition.corrupt&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 548 times"> + </span>]
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         to = LifecycleState::kFailed;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :     }</span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC tlaBgGNC">         550 :     LifecycleState from = state();</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC tlaBgGNC">         548 :     LifecycleState from = state();</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     // Validate that `to` is in this state's transition list</span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         550 :     const auto&amp; def = kStateMachine[static_cast&lt;int&gt;(from)];</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         550 :     bool legal = false;</span></span>
-<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 711 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">         723 :     for (uint8_t i = 0; i &lt; def.num_transitions; ++i) {</span></span>
-<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 538 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 173 times"> + </span>]:<span class="tlaGNC">         711 :         if (def.transitions[i] == to) {</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         538 :             legal = true;</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">         538 :             break;</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         548 :     const auto&amp; def = kStateMachine[static_cast&lt;int&gt;(from)];</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         548 :     bool legal = false;</span></span>
+<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 709 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">         721 :     for (uint8_t i = 0; i &lt; def.num_transitions; ++i) {</span></span>
+<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 536 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 173 times"> + </span>]:<span class="tlaGNC">         709 :         if (def.transitions[i] == to) {</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         536 :             legal = true;</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">         536 :             break;</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :         }</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :     }</span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 538 times"> + </span>]:<span class="tlaGNC">         550 :     if (!legal)</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 536 times"> + </span>]:<span class="tlaGNC">         548 :     if (!legal)</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          12 :         return false;</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :     // CAS: only change if still in `from`</span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         538 :     uint8_t expected = static_cast&lt;uint8_t&gt;(from);</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">         538 :     uint8_t desired = static_cast&lt;uint8_t&gt;(to);</span></span>
-<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 538 times"> + </span>]:<span class="tlaGNC">        1076 :     if (!state_.compare_exchange_strong(expected, desired, std::memory_order_acq_rel,</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">         536 :     uint8_t expected = static_cast&lt;uint8_t&gt;(from);</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">         536 :     uint8_t desired = static_cast&lt;uint8_t&gt;(to);</span></span>
+<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 536 times"> + </span>]:<span class="tlaGNC">        1072 :     if (!state_.compare_exchange_strong(expected, desired, std::memory_order_acq_rel,</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :                                         std::memory_order_acquire)) {</span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     }</span>
@@ -136,16 +136,16 @@
 <span id="L56"><span class="lineNum">      56</span>                 :             :     // Post-transition: invoke the hook for this transition.</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     // on_fail() uses the stored failure_reason_ (set by caller before</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     // transition).</span>
-<span id="L59"><span class="lineNum">      59</span>   [<span class="tlaGBC" title="Branch 0 was taken 333 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 205 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 329 times"> + </span> :<span class="tlaGNC tlaBgGNC">         538 :     if (to == LifecycleState::kActive &amp;&amp; (from == LifecycleState::kStarting ||</span></span>
+<span id="L59"><span class="lineNum">      59</span>   [<span class="tlaGBC" title="Branch 0 was taken 333 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 203 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 329 times"> + </span> :<span class="tlaGNC tlaBgGNC">         536 :     if (to == LifecycleState::kActive &amp;&amp; (from == LifecycleState::kStarting ||</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
 <span id="L60"><span class="lineNum">      60</span>                 :             :                                           from == LifecycleState::kRecovering)) {</span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         333 :         on_start();</span></span>
-<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 68 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 137 times"> + </span>]:<span class="tlaGNC">         205 :     } else if (to == LifecycleState::kDraining) {</span></span>
+<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 68 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135 times"> + </span>]:<span class="tlaGNC">         203 :     } else if (to == LifecycleState::kDraining) {</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">          68 :         on_drain();</span></span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 41 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 96 times"> + </span>]:<span class="tlaGNC">         137 :     } else if (to == LifecycleState::kStopping) {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          41 :         on_stop();</span></span>
-<span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 45 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 51 times"> + </span>]:<span class="tlaGNC">          96 :     } else if (to == LifecycleState::kStopped) {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          45 :         on_deactivate();</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 40 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 95 times"> + </span>]:<span class="tlaGNC">         135 :     } else if (to == LifecycleState::kStopping) {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          40 :         on_stop();</span></span>
+<span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 51 times"> + </span>]:<span class="tlaGNC">          95 :     } else if (to == LifecycleState::kStopped) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          44 :         on_deactivate();</span></span>
 <span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 37 times"> + </span>]:<span class="tlaGNC">          51 :     } else if (to == LifecycleState::kFailed) {</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">          14 :         on_fail(failure_reason_);</span></span>
 <span id="L70"><span class="lineNum">      70</span>   [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span>]:<span class="tlaGNC">          37 :     } else if (to == LifecycleState::kStarting &amp;&amp;</span></span>
@@ -162,7 +162,7 @@
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">           4 :         on_passivated();</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : </span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">         538 :     return true;</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">         536 :     return true;</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             : }</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             : </span>
 <span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">          10 : bool LifecycleActor::transition_to_quarantined(QuarantineReason reason) {</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-11 06:36:50</td>
+            <td class="headerValue">2026-08-11 07:09:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">60.0&nbsp;%</td>
@@ -110,11 +110,11 @@
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :     }</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC tlaBgGNC">          86 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC tlaBgGNC">          91 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          86 :         auto lt = system.table(&quot;logging&quot;);</span></span>
-<span id="L38"><span class="lineNum">      38</span>         [<span class="tlaGBC" title="Branch 0 was taken 72 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          86 :         if (!lt.valid())</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          72 :             return result&lt;void&gt;::make();</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          91 :         auto lt = system.table(&quot;logging&quot;);</span></span>
+<span id="L38"><span class="lineNum">      38</span>         [<span class="tlaGBC" title="Branch 0 was taken 77 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          91 :         if (!lt.valid())</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          77 :             return result&lt;void&gt;::make();</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>
 <span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          14 :         out.logging.enabled = lt.read_bool(&quot;enabled&quot;, true);</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-11 06:36:50</td>
+            <td class="headerValue">2026-08-11 07:09:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -101,18 +101,18 @@
 <span id="L23"><span class="lineNum">      23</span>                 :             : namespace hpactor {</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : namespace {</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : </span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC tlaBgGNC">        4539 : std::vector&lt;ProtoTypeRegistry::SubsystemRegistrar&gt;&amp; subsystem_registrars() {</span></span>
-<span id="L27"><span class="lineNum">      27</span>   [<span class="tlaGBC" title="Branch 0 was taken 3656 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 883 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3656 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        4539 :     static std::vector&lt;ProtoTypeRegistry::SubsystemRegistrar&gt; regs;</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        4539 :     return regs;</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC tlaBgGNC">        4556 : std::vector&lt;ProtoTypeRegistry::SubsystemRegistrar&gt;&amp; subsystem_registrars() {</span></span>
+<span id="L27"><span class="lineNum">      27</span>   [<span class="tlaGBC" title="Branch 0 was taken 3673 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 883 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3673 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        4556 :     static std::vector&lt;ProtoTypeRegistry::SubsystemRegistrar&gt; regs;</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        4556 :     return regs;</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : }</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : } // namespace</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        3656 : void ProtoTypeRegistry::register_subsystem(SubsystemRegistrar fn) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        3673 : void ProtoTypeRegistry::register_subsystem(SubsystemRegistrar fn) {</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     static std::mutex mu;</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3656 :     std::lock_guard&lt;std::mutex&gt; lock(mu);</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        3656 :     subsystem_registrars().push_back(fn);</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">        3656 : }</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3673 :     std::lock_guard&lt;std::mutex&gt; lock(mu);</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        3673 :     subsystem_registrars().push_back(fn);</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">        3673 : }</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         883 : void ProtoTypeRegistry::register_system_types() {</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">        1766 :     register_type&lt;::hpactor::DownMessage&gt;(TypeTag::DownMsg, &quot;hpactor.&quot;</span></span>

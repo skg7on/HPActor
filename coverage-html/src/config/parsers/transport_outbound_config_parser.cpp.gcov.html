@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-11 06:36:50</td>
+            <td class="headerValue">2026-08-11 07:09:55</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
@@ -112,11 +112,11 @@
 <span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC tlaBgGNC">          86 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC tlaBgGNC">          91 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          86 :         auto transport = system.table(&quot;transport&quot;);</span></span>
-<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 86 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          86 :         if (!transport.valid())</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          86 :             return result&lt;void&gt;::make();</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          91 :         auto transport = system.table(&quot;transport&quot;);</span></span>
+<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 91 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          91 :         if (!transport.valid())</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          91 :             return result&lt;void&gt;::make();</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto ob = transport.table(&quot;outbound&quot;);</span></span>
 <span id="L44"><span class="lineNum">      44</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!ob.valid())</span></span>
