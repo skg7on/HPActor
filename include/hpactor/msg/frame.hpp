@@ -2,10 +2,12 @@
 // (Apache 2.0 license header)
 #pragma once
 
+#include <cstdint>
 #include <hpactor/common.pb.h>
 #include <hpactor/frame.pb.h>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
+#include <optional>
 #include <span>
 
 namespace hpactor {
@@ -62,6 +64,8 @@ struct WireFrame {
         StreamAck,
         StreamClose,
         StreamError,
+        HandshakeHello,
+        HandshakeResponse,
         Unknown
     };
 
@@ -86,6 +90,10 @@ struct WireFrame {
                 return PayloadType::StreamClose;
             case ::hpactor::net::WireEnvelope::kStreamError:
                 return PayloadType::StreamError;
+            case ::hpactor::net::WireEnvelope::kHandshakeHello:
+                return PayloadType::HandshakeHello;
+            case ::hpactor::net::WireEnvelope::kHandshakeResponse:
+                return PayloadType::HandshakeResponse;
             default:
                 return PayloadType::Unknown;
         }
@@ -144,6 +152,19 @@ struct WireFrame {
     static WireFrame from_stream_error(::hpactor::net::StreamErrorFrame error) {
         WireFrame f;
         *f.pb_envelope.mutable_stream_error() = std::move(error);
+        return f;
+    }
+
+    static WireFrame from_handshake_hello(::hpactor::net::HandshakeHello hello) {
+        WireFrame f;
+        *f.pb_envelope.mutable_handshake_hello() = std::move(hello);
+        return f;
+    }
+
+    static WireFrame
+    from_handshake_response(::hpactor::net::HandshakeResponse resp) {
+        WireFrame f;
+        *f.pb_envelope.mutable_handshake_response() = std::move(resp);
         return f;
     }
 
@@ -257,6 +278,51 @@ void to_proto(::hpactor::net::PbTraceContext* pb, const TraceContext& context);
 result<TraceContext>
 trace_context_from_proto(const ::hpactor::net::PbTraceContext& pb,
                          uint16_t max_tracestate_len);
+
+// ── Connection handshake types (NET-001)
+// ──────────────────────────────────────
+
+/// \brief Protocol feature flags negotiated during the connection handshake.
+///
+/// Each bit represents an optional feature that must be supported by both peers
+/// before it may be used on the connection.  The negotiated set is the bitwise
+/// AND of the client and server flag masks.
+enum class HandshakeFeature : uint64_t {
+    None = 0,
+    /// \brief The peer supports \c AckFrame / \c NackFrame reliable messaging.
+    ReliableDelivery = 1ULL << 0,
+    /// \brief The peer supports \c BatchMsgFrame batching.
+    BatchMessaging = 1ULL << 1,
+    /// \brief The peer supports the stream protocol (\c StreamOpenFrame, etc.).
+    StreamProtocol = 1ULL << 2,
+    /// \brief Reserved for NET-005 frame compression.
+    FrameCompression = 1ULL << 3,
+};
+
+/// \brief Bitwise operators for \c HandshakeFeature.
+inline HandshakeFeature operator|(HandshakeFeature a, HandshakeFeature b) {
+    return static_cast<HandshakeFeature>(static_cast<uint64_t>(a) |
+                                         static_cast<uint64_t>(b));
+}
+inline HandshakeFeature operator&(HandshakeFeature a, HandshakeFeature b) {
+    return static_cast<HandshakeFeature>(static_cast<uint64_t>(a) &
+                                         static_cast<uint64_t>(b));
+}
+inline bool has_feature(uint64_t flags, HandshakeFeature f) {
+    return (flags & static_cast<uint64_t>(f)) != 0;
+}
+
+/// \brief Negotiate a protocol version from two ranges.
+///
+/// Compatible when \c server_min <= client_max && client_min <= server_max.
+/// The accepted version is \c min(server_max, client_max).
+/// \param[in] client_min Client's minimum supported version.
+/// \param[in] client_max Client's maximum supported version.
+/// \param[in] server_min Server's minimum supported version.
+/// \param[in] server_max Server's maximum supported version.
+/// \return The negotiated version, or 0 if ranges are disjoint.
+uint32_t negotiate_version(uint32_t client_min, uint32_t client_max,
+                           uint32_t server_min, uint32_t server_max);
 
 } // namespace net
 } // namespace hpactor

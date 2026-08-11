@@ -169,6 +169,9 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
             pool->on_frame_received(std::move(data));
         });
         plain_conn->set_max_inbound_frame_bytes(pool_config_.max_inbound_frame_bytes);
+        if (pool_config_.handshake.enabled) {
+            plain_conn->set_handshake_config(pool_config_.handshake);
+        }
         conn = plain_conn;
     }
 
@@ -462,6 +465,9 @@ void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {
             pool->on_connection_error(c, e);
         });
         plain_conn->set_max_inbound_frame_bytes(pool_config_.max_inbound_frame_bytes);
+        if (pool_config_.handshake.enabled) {
+            plain_conn->set_handshake_config(pool_config_.handshake);
+        }
         conn = plain_conn;
     }
 

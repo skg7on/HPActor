@@ -102,6 +102,35 @@ message StreamErrorFrame {
   string description = 3;
 }
 
+// ── Connection handshake (NET-001) ──────────────────────────────────────────
+
+// Result of a handshake negotiation.
+enum HandshakeResult {
+  HANDSHAKE_ACCEPTED = 0;            // Versions compatible, flags negotiated.
+  HANDSHAKE_INCOMPATIBLE_VERSION = 1; // Version ranges are disjoint.
+  HANDSHAKE_INCOMPATIBLE_FLAGS = 2;   // Required feature flags not supported.
+  HANDSHAKE_AUTH_FAILED = 3;          // Authentication failed (reserved for
+                                      // NET-002).
+}
+
+// Sent by the connecting client immediately after TCP/TLS connect.
+message HandshakeHello {
+  uint32 min_version = 1;    // Lowest protocol version this node supports.
+  uint32 max_version = 2;    // Highest protocol version this node supports.
+  uint64 feature_flags = 3;  // Bitmask of supported optional features.
+  uint64 node_id = 4;        // Sender node identity for logging/metrics.
+}
+
+// Sent by the server in response to HandshakeHello.
+message HandshakeResponse {
+  uint32 accepted_version = 1; // Negotiated version (0 if rejected).
+  uint64 feature_flags = 2;    // Intersection of client and server flags.
+  uint64 node_id = 3;          // Server node identity.
+  HandshakeResult result = 4;  // Negotiation outcome.
+}
+
+// ── Wire envelope ───────────────────────────────────────────────────────────
+
 // Envelope wrapper for frame type dispatch.
 // Replaces raw ActorMsgFrame on the wire when the peer supports
 // reliable messaging (negotiated in handshake, follow-up issue).
@@ -116,5 +145,7 @@ message WireEnvelope {
     StreamAckFrame stream_ack = 7;
     StreamCloseFrame stream_close = 8;
     StreamErrorFrame stream_error = 9;
+    HandshakeHello handshake_hello = 10;
+    HandshakeResponse handshake_response = 11;
   }
 }

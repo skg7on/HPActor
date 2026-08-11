@@ -14,11 +14,13 @@
 
 #pragma once
 
+#include <chrono>
 #include <functional>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/transport.hpp>
+#include <optional>
 
 namespace hpactor {
 
@@ -26,6 +28,33 @@ namespace net {
 
 class WireFrameConnection;
 using WireFrameConnectionPtr = std::shared_ptr<WireFrameConnection>;
+
+/// \brief Configuration for the NET-001 protocol handshake.
+///
+/// When \c enabled is \c false (the default), \c WireFrameConnection behaves
+/// exactly as before — no handshake, immediate transition to \c Connected.
+/// When \c enabled is \c true, a two-message version and feature negotiation
+/// exchange runs after TCP/TLS connect and before any \c WireEnvelope frames.
+struct HandshakeConfig {
+    /// \brief Enable the protocol handshake (default false for backward
+    /// compatibility).
+    bool enabled = false;
+
+    /// \brief Lowest protocol version this node supports.
+    uint32_t version_min = 1;
+
+    /// \brief Highest protocol version this node supports.
+    uint32_t version_max = 1;
+
+    /// \brief Bitmask of \c HandshakeFeature flags this node supports.
+    uint64_t feature_flags = 0;
+
+    /// \brief Maximum time to wait for the handshake to complete.
+    std::chrono::milliseconds timeout{5000};
+
+    /// \brief Node identity sent in the hello/response for logging and metrics.
+    uint64_t node_id = 0;
+};
 
 /// \brief TCP connection with WireFrame protocol framing.
 ///
@@ -138,6 +167,28 @@ class WireFrameConnection
     void
     set_frame_error_handler(std::function<void(FrameDecodeError, uint32_t)> handler);
 
+    /// \brief Set the protocol handshake configuration.
+    ///
+    /// For the connecting-client path, call this after
+    /// \c create_connecting_client() and before \c setup_after_connect().
+    /// For the server path, call this after \c create_as_server() and
+    /// before the first \c handle_read() — the state will be adjusted
+    /// automatically.
+    /// \param[in] config Handshake configuration.
+    void set_handshake_config(HandshakeConfig config);
+
+    /// \brief Return the negotiated handshake result for this connection.
+    ///
+    /// Only meaningful after the handshake completes successfully.
+    /// \return The handshake configuration with negotiated values, or
+    ///         \c std::nullopt if the handshake is disabled or has not
+    ///         completed.
+    std::optional<HandshakeConfig> negotiated_handshake() const {
+        if (!handshake_complete_)
+            return std::nullopt;
+        return handshake_config_;
+    }
+
     /// \brief Send raw frame data.
     ///
     /// \param[in] frame_data Pre-framed data to send.
@@ -176,6 +227,20 @@ class WireFrameConnection
     std::function<void(int result)> send_completion_handler_;
     std::function<void(FrameDecodeError, uint32_t)> frame_error_handler_;
     uint32_t max_inbound_frame_bytes_{16U * 1024U * 1024U};
+
+    // ── Handshake state (NET-001) ──────────────────────────────────────
+    HandshakeConfig handshake_config_;
+    bool handshake_complete_{false};
+    bool handshake_hello_sent_{false};
+
+    /// \brief Start the handshake (client: send HandshakeHello frame).
+    void start_handshake();
+
+    /// \brief Send a HandshakeResponse frame on this connection.
+    void send_handshake_response(const ::hpactor::net::HandshakeHello& hello);
+
+    /// \brief Transition from Handshake to Connected, firing ready_handler_.
+    void complete_handshake();
 };
 
 } // namespace net

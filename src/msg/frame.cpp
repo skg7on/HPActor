@@ -16,7 +16,9 @@
 
 #include <hpactor/log/logger.hpp>
 
+#include <algorithm>
 #include <arpa/inet.h>
+#include <array>
 #include <cstring>
 
 namespace hpactor {
@@ -123,6 +125,16 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
 
 WireFrame WireFrame::decode(std::span<const uint8_t> data) {
     return decode(StreamBuffer(data.begin(), data.end()));
+}
+
+// ── Version negotiation ─────────────────────────────────────────────────────
+
+uint32_t negotiate_version(uint32_t client_min, uint32_t client_max,
+                           uint32_t server_min, uint32_t server_max) {
+    if (server_min > client_max || client_min > server_max) {
+        return 0; // Disjoint ranges — incompatible
+    }
+    return std::min(server_max, client_max);
 }
 
 } // namespace net

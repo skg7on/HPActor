@@ -119,6 +119,14 @@ enum class MetricEventType : uint8_t {
                                   ///< \c value_hi carries the peak depth.
     kMailboxSystemLaneDepth = 75, ///< Current depth of the system lane.
                                   ///< \c value_hi carries the depth.
+
+    // ── Connection handshake (NET-001) ─────────────────────────────────
+    kHandshakeCompleted = 76, ///< Connection handshake completed successfully.
+                              ///< \c code carries the negotiated version.
+                              ///< \c value_hi carries agreed feature_flags
+                              ///< (lo).
+    kHandshakeRejected = 77,  ///< Connection handshake rejected.
+                              ///< \c code carries HandshakeResult reason.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

@@ -41,20 +41,37 @@ WireFrameConnection::create_as_client(int fd, EndPoint local_endpoint,
                                       EndPoint remote_endpoint, EventLoop* loop) {
     auto conn = std::shared_ptr<WireFrameConnection>(
         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));
-    conn->set_state(ConnectionState::Connected);
 
-    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
-                      "connection opened");
-
-    if (loop && fd >= 0) {
-        loop->add_fd(fd, EventLoop::Event::Read);
-        if (loop->supports_read_handler()) {
-            std::weak_ptr<WireFrameConnection> weak_conn = conn;
-            loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
-                if (auto self = weak_conn.lock()) {
-                    self->handle_read();
-                }
-            });
+    if (conn->handshake_config_.enabled) {
+        conn->set_state(ConnectionState::Handshake);
+        HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "connection opened, starting handshake");
+        if (loop && fd >= 0) {
+            loop->add_fd(fd, EventLoop::Event::Read);
+            if (loop->supports_read_handler()) {
+                std::weak_ptr<WireFrameConnection> weak_conn = conn;
+                loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+                    if (auto self = weak_conn.lock()) {
+                        self->handle_read();
+                    }
+                });
+            }
+        }
+        conn->start_handshake();
+    } else {
+        conn->set_state(ConnectionState::Connected);
+        HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "connection opened");
+        if (loop && fd >= 0) {
+            loop->add_fd(fd, EventLoop::Event::Read);
+            if (loop->supports_read_handler()) {
+                std::weak_ptr<WireFrameConnection> weak_conn = conn;
+                loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+                    if (auto self = weak_conn.lock()) {
+                        self->handle_read();
+                    }
+                });
+            }
         }
     }
 
@@ -74,22 +91,43 @@ WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,
 }
 
 void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {
-    conn->set_state(ConnectionState::Connected);
+    if (conn->handshake_config_.enabled) {
+        conn->set_state(ConnectionState::Handshake);
+        HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "connection established, starting handshake");
 
-    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
-                      "connection opened");
+        auto* loop = conn->event_loop();
+        int fd = conn->fd();
+        if (loop && fd >= 0) {
+            loop->add_fd(fd, EventLoop::Event::Read);
+            if (loop->supports_read_handler()) {
+                std::weak_ptr<WireFrameConnection> weak_conn = conn;
+                loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+                    if (auto self = weak_conn.lock()) {
+                        self->handle_read();
+                    }
+                });
+            }
+        }
+        conn->start_handshake();
+    } else {
+        conn->set_state(ConnectionState::Connected);
 
-    auto* loop = conn->event_loop();
-    int fd = conn->fd();
-    if (loop && fd >= 0) {
-        loop->add_fd(fd, EventLoop::Event::Read);
-        if (loop->supports_read_handler()) {
-            std::weak_ptr<WireFrameConnection> weak_conn = conn;
-            loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
-                if (auto self = weak_conn.lock()) {
-                    self->handle_read();
-                }
-            });
+        HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "connection opened");
+
+        auto* loop = conn->event_loop();
+        int fd = conn->fd();
+        if (loop && fd >= 0) {
+            loop->add_fd(fd, EventLoop::Event::Read);
+            if (loop->supports_read_handler()) {
+                std::weak_ptr<WireFrameConnection> weak_conn = conn;
+                loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+                    if (auto self = weak_conn.lock()) {
+                        self->handle_read();
+                    }
+                });
+            }
         }
     }
 }
@@ -99,10 +137,16 @@ WireFrameConnection::create_as_server(int fd, EndPoint local_endpoint,
                                       EndPoint remote_endpoint, EventLoop* loop) {
     auto conn = std::shared_ptr<WireFrameConnection>(
         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));
-    conn->set_state(ConnectionState::Connected);
 
-    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
-                      "connection opened");
+    if (conn->handshake_config_.enabled) {
+        conn->set_state(ConnectionState::Handshake);
+        HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "connection accepted, waiting for handshake");
+    } else {
+        conn->set_state(ConnectionState::Connected);
+        HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "connection opened");
+    }
 
     if (loop && fd >= 0) {
         loop->add_fd(fd, EventLoop::Event::Read);
@@ -147,7 +191,8 @@ void WireFrameConnection::set_frame_error_handler(
 }
 
 void WireFrameConnection::send(const StreamBuffer& frame_data) {
-    if (state_ != ConnectionState::Connected) {
+    if (state_ != ConnectionState::Connected &&
+        state_ != ConnectionState::Handshake) {
         return;
     }
 
@@ -272,7 +317,64 @@ void WireFrameConnection::handle_read() {
                                 read_buffer_.begin() + total_frame_size);
         read_buffer_.consume(total_frame_size);
 
-        if (frame_handler_) {
+        // During the Handshake state, intercept frames for protocol
+        // negotiation.  Handshake frames use the same "HPAC" magic and
+        // WireEnvelope framing as all other messages — they are just a
+        // different oneof variant.
+        if (state_ == ConnectionState::Handshake) {
+            auto decoded = try_decode_wireframe(frame_data);
+            if (!decoded.ok()) {
+                set_state(ConnectionState::Error);
+                HPACTOR_LOG_WARNING(log::LogCategory::kNetwork, ActorId{0}, 0,
+                                    "handshake: frame decode failed");
+                if (error_handler_) {
+                    error_handler_(nullptr, error(errors::unknown,
+                                                  "handshake frame decode failed"));
+                }
+                return;
+            }
+
+            auto pt = decoded.frame.payload_type();
+            if (pt == WireFrame::PayloadType::HandshakeHello) {
+                // Server path: client sent us a HandshakeHello.
+                const auto& hello = decoded.frame.pb_envelope.handshake_hello();
+                send_handshake_response(hello);
+            } else if (pt == WireFrame::PayloadType::HandshakeResponse) {
+                // Client path: server responded to our HandshakeHello.
+                const auto& resp = decoded.frame.pb_envelope.handshake_response();
+                if (resp.result() != ::hpactor::net::HANDSHAKE_ACCEPTED) {
+                    HPACTOR_LOG_WARNING(
+                        log::LogCategory::kNetwork, ActorId{0}, 0,
+                        "handshake rejected by peer",
+                        log::field("result", static_cast<uint64_t>(resp.result())));
+                    set_state(ConnectionState::Error);
+                    if (error_handler_) {
+                        error_handler_(nullptr, error(errors::unknown,
+                                                      "handshake rejected by peer"));
+                    }
+                    return;
+                }
+                handshake_config_.version_min = resp.accepted_version();
+                handshake_config_.version_max = resp.accepted_version();
+                handshake_config_.feature_flags = resp.feature_flags();
+                complete_handshake();
+            } else {
+                // Unexpected frame type during handshake — peer may be
+                // sending data frames before handshake completion.
+                set_state(ConnectionState::Error);
+                HPACTOR_LOG_WARNING(
+                    log::LogCategory::kNetwork, ActorId{0}, 0,
+                    "handshake: unexpected frame type",
+                    log::field("payload_type",
+                               static_cast<uint64_t>(static_cast<int>(pt))));
+                if (error_handler_) {
+                    error_handler_(nullptr,
+                                   error(errors::unknown,
+                                         "unexpected frame during handshake"));
+                }
+                return;
+            }
+        } else if (frame_handler_) {
             frame_handler_(std::move(frame_data));
         }
 
@@ -337,6 +439,127 @@ void WireFrameConnection::handle_send_completion(int result) {
 
     if (!write_buffer_.empty()) {
         flush_write_buffer();
+    }
+}
+
+// ── Protocol handshake (NET-001)
+// ──────────────────────────────────────────────
+
+void WireFrameConnection::set_handshake_config(HandshakeConfig config) {
+    handshake_config_ = config;
+
+    // Late binding: if the connection was already created with default
+    // (disabled) config, adjust state and start the handshake now.
+    if (config.enabled) {
+        if (state_ == ConnectionState::Connected) {
+            set_state(ConnectionState::Handshake);
+            start_handshake();
+        }
+    }
+}
+
+void WireFrameConnection::start_handshake() {
+    // Build a WireFrame containing a HandshakeHello in the WireEnvelope
+    // oneof.  Uses the normal "HPAC" framing — handshake frames are just
+    // another payload type in the existing wire protocol.
+    ::hpactor::net::HandshakeHello hello;
+    hello.set_min_version(handshake_config_.version_min);
+    hello.set_max_version(handshake_config_.version_max);
+    hello.set_feature_flags(handshake_config_.feature_flags);
+    hello.set_node_id(handshake_config_.node_id);
+
+    WireFrame frame = WireFrame::from_handshake_hello(std::move(hello));
+    StreamBuffer encoded = frame.encode();
+    if (encoded.empty()) {
+        set_state(ConnectionState::Error);
+        HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "handshake: failed to encode HandshakeHello");
+        if (error_handler_) {
+            error_handler_(nullptr,
+                           error(errors::unknown, "handshake encode failed"));
+        }
+        return;
+    }
+
+    handshake_hello_sent_ = true;
+    send_raw(encoded);
+}
+
+void WireFrameConnection::send_handshake_response(
+    const ::hpactor::net::HandshakeHello& hello) {
+    uint32_t accepted = negotiate_version(hello.min_version(), hello.max_version(),
+                                          handshake_config_.version_min,
+                                          handshake_config_.version_max);
+
+    ::hpactor::net::HandshakeResponse resp;
+    resp.set_node_id(handshake_config_.node_id);
+
+    if (accepted == 0) {
+        resp.set_accepted_version(0);
+        resp.set_feature_flags(0);
+        resp.set_result(::hpactor::net::HANDSHAKE_INCOMPATIBLE_VERSION);
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kNetwork, ActorId{0}, 0,
+            "handshake: incompatible version",
+            log::field("client_min", static_cast<uint64_t>(hello.min_version())),
+            log::field("client_max", static_cast<uint64_t>(hello.max_version())),
+            log::field("server_min",
+                       static_cast<uint64_t>(handshake_config_.version_min)),
+            log::field("server_max",
+                       static_cast<uint64_t>(handshake_config_.version_max)));
+    } else {
+        uint64_t agreed_flags =
+            hello.feature_flags() & handshake_config_.feature_flags;
+        resp.set_accepted_version(accepted);
+        resp.set_feature_flags(agreed_flags);
+        resp.set_result(::hpactor::net::HANDSHAKE_ACCEPTED);
+        handshake_config_.version_min = accepted;
+        handshake_config_.version_max = accepted;
+        handshake_config_.feature_flags = agreed_flags;
+    }
+
+    bool handshake_accepted = (resp.result() == ::hpactor::net::HANDSHAKE_ACCEPTED);
+
+    WireFrame frame = WireFrame::from_handshake_response(std::move(resp));
+    StreamBuffer encoded = frame.encode();
+    if (encoded.empty()) {
+        set_state(ConnectionState::Error);
+        HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "handshake: failed to encode HandshakeResponse");
+        if (error_handler_) {
+            error_handler_(nullptr,
+                           error(errors::unknown, "handshake encode failed"));
+        }
+        return;
+    }
+
+    send_raw(encoded);
+
+    if (handshake_accepted) {
+        complete_handshake();
+    } else {
+        set_state(ConnectionState::Error);
+        if (error_handler_) {
+            error_handler_(nullptr,
+                           error(errors::unknown,
+                                 "handshake rejected: incompatible version"));
+        }
+    }
+}
+
+void WireFrameConnection::complete_handshake() {
+    handshake_complete_ = true;
+    set_state(ConnectionState::Connected);
+
+    HPACTOR_LOG_DEBUG(
+        log::LogCategory::kNetwork, ActorId{0}, 0, "handshake complete",
+        log::field("version", static_cast<uint64_t>(handshake_config_.version_max)),
+        log::field("features",
+                   static_cast<uint64_t>(handshake_config_.feature_flags)));
+
+    if (ready_handler_) {
+        ready_handler_(
+            std::enable_shared_from_this<WireFrameConnection>::shared_from_this());
     }
 }
 

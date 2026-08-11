@@ -46,6 +46,8 @@ enum class FrameDispatchCode : uint8_t {
     StreamCapacityExceeded,
     HandlerUnavailable,
     RuntimeStopping,
+    HandshakeRejected, ///< Connection handshake was rejected (version mismatch,
+                       ///< incompatible flags, or auth failure).
 };
 
 /// \brief Fixed-size diagnostic returned by the inbound frame router.
