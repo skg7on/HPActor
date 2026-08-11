@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-09 05:28:17</td>
+            <td class="headerValue">2026-08-11 06:36:50</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">68.8&nbsp;%</td>
@@ -139,11 +139,11 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         874 : MessagingRuntime::~MessagingRuntime() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : mailbox::EnqueueResult</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      132841 : MessagingRuntime::try_deliver(ActorId target, TypedMessage msg,</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">      132866 : MessagingRuntime::try_deliver(ActorId target, TypedMessage msg,</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :                               uint8_t priority, int64_t deadline_ns,</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :                               mailbox::DeliveryOptions options) {</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      265682 :     return delivery_pipeline_.try_deliver(target, std::move(msg), priority,</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      132841 :                                           deadline_ns, options);</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      265732 :     return delivery_pipeline_.try_deliver(target, std::move(msg), priority,</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      132866 :                                           deadline_ns, options);</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : }</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             : </span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : mailbox::DeliveryResult</span>
@@ -177,8 +177,8 @@
 <span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">          12 :     dead_letters_.reconfigure(dead_letters);</span></span>
 <span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">          12 : }</span></span>
 <span id="L101"><span class="lineNum">     101</span>                 :             : </span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">        1055 : mailbox::DeadLetterQueue&amp; MessagingRuntime::dead_letters() noexcept {</span></span>
-<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">        1055 :     return dead_letters_;</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">        1053 : mailbox::DeadLetterQueue&amp; MessagingRuntime::dead_letters() noexcept {</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">        1053 :     return dead_letters_;</span></span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : }</span>
 <span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">           7 : adt::DedupCache&amp; MessagingRuntime::dedup_cache() noexcept {</span></span>
 <span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">           7 :     return dedup_cache_;</span></span>

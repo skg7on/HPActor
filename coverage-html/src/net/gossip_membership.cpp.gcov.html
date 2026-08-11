@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-08-09 05:28:17</td>
+            <td class="headerValue">2026-08-11 06:36:50</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">91.3&nbsp;%</td>
@@ -111,23 +111,23 @@
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : // ---- Endpoint conversion to/from PbEndpoint ----</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC tlaBgGNC">         102 : void ep_to_pb_endpoint(PbEndpoint* pb, const EndPoint&amp; ep) {</span></span>
-<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 102 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         102 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         102 :         auto* pb4 = pb-&gt;mutable_ipv4();</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         102 :         pb4-&gt;set_addr(ipv4-&gt;addr);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         102 :         pb4-&gt;set_port(ipv4-&gt;port());</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC tlaBgGNC">         103 : void ep_to_pb_endpoint(PbEndpoint* pb, const EndPoint&amp; ep) {</span></span>
+<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 103 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         103 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">         103 :         auto* pb4 = pb-&gt;mutable_ipv4();</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">         103 :         pb4-&gt;set_addr(ipv4-&gt;addr);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         103 :         pb4-&gt;set_port(ipv4-&gt;port());</span></span>
 <span id="L41"><span class="lineNum">      41</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :     } else if (auto* ipv6 = std::get_if&lt;Ipv6Endpoint&gt;(&amp;ep)) {</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :         auto* pb6 = pb-&gt;mutable_ipv6();</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :         pb6-&gt;set_addr(</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaUNC">           0 :             std::string(reinterpret_cast&lt;const char*&gt;(ipv6-&gt;addr.data()), 16));</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaUNC">           0 :         pb6-&gt;set_port(ipv6-&gt;port());</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     }</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC tlaBgGNC">         102 : }</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC tlaBgGNC">         103 : }</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          34 : EndPoint pb_endpoint_to_ep(const PbEndpoint&amp; pb) {</span></span>
-<span id="L50"><span class="lineNum">      50</span>         [<span class="tlaGBC" title="Branch 0 was taken 34 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          34 :     if (pb.has_ipv4()) {</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          34 :         const auto&amp; pb4 = pb.ipv4();</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          34 :         return Ipv4Endpoint{pb4.addr(), htons(static_cast&lt;uint16_t&gt;(pb4.port()))};</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          33 : EndPoint pb_endpoint_to_ep(const PbEndpoint&amp; pb) {</span></span>
+<span id="L50"><span class="lineNum">      50</span>         [<span class="tlaGBC" title="Branch 0 was taken 33 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          33 :     if (pb.has_ipv4()) {</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          33 :         const auto&amp; pb4 = pb.ipv4();</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          33 :         return Ipv4Endpoint{pb4.addr(), htons(static_cast&lt;uint16_t&gt;(pb4.port()))};</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     }</span>
 <span id="L54"><span class="lineNum">      54</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :     if (pb.has_ipv6()) {</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :         const auto&amp; pb6 = pb.ipv6();</span></span>
@@ -257,7 +257,7 @@
 <span id="L179"><span class="lineNum">     179</span>                 :             :         }</span>
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC tlaBgGNC">           8 :         transport_-&gt;set_receive_callback(</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           8 :             [this](const StreamBuffer&amp; data, const std::string&amp; host,</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           6 :                    uint16_t port) { handle_packet(data, host, port); });</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           5 :                    uint16_t port) { handle_packet(data, host, port); });</span></span>
 <span id="L183"><span class="lineNum">     183</span>                 :             :     }</span>
 <span id="L184"><span class="lineNum">     184</span>                 :             : </span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :     // Add self to the membership table.</span>
@@ -325,9 +325,9 @@
 <span id="L247"><span class="lineNum">     247</span>                 :             :     {</span>
 <span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC tlaBgGNC">          53 :         std::shared_lock&lt;std::shared_mutex&gt; lock(members_mutex_);</span></span>
 <span id="L249"><span class="lineNum">     249</span>         [<span class="tlaGBC" title="Branch 0 was taken 74 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span>]:<span class="tlaGNC">         127 :         for (const auto&amp; [ep, member] : members_) {</span></span>
-<span id="L250"><span class="lineNum">     250</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 62 times"> + </span>]:<span class="tlaGNC">          74 :             if (member.status == MemberStatus::Alive ||</span></span>
-<span id="L251"><span class="lineNum">     251</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">          12 :                 member.status == MemberStatus::Suspicious) {</span></span>
-<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaGNC">          65 :                 send_leave(ep);</span></span>
+<span id="L250"><span class="lineNum">     250</span>         [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 63 times"> + </span>]:<span class="tlaGNC">          74 :             if (member.status == MemberStatus::Alive ||</span></span>
+<span id="L251"><span class="lineNum">     251</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          11 :                 member.status == MemberStatus::Suspicious) {</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaGNC">          66 :                 send_leave(ep);</span></span>
 <span id="L253"><span class="lineNum">     253</span>                 :             :             }</span>
 <span id="L254"><span class="lineNum">     254</span>                 :             :         }</span>
 <span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaGNC">          53 :     }</span></span>
@@ -399,18 +399,18 @@
 <span id="L321"><span class="lineNum">     321</span>                 :             : //   Piggyback Count (2B BE) | Piggyback entries...</span>
 <span id="L322"><span class="lineNum">     322</span>                 :             : </span>
 <span id="L323"><span class="lineNum">     323</span>                 :             : StreamBuffer</span>
-<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">          87 : GossipMembership::encode_message(GossipMessageType type, uint64_t inc,</span></span>
+<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">          88 : GossipMembership::encode_message(GossipMessageType type, uint64_t inc,</span></span>
 <span id="L325"><span class="lineNum">     325</span>                 :             :                                  uint32_t seq, EndPoint ping_target,</span>
 <span id="L326"><span class="lineNum">     326</span>                 :             :                                  const std::vector&lt;PiggybackEntry&gt;&amp; pb) const {</span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">          87 :     PbGossipEnvelope env;</span></span>
-<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">          87 :     env.set_magic(GossipMagic);</span></span>
-<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">          87 :     env.set_version(GossipVersion);</span></span>
-<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">          87 :     env.set_type(static_cast&lt;PbGossipMessageType&gt;(type));</span></span>
-<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaGNC">          87 :     env.set_flags(0);</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">          88 :     PbGossipEnvelope env;</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">          88 :     env.set_magic(GossipMagic);</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">          88 :     env.set_version(GossipVersion);</span></span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">          88 :     env.set_type(static_cast&lt;PbGossipMessageType&gt;(type));</span></span>
+<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaGNC">          88 :     env.set_flags(0);</span></span>
 <span id="L332"><span class="lineNum">     332</span>                 :             : </span>
 <span id="L333"><span class="lineNum">     333</span>                 :             :     // Build per-type payload</span>
-<span id="L334"><span class="lineNum">     334</span>   [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          87 :     switch (type) {</span></span>
-<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 68 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span>]
+<span id="L334"><span class="lineNum">     334</span>   [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          88 :     switch (type) {</span></span>
+<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 69 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span>]
 <span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC">           9 :         case GossipMessageType::Ping: {</span></span>
 <span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">           9 :             auto* ping = env.mutable_ping();</span></span>
 <span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC">           9 :             ep_to_pb_endpoint(ping-&gt;mutable_sender_endpoint(),</span></span>
@@ -464,42 +464,42 @@
 <span id="L385"><span class="lineNum">     385</span>                 :             :             }</span>
 <span id="L386"><span class="lineNum">     386</span>                 :<span class="tlaGNC tlaBgGNC">           3 :             break;</span></span>
 <span id="L387"><span class="lineNum">     387</span>                 :             :         }</span>
-<span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaGNC">          68 :         case GossipMessageType::Leave: {</span></span>
-<span id="L389"><span class="lineNum">     389</span>                 :<span class="tlaGNC">          68 :             auto* leave = env.mutable_leave();</span></span>
-<span id="L390"><span class="lineNum">     390</span>                 :<span class="tlaGNC">          68 :             ep_to_pb_endpoint(leave-&gt;mutable_sender_endpoint(),</span></span>
-<span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaGNC">          68 :                               config_.local_state.identity.endpoint);</span></span>
-<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">          68 :             leave-&gt;set_incarnation(inc);</span></span>
-<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">          68 :             break;</span></span>
+<span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaGNC">          69 :         case GossipMessageType::Leave: {</span></span>
+<span id="L389"><span class="lineNum">     389</span>                 :<span class="tlaGNC">          69 :             auto* leave = env.mutable_leave();</span></span>
+<span id="L390"><span class="lineNum">     390</span>                 :<span class="tlaGNC">          69 :             ep_to_pb_endpoint(leave-&gt;mutable_sender_endpoint(),</span></span>
+<span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaGNC">          69 :                               config_.local_state.identity.endpoint);</span></span>
+<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">          69 :             leave-&gt;set_incarnation(inc);</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">          69 :             break;</span></span>
 <span id="L394"><span class="lineNum">     394</span>                 :             :         }</span>
 <span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         default:</span></span>
 <span id="L396"><span class="lineNum">     396</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
 <span id="L397"><span class="lineNum">     397</span>                 :             :     }</span>
 <span id="L398"><span class="lineNum">     398</span>                 :             : </span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC tlaBgGNC">         174 :     std::string serialized = env.SerializeAsString();</span></span>
-<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaGNC">          87 :     return StreamBuffer(serialized.begin(), serialized.end());</span></span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">          87 : }</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC tlaBgGNC">         176 :     std::string serialized = env.SerializeAsString();</span></span>
+<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaGNC">          88 :     return StreamBuffer(serialized.begin(), serialized.end());</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">          88 : }</span></span>
 <span id="L402"><span class="lineNum">     402</span>                 :             : </span>
 <span id="L403"><span class="lineNum">     403</span>                 :             : // =============================================================================</span>
 <span id="L404"><span class="lineNum">     404</span>                 :             : // Wire protocol — decode_message</span>
 <span id="L405"><span class="lineNum">     405</span>                 :             : // =============================================================================</span>
 <span id="L406"><span class="lineNum">     406</span>                 :             : </span>
-<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">          26 : bool GossipMembership::decode_message(const StreamBuffer&amp; data,</span></span>
+<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">          25 : bool GossipMembership::decode_message(const StreamBuffer&amp; data,</span></span>
 <span id="L408"><span class="lineNum">     408</span>                 :             :                                       GossipMessageType&amp; type, EndPoint&amp; sender,</span>
 <span id="L409"><span class="lineNum">     409</span>                 :             :                                       uint64_t&amp; inc, uint32_t&amp; seq,</span>
 <span id="L410"><span class="lineNum">     410</span>                 :             :                                       EndPoint&amp; ping_target,</span>
 <span id="L411"><span class="lineNum">     411</span>                 :             :                                       std::vector&lt;PiggybackEntry&gt;&amp; pb) const {</span>
-<span id="L412"><span class="lineNum">     412</span>                 :<span class="tlaGNC">          26 :     PbGossipEnvelope env;</span></span>
-<span id="L413"><span class="lineNum">     413</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">          26 :     if (!env.ParseFromArray(data.data(), static_cast&lt;int&gt;(data.size())))</span></span>
+<span id="L412"><span class="lineNum">     412</span>                 :<span class="tlaGNC">          25 :     PbGossipEnvelope env;</span></span>
+<span id="L413"><span class="lineNum">     413</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">          25 :     if (!env.ParseFromArray(data.data(), static_cast&lt;int&gt;(data.size())))</span></span>
 <span id="L414"><span class="lineNum">     414</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
-<span id="L415"><span class="lineNum">     415</span>   [<span class="tlaGBC" title="Branch 0 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 23 times"> + </span> :<span class="tlaGNC tlaBgGNC">          26 :     if (env.magic() != GossipMagic || env.version() != GossipVersion)</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 23 times"> + </span>]
+<span id="L415"><span class="lineNum">     415</span>   [<span class="tlaGBC" title="Branch 0 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 22 times"> + </span> :<span class="tlaGNC tlaBgGNC">          25 :     if (env.magic() != GossipMagic || env.version() != GossipVersion)</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 22 times"> + </span>]
 <span id="L416"><span class="lineNum">     416</span>                 :<span class="tlaGNC">           3 :         return false;</span></span>
 <span id="L417"><span class="lineNum">     417</span>                 :             : </span>
-<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">          23 :     type = static_cast&lt;GossipMessageType&gt;(env.type());</span></span>
-<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">          23 :     pb.clear();</span></span>
+<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC">          22 :     type = static_cast&lt;GossipMessageType&gt;(env.type());</span></span>
+<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">          22 :     pb.clear();</span></span>
 <span id="L420"><span class="lineNum">     420</span>                 :             : </span>
-<span id="L421"><span class="lineNum">     421</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          23 :     switch (type) {</span></span>
-<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
+<span id="L421"><span class="lineNum">     421</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          22 :     switch (type) {</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
 <span id="L422"><span class="lineNum">     422</span>                 :<span class="tlaGNC">           7 :         case GossipMessageType::Ping:</span></span>
 <span id="L423"><span class="lineNum">     423</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :             if (!env.has_ping())</span></span>
 <span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 return false;</span></span>
@@ -545,17 +545,17 @@
 <span id="L464"><span class="lineNum">     464</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case GossipMessageType::SyncRsp:</span></span>
 <span id="L465"><span class="lineNum">     465</span>                 :             :             // SyncRsp is handled by decode_sync_rsp(), not this path</span>
 <span id="L466"><span class="lineNum">     466</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
-<span id="L467"><span class="lineNum">     467</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         case GossipMessageType::Leave:</span></span>
-<span id="L468"><span class="lineNum">     468</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :             if (!env.has_leave())</span></span>
+<span id="L467"><span class="lineNum">     467</span>                 :<span class="tlaGNC tlaBgGNC">           6 :         case GossipMessageType::Leave:</span></span>
+<span id="L468"><span class="lineNum">     468</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :             if (!env.has_leave())</span></span>
 <span id="L469"><span class="lineNum">     469</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 return false;</span></span>
-<span id="L470"><span class="lineNum">     470</span>                 :<span class="tlaGNC tlaBgGNC">           7 :             sender = pb_endpoint_to_ep(env.leave().sender_endpoint());</span></span>
-<span id="L471"><span class="lineNum">     471</span>                 :<span class="tlaGNC">           7 :             inc = env.leave().incarnation();</span></span>
-<span id="L472"><span class="lineNum">     472</span>                 :<span class="tlaGNC">           7 :             seq = 0;</span></span>
-<span id="L473"><span class="lineNum">     473</span>                 :<span class="tlaGNC">           7 :             break;</span></span>
+<span id="L470"><span class="lineNum">     470</span>                 :<span class="tlaGNC tlaBgGNC">           6 :             sender = pb_endpoint_to_ep(env.leave().sender_endpoint());</span></span>
+<span id="L471"><span class="lineNum">     471</span>                 :<span class="tlaGNC">           6 :             inc = env.leave().incarnation();</span></span>
+<span id="L472"><span class="lineNum">     472</span>                 :<span class="tlaGNC">           6 :             seq = 0;</span></span>
+<span id="L473"><span class="lineNum">     473</span>                 :<span class="tlaGNC">           6 :             break;</span></span>
 <span id="L474"><span class="lineNum">     474</span>                 :             :     }</span>
 <span id="L475"><span class="lineNum">     475</span>                 :             : </span>
-<span id="L476"><span class="lineNum">     476</span>                 :<span class="tlaGNC">          23 :     return true;</span></span>
-<span id="L477"><span class="lineNum">     477</span>                 :<span class="tlaGNC">          26 : }</span></span>
+<span id="L476"><span class="lineNum">     476</span>                 :<span class="tlaGNC">          22 :     return true;</span></span>
+<span id="L477"><span class="lineNum">     477</span>                 :<span class="tlaGNC">          25 : }</span></span>
 <span id="L478"><span class="lineNum">     478</span>                 :             : </span>
 <span id="L479"><span class="lineNum">     479</span>                 :             : // =============================================================================</span>
 <span id="L480"><span class="lineNum">     480</span>                 :             : // Wire protocol — encode_sync_rsp (protobuf)</span>
@@ -796,17 +796,17 @@
 <span id="L713"><span class="lineNum">     713</span>                 :             : // Packet handler — non-blocking recvfrom loop</span>
 <span id="L714"><span class="lineNum">     714</span>                 :             : // =============================================================================</span>
 <span id="L715"><span class="lineNum">     715</span>                 :             : </span>
-<span id="L716"><span class="lineNum">     716</span>                 :<span class="tlaGNC">          24 : void GossipMembership::handle_packet(const StreamBuffer&amp; data,</span></span>
+<span id="L716"><span class="lineNum">     716</span>                 :<span class="tlaGNC">          23 : void GossipMembership::handle_packet(const StreamBuffer&amp; data,</span></span>
 <span id="L717"><span class="lineNum">     717</span>                 :             :                                      const std::string&amp; from_host,</span>
 <span id="L718"><span class="lineNum">     718</span>                 :             :                                      uint16_t from_port) {</span>
 <span id="L719"><span class="lineNum">     719</span>                 :             :     GossipMessageType type;</span>
-<span id="L720"><span class="lineNum">     720</span>                 :<span class="tlaGNC">          24 :     EndPoint sender;</span></span>
+<span id="L720"><span class="lineNum">     720</span>                 :<span class="tlaGNC">          23 :     EndPoint sender;</span></span>
 <span id="L721"><span class="lineNum">     721</span>                 :             :     uint64_t inc;</span>
 <span id="L722"><span class="lineNum">     722</span>                 :             :     uint32_t seq;</span>
-<span id="L723"><span class="lineNum">     723</span>                 :<span class="tlaGNC">          24 :     EndPoint ping_target;</span></span>
-<span id="L724"><span class="lineNum">     724</span>                 :<span class="tlaGNC">          24 :     std::vector&lt;PiggybackEntry&gt; pb;</span></span>
+<span id="L723"><span class="lineNum">     723</span>                 :<span class="tlaGNC">          23 :     EndPoint ping_target;</span></span>
+<span id="L724"><span class="lineNum">     724</span>                 :<span class="tlaGNC">          23 :     std::vector&lt;PiggybackEntry&gt; pb;</span></span>
 <span id="L725"><span class="lineNum">     725</span>                 :             : </span>
-<span id="L726"><span class="lineNum">     726</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 21 times"> + </span>]:<span class="tlaGNC">          24 :     if (!decode_message(data, type, sender, inc, seq, ping_target, pb)) {</span></span>
+<span id="L726"><span class="lineNum">     726</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">          23 :     if (!decode_message(data, type, sender, inc, seq, ping_target, pb)) {</span></span>
 <span id="L727"><span class="lineNum">     727</span>                 :             :         // Try SyncRsp format (uses a separate wire format from standard</span>
 <span id="L728"><span class="lineNum">     728</span>                 :             :         // messages)</span>
 <span id="L729"><span class="lineNum">     729</span>                 :<span class="tlaGNC">           3 :         std::vector&lt;Member&gt; members;</span></span>
@@ -816,8 +816,8 @@
 <span id="L733"><span class="lineNum">     733</span>                 :<span class="tlaGNC">           3 :         return;</span></span>
 <span id="L734"><span class="lineNum">     734</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L735"><span class="lineNum">     735</span>                 :             : </span>
-<span id="L736"><span class="lineNum">     736</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          21 :     switch (type) {</span></span>
-<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span>]
+<span id="L736"><span class="lineNum">     736</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          20 :     switch (type) {</span></span>
+<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span>]
 <span id="L737"><span class="lineNum">     737</span>                 :<span class="tlaGNC">           5 :         case GossipMessageType::Ping:</span></span>
 <span id="L738"><span class="lineNum">     738</span>                 :<span class="tlaGNC">           5 :             handle_ping(sender, inc, seq, std::move(pb), from_host, from_port);</span></span>
 <span id="L739"><span class="lineNum">     739</span>                 :<span class="tlaGNC">           5 :             break;</span></span>
@@ -833,13 +833,13 @@
 <span id="L749"><span class="lineNum">     749</span>                 :<span class="tlaGNC">           3 :         case GossipMessageType::Join:</span></span>
 <span id="L750"><span class="lineNum">     750</span>                 :<span class="tlaGNC">           3 :             handle_join(sender, inc, std::move(pb));</span></span>
 <span id="L751"><span class="lineNum">     751</span>                 :<span class="tlaGNC">           3 :             break;</span></span>
-<span id="L752"><span class="lineNum">     752</span>                 :<span class="tlaGNC">           7 :         case GossipMessageType::Leave:</span></span>
-<span id="L753"><span class="lineNum">     753</span>                 :<span class="tlaGNC">           7 :             handle_leave(sender, inc);</span></span>
-<span id="L754"><span class="lineNum">     754</span>                 :<span class="tlaGNC">           7 :             break;</span></span>
+<span id="L752"><span class="lineNum">     752</span>                 :<span class="tlaGNC">           6 :         case GossipMessageType::Leave:</span></span>
+<span id="L753"><span class="lineNum">     753</span>                 :<span class="tlaGNC">           6 :             handle_leave(sender, inc);</span></span>
+<span id="L754"><span class="lineNum">     754</span>                 :<span class="tlaGNC">           6 :             break;</span></span>
 <span id="L755"><span class="lineNum">     755</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         default:</span></span>
 <span id="L756"><span class="lineNum">     756</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
 <span id="L757"><span class="lineNum">     757</span>                 :             :     }</span>
-<span id="L758"><span class="lineNum">     758</span>         [<span class="tlaGBC" title="Branch 0 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          24 : }</span></span>
+<span id="L758"><span class="lineNum">     758</span>         [<span class="tlaGBC" title="Branch 0 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          23 : }</span></span>
 <span id="L759"><span class="lineNum">     759</span>                 :             : </span>
 <span id="L760"><span class="lineNum">     760</span>                 :             : // =============================================================================</span>
 <span id="L761"><span class="lineNum">     761</span>                 :             : // Message handlers</span>
@@ -1021,30 +1021,30 @@
 <span id="L935"><span class="lineNum">     935</span>                 :<span class="tlaGNC tlaBgGNC">           3 :     }</span></span>
 <span id="L936"><span class="lineNum">     936</span>                 :<span class="tlaGNC">           3 : }</span></span>
 <span id="L937"><span class="lineNum">     937</span>                 :             : </span>
-<span id="L938"><span class="lineNum">     938</span>                 :<span class="tlaGNC">           8 : void GossipMembership::handle_leave(EndPoint sender, uint64_t inc) {</span></span>
-<span id="L939"><span class="lineNum">     939</span>                 :<span class="tlaGNC">           8 :     Member member_to_fire;</span></span>
-<span id="L940"><span class="lineNum">     940</span>                 :<span class="tlaGNC">           8 :     bool should_fire = false;</span></span>
+<span id="L938"><span class="lineNum">     938</span>                 :<span class="tlaGNC">           7 : void GossipMembership::handle_leave(EndPoint sender, uint64_t inc) {</span></span>
+<span id="L939"><span class="lineNum">     939</span>                 :<span class="tlaGNC">           7 :     Member member_to_fire;</span></span>
+<span id="L940"><span class="lineNum">     940</span>                 :<span class="tlaGNC">           7 :     bool should_fire = false;</span></span>
 <span id="L941"><span class="lineNum">     941</span>                 :             : </span>
 <span id="L942"><span class="lineNum">     942</span>                 :             :     {</span>
-<span id="L943"><span class="lineNum">     943</span>                 :<span class="tlaGNC">           8 :         std::unique_lock&lt;std::shared_mutex&gt; lock(members_mutex_);</span></span>
-<span id="L944"><span class="lineNum">     944</span>                 :<span class="tlaGNC">           8 :         auto it = members_.find(sender);</span></span>
-<span id="L945"><span class="lineNum">     945</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           8 :         if (it != members_.end()) {</span></span>
+<span id="L943"><span class="lineNum">     943</span>                 :<span class="tlaGNC">           7 :         std::unique_lock&lt;std::shared_mutex&gt; lock(members_mutex_);</span></span>
+<span id="L944"><span class="lineNum">     944</span>                 :<span class="tlaGNC">           7 :         auto it = members_.find(sender);</span></span>
+<span id="L945"><span class="lineNum">     945</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :         if (it != members_.end()) {</span></span>
 <span id="L946"><span class="lineNum">     946</span>                 :             :             // Only accept if incarnation is &gt;= what we have.</span>
-<span id="L947"><span class="lineNum">     947</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           8 :             if (inc &gt;= it-&gt;second.incarnation) {</span></span>
-<span id="L948"><span class="lineNum">     948</span>                 :<span class="tlaGNC">           8 :                 it-&gt;second.status = MemberStatus::Left;</span></span>
-<span id="L949"><span class="lineNum">     949</span>                 :<span class="tlaGNC">           8 :                 it-&gt;second.last_seen = std::chrono::steady_clock::now();</span></span>
-<span id="L950"><span class="lineNum">     950</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           8 :                 if (member_change_cb_) {</span></span>
+<span id="L947"><span class="lineNum">     947</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :             if (inc &gt;= it-&gt;second.incarnation) {</span></span>
+<span id="L948"><span class="lineNum">     948</span>                 :<span class="tlaGNC">           7 :                 it-&gt;second.status = MemberStatus::Left;</span></span>
+<span id="L949"><span class="lineNum">     949</span>                 :<span class="tlaGNC">           7 :                 it-&gt;second.last_seen = std::chrono::steady_clock::now();</span></span>
+<span id="L950"><span class="lineNum">     950</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           7 :                 if (member_change_cb_) {</span></span>
 <span id="L951"><span class="lineNum">     951</span>                 :<span class="tlaGNC">           6 :                     member_to_fire = it-&gt;second;</span></span>
 <span id="L952"><span class="lineNum">     952</span>                 :<span class="tlaGNC">           6 :                     should_fire = true;</span></span>
 <span id="L953"><span class="lineNum">     953</span>                 :             :                 }</span>
 <span id="L954"><span class="lineNum">     954</span>                 :             :             }</span>
 <span id="L955"><span class="lineNum">     955</span>                 :             :         }</span>
-<span id="L956"><span class="lineNum">     956</span>                 :<span class="tlaGNC">           8 :     }</span></span>
+<span id="L956"><span class="lineNum">     956</span>                 :<span class="tlaGNC">           7 :     }</span></span>
 <span id="L957"><span class="lineNum">     957</span>                 :             : </span>
-<span id="L958"><span class="lineNum">     958</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           8 :     if (should_fire) {</span></span>
+<span id="L958"><span class="lineNum">     958</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           7 :     if (should_fire) {</span></span>
 <span id="L959"><span class="lineNum">     959</span>                 :<span class="tlaGNC">           6 :         member_change_cb_(member_to_fire, false);</span></span>
 <span id="L960"><span class="lineNum">     960</span>                 :             :     }</span>
-<span id="L961"><span class="lineNum">     961</span>                 :<span class="tlaGNC">           8 : }</span></span>
+<span id="L961"><span class="lineNum">     961</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L962"><span class="lineNum">     962</span>                 :             : </span>
 <span id="L963"><span class="lineNum">     963</span>                 :             : // =============================================================================</span>
 <span id="L964"><span class="lineNum">     964</span>                 :             : // Message sending</span>
@@ -1142,18 +1142,18 @@
 <span id="L1053"><span class="lineNum">    1053</span>                 :<span class="tlaGNC">           3 :         transport_-&gt;send(data, target);</span></span>
 <span id="L1054"><span class="lineNum">    1054</span>                 :<span class="tlaGNC">           3 : }</span></span>
 <span id="L1055"><span class="lineNum">    1055</span>                 :             : </span>
-<span id="L1056"><span class="lineNum">    1056</span>                 :<span class="tlaGNC">          68 : void GossipMembership::send_leave(EndPoint target) {</span></span>
-<span id="L1057"><span class="lineNum">    1057</span>   [<span class="tlaGBC" title="Branch 0 was taken 50 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 50 times"> + </span> :<span class="tlaGNC">          68 :     FAULT_INJECT(&quot;hpactor.gossip.leave.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 68 times"> + </span>]
+<span id="L1056"><span class="lineNum">    1056</span>                 :<span class="tlaGNC">          69 : void GossipMembership::send_leave(EndPoint target) {</span></span>
+<span id="L1057"><span class="lineNum">    1057</span>   [<span class="tlaGBC" title="Branch 0 was taken 51 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 51 times"> + </span> :<span class="tlaGNC">          69 :     FAULT_INJECT(&quot;hpactor.gossip.leave.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 69 times"> + </span>]
 <span id="L1058"><span class="lineNum">    1058</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L1059"><span class="lineNum">    1059</span>                 :             :     }</span>
-<span id="L1060"><span class="lineNum">    1060</span>                 :<span class="tlaGNC tlaBgGNC">          68 :     std::vector&lt;PiggybackEntry&gt; pb; // empty piggyback for leave</span></span>
+<span id="L1060"><span class="lineNum">    1060</span>                 :<span class="tlaGNC tlaBgGNC">          69 :     std::vector&lt;PiggybackEntry&gt; pb; // empty piggyback for leave</span></span>
 <span id="L1061"><span class="lineNum">    1061</span>                 :             :     StreamBuffer msg =</span>
-<span id="L1062"><span class="lineNum">    1062</span>                 :<span class="tlaGNC">          68 :         encode_message(GossipMessageType::Leave, incarnation_, seq_no_++,</span></span>
-<span id="L1063"><span class="lineNum">    1063</span>                 :<span class="tlaGNC">          68 :                        config_.local_state.identity.endpoint, pb);</span></span>
-<span id="L1064"><span class="lineNum">    1064</span>         [<span class="tlaGBC" title="Branch 0 was taken 50 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span>]:<span class="tlaGNC">          68 :     if (transport_)</span></span>
-<span id="L1065"><span class="lineNum">    1065</span>                 :<span class="tlaGNC">          50 :         transport_-&gt;send(msg, target);</span></span>
-<span id="L1066"><span class="lineNum">    1066</span>                 :<span class="tlaGNC">          68 : }</span></span>
+<span id="L1062"><span class="lineNum">    1062</span>                 :<span class="tlaGNC">          69 :         encode_message(GossipMessageType::Leave, incarnation_, seq_no_++,</span></span>
+<span id="L1063"><span class="lineNum">    1063</span>                 :<span class="tlaGNC">          69 :                        config_.local_state.identity.endpoint, pb);</span></span>
+<span id="L1064"><span class="lineNum">    1064</span>         [<span class="tlaGBC" title="Branch 0 was taken 51 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span>]:<span class="tlaGNC">          69 :     if (transport_)</span></span>
+<span id="L1065"><span class="lineNum">    1065</span>                 :<span class="tlaGNC">          51 :         transport_-&gt;send(msg, target);</span></span>
+<span id="L1066"><span class="lineNum">    1066</span>                 :<span class="tlaGNC">          69 : }</span></span>
 <span id="L1067"><span class="lineNum">    1067</span>                 :             : </span>
 <span id="L1068"><span class="lineNum">    1068</span>                 :             : // =============================================================================</span>
 <span id="L1069"><span class="lineNum">    1069</span>                 :             : // State mutation</span>
