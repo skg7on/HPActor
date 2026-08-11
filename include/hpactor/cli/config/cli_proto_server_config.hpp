@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <string>
 
+#include <hpactor/net/wireframe_connection.hpp>
+
 namespace hpactor {
 namespace cli {
 
@@ -47,6 +49,11 @@ struct CliProtoServerConfig {
 
     /// \brief Owner group name for the UDS socket (optional).
     std::string uds_socket_group;
+
+    /// \brief Protocol handshake configuration (NET-001).
+    /// When \c enabled, the server performs version and feature negotiation
+    /// with connecting CLI clients before accepting CLI commands.
+    net::HandshakeConfig handshake;
 };
 
 } // namespace cli

@@ -64,6 +64,11 @@ struct PoolConfig {
     /// \brief Maximum inbound frame payload bytes (default 16 MiB).
     /// Frames declaring a larger payload are rejected before allocation.
     uint32_t max_inbound_frame_bytes{16U * 1024U * 1024U};
+
+    /// \brief Protocol handshake configuration (NET-001).
+    /// When \c enabled, a version and feature negotiation exchange runs
+    /// after TCP connect and before any WireEnvelope frames.
+    HandshakeConfig handshake;
 };
 
 /// \brief Connection pool runtime statistics.

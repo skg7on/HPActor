@@ -169,12 +169,13 @@ class WireFrameConnection
 
     /// \brief Set the protocol handshake configuration.
     ///
-    /// Must be called before the connection is established (before
-    /// \c setup_after_connect() or the factory methods).
+    /// For the connecting-client path, call this after
+    /// \c create_connecting_client() and before \c setup_after_connect().
+    /// For the server path, call this after \c create_as_server() and
+    /// before the first \c handle_read() — the state will be adjusted
+    /// automatically.
     /// \param[in] config Handshake configuration.
-    void set_handshake_config(HandshakeConfig config) {
-        handshake_config_ = config;
-    }
+    void set_handshake_config(HandshakeConfig config);
 
     /// \brief Return the negotiated handshake result for this connection.
     ///

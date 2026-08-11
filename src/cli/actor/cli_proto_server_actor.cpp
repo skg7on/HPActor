@@ -212,6 +212,10 @@ void CliProtoServerActor::on_tcp_accepted(int client_fd, EndPoint remote_ep) {
         return;
     }
 
+    if (config_.handshake.enabled) {
+        conn->set_handshake_config(config_.handshake);
+    }
+
     auto formatter = OutputFormatter::create(config_.default_format);
     auto session = std::make_unique<CliSession>(
         &system_, command_tree_.get(), std::move(formatter),
@@ -271,6 +275,10 @@ void CliProtoServerActor::on_uds_accepted(int client_fd) {
     if (!conn) {
         ::close(client_fd);
         return;
+    }
+
+    if (config_.handshake.enabled) {
+        conn->set_handshake_config(config_.handshake);
     }
 
     auto formatter = OutputFormatter::create(config_.default_format);

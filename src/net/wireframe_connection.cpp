@@ -394,6 +394,23 @@ void WireFrameConnection::handle_send_completion(int result) {
 // ── Protocol handshake (NET-001)
 // ──────────────────────────────────────────────
 
+void WireFrameConnection::set_handshake_config(HandshakeConfig config) {
+    handshake_config_ = config;
+
+    // Late binding: if the connection was already created with default
+    // (disabled) config, adjust state and start the handshake now.
+    if (config.enabled) {
+        if (state_ == ConnectionState::Connected) {
+            // Server path (create_as_server) or immediately-connected client
+            // (create_as_client): transition to Handshake and start.
+            set_state(ConnectionState::Handshake);
+            start_handshake();
+        }
+        // For Connecting state, setup_after_connect() will read the updated
+        // config and start the handshake.
+    }
+}
+
 void WireFrameConnection::start_handshake() {
     // Client path: send HandshakeHello.
     // Server path: just wait for the client to send hello first (no-op here).
