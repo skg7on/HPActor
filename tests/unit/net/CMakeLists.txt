@@ -25,6 +25,7 @@ add_executable(test_unit_net
     test_reliable_ack_emission.cpp
     test_fuzz_regression_protobuf.cpp
     test_fuzz_regression_http.cpp
+    test_handshake.cpp
 )
 target_link_libraries(test_unit_net hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 

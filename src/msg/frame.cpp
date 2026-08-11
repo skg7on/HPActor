@@ -16,7 +16,9 @@
 
 #include <hpactor/log/logger.hpp>
 
+#include <algorithm>
 #include <arpa/inet.h>
+#include <array>
 #include <cstring>
 
 namespace hpactor {
@@ -123,6 +125,97 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
 
 WireFrame WireFrame::decode(std::span<const uint8_t> data) {
     return decode(StreamBuffer(data.begin(), data.end()));
+}
+
+// ── Handshake message encode/decode
+// ────────────────────────────────────────────
+
+namespace {
+
+template <typename PbMessage>
+StreamBuffer encode_handshake_message(const PbMessage& msg) {
+    std::string serialized = msg.SerializeAsString();
+    if (serialized.empty() && msg.ByteSizeLong() > 0) {
+        return {}; // Serialization failure
+    }
+
+    StreamBuffer result;
+    result.reserve(HandshakeHeaderSize + serialized.size());
+
+    // Magic "HPAH"
+    const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'H'};
+    result.append(magic.data(), 4);
+
+    // Remaining length in network byte order
+    uint32_t payload_len = static_cast<uint32_t>(serialized.size());
+    uint32_t net_len = htonl(payload_len);
+    result.append(reinterpret_cast<const uint8_t*>(&net_len), 4);
+
+    result.append(reinterpret_cast<const uint8_t*>(serialized.data()),
+                  serialized.size());
+    return result;
+}
+
+template <typename PbMessage>
+std::optional<PbMessage> decode_handshake_message(const StreamBuffer& data) {
+    if (data.size() < HandshakeHeaderSize) {
+        return std::nullopt;
+    }
+
+    // Validate magic "HPAH"
+    const std::array<uint8_t, 4> expected_magic = {'H', 'P', 'A', 'H'};
+    if (std::memcmp(data.data(), expected_magic.data(), 4) != 0) {
+        return std::nullopt;
+    }
+
+    // Read payload length
+    uint32_t net_len = 0;
+    std::memcpy(&net_len, data.data() + 4, 4);
+    uint32_t payload_len = ntohl(net_len);
+
+    size_t expected_size = HandshakeHeaderSize + payload_len;
+    if (data.size() < expected_size) {
+        return std::nullopt;
+    }
+
+    // Parse protobuf
+    PbMessage msg;
+    std::string serialized(data.begin() + HandshakeHeaderSize,
+                           data.begin() + expected_size);
+    if (!msg.ParseFromString(serialized)) {
+        return std::nullopt;
+    }
+
+    return msg;
+}
+
+} // namespace
+
+StreamBuffer encode_handshake_hello(const ::hpactor::net::HandshakeHello& hello) {
+    return encode_handshake_message(hello);
+}
+
+std::optional<::hpactor::net::HandshakeHello>
+decode_handshake_hello(const StreamBuffer& data) {
+    return decode_handshake_message<::hpactor::net::HandshakeHello>(data);
+}
+
+StreamBuffer
+encode_handshake_response(const ::hpactor::net::HandshakeResponse& resp) {
+    return encode_handshake_message(resp);
+}
+
+std::optional<::hpactor::net::HandshakeResponse>
+decode_handshake_response(const StreamBuffer& data) {
+    return decode_handshake_message<::hpactor::net::HandshakeResponse>(data);
+}
+
+uint32_t negotiate_version(uint32_t client_min, uint32_t client_max,
+                           uint32_t server_min, uint32_t server_max) {
+    if (server_min > client_max || client_min > server_max) {
+        return 0; // Disjoint ranges — incompatible
+    }
+    return std::min(server_max, client_max);
 }
 
 } // namespace net

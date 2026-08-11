@@ -586,6 +586,10 @@ void Aggregator::on_event(const MetricEvent& e) {
                           std::memory_order_relaxed);
             break;
         }
+        // ── Connection handshake (NET-001) — handled upstream ──────────
+        case MetricEventType::kHandshakeCompleted:
+        case MetricEventType::kHandshakeRejected:
+            break;
     }
 }
 
