@@ -429,3 +429,113 @@ behavior = "X"
     auto result = TomlParser::parse(main_path);
     EXPECT_FALSE(result.has_value());
 }
+
+// ── Validation Report ──────────────────────────────────────────────
+
+TEST(TomlParserTest, ValidTomlProducesEmptyReport) {
+    std::string content = R"(
+[system]
+version = "1.0"
+
+[[actor]]
+id = "echo"
+behavior = "EchoActor"
+)";
+    std::string path = write_temp(content, "valid_report");
+    auto result = TomlParser::parse(path);
+    ASSERT_TRUE(result.has_value());
+    const auto& report = result.value().validation_report;
+    EXPECT_EQ(report.total_count(), 0u);
+    EXPECT_FALSE(report.has_errors());
+    EXPECT_FALSE(report.has_warnings());
+}
+
+TEST(TomlParserTest, SubsystemConfigDefaultsProduceNoFindings) {
+    // A full config with valid subsystem settings should produce no findings.
+    std::string content = R"(
+[system]
+version = "1.0"
+default_mailbox_size = 2048
+
+[system.mailbox]
+default_capacity = 128
+high_watermark = 0.90
+low_watermark = 0.40
+critical_watermark = 0.95
+
+[system.metrics]
+enabled = true
+ring_buffer_capacity = 32768
+
+[[actor]]
+id = "echo"
+behavior = "EchoActor"
+)";
+    std::string path = write_temp(content, "subsystem_report");
+    auto result = TomlParser::parse(path);
+    ASSERT_TRUE(result.has_value());
+    const auto& report = result.value().validation_report;
+    // All values are within valid ranges, so no findings expected.
+    EXPECT_EQ(report.total_count(), 0u);
+}
+
+TEST(TomlParserTest, ValidationReportIsAccessible) {
+    // Verifies the report member exists and is a ValidationReport instance.
+    std::string path = DATA_DIR + "/minimal.toml";
+    auto result = TomlParser::parse(path);
+    ASSERT_TRUE(result.has_value());
+    const auto& report = result.value().validation_report;
+    // Basic smoke check — the report exists and has the expected type.
+    EXPECT_EQ(report.error_count(), 0u);
+    EXPECT_EQ(report.warning_count(), 0u);
+    EXPECT_TRUE(report.findings().empty());
+}
+
+TEST(TomlParserTest, MailboxClampedValuesProduceWarnings) {
+    // Values that are silently clamped should produce warning findings.
+    std::string content = R"(
+[system]
+version = "1.0"
+
+[system.mailbox]
+low_watermark = -0.5
+high_watermark = 0.30
+critical_watermark = 1.50
+
+[[actor]]
+id = "echo"
+behavior = "EchoActor"
+)";
+    std::string path = write_temp(content, "mailbox_clamped");
+    auto result = TomlParser::parse(path);
+    ASSERT_TRUE(result.has_value());
+    const auto& report = result.value().validation_report;
+
+    // At least the low_watermark clamping should produce a warning.
+    // (Exact count depends on how many values are clamped.)
+    EXPECT_GT(report.total_count(), 0u);
+    EXPECT_TRUE(report.has_warnings());
+    EXPECT_FALSE(report.has_errors());
+}
+
+TEST(TomlParserTest, MailboxValidValuesProduceNoWarnings) {
+    // All values within valid range should produce no findings.
+    std::string content = R"(
+[system]
+version = "1.0"
+
+[system.mailbox]
+low_watermark = 0.20
+high_watermark = 0.80
+critical_watermark = 0.95
+
+[[actor]]
+id = "echo"
+behavior = "EchoActor"
+)";
+    std::string path = write_temp(content, "mailbox_valid");
+    auto result = TomlParser::parse(path);
+    ASSERT_TRUE(result.has_value());
+    const auto& report = result.value().validation_report;
+    EXPECT_EQ(report.total_count(), 0u);
+}

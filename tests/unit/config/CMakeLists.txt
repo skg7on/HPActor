@@ -1,6 +1,7 @@
 add_executable(test_unit_config
     test_actor_factory_registry.cpp
     test_config_final.cpp
+    test_validation_report.cpp
     test_fuzz_regression_toml.cpp
 )
 target_link_libraries(test_unit_config hpactor hpactor_test_support GTest::gtest_main)

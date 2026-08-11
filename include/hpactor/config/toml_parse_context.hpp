@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/config/validation_report.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <string>
@@ -25,6 +26,11 @@ namespace hpactor::config {
 /// Carries the file path being parsed and whether it is the entrypoint
 /// file (vs an imported file). Passed to subsystem parsers so they can
 /// report file-specific errors.
+///
+/// Also carries an optional ValidationReport pointer.  Subsystem parsers
+/// that detect non-fatal issues (type mismatches, value clamping,
+/// deprecated keys) can call add_finding() to record them without
+/// aborting the parse.
 class TomlParseContext {
   public:
     /// \brief Construct a parse context.
@@ -58,9 +64,40 @@ class TomlParseContext {
                                             filepath_ + ": " + message));
     }
 
+    /// \brief Set the validation report for this parse context.
+    ///
+    /// After setting, subsystem parsers can call add_finding() to record
+    /// non-fatal issues.
+    ///
+    /// \param[in] report Non-owning pointer to the report.
+    void set_report(ValidationReport* report) noexcept {
+        report_ = report;
+    }
+
+    /// \brief The current validation report, or nullptr if not set.
+    ///
+    /// \return Non-owning pointer to the report.
+    ValidationReport* report() const noexcept {
+        return report_;
+    }
+
+    /// \brief Add a validation finding to the report.
+    ///
+    /// Safe to call when no report is set — the call is silently ignored.
+    ///
+    /// \param[in] severity Finding severity.
+    /// \param[in] path Dot-notation config field path.
+    /// \param[in] message Human-readable description.
+    void add_finding(ConfigSeverity severity, std::string path,
+                     std::string message) const {
+        if (report_)
+            report_->add({severity, std::move(path), std::move(message)});
+    }
+
   private:
     std::string filepath_;
     bool entrypoint_{false};
+    ValidationReport* report_{nullptr};
 };
 
 } // namespace hpactor::config
