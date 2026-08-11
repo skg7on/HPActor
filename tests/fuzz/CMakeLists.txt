@@ -43,6 +43,11 @@ add_fuzz_test(toml
 )
 # toml++ requires -fexceptions (same exemption as toml_parser.cpp)
 target_compile_options(fuzz_toml PRIVATE -fexceptions)
+# toml++ is a third-party header-only library; disable UBSAN to avoid
+# false positives (e.g., integer overflow patterns in TOML numeric parsing
+# trigger -fsanitize=undefined on Linux/Clang 18 but are benign)
+target_compile_options(fuzz_toml PRIVATE -fno-sanitize=undefined)
+target_link_options(fuzz_toml PRIVATE -fno-sanitize=undefined)
 
 # ---------------------------------------------------------------------------
 # Medium targets (CLI + Admin)

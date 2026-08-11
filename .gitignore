@@ -12,6 +12,10 @@ Testing/
 # Worktrees
 .worktrees/
 .claude/worktrees
+
+# Fuzz corpus generated files (keep only seed_*.bin)
+tests/fuzz/fuzz_corpus/**/*.bin
+!tests/fuzz/fuzz_corpus/**/seed_*.bin
 .claude/skills/*-workspace/
 
 # Understand Anything Skill

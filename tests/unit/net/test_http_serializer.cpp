@@ -97,6 +97,32 @@ TEST(HttpSerializerTest, SerializeAcceptQualityWeights) {
     EXPECT_NE(content_type.find("application/json"), std::string::npos);
 }
 
+TEST(HttpSerializerTest, SerializeRejectMalformedQuality) {
+    // Malformed quality values must not crash (no exceptions in HPActor).
+    // std::stof("notanumber") throws → std::terminate under -fno-exceptions.
+    // The fix uses strtof which returns 0.0 on parse failure and we
+    // clamp to the RFC 7231 default quality of 1.0.
+    HttpSerializer serializer;
+
+    StreamBuffer payload = make_body("data");
+    TypedMessage msg(TypeTag::User, payload);
+
+    // q=notanumber — would crash with std::stof, should fall back to 1.0
+    auto [body1, ct1] =
+        serializer.serialize_response(msg, "text/plain;q=notanumber");
+    EXPECT_NE(ct1.find("text/plain"), std::string::npos);
+
+    // q=999999999999999999999 — overflows float range, would crash with
+    // std::stof
+    auto [body2, ct2] =
+        serializer.serialize_response(msg, "text/plain;q=999999999999999999999");
+    EXPECT_NE(ct2.find("text/plain"), std::string::npos);
+
+    // q= (empty quality value) — invalid parse, must not crash
+    auto [body3, ct3] = serializer.serialize_response(msg, "text/plain;q=");
+    EXPECT_NE(ct3.find("text/plain"), std::string::npos);
+}
+
 TEST(HttpSerializerTest, SerializeNoAcceptDefaultJson) {
     HttpSerializer serializer;
 

@@ -18,6 +18,8 @@
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <cerrno>
+#include <cstdlib>
 #include <string>
 #include <utility>
 #include <vector>
@@ -210,7 +212,14 @@ HttpSerializer::parse_accept_header(const std::string& header) const {
                 size_t qend = header.find_first_of(",;", pos);
                 std::string qstr = header.substr(
                     pos, qend == std::string::npos ? qend : qend - pos);
-                quality = std::stof(qstr);
+                // Non-throwing parse via strtof (std::stof throws,
+                // but HPActor builds with -fno-exceptions).
+                char* endptr = nullptr;
+                errno = 0;
+                quality = std::strtof(qstr.c_str(), &endptr);
+                if (endptr == qstr.c_str() || quality < 0.0f || errno == ERANGE) {
+                    quality = 1.0f; // RFC 7231 default
+                }
                 pos = qend;
             }
         }
